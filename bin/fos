@@ -35,7 +35,6 @@ from fog05.fosagent import FosAgent
 
 
 
-
 class WSStore(object):
     def __init__(self, sid, root, home, host, auth):
 
@@ -613,7 +612,7 @@ class FOSCli(object):
     @asyncio.coroutine
     def __send_clean_entity(self, node_uuid, entity_uuid, instance_uuid):
         handler = yield from self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
-        uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.aroot, node_uuid, handler, entity_uuid, instance_uuid)
+        uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.droot, node_uuid, handler, entity_uuid, instance_uuid)
         res = yield from self.store.desired.remove(uri)
         if res:
             print("Instance {} for entity {} cleaned in node {}".format(instance_uuid, entity_uuid, node_uuid))
