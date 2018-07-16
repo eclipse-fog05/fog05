@@ -1,0 +1,1230 @@
+# Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+# 
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+# 
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# http://www.eclipse.org/legal/epl-2.0
+# 
+# SPDX-License-Identifier: EPL-2.0
+#
+# Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Initial implementation and API
+
+
+#!/usr/bin/env python3
+
+import argparse
+## cli using webserver
+import asyncio
+import os
+import re
+import signal
+import tempfile
+import time
+import json
+import psutil
+import websockets
+import uuid
+import fnmatch
+import sys
+import random
+from jsonschema import validate, ValidationError
+from fog05 import Schemas
+from fog05.fosagent import FosAgent
+
+
+
+
+class WSStore(object):
+    def __init__(self, sid, root, home, host, auth):
+
+        self.sid = sid
+        self.root = root
+        self.home = home
+        self.host = host
+        self.auth = auth
+
+    @asyncio.coroutine
+    def create(self):
+        cmd = 'create {} {} {} 1024'.format(self.sid, self.root, self.home)
+        ws = yield from websockets.connect('ws://{}:9876/{}'.format(self.host, self.auth))
+        yield from ws.send(cmd)
+        response = yield from ws.recv()
+        yield from ws.close()
+
+        response = response.split(' ')
+        if response[0] == 'OK':
+            return True
+        elif response[0] == 'NOK':
+            return False
+        else:
+            print("Wrong response from the server {}".format(''.join(response)))
+            return False
+
+    @asyncio.coroutine
+    def put(self, uri, val):
+        cmd = 'put {} {} {}'.format(self.sid, uri, val)
+        ws = yield from websockets.connect('ws://{}:9876/{}'.format(self.host,self.auth))
+        yield from ws.send(cmd)
+        response = yield from ws.recv()
+        yield from ws.close()
+        response = response.split(' ')
+
+        if response[0] == 'OK':
+            return True
+        elif response[0] == 'NOK':
+            return False
+        else:
+            print("Wrong response from the server {}".format(''.join(response)))
+            return False
+
+    @asyncio.coroutine
+    def dput(self, uri, value=None):
+        cmd = 'dput {} {}'.format(self.sid, uri)
+        if value is not None:
+            cmd = '{} {}'.format(cmd, value)
+        ws = yield from websockets.connect('ws://{}:9876/{}'.format(self.host,self.auth))
+        yield from ws.send(cmd)
+        response = yield from ws.recv()
+        yield from ws.close()
+        response = response.split(' ')
+
+        if response[0] == 'OK':
+            return True
+        elif response[0] == 'NOK':
+            return False
+        else:
+            print("Wrong response from the server {}".format(''.join(response)))
+            return False
+
+    @asyncio.coroutine
+    def get(self, uri):
+        cmd = 'get {} {}'.format(self.sid, uri)
+
+        ws = yield from websockets.connect('ws://{}:9876/{}'.format(self.host,self.auth))
+        yield from ws.send(cmd)
+        response = yield from ws.recv()
+        yield from ws.close()
+        infos = response.split(uri)[-1]
+        if infos in ['', ' ']:
+            return None
+        infos = infos.replace(' ', '')
+        if infos is not None and infos != '':
+            return infos
+        else:
+            return None
+
+    @asyncio.coroutine
+    def getAll(self, uri):
+        cmd = 'aget {} {}'.format(self.sid, uri)
+        values=[]
+        ws = yield from websockets.connect('ws://{}:9876/{}'.format(self.host,self.auth))
+        yield from ws.send(cmd)
+        response = yield from ws.recv()
+        yield from ws.close()
+        infos = response.split(uri)[-1].replace(' ', '')
+        if infos is not None and infos != '':
+            nodes_list = infos.split('|')
+            for e in nodes_list:
+                i = e.split('@')
+                if len(i)>1:
+                    if i[1] is not None and i[1] not in ['',' ', 'None']:
+                        v = []
+                        v.append(i[0])
+                        v.append(''.join(i[1:]))
+                        values.append(tuple(v))
+
+        return tuple(values)
+
+    @asyncio.coroutine
+    def resolveAll(self, uri):
+        cmd = 'aresolve {} {}'.format(self.sid, uri)
+        values=[]
+        ws = yield from websockets.connect('ws://{}:9876/{}'.format(self.host, self.auth))
+        yield from ws.send(cmd)
+        response = yield from ws.recv()
+        yield from ws.close()
+        infos = response.split(uri)[-1].replace(' ', '')
+        if infos is not None and infos != '':
+            nodes_list = infos.split('|')
+            for e in nodes_list:
+                i = e.split('@')
+                if len(i)>1:
+                    if i[1] is not None and i[1] not in ['',' ', 'None']:
+                        v = []
+                        v.append(i[0])
+                        v.append(''.join(i[1:]))
+                        values.append(tuple(v))
+
+        return tuple(values)
+
+    @asyncio.coroutine
+    def remove(self, uri):
+        cmd = 'remove {} {}'.format(self.sid, uri)
+        ws = yield from websockets.connect('ws://{}:9876/{}'.format(self.host, self.auth))
+        yield from ws.send(cmd)
+        response = yield from ws.recv()
+        yield from ws.close()
+        response = response.split(' ')
+        if response[0] == 'OK':
+            return True
+        elif response[0] == 'NOK':
+            return False
+        else:
+            print("Wrong response from the server {}".format(''.join(response)))
+            return False
+
+
+class FOSStore(object):
+    def __init__(self, aroot, droot, home, host, id):
+        port = '5000'
+        self.aroot = aroot #'dfos://{}'
+        self.ahome = '{}/{}'.format(aroot, home) #'dfos://{}/{}' % self.uuid)
+
+        self.droot = droot  # 'dfos://{}'
+        self.dhome = '{}/{}'.format(droot, home)  # 'dfos://{}/{}' % self.uuid)
+
+        self.auth = 'a1b2c3d4'
+        #id = random.randint(int(time.time() - 1000), int(time.time()))
+        self.actual = WSStore('a-{}-{}'.format(id, home), self.aroot, self.ahome, host, self.auth)
+        self.desired = WSStore('d-{}-{}'.format(id, home), self.droot, self.dhome, host, self.auth)
+
+    def close(self):
+        pass
+        #self.actual.close()
+        #self.desidered.close()
+
+
+class FOSCli(object):
+
+    def __init__(self,host):
+
+        #self.agent = None
+        self.store = None
+        self.sys_id = 0
+        self.aroot = 'afos://{}'.format(self.sys_id)
+        self.droot = 'dfos://{}'.format(self.sys_id)
+        self.uuid = 'localhost'
+        self.host = host
+
+        self.server_file = os.path.join(tempfile.gettempdir(), 'dstore_server.pid')
+        self.server_file_out = os.path.join(tempfile.gettempdir(), 'dstore_server.out')
+        self.server_file_err = os.path.join(tempfile.gettempdir(), 'sdstore_erver.err')
+
+    def __initialize(self):
+
+        flag = False
+
+        if os.path.isfile(self.server_file) is False:
+            f = open(self.server_file, 'w')
+            f_err = open(self.server_file_err, 'w')
+            f_out = open(self.server_file_out, 'w')
+            cmd_splitted = 'f05ws -p 9876'.split()
+            #cmd_splitted = 'f05api'.split()
+            p = psutil.Popen(cmd_splitted, stdout=f_out, stderr=f_err)
+            f.write(str(p.pid))
+            pid = p.pid
+            f.close()
+            flag = True
+        else:
+            with open(self.server_file, 'r') as f:
+                pid = int(f.read())
+                f.close()
+            if not psutil.pid_exists(pid):
+                f = open(self.server_file, 'w')
+                f_err = open(self.server_file_err,'w')
+                f_out = open(self.server_file_out, 'w')
+                cmd_splitted = 'f05ws -p 9876'.split()
+                #cmd_splitted = 'f05api'.split()
+                p = psutil.Popen(cmd_splitted, stdout=f_out,stderr=f_err)
+                f.write(str(p.pid))
+                pid = p.pid
+                f.close()
+                flag = True
+
+        self.store = FOSStore(self.aroot, self.droot, self.uuid, self.host, pid)
+        if flag:
+            time.sleep(3)
+            asyncio.get_event_loop().run_until_complete(self.store.desired.create())
+            time.sleep(0.01)
+            asyncio.get_event_loop().run_until_complete(self.store.actual.create())
+            time.sleep(0.01)
+        pass
+
+    def __read_file(self, file_path):
+        with open(file_path, 'r') as f:
+            data = f.read()
+        return data
+
+    def exit(self, exit_code):
+        if self.store is not None:
+            self.store.close()
+        exit(exit_code)
+
+    @asyncio.coroutine
+    def __get_all_node_plugin(self,node_uuid):
+        uri = '{}/{}/plugins'.format(self.aroot, node_uuid)
+        response = yield from self.store.actual.get(uri)
+        if response is not None and response != '':
+            return json.loads(response).get('plugins')
+        else:
+            return None
+
+    @asyncio.coroutine
+    def __send_add_network(self, node_uuid, manifest):
+        manifest.update({'status':'add'})
+        all_plugins = yield from self.__get_all_node_plugin(node_uuid)
+        if all_plugins is None:
+            print('Error on receive plugin from node')
+            return
+        nws = [x for x in all_plugins if x.get('type') == 'network']
+        if len(nws) == 0:
+            print('No network plugin loaded on node, aborting')
+            return
+        brctl = nws[0]  # will use the first plugin
+
+        json_data = json.dumps(manifest)#.replace(' ','')
+        uri = '{}/{}/network/{}/networks/{}'.format(self.droot, node_uuid, brctl.get('uuid'), manifest.get('uuid'))
+
+        res = yield from self.store.desired.put(uri, json_data)
+        if res:
+            print("Network {} added to {}".format(manifest.get('uuid'), node_uuid))
+        else:
+            print("Error on adding network")
+
+    @asyncio.coroutine
+    def __send_remove_network(self, node_uuid, net_id):
+
+        all_plugins = yield from self.__get_all_node_plugin(node_uuid)
+        if all_plugins is None:
+            print('Error on receive plugin from node')
+            return
+        nws = [x for x in all_plugins if x.get('type') == 'network']
+        #print('locating brctl plugin')
+        search = [x for x in nws if 'brctl' in x.get('name')]
+        #print(search)
+        if len(search) == 0:
+            print('Plugin was not loaded')
+            return
+        else:
+            brctl = search[0]
+
+        uri = '{}/{}/network/{}/networks/{}'.format(self.droot, node_uuid, brctl.get('uuid'), net_id)
+        res = yield from self.store.desired.remove(uri)
+        if res:
+            print("Network {} removed from {}".format(net_id, node_uuid))
+        else:
+            print("Error on adding network")
+
+    @asyncio.coroutine
+    def __get_flavors(self):
+        uri = '{}/*/runtime/*/flavor/*/'.format(self.aroot)
+        fls = []
+        fl_list = yield from self.store.actual.resolveAll(uri)
+        if fl_list is not None and len(fl_list) > 0:
+            for f in fl_list:
+                fls.append(json.loads(f[1]))
+        return fls
+
+    @asyncio.coroutine
+    def __get_flavor(self, flavor_uuid):
+        uri = '{}/*/runtime/*/flavor/{}'.format(self.aroot, flavor_uuid)
+        fls = []
+        fl_list = yield from self.store.actual.resolveAll(uri)
+        if fl_list is not None and len(fl_list) > 0:
+            for f in fl_list:
+                fls.append(json.loads(f[1]))
+            return fls[0]
+        if fl_list is None:
+            return None
+
+
+    @asyncio.coroutine
+    def __send_add_flavor(self, manifest):
+        manifest.update({'status': 'add'})
+        json_data = json.dumps(manifest).replace(' ', '')
+        uri = '{}/*/runtime/*/flavor/{}'.format(self.droot, manifest.get('uuid'))
+        res = yield from self.store.desired.put(uri, json_data)
+        return res
+
+
+    @asyncio.coroutine
+    def __send_add_flavor_node(self, node_uuid, manifest):
+        manifest.update({'status': 'add'})
+        json_data = json.dumps(manifest).replace(' ', '')
+
+        all_plugins = yield from self.__get_all_node_plugin(node_uuid)
+        if all_plugins is None:
+            print('Error on receive plugin from node')
+            return
+        rts = [x for x in all_plugins if x.get('type') == 'runtime' and x.get('name') in ['KVMLibvirt', 'XENLibvirt']]
+        for r in rts:
+            uri = '{}/{}/runtime/{}/flavor/{}'.format(self.droot, node_uuid, r.get('uuid'), manifest.get('uuid'))
+            yield from self.store.desired.put(uri, json_data)
+        # TODO fix this
+        return True
+
+    @asyncio.coroutine
+    def __send_remove_flavor_node(self, node_uuid, flavor_id):
+        all_plugins = yield from self.__get_all_node_plugin(node_uuid)
+        if all_plugins is None:
+            print('Error on receive plugin from node')
+            return
+        rts = [x for x in all_plugins if x.get('type') == 'runtime' and x.get('name') in ['KVMLibvirt', 'XENLibvirt']]
+        for r in rts:
+            uri = '{}/{}/runtime/{}/flavor/{}'.format(self.droot, node_uuid, r.get('uuid'), flavor_id)
+            yield from self.store.desired.remove(uri)
+        # TODO fix this
+        return True
+
+    @asyncio.coroutine
+    def __send_add_image(self, manifest):
+        manifest.update({'status': 'add'})
+        json_data = json.dumps(manifest).replace(' ', '')
+        uri = '{}/*/runtime/*/image/{}'.format(self.droot, manifest.get('uuid'))
+        res = yield from self.store.desired.put(uri, json_data)
+        return res
+
+    @asyncio.coroutine
+    def __send_add_image_node(self, node_uuid, manifest):
+        manifest.update({'status': 'add'})
+        json_data = json.dumps(manifest).replace(' ', '')
+
+        all_plugins = yield from self.__get_all_node_plugin(node_uuid)
+        if all_plugins is None:
+            print('Error on receive plugin from node')
+            return
+        rts = [x for x in all_plugins if x.get('type') == 'runtime' and x.get('name') in ['KVMLibvirt', 'XENLibvirt']]
+        for r in rts:
+            uri = '{}/{}/runtime/{}/image/{}'.format(self.droot, node_uuid, r.get('uuid'), manifest.get('uuid'))
+            yield from self.store.desired.put(uri, json_data)
+        # TODO fix this
+        return True
+
+    @asyncio.coroutine
+    def __get_images(self):
+        uri = '{}/*/runtime/*/image/*/'.format(self.aroot)
+        imgs = []
+        img_list = yield from self.store.actual.resolveAll(uri)
+        if img_list is not None and len(img_list) > 0:
+            for i in img_list:
+                imgs.append(json.loads(i[1]))
+        return imgs
+
+    @asyncio.coroutine
+    def __get_image(self, image_uuid):
+        uri = '{}/*/runtime/*/image/{}'.format(self.aroot,image_uuid)
+        imgs = []
+        img_list = yield from self.store.actual.resolveAll(uri)
+        if img_list is not None and len(img_list) > 0:
+            for i in img_list:
+                imgs.append(json.loads(i[1]))
+            return imgs[0]
+        if img_list is None:
+            return None
+
+    @asyncio.coroutine
+    def __send_remove_image(self, image_uuid):
+        uri = '{}/*/runtime/*/image/{}'.format(self.aroot, image_uuid)
+        res = self.store.actual.remove(uri)
+        return res
+
+    @asyncio.coroutine
+    def __send_remove_image_node(self, node_uuid, image_uuid):
+        all_plugins = yield from self.__get_all_node_plugin(node_uuid)
+        if all_plugins is None:
+            print('Error on receive plugin from node')
+            return
+        rts = [x for x in all_plugins if x.get('type') == 'runtime' and x.get('name') in ['KVMLibvirt', 'XENLibvirt']]
+        for r in rts:
+            uri = '{}/{}/runtime/{}/image/{}'.format(self.droot, node_uuid, r.get('uuid'), image_uuid)
+            yield from self.store.desired.remove(uri)
+        # TODO fix this
+        return True
+
+    @asyncio.coroutine
+    def __instance_exsits(self, entity_uuid, instance_uuid):
+        uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.aroot, "*", "*", entity_uuid, instance_uuid)
+        d = yield from self.store.actual.resolveAll(uri)
+        if d is None or len(d) == 0:
+            return False
+        return True
+
+    @asyncio.coroutine
+    def __entity_exsits(self, node_uuid,entity_uuid):
+        uri = '{}/{}/runtime/{}/entity/{}'.format(self.aroot, node_uuid, "*", entity_uuid)
+        d = yield from self.store.actual.resolveAll(uri)
+        if d is None or len(d) == 0:
+            return False
+        return True
+
+    def __catch_signal(self, signal, frame):
+        if signal == 2:
+            if self.agent is not None:
+                self.agent.stop()
+                time.sleep(1)
+            self.exit(0)
+
+    def __start_node(self, plugin_path, debug):
+        signal.signal(signal.SIGINT, self.__catch_signal)
+        # TODO should also catch CTRL-BREAK on Windows
+        self.agent = FosAgent(debug=debug, plugins_path=plugin_path)
+        self.agent.run()
+        while True:
+            time.sleep(100)
+
+    @asyncio.coroutine
+    def __search_plugin_by_name(self, name, node_uuid):
+        uri = '{}/{}/plugins'.format(self.aroot, node_uuid)
+        all_plugins = yield from self.store.actual.get(uri)
+        # cmd = 'get {0} {1}'.format(self.asid, uri)
+        # with self.websocket as ws:
+        #     await ws.send(cmd)
+        #     response = await ws.recv()
+        # all_plugins = response.split(uri)[-1].replace(' ','')
+        if all_plugins is None or all_plugins=='':
+            print('Cannot get plugin')
+            return None
+        all_plugins = json.loads(all_plugins).get('plugins')
+        search = [x for x in all_plugins if name.upper() in x.get('name').upper()]
+        if len(search) == 0:
+            return None
+        else:
+            return search[0]
+
+    @asyncio.coroutine
+    def __get_entity_handler_by_uuid(self, node_uuid, entity_uuid):
+        uri = '{}/{}/runtime/*/entity/{}'.format(self.aroot, node_uuid, entity_uuid)
+        all = yield from self.store.actual.resolveAll(uri)
+        for i in all:
+            k = i[0]
+            if fnmatch.fnmatch(k, uri):
+                # print('MATCH {0}'.format(k))
+                # print('Extracting uuid...')
+                regex = uri.replace('/', '\/')
+                regex = regex.replace('*', '(.*)')
+                reobj = re.compile(regex)
+                mobj = reobj.match(k)
+                uuid = mobj.group(1)
+                # print('UUID {0}'.format(uuid))
+
+                return uuid
+
+    @asyncio.coroutine
+    def __get_entity_handler_by_type(self,node_uuid, t):
+        handler = None
+
+        handler = yield from self.__search_plugin_by_name(t, node_uuid)
+        if handler is None:
+            print('type not yet supported')
+        return handler
+
+    @asyncio.coroutine
+    def __send_define_entity(self, node_uuid, manifest):
+        entity_uuid = manifest.get('uuid')
+        # if self.__entity_exsits(node_uuid, entity_uuid):
+        #     print("Entity with this UUID: {} already exists in node: {} ".format(entity_uuid, node_uuid))
+
+        manifest.update({'status': 'define'})
+        handler = None
+        t = manifest.get('type')
+
+        try:
+            if t in ['kvm', 'xen']:
+                handler = yield from self.__search_plugin_by_name(t, node_uuid)
+                validate(manifest.get('entity_data'), Schemas.vm_schema)
+            elif t in ['container', 'lxd']:
+                handler = yield from self.__search_plugin_by_name(t, node_uuid)
+                validate(manifest.get('entity_data'), Schemas.container_schema)
+            elif t == 'native':
+                handler = yield from self.__search_plugin_by_name('native', node_uuid)
+                validate(manifest.get('entity_data'), Schemas.native_schema)
+            elif t == 'ros2':
+                handler = yield from self.__search_plugin_by_name('ros2', node_uuid)
+                validate(manifest.get('entity_data'), Schemas.ros2_schema)
+            elif t == 'usvc':
+                print('microservice not yet')
+            else:
+                print('type not recognized')
+
+            if handler is None:
+                print('error on plugin for this type of entity')
+                self.exit(-1)
+        except ValidationError as ve:
+            print('Manifest is not correct')
+            print('{}',format(ve.message))
+            self.exit(-1)
+
+
+        entity_definition = manifest
+        json_data = json.dumps(entity_definition) #.replace(' ', '')
+        uri = '{}/{}/runtime/{}/entity/{}'.format(self.droot, node_uuid, handler.get('uuid'), entity_uuid)
+
+        res = yield from self.store.desired.put(uri, json_data)
+        if res:
+            while True:
+                time.sleep(1)
+                uri = '{}/{}/runtime/{}/entity/{}'.format(self.aroot, node_uuid, handler.get('uuid'), entity_uuid)
+                data = yield from self.store.actual.get(uri)
+                entity_info = None
+                if data is not None:
+                    entity_info = json.loads(data)
+                if entity_info is not None and entity_info.get('status') == 'defined':
+                    break
+            print("Entity {} defined on node {}".format(entity_uuid, node_uuid))
+        else:
+
+            print("Error on define entity")
+
+    @asyncio.coroutine
+    def __send_undefine_entity(self, node_uuid, entity_uuid):
+        handler = yield from self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
+        uri = '{}/{}/runtime/{}/entity/{}'.format(self.droot, node_uuid, handler, entity_uuid)
+
+        res = yield from self.store.desired.remove(uri)
+        if res:
+            print("Entity {} removed from {}".format(entity_uuid, node_uuid))
+        else:
+            print("Error on entity remove")
+
+    @asyncio.coroutine
+    def __send_configure_entity(self, node_uuid, entity_uuid, instance_uuid):
+        # if self.__instance_exsits(entity_uuid, entity_uuid):
+        #     print("Instance with this UUID: {} already exists!".format(instance_uuid))
+
+        handler = yield from self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
+        uri = '{}/{}/runtime/{}/entity/{}/instance/{}#status=configure'.format(self.droot, node_uuid, handler, entity_uuid, instance_uuid)
+        res = yield from self.store.desired.dput(uri)
+        if res:
+            while True:
+                time.sleep(1)
+                uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.aroot, node_uuid, handler, entity_uuid, instance_uuid)
+                data = yield from self.store.actual.get(uri)
+                entity_info = None
+                if data is not None:
+                    entity_info = json.loads(data)
+                if entity_info is not None and entity_info.get('status') == 'configured':
+                        break
+            print("Configured instace {} for entity {} on node {}".format(instance_uuid, entity_uuid, node_uuid))
+        else:
+            print("Error on configure entity instance")
+
+    @asyncio.coroutine
+    def __send_clean_entity(self, node_uuid, entity_uuid, instance_uuid):
+        handler = yield from self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
+        uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.aroot, node_uuid, handler, entity_uuid, instance_uuid)
+        res = yield from self.store.desired.remove(uri)
+        if res:
+            print("Instance {} for entity {} cleaned in node {}".format(instance_uuid, entity_uuid, node_uuid))
+        else:
+            print("Error on clean entity instance")
+
+    @asyncio.coroutine
+    def __send_run_entity(self, node_uuid, entity_uuid, instance_uuid):
+        handler = yield from self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
+        uri = '{}/{}/runtime/{}/entity/{}/instance/{}#status=run'.format(self.droot, node_uuid, handler, entity_uuid, instance_uuid)
+
+        res = yield from self.store.desired.dput(uri)
+        if res:
+            while True:
+                time.sleep(1)
+                uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.aroot, node_uuid, handler, entity_uuid,  instance_uuid)
+                data = yield from self.store.actual.get(uri)
+                entity_info = None
+                if data is not None:
+                    entity_info = json.loads(data)
+                if entity_info is not None and entity_info.get('status') == 'run':
+                    break
+            print("Running instance {} for entity {} on node {}".format(instance_uuid, entity_uuid, node_uuid))
+        else:
+            print("Error on running entity instance")
+
+    @asyncio.coroutine
+    def __send_stop_entity(self, node_uuid, entity_uuid, instance_uuid):
+        handler = yield from self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
+        uri = '{}/{}/runtime/{}/entity/{}/instance/{}#status=stop'.format(self.droot, node_uuid, handler, entity_uuid, instance_uuid)
+        res = yield from self.store.desired.dput(uri)
+        if res:
+            while True:
+                uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.aroot, node_uuid, handler, entity_uuid, instance_uuid)
+                data = yield from self.store.actual.get(uri)
+                entity_info = None
+                if data is not None:
+                    entity_info = json.loads(data)
+                if entity_info is not None and entity_info.get('status') == 'stop':
+                    break
+            print("Stopped instance {} for entity {} on node {}".format(instance_uuid, entity_uuid, node_uuid))
+        else:
+            print("Error on stopping entity instance")
+
+    @asyncio.coroutine
+    def __sent_migrate_entity(self, node_uuid, entity_uuid, destination_uuid, instance_uuid):
+        handler = yield from self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
+        uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.aroot, node_uuid, handler, entity_uuid, instance_uuid)
+
+        entity_info = yield from self.store.actual.get(uri)
+        if entity_info is None:
+            print("Error on getting instance info")
+            self.exit(-1)
+
+        entity_info = json.loads(entity_info)
+
+        entity_info_src = entity_info.copy()
+        entity_info_dst = entity_info.copy()
+
+        entity_info_src.update({"status": "taking_off"})
+        entity_info_src.update({"dst": destination_uuid})
+
+        entity_info_dst.update({"status": "landing"})
+        entity_info_dst.update({"dst": destination_uuid})
+
+        destination_handler = yield from self.__get_entity_handler_by_type(destination_uuid, entity_info_dst.get('type'))
+        if destination_handler is None:
+            print("Error Destination node can't handle this type of entity {0}".format(entity_info_dst.get('type')))
+            self.exit(-1)
+
+        uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.droot, destination_uuid, destination_handler.get('uuid'), entity_uuid, instance_uuid)
+        res = yield from self.store.desired.put(uri, json.dumps(entity_info_dst))
+        #.replace(' ',''))
+        if res:
+            uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.droot, node_uuid, handler, entity_uuid, instance_uuid)
+            res_dest = yield from self.store.desired.dput(uri, json.dumps(entity_info_src))
+            #.replace(' ',''))
+            if res_dest:
+                while True:
+                    time.sleep(1)
+                    uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.aroot, destination_uuid, destination_handler.get('uuid'), entity_uuid, instance_uuid)
+                    data = yield from self.store.actual.get(uri)
+                    entity_info = None
+                    if data is not None:
+                        entity_info = json.loads(data)
+                    if entity_info is not None and entity_info.get("status") == "run":
+                        break
+                print("Migrated {} (entity {}) from {} to {}".format(instance_uuid, entity_uuid, node_uuid, destination_uuid))
+            else:
+                print("Error on destination node")
+        else:
+            print("Error on source node")
+
+    @asyncio.coroutine
+    def __send_pause_entity(self, node_uuid, entity_uuid, instance_uuid):
+        handler = yield from self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
+        uri = '{}/{}/runtime/{}/entity/{}/instance/{}#status=pause'.format(self.droot, node_uuid, handler, entity_uuid, instance_uuid)
+        res = yield from self.store.desired.dput(uri)
+        if res:
+            while True:
+                uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.aroot, node_uuid, handler, entity_uuid, instance_uuid)
+                data = yield from self.store.actual.get(uri)
+                entity_info = None
+                if data is not None:
+                    entity_info = json.loads(data)
+                if entity_info is not None and entity_info.get('status') == 'pause':
+                    break
+            print("Paused instance {} for entity {} on node {}".format(instance_uuid, entity_uuid, node_uuid))
+        else:
+            print("Error on pause entity instance")
+
+    @asyncio.coroutine
+    def __send_resume_entity(self, node_uuid, entity_uuid, instance_uuid):
+        handler = yield from self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
+        uri = '{}/{}/runtime/{}/entity/{}/instance/{}#status=resume'.format(self.droot, node_uuid, handler, entity_uuid, instance_uuid)
+        res = yield from self.store.desired.dput(uri)
+        if res:
+            while True:
+                uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.aroot, node_uuid, handler, entity_uuid, instance_uuid)
+                data = yield from self.store.actual.get(uri)
+                entity_info = None
+                if data is not None:
+                    entity_info = json.loads(data)
+                if entity_info is not None and entity_info.get('status') == 'run':
+                    break
+            print("Resumed instance {} for entity {} on node {}".format(instance_uuid, entity_uuid, node_uuid))
+        else:
+            print("Error on resume entity instance")
+
+    @asyncio.coroutine
+    def __send_add_plugin(self, node_uuid, manifest):
+        plugins = {"plugins": [manifest]}
+        plugins = json.dumps(plugins)#.replace(' ','')
+        uri = '{}/{}/plugins'.format(self.droot, node_uuid)
+        res = yield from self.store.desired.dput(uri, plugins)
+        if res:
+            print("Plugin {} added to {}".format(manifest.get('uuid'),node_uuid))
+        else:
+            print("Error on adding plugin")
+
+    @asyncio.coroutine
+    def __get_plugins(self,node_uuid):
+        uri = '{}/{}/plugins'.format(self.aroot, node_uuid)
+        plugins = yield from self.store.actual.get(uri)
+        if plugins is not None and plugins != '' :
+            plugins = json.loads(plugins).get('plugins')
+            print('+-----------------------PLUGINS-------------------------+')
+            for p in plugins:
+                print('+-------------------------------------------------------+')
+                print('| Name: {0} \t| UUID: {1}\t | Type: {2}'
+                      .format(p.get('name'), p.get('uuid'), p.get('type')))
+            print('+-------------------------------------------------------+')
+        else:
+            print("No node or plugins found")
+
+    @asyncio.coroutine
+    def __get_nodes(self):
+        uri = '{}/*'.format(self.aroot)
+        infos = yield from self.store.actual.resolveAll(uri)
+        if infos is not None and infos != '' and len(infos)>0:
+            print('+-------------------------------------------------------+')
+            for e in infos:
+                    node_info = json.loads(e[1])
+                    if len(e[0].split('/')) == 4:
+                        node_info = json.loads(e[1])
+                        print('| Name: {0} \t| UUID: {1}\t '.format(node_info.get('name'), node_info.get('uuid')))
+            print('+-------------------------------------------------------+')
+        else:
+            print('No node found!!')
+
+    @asyncio.coroutine
+    def __get_nodes_uuids(self):
+        nodes = []
+        uri = '{}/*'.format(self.aroot)
+        infos = yield from self.store.actual.resolveAll(uri)
+        if infos is not None and infos != '' and len(infos) > 0:
+            for e in infos:
+                node_info = json.loads(e[1])
+                if len(e[0].split('/')) == 4:
+                    node_info = json.loads(e[1])
+                    nodes.append(node_info.get('uuid'))
+        return nodes
+
+
+    @asyncio.coroutine
+    def __get_networks(self):
+        uri = '{}/*/network/*/networks/*/'.format(self.aroot)
+        nw_list = yield from self.store.actual.resolveAll(uri)
+        if nw_list is not None and len(nw_list)>0:
+            for e in nw_list:
+                net_info = json.loads(e[1])
+                print('+-------------------------------------------------------+')
+                print('| UUID : {} \t\t'.format(net_info.get('uuid')))
+                print('| Name: {} \t\t'.format(net_info.get('name')))
+                print('| Virtual Device: {} \t\t'.format(net_info.get('virtual_device')))
+                print('| DHCP: {} \t\t'.format(net_info.get('has_dhcp')))
+                print('| IP Range: {} \t\t'.format(net_info.get('ip_range')))
+                print('| Gateway: {} \t\t'.format(net_info.get('gateway')))
+                print('| VxLAN ID: {} \t\t'.format(net_info.get('vxlan_id')))
+                print('| Multicast VxLAN Address: {} \t\t'.format(net_info.get('multicast_address')))
+                print('| Node: {} \t\t'.format(e[0].split('/')[-5]))
+                print('+-------------------------------------------------------+')
+        else:
+            print("No network found")
+
+    @asyncio.coroutine
+    def __get_node_details(self, node_uuid, info):
+        uri = '{}/{}'.format(self.aroot, node_uuid)
+        infos = yield from self.store.actual.get(uri)
+        if infos is not None and infos != '':
+            node = json.loads(infos)
+            print('+-------------------------------------------------------+')
+            print('| Name: {0} \t| UUID: {1}\t '.format(node.get('name'), node.get('uuid')))
+            print('+-------------------------------------------------------+')
+            if info is True:
+                print('+------------------------CPU----------------------------+')
+                cpus = node.get('cpu')
+                print('| Total CPU {}'.format(len(cpus)))
+                for cpu in cpus:
+                    print('+-------------------------------------------------------+')
+                    print('| ARCH: {}'.format(cpu.get('arch')))
+                    print('| Model: {}'.format(cpu.get('model')))
+                    print('| Frequency: {}'.format(cpu.get('frequency')))
+                print('+-------------------------------------------------------+')
+                print('| RAM: {}'.format(node.get('ram').get('size')))
+                print('+----------------------NETWORKS-------------------------+')
+                nws = node.get("network")
+                for nw in nws:
+                    print('| ################################################### ')
+                    intf_conf = nw.get('inft_configuration')
+                    print("| ## Interface: {} ##".format(nw.get('intf_name')))
+                    print("| ### MAC: {} ".format(nw.get('intf_mac_address')))
+                    print("| ### type: {} ".format(nw.get('type')))
+                    print("| ### Default gateway: {} ".format(nw.get('default_gw')))
+                    print("| ##### Interface Configuration #####")
+                    print("| ###### Speed: {} ".format(intf_conf.get('intf_speed')))
+                    print("| ###### IPV4: {} Netmask: {} Gateway: {}".format(intf_conf.get('ipv4_address'),
+                                                                         intf_conf.get('ipv4_netmask'),
+                                                                         intf_conf.get('ipv4_gateway')))
+                    print("| ###### IPV6: {} Netmask: {}".format
+                          (intf_conf.get('ipv6_address'), intf_conf.get('ipv6_netmask')))
+                print('| ################################################### ')
+                accs = node.get('accelerator')
+                if accs is not None:
+                    print('+----------------------ACCELERATORS-------------------------+')
+                    for acc in accs:
+                        print('| ################################################### ')
+                        print("| ## Name: {} ##".format(acc.get('name')))
+                        print("| ## HW Address: {} ##".format(acc.get('hw_address')))
+                        print("| ## Supported libraries: {} ##".format(' '.join(acc.get('supported_library'))))
+                    print('| ################################################### ')
+                ios = node.get('io')
+                if ios is not None:
+                    print('+----------------------I\O-----------------------------+')
+                    for io in ios:
+                        print('| ################################################### ')
+                        print("| ## Name: {} ##".format(io.get('io_type')))
+                        print("| ## Type: {} ##".format(io.get('hw_address')))
+                        print("| ## File: {} ##".format(io.get('io_file')))
+                    print('| ################################################### ')
+                print('+-------------------------------------------------------+')
+
+    @asyncio.coroutine
+    def __get_entities(self):
+        uri = '{}/*/runtime/*/entity/*'.format(self.aroot)
+        entities = yield from self.store.actual.resolveAll(uri)
+        for entity in entities:
+            entity_uri = entity[0]
+            entity_info = json.loads(entity[1])
+            print('| UUID : {} \t\t|'.format(entity_info.get('uuid')))
+            print('| Name: {} \t\t|'.format(entity_info.get('name')))
+            print('| Type: {} \t\t|'.format(entity_info.get('type')))
+            print('| Status: {} \t\t|'.format(entity_info.get('status')))
+            print('| Node: {} \t\t|'.format(entity_uri.split('/')[3]))
+            print('+-------------------------------------------------------+')
+
+
+    @asyncio.coroutine
+    def __onboard_entity(self, manifest):
+        instances_uuids = []
+        nodes = yield from self.__get_nodes_uuids()
+        nws = manifest.get('networks')
+        for n in nws:
+            for node in nodes:
+                yield from self.__send_add_network(node, n)
+
+        deploy_order_list = self.__resolve_dependencies(manifest.get("components"))
+        for c in deploy_order_list:
+            search = [x for x in manifest.get("components") if x.get('name') == c]
+            if len(search) > 0:
+                component = search[0]
+            mf = component.get('manifest')
+            yield from self.__send_define_entity(component.get('node'),mf)
+            c_i_uuid = '{}'.format(uuid.uuid4())
+            yield from self.__send_configure_entity(component.get('node'), mf.get('uuid'),c_i_uuid)
+            yield from self.__send_run_entity(component.get('node'), mf.get('uuid'),c_i_uuid)
+            instances_uuids.append(c_i_uuid)
+        print('Onboarded:')
+        i = 0
+        while i<len(instances_uuids):
+            print('{} Instance UUID : {}'.format(deploy_order_list[i],instances_uuids[i]))
+            i = i+1
+
+
+    def __resolve_dependencies(self, components):
+        '''
+        The return list contains component's name in the order that can be used to deploy
+         @TODO: should use less cycle to do this job
+        :rtype: list
+        :param components: list like [{'name': 'c1', 'need': ['c2', 'c3']}, {'name': 'c2', 'need': ['c3']}, {'name': 'c3', 'need': ['c4']}, {'name': 'c4', 'need': []}, {'name': 'c5', 'need': []}]
+
+        no_dependable_components -> list like [[{'name': 'c4', 'need': []}, {'name': 'c5', 'need': []}], [{'name': 'c3', 'need': []}], [{'name': 'c2', 'need': []}], [{'name': 'c1', 'need': []}], []]
+        :return: list like ['c4', 'c5', 'c3', 'c2', 'c1']
+        '''
+        c = list(components)
+        no_dependable_components = []
+        for i in range(0, len(components)):
+            no_dependable_components.append([x for x in c if len(x.get('need')) == 0])
+            # print (no_dependable_components)
+            c = [x for x in c if x not in no_dependable_components[i]]
+            for y in c:
+                n = y.get('need')
+                n = [x for x in n if x not in [z.get('name') for z in no_dependable_components[i]]]
+                y.update({"need": n})
+
+        order = []
+        for i in range(0, len(no_dependable_components)):
+            n = [x.get('name') for x in no_dependable_components[i]]
+            order.extend(n)
+        return order
+
+    def start(self, plugins, verbose, daemon):
+        if plugins:
+            sys.path.append(os.path.abspath(plugins))
+            if daemon:
+                print("Cannot daemonize on {} at the moment".format(os.name))
+                # if os.name == 'posix':
+                #     print('Forking in backgroud')
+                #     pid = '/tmp/fos.pid'
+                #     print('PID file {}'.format(pid))
+                #     with dmn.DaemonContext(pidfile=pid, umask=0):
+                #         self.__start_node(plugins, verbose)
+                # else:
+                #     print("Cannot daemonize on {} at the moment".format(os.name))
+            else:
+                self.__start_node(plugins, verbose)
+        else:
+            print('You should specify plugin path!!')
+
+    def node(self, node_list, node_uuid, plugin_action, action, manifest, plugin_uuid, info):
+        if node_list:
+            asyncio.get_event_loop().run_until_complete(self.__get_nodes())
+            return
+        if node_uuid is not None and plugin_action is False:
+            asyncio.get_event_loop().run_until_complete(self.__get_node_details(node_uuid, info))
+            return
+        if node_uuid is not None and plugin_action is True:
+            if action == 'add':
+                print('Adding plugin from {} to {}'.format(manifest, node_uuid))
+                manifest = json.loads(self.__read_file(manifest))
+                # TODO check manifest plugin
+                manifest.update({'status':'add'})
+                asyncio.get_event_loop().run_until_complete(self.__send_add_plugin(node_uuid, manifest))
+                return
+            if action == 'remove':
+                print('Removing plugin {} from {} not yet...'.format(plugin_uuid, node_uuid))
+                return
+            if action == '':
+                asyncio.get_event_loop().run_until_complete(self.__get_plugins(node_uuid))
+                return
+        return
+
+    def network(self,nw_list, node_uuid, add, remove, manifest, net_uuid):
+        #print(nw_list, node_uuid, add, remove, manifest, net_uuid)
+        if nw_list:
+            asyncio.get_event_loop().run_until_complete(self.__get_networks())
+            return
+        if node_uuid is not None:
+            if add and manifest is not None:
+                manifest = json.loads(self.__read_file(manifest))
+                try:
+                    validate(manifest, Schemas.network_schema)
+                except ValidationError as ve:
+                    print('Manifest is not correct')
+                    print('{}'.format(ve.message))
+                    return
+                print('manifest Ok')
+                asyncio.get_event_loop().run_until_complete(self.__send_add_network(node_uuid, manifest))
+                return
+            if remove and net_uuid is not None:
+                asyncio.get_event_loop().run_until_complete(self.__send_remove_network(node_uuid, net_uuid))
+                return
+
+    def entity(self, en_list, action, node_uuid, manifest, entity_uuid, instance_uuid, dest_node):
+        #print(en_list,action,node_uuid,manifest,entity_uuid,dest_node)
+        if en_list:
+            asyncio.get_event_loop().run_until_complete(self.__get_entities())
+            return
+        if action == 'add' and manifest is not None:
+            manifest = json.loads(self.__read_file(manifest))
+            try:
+                validate(manifest, Schemas.entity_schema)
+            except ValidationError as ve:
+                print('Manifest is not correct')
+                print('{}'.format(ve.message))
+                return
+            print('manifest Ok')
+            asyncio.get_event_loop().run_until_complete(self.__onboard_entity(manifest))
+            return
+        if node_uuid is None: return
+        if action == 'define' and manifest is not None:
+            manifest = json.loads(self.__read_file(manifest))
+            try:
+                validate(manifest, Schemas.atomic_entity_schema)
+            except ValidationError as ve:
+                print('Manifest is not correct')
+                print('{}'.format(ve.message))
+                return
+            print('manifest Ok')
+            asyncio.get_event_loop().run_until_complete(self.__send_define_entity(node_uuid, manifest))
+            return
+        if entity_uuid is None: return
+        if action == 'undefine':
+            asyncio.get_event_loop().run_until_complete(self.__send_undefine_entity(node_uuid, entity_uuid))
+        if action == 'configure' and instance_uuid is not None:
+            asyncio.get_event_loop().run_until_complete(self.__send_configure_entity(node_uuid, entity_uuid, instance_uuid))
+        if action == 'clean' and instance_uuid is not None:
+            asyncio.get_event_loop().run_until_complete(self.__send_clean_entity(node_uuid, entity_uuid, instance_uuid))
+        if action == 'run' and instance_uuid is not None:
+            asyncio.get_event_loop().run_until_complete(self.__send_run_entity(node_uuid, entity_uuid, instance_uuid))
+        if action == 'stop' and instance_uuid is not None:
+            asyncio.get_event_loop().run_until_complete(self.__send_stop_entity(node_uuid, entity_uuid, instance_uuid))
+        if action == 'pause' and instance_uuid is not None:
+            asyncio.get_event_loop().run_until_complete(self.__send_pause_entity(node_uuid, entity_uuid, instance_uuid))
+        if action == 'resume' and instance_uuid is not None:
+            asyncio.get_event_loop().run_until_complete(self.__send_resume_entity(node_uuid, entity_uuid, instance_uuid))
+        if action == 'migrate' and dest_node is not None and instance_uuid is not None:
+            asyncio.get_event_loop().run_until_complete(self.__sent_migrate_entity(node_uuid, entity_uuid, dest_node, instance_uuid))
+
+    def manifest(self, type, manifest):
+        manifest = json.loads(self.__read_file(manifest))
+        if type == 'entity':
+            t = manifest.get('type')
+            try:
+                if t == 'vm':
+                    validate(manifest.get('entity_data'), Schemas.vm_schema)
+                elif t == 'container':
+                    validate(manifest.get('entity_data'), Schemas.container_schema)
+                elif t == 'native':
+                    validate(manifest.get('entity_data'), Schemas.native_schema)
+                elif t == 'ros2':
+                    validate(manifest.get('entity_data'), Schemas.ros2_schema)
+                elif t == 'entity':
+                    validate(manifest, Schemas.entity_schema)
+                elif t == 'usvc':
+                    print('microservice not yet')
+                else:
+                    print('type not recognized')
+            except ValidationError as ve:
+                print('Manifest is not correct')
+                print('{}'.format(ve.message))
+                self.exit(-1)
+        if type == 'network':
+            try:
+                validate(manifest, Schemas.network_schema)
+            except ValidationError as ve:
+                print('Manifest is not correct')
+                print('{}'.format(ve.message))
+                self.exit(-1)
+        if type == 'application':
+            try:
+                validate(manifest, Schemas.entity_schema)
+            except ValidationError as ve:
+                print('Manifest is not correct')
+                print('{}'.format(ve.message))
+                self.exit(-1)
+
+        print('Manifest seems ok!')
+        return
+
+    def main(self):
+        parser = argparse.ArgumentParser(description='fog05 | The Fog-Computing IaaS')
+        subparsers = parser.add_subparsers(dest='cmd')
+
+        ##START CMD
+
+        parser_start = subparsers.add_parser('start')
+        parser_start.add_argument('-p', '--plugins', required=True, type=str, default=False, help='plugin path')
+        parser_start.add_argument('-v', '--verbose', action='store_true', default=False, help='Verbose output')
+        parser_start.add_argument('-d', '--daemon', action='store_true', default=False, help='Run as a daemon')
+
+
+        ## NODE CMD
+        parser_node = subparsers.add_parser('node')
+
+        node_grp = parser_node.add_mutually_exclusive_group(required=True)
+
+        node_grp.add_argument('list', nargs='?', type=bool, default=False, help='list all nodes')
+        node_grp.add_argument('-u', '--uuid',  type=str, default=None, help='Node uuid')
+
+        parser_node.add_argument('-p','-plugin', action='store_true', default=False, help='enable action on plugin',
+                                 dest='plugin')
+        parser_node.add_argument('-i', '--info', action='store_true', default=False, help='detailed info', dest='info')
+
+        node_plugin_grp = parser_node.add_mutually_exclusive_group(required=False)
+        node_plugin_grp.add_argument('-a', '--add', action='store_true', default=False, help='add plugin')
+        node_plugin_grp.add_argument('-r', '--remove', nargs='?', type=bool, default=False, help='remove plugin')
+
+        #parser_node.add_argument('-a', '--add', nargs='?', type=bool, default=False, help='add plugin', dest='action')
+        #parser_node.add_argument('-r', '--remove', nargs='?', type=bool, default=False, help='remove plugin',
+        #                         dest='action')
+
+        parser_node.add_argument('-m', '--manifest', type=str, default=None, help='plugin manifest')
+        parser_node.add_argument('-pu', '--puuid', type=str, default=None, help='plugin uuid')
+
+
+
+        ## NETWORK CMD
+        parser_network = subparsers.add_parser('network')
+        network_grp = parser_network.add_mutually_exclusive_group(required=True)
+
+        network_grp.add_argument('list', nargs='?', type=bool, default=False, help='list all network')
+        network_grp.add_argument('-a','--add', action='store_true', help='add network')
+        network_grp.add_argument('-r','--remove', action='store_true', help='remove network')
+
+        parser_network.add_argument('-m', '--manifest', type=str, default=None, help='network manifest')
+        parser_network.add_argument('-nu', '--nuuid', type=str, default=None, help='network uuid')
+        parser_network.add_argument('-u', '--uuid', type=str, default=None, help='node uuid')
+
+        ## ENTITY CMD
+        parser_entity = subparsers.add_parser('entity')
+        entity_grp = parser_entity.add_mutually_exclusive_group(required=True)
+
+        entity_grp.add_argument('list', nargs='?', type=bool, default=False, help='list all entities')
+        entity_grp.add_argument('-a', '--add', action='store_true', help='add entity')
+        entity_grp.add_argument('-r', '--remove', action='store_true', help='remove entity')
+        entity_grp.add_argument('--define', action='store_true', help='define entity')
+        entity_grp.add_argument('--undefine', action='store_true', help='remove entity')
+        entity_grp.add_argument('--configure', action='store_true', help='configure entity')
+        entity_grp.add_argument('--clean', action='store_true', help='clean entity')
+        entity_grp.add_argument('--run', action='store_true', help='run entity')
+        entity_grp.add_argument('--stop', action='store_true', help='stop entity')
+        entity_grp.add_argument('--pause', action='store_true', help='pause entity')
+        entity_grp.add_argument('--resume', action='store_true', help='resume entity')
+        entity_grp.add_argument('--migrate', action='store_true', help='migrate entity')
+
+        parser_entity.add_argument('-m', '--manifest', type=str, default=None, help='entity manifest')
+        parser_entity.add_argument('-eu', '--euuid', type=str, default=None, help='entity uuid')
+        parser_entity.add_argument('-iu', '--iuuid', type=str, default=None, help='instance uuid')
+        parser_entity.add_argument('-u', '--uuid', type=str, default=None, help='node uuid')
+        parser_entity.add_argument('-du', '--duuid', type=str, default=None, help='destination node uuid')
+
+        ## MANIFEST CMD
+        parser_manifest = subparsers.add_parser('manifest')
+        manifest_grp = parser_manifest.add_mutually_exclusive_group(required=True)
+        manifest_grp.add_argument('-n', '--network', action='store_true', help='network manifest')
+        manifest_grp.add_argument('-e', '--entity', action='store_true', help='entity manifest')
+        manifest_grp.add_argument('-a', '--application', action='store_true', help='application manifest')
+        parser_manifest.add_argument('manifest', type=str, default=None, help='manifest path')
+
+
+        kwargs = vars(parser.parse_args())
+        #print(kwargs)
+
+        if kwargs['cmd'] == 'start':
+            self.start(kwargs['plugins'], kwargs['verbose'], kwargs['daemon'])
+
+        elif kwargs['cmd'] == 'manifest':
+            type = ''
+            if kwargs['network'] is True: type = 'network'
+            if kwargs['entity'] is True: type = 'entity'
+            if kwargs['application'] is True: type = 'application'
+            self.manifest(type, kwargs['manifest'])
+
+        else:
+            self.__initialize()
+            if kwargs['cmd'] == 'node':
+                action = ''
+                if kwargs['add'] is True: action = 'add'
+                elif kwargs['remove'] is True: action = 'remove'
+                self.node(kwargs['list'], kwargs['uuid'], kwargs['plugin'], action, kwargs['manifest'],
+                          kwargs['puuid'],kwargs['info'])
+                self.exit(0)
+            elif kwargs['cmd'] == 'network':
+                self.network(kwargs['list'],kwargs['uuid'], kwargs['add'], kwargs['remove'], kwargs['manifest'],
+                             kwargs['nuuid'])
+                self.exit(0)
+            elif kwargs['cmd'] == 'entity':
+
+                action = ''
+                if kwargs['add'] is True: action = 'add'
+                if kwargs['remove'] is True: action = 'remove'
+                if kwargs['define'] is True: action = 'define'
+                if kwargs['undefine'] is True: action = 'undefine'
+                if kwargs['configure'] is True: action = 'configure'
+                if kwargs['clean'] is True: action = 'clean'
+                if kwargs['run'] is True: action = 'run'
+                if kwargs['stop'] is True: action = 'stop'
+                if kwargs['pause'] is True: action = 'pause'
+                if kwargs['resume'] is True: action = 'resume'
+                if kwargs['migrate'] is True: action = 'migrate'
+
+                self.entity(kwargs['list'], action, kwargs['uuid'], kwargs['manifest'], kwargs['euuid'],
+                            kwargs['iuuid'], kwargs['duuid'])
+
+                self.exit(0)
+            else:
+                print('Error check your command line!!')
+                exit(-1)
+
+
+if __name__ == '__main__':
+        c = FOSCli('localhost')
+        c.main()

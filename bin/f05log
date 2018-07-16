@@ -1,0 +1,196 @@
+# Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+# 
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+# 
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# http://www.eclipse.org/legal/epl-2.0
+# 
+# SPDX-License-Identifier: EPL-2.0
+#
+# Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Initial implementation and API
+
+
+#!/usr/bin/env python3
+
+
+
+from cdds import *
+import sys
+
+class KeyValue(TopicType):
+    def __init__(self, version, key, value, sid):
+        self.version = version
+        self.key = key
+        self.value = value
+        self.sid = sid
+
+    def gen_key(self):
+        return self.key
+
+    def __str__(self):
+        return 'KeyValue(version = {0}, key = {1}, value = {2}, sid = {3})'.format(self.version, self.key, self.value, self.sid)
+
+
+class StoreInfo(TopicType):
+    def __init__(self, sid, sroot, shome):
+        self.sid = sid
+        self.sroot = sroot
+        self.shome = shome
+
+    def gen_key(self):
+        return self.sid
+
+    def __str__(self):
+        return 'StoreInfo(sid = {0}, root = {1}, home= {2})'.format(self.sid, self.sroot, self.shome)
+
+
+class CacheMiss(TopicType):
+    def __init__(self, source_sid, key):
+        self.source_sid = source_sid
+        self.key = key
+
+    def gen_key(self):
+       return self.key
+
+    def __str__(self):
+        return 'CacheMiss(source_sid = {0}, key = {1})'.format(self.source_sid, self.key)
+
+class CacheHit(TopicType):
+    def __init__(self, source_sid, dest_sid, key, value, version):
+        self.source_sid = source_sid
+        self.dest_sid = dest_sid
+        self.key = key
+        self.value = value
+        self.version = version
+
+    def gen_key(self):
+       return self.key
+
+    def __str__(self):
+        return 'CacheHit(source_sid = {0}, dest_sid = {1}, key = {2}, value = {3}, version = {4})'.format(self.source_sid, self.dest_sid, self.key, self.value, self.version)
+
+class CacheMissMV(TopicType):
+    def __init__(self, source_sid, key):
+        self.source_sid = source_sid
+        self.key = key
+
+    def gen_key(self):
+       return self.key
+
+    def __str__(self):
+        return 'CacheMissMV(source_sid = {0}, key = {1})'.format(self.source_sid, self.key)
+
+class CacheHitMV(TopicType):
+    def __init__(self, source_sid, dest_sid, key, kvave):
+        self.source_sid = source_sid
+        self.dest_sid = dest_sid
+        self.key = key
+        self.kvave= kvave # (key, value, version)
+
+    def gen_key(self):
+       return self.key
+
+    def __str__(self):
+        return 'CacheHitMV(source_sid = {0}, dest_sid = {1}, key = {2}, kvave= {3})'.format(self.source_sid, self.dest_sid, self.key, self.kvave)
+
+
+def cache_discovered(dr):
+    for (s, i) in dr.take(all_samples()):
+        if i.valid_data:
+            print(str(s))
+
+def cache_discovery_event(r, s):
+    print("Cache discovery event")
+
+def log_samples(dr):
+    for (s, i) in dr.take(all_samples()):
+        if i.valid_data:
+            print(str(s))
+
+
+def start_tlog(root):
+    dds_runtime = Runtime.get_runtime()
+    dp = Participant(0)
+    pub = Publisher(dp, Publisher.partition(root))
+    sub = Subscriber(dp, Publisher.partition(root))
+
+    store_info_topic = FlexyTopic(dp, "FOSStoreInfo")
+    key_value_topic = FlexyTopic(dp, "FOSKeyValue")
+
+    store_info_writer = FlexyWriter(pub,
+                                    store_info_topic,
+                                    DDS_State)
+
+    store_info_reader = FlexyReader(sub,
+                                    store_info_topic,
+                                    log_samples,
+                                    DDS_State)
+
+    store_info_reader.on_liveliness_changed(cache_discovery_event)
+
+    key_value_writer = FlexyWriter(pub,
+                                   key_value_topic,
+                                   DDS_State)
+
+    key_value_reader = FlexyReader(sub,
+                                   key_value_topic,
+                                   log_samples,
+                                   DDS_State)
+
+    miss_topic = FlexyTopic(dp, "FOSStoreMiss")
+
+    miss_writer = FlexyWriter(pub,
+                              miss_topic,
+                              DDS_Event)
+
+    miss_reader = FlexyReader(sub,
+                              miss_topic,
+                              log_samples,
+                              DDS_Event)
+
+    hit_topic = FlexyTopic(dp, "FOSStoreHit")
+
+    hit_writer = FlexyWriter(pub,
+                             hit_topic,
+                             DDS_Event)
+
+    hit_reader = FlexyReader(sub,
+                             hit_topic,
+                             log_samples,
+                             DDS_Event)
+
+    missmv_topic = FlexyTopic(dp, "FOSStoreMissMV")
+
+    missmv_writer = FlexyWriter(pub,
+                                missmv_topic,
+                                DDS_Event)
+
+    missmv_reader = FlexyReader(sub,
+                                missmv_topic,
+                                log_samples,
+                                DDS_Event)
+
+    hitmv_topic = FlexyTopic(dp, "FOSStoreHitMV")
+
+    hitmv_writer = FlexyWriter(pub,
+                                hitmv_topic,
+                                DDS_Event)
+
+    hitmv_reader = FlexyReader(sub,
+                                hitmv_topic,
+                               log_samples,
+                               DDS_Event)
+
+if __name__=='__main__':
+    if len(sys.argv) > 1:
+        start_tlog(sys.argv[1])
+        print("Press 'x' or 'X' to exit...")
+        done = False
+        while done is False:
+            c = input()
+            if c.capitalize() == "X":
+                done = True
+    else:
+        print("USAGE:\n\tflog")

@@ -1,0 +1,16 @@
+*~
+.DS_Store
+.idea
+__pycache__
+*.log
+*.pyc
+
+build
+dist
+fog05.egg-info
+
+nohup.out
+
+_build
+
+*/_build/*

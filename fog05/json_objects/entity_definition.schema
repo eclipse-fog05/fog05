@@ -1,0 +1,75 @@
+// # Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+// # 
+// # See the NOTICE file(s) distributed with this work for additional
+// # information regarding copyright ownership.
+// # 
+// # This program and the accompanying materials are made available under the
+// # terms of the Eclipse Public License 2.0 which is available at
+// # http://www.eclipse.org/legal/epl-2.0
+// # 
+// # SPDX-License-Identifier: EPL-2.0
+// #
+// # Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Initial implementation and API
+
+
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "title": "Generic Definition",
+  "description": "application definition schema",
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "desciption": "describe the action, so the desidered lifecycle state"
+    },
+    "name": {
+      "type": "string"
+    },
+    "uuid": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer"
+    },
+    "type": {
+      "type": "string",
+      "description": "in this case entity"
+    },
+    "networks":{
+      "type":"array",
+      "items":{
+        "type":"object",
+        "description":"manifest for each network/network component"
+      }
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "node":{
+            "type": "string"
+          },
+          "need": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "proximity": {
+            "type": "object"
+          },
+          "manifest": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}

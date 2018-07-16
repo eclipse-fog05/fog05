@@ -1,0 +1,152 @@
+// # Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+// # 
+// # See the NOTICE file(s) distributed with this work for additional
+// # information regarding copyright ownership.
+// # 
+// # This program and the accompanying materials are made available under the
+// # terms of the Eclipse Public License 2.0 which is available at
+// # http://www.eclipse.org/legal/epl-2.0
+// # 
+// # SPDX-License-Identifier: EPL-2.0
+// #
+// # Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Initial implementation and API
+
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "title": "Node Monitoring",
+  "description": "Monitoring about a FogOS Node",
+  "type": "object",
+  "properties": {
+    "uuid": {
+      "description": "The unique identifier for a node",
+      "type": "string"
+    },
+    "name": {
+      "description": "Name of the node",
+      "type": "string"
+    },
+    "monitoring": {
+      "type": "object",
+      "properties": {
+        "cpu": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "current_frequency": {
+                "description": "current cpu frequency",
+                "type": "integer"
+              },
+              "current_load": {
+                "description": "current cpu load",
+                "type": "float"
+              }
+            }
+          }
+        },
+        "ram": {
+          "type": "object",
+          "properties": {
+            "available": {
+              "description": "available ram",
+              "type": "long"
+            },
+            "used": {
+              "description": "used ram",
+              "type": "long"
+            },
+            "free": {
+              "description": "free (zeroed) ram",
+              "type": "long"
+            },
+            "current_load": {
+              "description": "current memory used in percent",
+              "type": "float"
+            }
+          }
+        },
+        "disk": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "mount_point": {
+                "type": "string"
+              },
+              "used": {
+                "type": "long"
+              },
+              "free": {
+                "type": "long"
+              },
+              "current_load": {
+                "type": "float"
+              }
+            }
+          }
+        },
+        "network": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "bytes_sent": {
+                "type": "long"
+              },
+              "bytes_recv": {
+                "type": "long"
+              },
+              "pkts_sent": {
+                "type": "long"
+              },
+              "pkts_recv": {
+                "type": "long"
+              },
+              "errin": {
+                "type": "long"
+              },
+              "errout": {
+                "type": "long"
+              },
+              "dropin": {
+                "type": "long"
+              },
+              "dropout": {
+                "type": "long"
+              }
+            }
+          }
+        },
+        "processes": {
+          "type": "integer"
+        },
+        "plugins": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "plugin_uuid": {
+                "type": "string"
+              },
+              "plugin_name": {
+                "type": "string"
+              },
+              "plugin_version": {
+                "type": "long"
+              },
+              "plugin_description": {
+                "type": "string"
+              },
+              "plugin_path": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

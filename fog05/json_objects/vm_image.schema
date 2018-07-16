@@ -1,0 +1,41 @@
+// # Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+// # 
+// # See the NOTICE file(s) distributed with this work for additional
+// # information regarding copyright ownership.
+// # 
+// # This program and the accompanying materials are made available under the
+// # terms of the Eclipse Public License 2.0 which is available at
+// # http://www.eclipse.org/legal/epl-2.0
+// # 
+// # SPDX-License-Identifier: EPL-2.0
+// #
+// # Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Initial implementation and API
+
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "title": "VM Definition",
+  "description": "VM image schema",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "image name"
+    },
+    "uuid": {
+      "type": "string",
+      "description": "image uuid"
+    },
+    "base_image": {
+      "type": "string",
+      "description": "url of image"
+    },
+    "format":{
+      "type":"string",
+      "description":"image format (eg. qcow2, raw, iso, vdi...)"
+    },
+    "path":{
+      "type":"string",
+      "description":"path on local node, added when image is downloaded"
+    }
+  }
+}

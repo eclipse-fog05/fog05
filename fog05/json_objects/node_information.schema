@@ -1,0 +1,224 @@
+// # Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+// # 
+// # See the NOTICE file(s) distributed with this work for additional
+// # information regarding copyright ownership.
+// # 
+// # This program and the accompanying materials are made available under the
+// # terms of the Eclipse Public License 2.0 which is available at
+// # http://www.eclipse.org/legal/epl-2.0
+// # 
+// # SPDX-License-Identifier: EPL-2.0
+// #
+// # Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Initial implementation and API
+
+{
+    "$schema" : "http://json-schema.org/draft-06/schema#",
+    "title" : "NodeInformation",
+    "description" : "Information about a FogOS Node",
+    "type" : "object",
+    "properties": {
+        "uuid": {
+            "description": "The unique identifier for a node",
+            "type": "string"
+        },
+        "name": {
+            "description": "Name of the node",
+            "type": "string"
+        },
+        "os":{
+            "description": "os running on node",
+            "type": "string"
+        },
+        "hardware_specifications": {
+                "type":"object",
+                "properties" :{
+                    "cpu":{
+                        "type": "array",
+                        "items":{
+
+                            "type":"object",
+                            "properties":{
+                                "model":{
+                                    "description" : "model name of node cpu",
+                                    "type": "string"
+                                },
+                                "frequency":{
+                                    "description" : "the maximum cpu frequency",
+                                    "type" : "float"
+                                },
+                                "arch":{
+                                    "description" : "the cpu architecture",
+                                    "type" : "string"
+                                }
+                            },
+                            "minItems": 1,
+                            "uniqueItems" : false
+                        }
+                    },
+                    "ram":{
+                        "type":"object",
+                        "properties":{
+                            "size":{
+                                "description" : "Node ram size",
+                                "type":"integer"
+                            }
+                        }
+                    },
+                    "disks":{
+                        "type":"array",
+                        "items":{
+                            "type":"object",
+                            "properties":{
+                                "local_address":{
+                                    "description":"address of storage device",
+                                    "type":"string"
+                                },
+                                "dimension":{
+                                    "description":"disk dimension",
+                                    "type":"float"
+                                },
+                                "mount_point":{
+                                    "description":"mount point associated to the disk",
+                                    "type":"string"
+                                },
+                                "filesystem":{
+                                    "description":"disk file system",
+                                    "type":"string"
+                                }
+                            }
+                        },
+                        "minItems":1,
+                        "uniqueItems":true
+                    },
+                    "io":{
+                        "type":"array",
+                        "items":{
+                            "type":"object",
+                            "properties":{
+                                "name":{
+                                    "description":"io name",
+                                    "type":"string"
+                                },
+                                "io_type":{
+                                    "description":"io type",
+                                    "type":"string"
+                                },
+                                "io_file":{
+                                    "description":"io filename eg. stdio ",
+                                    "type":"string"
+                                },
+                                "available":{
+                                    "type":"boolean",
+                                    "description":"if this device is available or is assigned to an entity"
+                                }
+                            }
+                            }
+                        }
+                    },
+                    "accelerator":{
+                        "type":"array",
+                        "items":{
+                            "type":"object",
+                            "properties":{
+                                "hw_address":{
+                                    "description":"hardware address of accelerator",
+                                    "type":"string"
+                                },
+                                "name":{
+                                    "description":"name of accelerator",
+                                    "type":"string"
+                                },
+                                "supported_library":{
+                                    "type":"array",
+                                    "items":{
+                                        "type":"string"
+                                    }
+                                },
+                                "available":{
+                                    "type":"boolean",
+                                    "description":"if this device is available or is assigned to an entity"
+                                }
+                            }
+                        }
+                    },
+                    "network":{
+                        "type":"array",
+                        "items":{
+                            "type":"object",
+                            "properties":{
+                                "intf_name":{
+                                    "description":"interface name",
+                                    "type":"string"
+                                },
+                                "intf_configuration":{
+                                    "type":"object",
+                                    "properties":{
+                                        "ipv4_address":{
+                                            "description":"interface ipv4 address",
+                                            "type":"string"
+                                        },
+                                        "ipv4_netmask":{
+                                            "description":"interface ipv4 netmask",
+                                            "type":"string"
+                                        },
+                                        "ipv4_gateway":{
+                                            "description":"interface ipv4 gateway",
+                                            "type":"string"
+                                        },
+                                        "ipv6_address":{
+                                            "description":"interface ipv6 address"
+                                            "type":"string"
+                                        },
+                                        "ipv6_netmask":{
+                                            "description":"interface ipv6 netmask",
+                                            "type":"string"
+                                        },
+                                        "ipv6_gateway":{
+                                            "description":"interface ipv6 gateway",
+                                            "type":"string"
+                                        },
+                                        "bus_address":{
+                                            "description":"interface bus address",
+                                            "type":"string"
+                                        }
+                                    }
+                                },
+                                "intf_mac_address":{
+                                    "description":"interface MAC address",
+                                    "type":"string"
+                                },
+                                "intf_speed":{
+                                    "description":"interface speed",
+                                    "type":"integer"
+                                },
+                                "intf_type":{
+                                    "description":"interface type eg. wired/wireless",
+                                    "type":"string"
+                                },
+                                "available":{
+                                    "type":"boolean",
+                                    "description":"if this device is available or is assigned to an entity"
+                                },
+                                "default_gw":{
+                                    "type":"boolean",
+                                    "description":"if this device is the default gateway"
+                                }
+                            }
+                        }
+                    },
+                    "position":{
+                        "type":"object",
+                        "properties":{
+                            "lat":{
+                                "description":"node latitude",
+                                "type":"double"
+                            },
+                            "lon":{
+                                "description":"node longitude",
+                                "type":"double"
+                            }
+                        }
+                    }
+                }
+    }
+}

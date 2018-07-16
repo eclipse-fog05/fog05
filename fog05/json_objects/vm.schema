@@ -1,0 +1,94 @@
+// # Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+// # 
+// # See the NOTICE file(s) distributed with this work for additional
+// # information regarding copyright ownership.
+// # 
+// # This program and the accompanying materials are made available under the
+// # terms of the Eclipse Public License 2.0 which is available at
+// # http://www.eclipse.org/legal/epl-2.0
+// # 
+// # SPDX-License-Identifier: EPL-2.0
+// #
+// # Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Initial implementation and API
+
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "title": "VM Definition",
+  "description": "VM definition schema",
+  "type": "object",
+  "properties": {
+    "name":{
+      "type":"string",
+      "description":"vm name"
+    },
+    "uuid":{
+      "type":"string"
+    },
+    "flavor_id":{
+      "type":"string",
+      "description":"flavor uuid where find infomation about cpu, memory and disk size"
+    },
+    "cpu":{
+      "type":"integer"
+    },
+    "memory":{
+      "type":"integer"
+    },
+    "disk_size":{
+      "type":"integer"
+    },
+    "base_image":{
+      "type":"string",
+      "description":"url, local path of image, or uuid of image"
+    },
+    "user-data":{
+      "type" : "string",
+      "description":"cloud init file"
+    },
+    "ssh-key":{
+      "type":"string",
+      "description":"ssh key to login to the machine"
+    },
+    "networks":{
+      "type":"array",
+      "items":{
+        "type":"object",
+        "properties":{
+          "mac_address":{
+            "type":"string"
+          },
+          "intf_name":{
+            "type":"string",
+            "description":"name of network interface"
+          },
+           "br_name":{
+            "type":"string",
+            "description":"name of the bridge to use present only in case of neither network_uuid and type are not present"
+          },
+          "type":{
+            "type":"string",
+            "description":"type of the network interface needed, is this is present network_uuid br_name should not be present"
+          },
+          "network_uuid":{
+            "type":"string",
+            "description":"uuid of the network to use present if type and "
+          },
+          "connection_point":{
+            "type":"object",
+            "properties":{
+              "connection_point_uuid":{
+                "type":"string",
+                "description":"uuid of this connection point, if the cp already exist will be used, if is already in use there is an error"
+              },
+              "virtual_link_uuid":{
+                "type":"string",
+                "description":"uuid of virtual link connected to this connection point"
+              }
+            }
+          }
+        }
+      }
+    }
+
+  }
+}
