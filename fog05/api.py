@@ -21,8 +21,8 @@ import json
 import fnmatch
 import time
 
-class FOSStore(object):
 
+class FOSStore(object):
     "Helper class to interact with the Store"
 
     def __init__(self, aroot, droot, home):
@@ -52,8 +52,6 @@ class FOSStore(object):
         '''
         self.actual.close()
         self.desired.close()
-
-
 
 
 class API(object):
@@ -102,7 +100,7 @@ class API(object):
             for node in nodes:
                 res = self.network.add(manifest=n, node_uuid=node[0])
                 if not res:
-                    raise Exception('Error on define network {} -> {} on {}  (RES={})'.format(n.get('uuid'), manifest.get('uuid'), node[0],res))
+                    raise Exception('Error on define network {} -> {} on {}  (RES={})'.format(n.get('uuid'), manifest.get('uuid'), node[0], res))
             networks_uuid.append(n.get('uuid'))
         c_list = self.resolve_dependencies(manifest.get('components'))
         for c in c_list:
@@ -128,15 +126,15 @@ class API(object):
                     raise Exception('Error on define entity {} -> {} on {}   (RES={})'.format(manifest.get('uuid'), mf.get('uuid'), component.get('node'), res))
                 instances_uuids.update({mf.get('uuid'): c_i_uuid})
 
-        return {'entity': {manifest.get('uuid'): instances_uuids}, 'networks': networks_uuid }
+        return {'entity': {manifest.get('uuid'): instances_uuids}, 'networks': networks_uuid}
 
     def remove(self, entity_uuid):
         nodes = self.node.list()
-        if len(nodes)>0:
+        if len(nodes) > 0:
             u = nodes[0][0]
             uri = "{}/{}/onboard/{}".format(self.a_root, u, entity_uuid)
             data = self.store.actual.resolve(uri)
-            entities = self.entity.list() # {node uuid: {entity uuid: [instance list]} list}
+            entities = self.entity.list()  # {node uuid: {entity uuid: [instance list]} list}
             # print('entities {}'.format(entities))
             if data is not None and len(data) > 0:
                 data = json.loads(data)
@@ -162,9 +160,6 @@ class API(object):
                     uri = "{}/{}/onboard/{}".format(self.d_root, u, entity_uuid)
                     # print('I should remove {}'.format(uri))
                     self.store.desired.remove(uri)
-
-
-
 
     def resolve_dependencies(self, components):
         '''
@@ -198,6 +193,7 @@ class API(object):
         This class encapsulates API for manifests
 
         '''
+
         def __init__(self, store=None):
             if store is None:
                 raise RuntimeError('store cannot be none in API!')
@@ -325,6 +321,7 @@ class API(object):
         This class encapsulates the commands for Plugin interaction
 
         '''
+
         def __init__(self, store=None):
             if store is None:
                 raise RuntimeError('store cannot be none in API!')
@@ -340,8 +337,7 @@ class API(object):
             :return: boolean
             '''
 
-
-            manifest.update({'status':'add'})
+            manifest.update({'status': 'add'})
             plugins = {"plugins": [manifest]}
             plugins = json.dumps(plugins)
             if node_uuid is None:
@@ -379,7 +375,7 @@ class API(object):
                 uri = '{}/{}/plugins'.format(self.store.aroot, node_uuid)
                 response = self.store.actual.get(uri)
                 if response is not None:
-                    return {node_uuid:json.loads(response).get('plugins')}
+                    return {node_uuid: json.loads(response).get('plugins')}
                 else:
                     return None
 
@@ -468,7 +464,7 @@ class API(object):
             '''
 
             if node_uuid is not None:
-                all_plugins = yield from self.__get_all_node_plugin(node_uuid)
+                all_plugins = self.__get_all_node_plugin(node_uuid)
                 if all_plugins is None:
                     print('Error on receive plugin from node')
                     return False
@@ -649,7 +645,7 @@ class API(object):
             # print('RES is {}'.format(res))
             if res >= 0:
                 if wait:
-                    self.__wait_atomic_entity_state_change(node_uuid,handler.get('uuid'), entity_uuid, 'defined')
+                    self.__wait_atomic_entity_state_change(node_uuid, handler.get('uuid'), entity_uuid, 'defined')
                 return True
             else:
                 return False
@@ -710,8 +706,8 @@ class API(object):
             :param wait: optional wait before returning
             :return: boolean
             '''
-            handler = yield from self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
-            uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.store.aroot, node_uuid, handler, entity_uuid, instance_uuid)
+            handler = self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
+            uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.store.droot, node_uuid, handler, entity_uuid, instance_uuid)
             res = self.store.desired.remove(uri)
             # if res >= 0:
             #     return True
@@ -736,7 +732,19 @@ class API(object):
             # print('RES is {}'.format(res))
             if res >= 0:
                 if wait:
-                    self.__wait_atomic_entity_instance_state_change(node_uuid, handler, entity_uuid, instance_uuid, 'run')
+                    state = "run"
+                    while True:
+                        time.sleep(1)
+                        uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.store.aroot, node_uuid, handler, entity_uuid, instance_uuid)
+                        data = self.store.actual.get(uri)
+                        if data is not None:
+                            entity_info = json.loads(data)
+                            if entity_info is not None:
+                                if entity_info.get('status') == state:
+                                    break
+                                elif entity_info.get('status') != "starting":
+                                    uri = '{}/{}/runtime/{}/entity/{}/instance/{}#status=run'.format(self.store.droot, node_uuid, handler, entity_uuid, instance_uuid)
+                                    self.store.desired.dput(uri)
                 return True
             else:
                 return False
@@ -796,7 +804,6 @@ class API(object):
             :return: boolean
             '''
 
-
             handler = self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
             uri = '{}/{}/runtime/{}/entity/{}/instance/{}#status=resume'.format(self.store.droot, node_uuid, handler, entity_uuid, instance_uuid)
             res = self.store.desired.dput(uri)
@@ -822,7 +829,6 @@ class API(object):
             :param wait: optional wait before returning
             :return: boolean
             '''
-
 
             handler = self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
             uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.store.aroot, node_uuid, handler, entity_uuid, instance_uuid)
@@ -851,7 +857,7 @@ class API(object):
             res = self.store.desired.put(uri, json.dumps(entity_info_dst))
             if res >= 0:
                 uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.store.droot, node_uuid, handler, entity_uuid, instance_uuid)
-                res_dest = yield from self.store.desired.dput(uri, json.dumps(entity_info_src))
+                res_dest = self.store.desired.dput(uri, json.dumps(entity_info_src))
                 if res_dest:
                     if wait:
                         self.__wait_atomic_entity_instance_state_change(destination_node_uuid, destination_handler.get('uuid'), entity_uuid, instance_uuid, 'run')
@@ -883,7 +889,7 @@ class API(object):
                     rid = i[0]
                     en_uuid = rid.split('/')[7]
                     if en_uuid not in entity_list:
-                        entity_list.update({en_uuid:[]})
+                        entity_list.update({en_uuid: []})
                     if len(rid.split('/')) == 8 and en_uuid in entity_list:
                         pass
                     if len(rid.split('/')) == 10:
@@ -900,7 +906,6 @@ class API(object):
                 entities.update({node_id: elist.get(node_id)})
             return entities
 
-
     class Image(object):
         '''
 
@@ -908,6 +913,7 @@ class API(object):
 
 
         '''
+
         def __init__(self, store=None):
             if store is None:
                 raise RuntimeError('store cannot be none in API!')
@@ -962,6 +968,7 @@ class API(object):
           This class encapsulates the action on flavors
 
         '''
+
         def __init__(self, store=None):
             if store is None:
                 raise RuntimeError('store cannot be none in API!')
@@ -1012,7 +1019,7 @@ class API(object):
 
     '''
     Methods
-    
+
     - manifest
         -check
     - node
@@ -1056,5 +1063,5 @@ class API(object):
         - remove
         - search
 
-    
+
     '''
