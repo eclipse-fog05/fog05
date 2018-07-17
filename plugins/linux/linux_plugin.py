@@ -200,7 +200,8 @@ class Linux(OSPlugin):
 
     def get_processor_information(self):
         cpu = []
-        for i in range(0, psutil.cpu_count()):
+        num_cpu = min(psutil.cpu_count(), len(psutil.cpu_freq(percpu=True)))
+        for i in range(0, num_cpu):
             model = self.__get_processor_name()
             try:
                 frequency = psutil.cpu_freq(percpu=True)
