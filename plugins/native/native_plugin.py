@@ -264,21 +264,19 @@ class Native(RuntimePlugin):
             instance = entity.get_instance(instance_uuid)
             if instance.get_state() != State.CONFIGURED:
                 self.agent.logger.error('clean_entity()',
-                                        'KVM Plugin - Instance state is wrong, or transition not allowed')
+                                        'Native Plugin - Instance state is wrong, or transition not allowed')
                 raise StateTransitionNotAllowedException("Instance is not in CONFIGURED state",
                                                          str("Instance %s is not in CONFIGURED state" % instance_uuid))
             else:
 
-                if instance.source is None:
-                    cmd = "{} {}".format(entity.command, ' '.join(str(x) for x in entity.args))
-                else:
+                if instance.source is not None:
 
                     native_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, entity_uuid, instance.name)
 
                     source_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, entity_uuid)
 
                     pid_file = os.path.join(self.BASE_DIR, self.STORE_DIR, entity_uuid, instance.name, instance_uuid)
-                    run_script = self.__generate_run_script(instance.command, source_dir, pid_file)
+                    run_script = self.__generate_run_script(instance.command, instance.args, source_dir, pid_file)
                     if self.operating_system.lower() == 'linux':
                         self.agent.get_os_plugin().store_file(run_script, native_dir, str("%s_run.sh" % instance_uuid))
                         chmod_cmd = str("chmod +x %s" % os.path.join(native_dir, str("%s_run.sh" % instance_uuid)))
@@ -290,7 +288,6 @@ class Native(RuntimePlugin):
                     else:
                         cmd = ''
 
-                if instance.source is not None:
                     process = self.__execute_command(cmd, instance.outfile)
 
                     time.sleep(1)
@@ -310,12 +307,11 @@ class Native(RuntimePlugin):
                     if self.operating_system.lower() == 'linux':
                         if instance.command.endswith('.sh'):
                             command = self.agent.get_os_plugin().read_file(instance.command)
-                            na_script = Environment().from_string(command)
-                            na_script = na_script.render(pid_file='{}_{}.pid'.format(os.path.join(self.BASE_DIR, entity_uuid), instance_uuid))
-
+                            pid_file = '{}_{}.pid'.format(os.path.join(self.BASE_DIR, entity_uuid), instance_uuid)
+                            run_script = self.__generate_run_script(instance.command, instance.args, None, pid_file)
                             f_name = '{}_{}.sh'.format(entity_uuid, instance_uuid)
                             f_path = self.BASE_DIR
-                            self.agent.get_os_plugin().store_file(na_script, f_path, f_name)
+                            self.agent.get_os_plugin().store_file(run_script, f_path, f_name)
                             cmd = '{} {}'.format('{}_{}.sh'.format(os.path.join(self.BASE_DIR, entity_uuid), instance_uuid), ''.join(entity.args))
                             f_path = os.path.join(f_path, f_name)
                             self.agent.get_os_plugin().execute_command('chmod +x {}'.format(f_path))
@@ -324,18 +320,19 @@ class Native(RuntimePlugin):
                             pid_file = os.path.join(self.BASE_DIR, self.STORE_DIR, entity_uuid, instance.name, instance_uuid)
                             template_xml = self.agent.get_os_plugin().read_file(os.path.join(self.DIR, 'templates', 'run_native_unix2.sh'))
                             na_script = Environment().from_string(template_xml)
+                            cmd = '{} {}'.format(entity.command, ' '.join(entity.args))
                             na_script = na_script.render(command=cmd, outfile=pid_file)
                             self.agent.get_os_plugin().store_file(na_script, native_dir, str("%s_run.sh" % instance_uuid))
                             chmod_cmd = str("chmod +x %s" % os.path.join(native_dir, str("%s_run.sh" % instance_uuid)))
                             self.agent.get_os_plugin().execute_command(chmod_cmd, True)
                             cmd = str("%s" % os.path.join(native_dir, str("%s_run.sh" % instance_uuid)))
                     elif self.operating_system.lower() == 'windows':
+
                         native_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, entity_uuid, instance.name)
                         pid_file = os.path.join(self.BASE_DIR, self.STORE_DIR, entity_uuid, instance.name, instance_uuid)
-                        template_xml = self.agent.get_os_plugin().read_file(os.path.join(self.DIR, 'templates', 'run_native_windows.ps1'))
-                        na_script = Environment().from_string(template_xml)
-                        na_script = na_script.render(command=cmd, outfile=pid_file)
-                        self.agent.get_os_plugin().store_file(na_script, native_dir, str("%s_run.ps1" % instance_uuid))
+                        run_script = self.__generate_run_script(instance.command, instance.args, None, pid_file)
+                        self.agent.logger.info('runEntity()', '[ INFO ] PowerShell script is {}'.format(run_script))
+                        self.agent.get_os_plugin().store_file(run_script, native_dir, str("%s_run.ps1" % instance_uuid))
                         cmd = str("%s" % os.path.join(native_dir, str("%s_run.ps1" % instance_uuid)))
 
                     self.agent.logger.info('runEntity()', 'Command is {}'.format(cmd))
@@ -343,6 +340,7 @@ class Native(RuntimePlugin):
                     process = self.__execute_command(cmd, instance.outfile)
                     instance.on_start(process.pid, process)
 
+                entity.add_instance(instance)
                 self.current_entities.update({entity_uuid: entity})
                 uri = str('%s/%s/%s/%s/%s' % (self.agent.dhome, self.HOME, entity_uuid, self.INSTANCE, instance_uuid))
                 na_info = json.loads(self.agent.dstore.get(uri))
@@ -368,7 +366,7 @@ class Native(RuntimePlugin):
             instance = entity.get_instance(instance_uuid)
             if instance.get_state() != State.RUNNING:
                 self.agent.logger.error('clean_entity()',
-                                        'KVM Plugin - Instance state is wrong, or transition not allowed')
+                                        'Native Plugin - Instance state is wrong, or transition not allowed')
                 raise StateTransitionNotAllowedException("Instance is not in RUNNING state",
                                                          str("Instance %s is not in RUNNING state" % instance_uuid))
             else:
@@ -414,8 +412,9 @@ class Native(RuntimePlugin):
                     self.agent.logger.info('stopEntity()', 'Instance source is not none')
                     pid_file = os.path.join(self.BASE_DIR, self.STORE_DIR, entity_uuid, instance.name, '{}.pid'.format(instance_uuid))
                     pid = int(self.agent.get_os_plugin().read_file(pid_file))
-                    self.agent.logger.info('stopEntity()', 'Native Plugin - PID {}'.format(pid))
-                    self.agent.get_os_plugin().execute_command('sudo pkill -9 -P {}'.format(pid))
+                    if self.operating_system.lower == 'linux':
+                        self.agent.logger.info('stopEntity()', 'Native Plugin - PID {}'.format(pid))
+                        self.agent.get_os_plugin().execute_command('sudo pkill -9 -P {}'.format(pid))
                     if self.agent.get_os_plugin().check_if_pid_exists(pid):
                         self.agent.get_os_plugin().send_sig_int(pid)
                         time.sleep(10)
@@ -464,19 +463,38 @@ class Native(RuntimePlugin):
         else:
             # cmd = 'sh -c {}'.format(command)
             cmd_splitted = command.split()
+            self.agent.logger.info('__execute_command()', 'CMD SPLIT = {}'.format(cmd_splitted))
             p = psutil.Popen(cmd_splitted, stdout=f, stderr=f)
         return p
 
-    def __generate_run_script(self, cmd, directory, outfile):
+    def __generate_run_script(self, cmd, args, directory, outfile):
         if self.operating_system.lower() == 'windows':
-            self.agent.logger.info('__generate_run_script()', ' Native Plugin - Generating run script for Windows')
-            template_xml = self.agent.get_os_plugin().read_file(os.path.join(self.DIR, 'templates',
-                                                                             'run_native_windows.ps1'))
+            if len(args) == 0:
+                self.agent.logger.info('__generate_run_script()', ' Native Plugin - Generating run script for Windows')
+                template_script = self.agent.get_os_plugin().read_file(os.path.join(self.DIR, 'templates', 'run_native_windows.ps1'))
+                na_script = Environment().from_string(template_script)
+                if directory:
+                    cmd = os.path.join(directory,cmd)
+                na_script = na_script.render(command=cmd, outfile=outfile)
+            else:
+                args = json.dumps(args)[1:-1]
+                template_script = self.agent.get_os_plugin().read_file(os.path.join(self.DIR, 'templates', 'run_native_windows_args.ps1'))
+                na_script = Environment().from_string(template_script)
+                if directory:
+                    cmd = os.path.join(directory, cmd)
+                na_script = na_script.render(command=cmd,args_list=args, outfile=outfile)
+
         else:
             self.agent.logger.info('__generate_run_script()', ' Native Plugin - Generating run script for Linux')
-            template_xml = self.agent.get_os_plugin().read_file(os.path.join(self.DIR, 'templates', 'run_native_unix.sh'))
-        na_script = Environment().from_string(template_xml)
-        na_script = na_script.render(command=cmd, path=directory, outfile=outfile)
+            template_script = self.agent.get_os_plugin().read_file(os.path.join(self.DIR, 'templates', 'run_native_unix.sh'))
+            na_script = Environment().from_string(template_script)
+            if directory:
+                cmd = os.path.join(directory, cmd)
+            if len(args)>0:
+                cmd = cmd + ' {}'.format(' '.join(args))
+                na_script = na_script.render(command=cmd, outfile=outfile)
+
+        self.agent.logger.info('__generate_run_script()', 'Script is {}'.format(na_script))
         return na_script
 
     def __react_to_cache(self, uri, value, v):
