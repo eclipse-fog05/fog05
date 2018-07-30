@@ -16,6 +16,9 @@ class Agent(object):
     def __init__(self, uuid):
         self.uuid = uuid
 
+    def __load_configuration(self, filename):
+        raise NotImplementedError
+
     def __load_os_plugin(self):
         raise NotImplementedError
 

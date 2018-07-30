@@ -13,6 +13,7 @@
 
 import json
 # import networkx as nx
+import configparser
 import time
 import traceback
 import sys
@@ -43,11 +44,13 @@ class FosAgent(Agent):
         else:
             self.__PLUGINDIR = plugins_path
 
-        self.__PLUGIN_AUTOLOAD = True
+
 
         try:
 
             self.logger.info('__init__()', 'Plugins Dir: {}'.format(self.__PLUGINDIR))
+            self.config = self.__load_configuration('etc/agent.ini')
+
             self.pl = PluginLoader(self.__PLUGINDIR)
             self.pl.get_plugins()
             self.__osPlugin = None
@@ -58,13 +61,37 @@ class FosAgent(Agent):
             self.__load_os_plugin()
             self.logger.info('__init__()', '[ DONE ] Loading OS Plugin...')
             super(FosAgent, self).__init__(self.__osPlugin.get_uuid())
-            sid = str(self.uuid)
 
             self.base_path = self.__osPlugin.get_base_path()
 
-            #todo get from command line
             self.sys_id = 0
+            self.__PLUGIN_AUTOLOAD = True
+            self.__autoload_list = []
 
+            # Configuration Parsing
+
+            if 'agent' in self.config:
+                if 'SYSID' in self.config['agent']:
+                    self.sys_id = int(self.config['agent']['SYSID'])
+                if 'UUID' in self.config['agent']:
+                    self.uuid = self.config['agent']['uuid']
+            if 'plugins' in self.config:
+                if 'autoload' in self.config['plugins']:
+                    self.__PLUGIN_AUTOLOAD = self.config['plugins'].getboolean('autoload')
+                if 'auto' in self.config['plugins']:
+                    self.__autoload_list = json.loads(self.config['plugins']['auto'])
+
+            self.logger.info('__init__()', '[ INIT ] #############################')
+            self.logger.info('__init__()', '[ INIT ] fog05 Agent configuration is:')
+            self.logger.info('__init__()', '[ INIT ] Config Obj: {}'.format(self.config))
+            self.logger.info('__init__()', '[ INIT ] SYSID: {}'.format(self.sys_id))
+            self.logger.info('__init__()', '[ INIT ] UUID: {}'.format(self.uuid))
+            self.logger.info('__init__()', '[ INIT ] Plugins directory : {}'.format(self.__PLUGINDIR))
+            self.logger.info('__init__()', '[ INIT ] AUTOLOAD Plugins: {}'.format(self.__PLUGIN_AUTOLOAD))
+            self.logger.info('__init__()', '[ INIT ] Plugins to autoload: {} (empty means all plugin in the directory)'.format(' '.join(self.__autoload_list)))
+            self.logger.info('__init__()', '[ INIT ] #############################')
+
+            sid = str(self.uuid)
             # Desired Store. containing the desired state
             self.droot = "dfos://{}".format(self.sys_id)
             self.dhome = str("{}/{}".format(self.droot, sid))
@@ -102,26 +129,28 @@ class FosAgent(Agent):
                 self.logger.info('__init__()', 'Autoloading plugins....')
                 plugins = self.pl.plugins
                 for p in plugins:
-                    mfile = p.get('info').replace('__init__.py','{}_plugin.json'.format(p.get('name')))
-                    if self.__osPlugin.file_exists(mfile):
-                        manifest = json.loads(self.__osPlugin.read_file(mfile))
-                        name = manifest.get('name')
-                        plugin_uuid = manifest.get('uuid')
-                        conf = manifest.get('configuration', None)
-                        req = manifest.get('requirements', None)
-                        # if req is not None:
-                        #     self.pl.install_requirements(req)
-                        load_method = self.__load_plugin_method_selection(manifest.get('type'))
-                        if load_method is not None:
-                            if conf is None:
-                                load_method(name, plugin_uuid)
+
+                    if p['name'] in self.__autoload_list or len(self.__autoload_list) == 0:
+                        mfile = p.get('info').replace('__init__.py','{}_plugin.json'.format(p.get('name')))
+                        if self.__osPlugin.file_exists(mfile):
+                            manifest = json.loads(self.__osPlugin.read_file(mfile))
+                            name = manifest.get('name')
+                            plugin_uuid = manifest.get('uuid')
+                            conf = manifest.get('configuration', None)
+                            req = manifest.get('requirements', None)
+                            # if req is not None:
+                            #     self.pl.install_requirements(req)
+                            load_method = self.__load_plugin_method_selection(manifest.get('type'))
+                            if load_method is not None:
+                                if conf is None:
+                                    load_method(name, plugin_uuid)
+                                else:
+                                    load_method(name, plugin_uuid, conf)
                             else:
-                                load_method(name, plugin_uuid, conf)
-                        else:
-                            if len(s) != 0:
-                                self.logger.warning('__react_to_plugins()', '[ WARN ] Plugins of type {} are not yet supported...'.format(v.get('type')))
-                            else:
-                                self.logger.warning('__react_to_plugins()', '[ WARN ] Plugin already loaded')
+                                if len(s) != 0:
+                                    self.logger.warning('__react_to_plugins()', '[ WARN ] Plugins of type {} are not yet supported...'.format(v.get('type')))
+                                else:
+                                    self.logger.warning('__react_to_plugins()', '[ WARN ] Plugin already loaded')
 
 
 
@@ -132,6 +161,15 @@ class FosAgent(Agent):
             self.logger.error('__init__()', "Something trouble happen {} ".format(e))
             traceback.print_exc()
             exit(-1)
+
+
+
+
+    def __load_configuration(self, filename):
+        config = configparser.ConfigParser()
+        config.read(filename)
+        return  config
+
 
 
     def __load_os_plugin(self):
