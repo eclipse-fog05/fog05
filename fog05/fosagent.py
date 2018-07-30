@@ -80,6 +80,7 @@ class FosAgent(Agent):
                     self.__PLUGIN_AUTOLOAD = self.config['plugins'].getboolean('autoload')
                 if 'auto' in self.config['plugins']:
                     self.__autoload_list = json.loads(self.config['plugins']['auto'])
+            sid = str(self.uuid)
 
             self.logger.info('__init__()', '[ INIT ] #############################')
             self.logger.info('__init__()', '[ INIT ] fog05 Agent configuration is:')
@@ -90,20 +91,76 @@ class FosAgent(Agent):
             self.logger.info('__init__()', '[ INIT ] Plugins to autoload: {} (empty means all plugin in the directory)'.format(' '.join(self.__autoload_list)))
             self.logger.info('__init__()', '[ INIT ] #############################')
 
-            sid = str(self.uuid)
+            self.sroot = "sfos://{}".format(self.sys_id)
+            self.shome = str("{}/{}".format(self.sroot, 'info'))
+            self.logger.info('__init__()', '[ INIT ] Creating System Info Store ROOT: {} HOME: {}'.format(self.sroot, self.shome))
+            self.sstore = Store(sid, self.sroot, self.shome, 1024)
+            self.logger.info('__init__()', '[ INIT ] fog05 System Information loading')
+
+            self.users = []
+            self.networks = []
+
+            uri = '{}/tenants'.format(self.shome)
+            i = self.sstore.get(uri)
+            if i is not None:
+                ti = json.loads(i)
+                for t in ti:
+                    if t.get('uuid') == 0:
+                        n = t.get('nodes')
+                        n.append(sid)
+                        # t.update({'nodes': n})
+
+                self.sstore.put(uri, json.dumps(ti))
+                self.tenants = ti
+            else:
+                quotas = {
+                    'max_vcpu': -1,
+                    'current_vcpu': 0,
+                    'max_vdisk': -1,
+                    'current_vdisk': 0,
+                    'max_vnetwork': -1,
+                    'current_vnetwork': 0,
+                    'max_instances': -1,
+                    'current_instances': 0
+                }
+                ti = [{
+                    'uuid': 0,
+                    'quotas': quotas,
+                    'users': [],
+                    'nodes': [sid],
+                    'name': 'default'
+                }]
+                self.sstore.put(uri, json.dumps(ti))
+                self.tenants = ti
+
+            uri = '{}/users'.format(self.shome)
+            i = self.sstore.get(uri)
+            if i is not None:
+                self.users = json.loads(i)
+
+            uri = '{}/networks'.format(self.shome)
+            i = self.sstore.get(uri)
+            if i is not None:
+                self.networks = json.loads(i)
+
+            self.logger.info('__init__()', '[ INIT ] #############################')
+            self.logger.info('__init__()', '[ INIT ] fog05 System Information are:')
+            self.logger.info('__init__()', '[ INIT ] Tenants: {}'.format(json.dumps(self.tenants)))
+            self.logger.info('__init__()', '[ INIT ] Users: {}'.format(json.dumps(self.users)))
+            self.logger.info('__init__()', '[ INIT ] Networks: {}'.format(json.dumps(self.networks)))
+            self.logger.info('__init__()', '[ INIT ] #############################')
+
             # Desired Store. containing the desired state
             self.droot = "dfos://{}".format(self.sys_id)
             self.dhome = str("{}/{}".format(self.droot, sid))
-            self.logger.info('__init__()', '[ INIT ] Creating Desired State Store ROOT: {} HOME: {}'.format(self.droot,
-                                                                                                          self.dhome))
+            self.logger.info('__init__()', '[ INIT ] Creating Desired State Store ROOT: {} HOME: {}'.format(self.droot, self.dhome))
             self.dstore = Store(sid, self.droot, self.dhome, 1024)
             self.logger.info('__init__()', '[ DONE ] Creating Desired State Store')
 
             # Actual Store, containing the Actual State
             self.aroot = "afos://{}".format(self.sys_id)
             self.ahome = str("{}/{}".format(self.aroot, sid))
-            self.logger.info('__init__()', '[ INIT ] Creating Actual State Store ROOT: {} HOME: {}'.format(self.aroot,
-                                                                                                       self.ahome))
+            self.logger.info('__init__()', '[ INIT ] Creating Actual State Store ROOT: {} HOME: {}'.format(self.aroot, self.ahome))
             self.astore = Store(sid, self.aroot, self.ahome, 1024)
             self.logger.info('__init__()', '[ DONE ] Creating Actual State Store')
 
@@ -632,6 +689,15 @@ class FosAgent(Agent):
                 self.logger.error('__exit_gracefully()', '{}'.format(e))
                 #traceback.print_exc()
                 pass
+
+        uri = '{}/tenants'.format(self.shome)
+        self.tenants = json.loads(self.sstore.get(uri))
+        for t in self.tenants:
+            n = t.get('nodes')
+            n.remove(str(self.uuid))
+        self.sstore.put(uri, json.dumps(self.tenants))
+        self.logger.info('__exit_gracefully()', '[ DONE ] Unregistering from tenants')
+
 
         self.dstore.close()
         self.astore.close()
