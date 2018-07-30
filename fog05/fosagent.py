@@ -218,15 +218,10 @@ class FosAgent(Agent):
             traceback.print_exc()
             exit(-1)
 
-
-
-
     def __load_configuration(self, filename):
         config = configparser.ConfigParser()
         config.read(filename)
-        return  config
-
-
+        return config
 
     def __load_os_plugin(self):
         platform = sys.platform
@@ -698,28 +693,21 @@ class FosAgent(Agent):
         self.sstore.put(uri, json.dumps(self.tenants))
         self.logger.info('__exit_gracefully()', '[ DONE ] Unregistering from tenants')
 
-
+        self.sstore.close()
         self.dstore.close()
         self.astore.close()
         self.logger.info('__exit_gracefully()', '[ DONE ] Bye')
-        #sys.exit(0)
+        sys.exit(0)
 
     def run(self):
-
 
         uri = str('{}/onboard/*'.format(self.dhome))
         self.dstore.observe(uri, self.__react_to_onboarding)
         self.logger.info('run()', 'fosAgent Observing for onboarding on: {}'.format(uri))
 
-        #uri = str('{}/*/'.format(self.dhome))
-        #self.dstore.observe(uri, self.__react_to_cache)
-        #self.logger.info('run()','fosAgent Observing home on: {}'.format(uri))
-
         uri = str('{}/plugins'.format(self.dhome))
         self.dstore.observe(uri, self.__react_to_plugins)
         self.logger.info('run()','fosAgent Observing plugins on: {}'.format(uri))
-
-        #signal.signal(signal.SIGINT, self.__exit_gracefully)
 
         self.logger.info('run()','[ DONE ] fosAgent Up and Running')
         return self
