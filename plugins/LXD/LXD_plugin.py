@@ -64,11 +64,11 @@ class LXD(RuntimePlugin):
         self.agent.dstore.observe(uri, self.__react_to_cache_entity)
 
         uri = '{}/{}/*'.format(self.agent.dhome, self.HOME_FLAVOR)
-        self.agent.logger.info('startRuntime()', ' KVM Plugin - Observing {} for flavor'.format(uri))
+        self.agent.logger.info('startRuntime()', ' LXD Plugin - Observing {} for flavor'.format(uri))
         self.agent.dstore.observe(uri, self.__react_to_cache_flavor)
 
         uri = '{}/{}/*'.format(self.agent.dhome, self.HOME_IMAGE)
-        self.agent.logger.info('startRuntime()', ' KVM Plugin - Observing {} for image'.format(uri))
+        self.agent.logger.info('startRuntime()', ' LXD Plugin - Observing {} for image'.format(uri))
         self.agent.dstore.observe(uri, self.__react_to_cache_image)
 
         '''check if dirs exists if not exists create'''
@@ -394,7 +394,7 @@ class LXD(RuntimePlugin):
             instance = entity.get_instance(instance_uuid)
             if instance.get_state() != State.CONFIGURED:
                 self.agent.logger.error('clean_entity()',
-                                        'KVM Plugin - Instance state is wrong, or transition not allowed')
+                                        'LXD Plugin - Instance state is wrong, or transition not allowed')
                 raise StateTransitionNotAllowedException('Instance is not in CONFIGURED state',
                                                          'Instance {} is not in CONFIGURED state'.format(instance_uuid))
             else:
@@ -433,7 +433,7 @@ class LXD(RuntimePlugin):
             instance = entity.get_instance(instance_uuid)
             if instance.get_state() != State.RUNNING:
                 self.agent.logger.error('clean_entity()',
-                                        'KVM Plugin - Instance state is wrong, or transition not allowed')
+                                        'LXD Plugin - Instance state is wrong, or transition not allowed')
                 raise StateTransitionNotAllowedException('Instance is not in RUNNING state',
                                                          'Instance {} is not in RUNNING state'.format(entity_uuid))
             else:
@@ -472,12 +472,12 @@ class LXD(RuntimePlugin):
                                                      'Entity {} is not in DEFINED state'.format(entity_uuid))
         else:
             if instance_uuid is None or not entity.has_instance(instance_uuid):
-                self.agent.logger.error('run_entity()', 'KVM Plugin - Instance not found!!')
+                self.agent.logger.error('run_entity()', 'LXD Plugin - Instance not found!!')
             else:
                 instance = entity.get_instance(instance_uuid)
                 if instance.get_state() != State.RUNNING:
                     self.agent.logger.error('clean_entity()',
-                                            'KVM Plugin - Instance state is wrong, or transition not allowed')
+                                            'LXD Plugin - Instance state is wrong, or transition not allowed')
                     raise StateTransitionNotAllowedException('Instance is not in RUNNING state',
 
                                                              'Instance {} is not in RUNNING state'.format(instance_uuid))
@@ -509,12 +509,12 @@ class LXD(RuntimePlugin):
                                                      'Entity {} is not in DEFINED state'.format(entity_uuid))
         else:
             if instance_uuid is None or not entity.has_instance(instance_uuid):
-                self.agent.logger.error('run_entity()', 'KVM Plugin - Instance not found!!')
+                self.agent.logger.error('run_entity()', 'LXD Plugin - Instance not found!!')
             else:
                 instance = entity.get_instance(instance_uuid)
                 if instance.get_state() != State.PAUSED:
                     self.agent.logger.error('clean_entity()',
-                                            'KVM Plugin - Instance state is wrong, or transition not allowed')
+                                            'LXD Plugin - Instance state is wrong, or transition not allowed')
                     raise StateTransitionNotAllowedException('Instance is not in PAUSED state',
                                                              'Instance {} is not in PAUSED state'.format(instance_uuid))
                 else:
@@ -755,7 +755,7 @@ class LXD(RuntimePlugin):
 
             self.agent.logger.info('before_migrate_entity_actions()', ' LXD Plugin - Before Migration Source: Waiting destination to be ready')
             while True:
-                # self.agent.logger.info('before_migrate_entity_actions()', ' KVM Plugin - Before Migration Source: Waiting destination to be ready')
+                # self.agent.logger.info('before_migrate_entity_actions()', ' LXD Plugin - Before Migration Source: Waiting destination to be ready')
                 uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.agent.aroot, destination_node_uuid, lxd_uuid, entity_uuid, instance_uuid)
                 lxc_info = self.agent.astore.get(uri)
                 if lxc_info is not None:
@@ -1073,7 +1073,7 @@ class LXD(RuntimePlugin):
     def __remove_image(self, image_uuid):
         image = self.images.get(image_uuid, None)
         if image is None:
-            self.agent.logger.info('__remove_image()', ' KVM Plugin - Image not found!!')
+            self.agent.logger.info('__remove_image()', ' LXD Plugin - Image not found!!')
             return
         self.agent.get_os_plugin().remove_file(image.get('path'))
         self.images.pop(image_uuid)
@@ -1102,11 +1102,11 @@ class LXD(RuntimePlugin):
                 self.__add_image(value)
 
     def __react_to_cache_flavor(self, uri, value, v):
-        self.agent.logger.info('__react_to_cache_flavor()', 'KVM Plugin - React to to URI: {} Value: {} Version: {}'.format(uri, value, v))
+        self.agent.logger.info('__react_to_cache_flavor()', 'LXD Plugin - React to to URI: {} Value: {} Version: {}'.format(uri, value, v))
         if uri.split('/')[-2] == 'flavor':
             flavor_uuid = uri.split('/')[-1]
             if value is None and v is None:
-                self.agent.logger.info('__react_to_cache_flavor()', 'KVM Plugin - This is a remove for URI: {}'.format(uri))
+                self.agent.logger.info('__react_to_cache_flavor()', 'LXD Plugin - This is a remove for URI: {}'.format(uri))
                 self.__remove_flavor(flavor_uuid)
             else:
                 value = json.loads(value)

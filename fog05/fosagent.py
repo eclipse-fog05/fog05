@@ -83,7 +83,6 @@ class FosAgent(Agent):
 
             self.logger.info('__init__()', '[ INIT ] #############################')
             self.logger.info('__init__()', '[ INIT ] fog05 Agent configuration is:')
-            self.logger.info('__init__()', '[ INIT ] Config Obj: {}'.format(self.config))
             self.logger.info('__init__()', '[ INIT ] SYSID: {}'.format(self.sys_id))
             self.logger.info('__init__()', '[ INIT ] UUID: {}'.format(self.uuid))
             self.logger.info('__init__()', '[ INIT ] Plugins directory : {}'.format(self.__PLUGINDIR))
