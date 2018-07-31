@@ -332,7 +332,7 @@ class API(object):
 
             Add a plugin to a node or to all node in the system/tenant
 
-            :param manifest: the dictionary representing the plugin manifes
+            :param manifest: the dictionary representing the plugin manifest
             :param node_uuid: optional the node in which add the plugin
             :return: boolean
             '''
@@ -677,9 +677,9 @@ class API(object):
 
             :param entity_uuid: entity you want to configure
             :param node_uuid: destination node
-            :param instance_uuid: optional if preset will use that uuid for the atomic entity instance otherwise will generate a new one
+            :param instance_uuid: optional if present will use that uuid for the atomic entity instance otherwise will generate a new one
             :param wait: optional wait before returning
-            :return: intstance uuid or none in case of error
+            :return: instance uuid or none in case of error
             '''
             handler = self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
             if instance_uuid is None:
@@ -795,7 +795,7 @@ class API(object):
         def resume(self, entity_uuid, node_uuid, instance_uuid, wait=False):
             '''
 
-            resume the exectution of an atomic entity instance
+            Resume the exectution of an atomic entity instance
 
             :param entity_uuid: entity for which you want to resume the instance
             :param node_uuid: destination node
@@ -822,7 +822,7 @@ class API(object):
             The migration is issued when this command is sended, there is a little overhead for the copy of the base image and the disk image
 
 
-            :param entity_uuid: ntity for which you want to migrate the instance
+            :param entity_uuid: entity for which you want to migrate the instance
             :param instance_uuid: instance you want to migrate
             :param node_uuid: source node for the instance
             :param destination_node_uuid: destination node for the instance
@@ -943,7 +943,7 @@ class API(object):
         def remove(self, image_uuid, node_uuid=None):
             '''
 
-            remove an image for a node or all nodes
+            Remove an image for a node or all nodes
 
             :param image_uuid: image you want to remove
             :param node_uuid: optional node from which remove the image

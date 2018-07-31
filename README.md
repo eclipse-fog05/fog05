@@ -5,45 +5,14 @@ Unifies compute/networking fabric end-to-end
 
 Thanks to its plugin architecture can manage near everything
 
-See inside [docs](https://github.com/atolab/fog05_docs/tree/master/docs) for some design documentation
+See inside [Wiki](https://github.com/eclipse/fog05/wiki) for more detailed information
 
 Inside [plugins](./plugins) there are some plugins for entity
 
 Inside [examples](./examples) you can find some example/demo
 
 
-
-## Agent
-
-You should have [Eclipse Cyclone DDS](https://github.com/eclipse/cyclonedds) installed, [Python Cyclone DDS API Bindings](https://github.com/atolab/python-cdds) and the [DStore API](https://github.com/atolab/python-dstore)
-
-
-
----
-
-config dependencies:
-
-- user should be able to use sudo without password asking (`echo "username  ALL=(ALL) NOPASSWD: ALL"  >> /etc/sudoers`)
-- user should be able to create files and directories under /opt/
-
-## Installation
-
-You can install from source:
-
-
-```bash
-
-    $ ./configure
-    $ make
-    $ make install
-
-```
-
-
-You can download from [here](https://drive.google.com/open?id=1gfLtGMm76Z5SirOQHAjovz75DrkAqmEH)
-the compressed file that contains the deb packages for your architecture (x86_64 or ARM)
-
-
+See also [Introduction](https://github.com/eclipse/fog05/blob/master/Introduction.md) for more information
 
 ### How to run:
 
