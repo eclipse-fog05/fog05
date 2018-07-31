@@ -22,4 +22,4 @@ In the wiki you can find information about:
 ### Contributing
 
 If you want to contribute, please read information in [CONTRIBUTING.md](./CONTRIBUTING.md)
-And take a look to [TODO.md](./TODO.md]
+And take a look to [TODO.md](./TODO.md)
