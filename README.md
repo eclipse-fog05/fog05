@@ -9,9 +9,6 @@ See inside [Wiki](https://github.com/eclipse/fog05/wiki) for more detailed infor
 
 Inside [plugins](./plugins) there are some plugins for entity
 
-Inside [examples](./examples) you can find some example/demo
-
-
 See also [Introduction](https://github.com/eclipse/fog05/blob/master/Introduction.md) for more information
 
 ### How to run:
