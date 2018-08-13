@@ -464,7 +464,7 @@ class Native(RuntimePlugin):
             # cmd = 'sh -c {}'.format(command)
             cmd_splitted = command.split()
             self.agent.logger.info('__execute_command()', 'CMD SPLIT = {}'.format(cmd_splitted))
-            p = psutil.Popen(cmd_splitted, stdout=f, stderr=f)
+            p = psutil.Popen(cmd_splitted, shell=True, stdout=f, stderr=f)
         return p
 
     def __generate_run_script(self, cmd, args, directory, outfile):
