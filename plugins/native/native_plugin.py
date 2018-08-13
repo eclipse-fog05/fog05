@@ -492,7 +492,8 @@ class Native(RuntimePlugin):
                 cmd = os.path.join(directory, cmd)
             if len(args)>0:
                 cmd = cmd + ' {}'.format(' '.join(args))
-                na_script = na_script.render(command=cmd, outfile=outfile)
+            na_script = na_script.render(command=cmd, outfile=outfile)
+
 
         self.agent.logger.info('__generate_run_script()', 'Script is {}'.format(na_script))
         return na_script
