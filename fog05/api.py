@@ -42,7 +42,7 @@ class FOSStore(object):
         self.dhome = str('{}/{}'.format(droot, home))  # str('dfos://{}/{}' % self.uuid)
 
         self.sroot = sroot
-        self.dhome = str('{}/{}'.format(sroot, home))
+        self.shome = str('{}/{}'.format(sroot, home))
 
         self.actual = Store('a{}'.format(home), self.aroot, self.ahome, 1024)
         self.desired = Store('d{}'.format(home), self.droot, self.dhome, 1024)
