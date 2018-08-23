@@ -684,7 +684,7 @@ class FosAgent(Agent):
                 self.logger.error('__exit_gracefully()', '{}'.format(e))
                 #traceback.print_exc()
                 pass
-
+        '''
         uri = '{}/tenants'.format(self.shome)
         self.tenants = json.loads(self.sstore.get(uri))
         for t in self.tenants:
@@ -694,6 +694,7 @@ class FosAgent(Agent):
         self.logger.info('__exit_gracefully()', '[ DONE ] Unregistering from tenants')
 
         self.sstore.close()
+        '''
         self.dstore.close()
         self.astore.close()
         self.logger.info('__exit_gracefully()', '[ DONE ] Bye')
