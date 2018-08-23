@@ -244,7 +244,7 @@ class FosAgent(Agent):
                 os = self.pl.load_plugin(os)
                 self.__osPlugin = os.run(agent=self)
             else:
-                self.logger.error('__load_os_plugin()', 'Error on Loading GNU\Linux plugin!!!')
+                self.logger.error('__load_os_plugin()', 'Error on Loading Windows plugin!!!')
                 raise RuntimeError("Error on loading OS Plugin")
         else:
             self.logger.error('__load_os_plugin()', 'Platform {} not compatible!!!!'.format(platform))
