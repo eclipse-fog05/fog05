@@ -90,7 +90,7 @@ class FosAgent(Agent):
             self.logger.info('__init__()', '[ INIT ] AUTOLOAD Plugins: {}'.format(self.__PLUGIN_AUTOLOAD))
             self.logger.info('__init__()', '[ INIT ] Plugins to autoload: {} (empty means all plugin in the directory)'.format(' '.join(self.__autoload_list)))
             self.logger.info('__init__()', '[ INIT ] #############################')
-
+            '''
             self.sroot = "sfos://{}".format(self.sys_id)
             self.shome = str("{}/{}".format(self.sroot, 'info'))
             self.logger.info('__init__()', '[ INIT ] Creating System Info Store ROOT: {} HOME: {}'.format(self.sroot, self.shome))
@@ -149,7 +149,7 @@ class FosAgent(Agent):
             self.logger.info('__init__()', '[ INIT ] Users: {}'.format(json.dumps(self.users)))
             self.logger.info('__init__()', '[ INIT ] Networks: {}'.format(json.dumps(self.networks)))
             self.logger.info('__init__()', '[ INIT ] #############################')
-
+            '''
             # Desired Store. containing the desired state
             self.droot = "dfos://{}".format(self.sys_id)
             self.dhome = str("{}/{}".format(self.droot, sid))

@@ -25,7 +25,7 @@ import time
 class FOSStore(object):
     "Helper class to interact with the Store"
 
-    def __init__(self, aroot, droot, home):
+    def __init__(self, aroot, droot,sroot, home):
         '''
 
         Initialize the Store with root and home
@@ -41,8 +41,12 @@ class FOSStore(object):
         self.droot = droot  # 'dfos://{}'
         self.dhome = str('{}/{}'.format(droot, home))  # str('dfos://{}/{}' % self.uuid)
 
+        self.sroot = sroot
+        self.dhome = str('{}/{}'.format(sroot, home))
+
         self.actual = Store('a{}'.format(home), self.aroot, self.ahome, 1024)
         self.desired = Store('d{}'.format(home), self.droot, self.dhome, 1024)
+        #self.system = Store('s{}'.format(home), self.sroot, self.dhome, 1024)
 
     def close(self):
         '''
@@ -52,6 +56,7 @@ class FOSStore(object):
         '''
         self.actual.close()
         self.desired.close()
+        self.system.close()
 
 
 class API(object):
@@ -64,7 +69,8 @@ class API(object):
 
         self.a_root = 'afos://{}'.format(sysid)
         self.d_root = 'dfos://{}'.format(sysid)
-        self.store = FOSStore(self.a_root, self.d_root, store_id)
+        self.s_root = 'sfos://{}'.format(sysid)
+        self.store = FOSStore(self.a_root, self.d_root, self.s_root, store_id)
 
         self.manifest = self.Manifest(self.store)
         self.node = self.Node(self.store)
