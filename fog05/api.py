@@ -36,13 +36,13 @@ class FOSStore(object):
         '''
 
         self.aroot = aroot  # 'dfos://{}'
-        self.ahome = str('{}/{}'.format(aroot, home))  # str('dfos://{}/{}' % self.uuid)
+        self.ahome = '{}/{}'.format(aroot, home)
 
         self.droot = droot  # 'dfos://{}'
-        self.dhome = str('{}/{}'.format(droot, home))  # str('dfos://{}/{}' % self.uuid)
+        self.dhome = '{}/{}'.format(droot, home)
 
         self.sroot = sroot
-        self.shome = str('{}/{}'.format(sroot, home))
+        self.shome = '{}/{}'.format(sroot, home)
 
         self.actual = Store('a{}'.format(home), self.aroot, self.ahome, 1024)
         self.desired = Store('d{}'.format(home), self.droot, self.dhome, 1024)
