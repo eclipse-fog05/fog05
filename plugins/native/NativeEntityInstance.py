@@ -54,7 +54,7 @@ class NativeEntityInstance(EntityInstance):
         self.state = State.RUNNING
 
     def after_migrate(self):
-        raise Exception("Cannot migrate Native")
+        raise Exception('Cannot migrate Native')
 
     def before_migrate(self):
-        raise Exception("Cannot migrate Native")
+        raise Exception('Cannot migrate Native')

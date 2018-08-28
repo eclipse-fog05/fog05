@@ -47,25 +47,25 @@ class Windows(OSPlugin):
         return 'C:\\opt\\fos'
 
     def execute_command(self, command, blocking=False):
-        self.agent.logger.info('executeCommand()', str('OS Plugin executing command %s' % command))
+        self.agent.logger.info('executeCommand()', 'OS Plugin executing command {}'.format(command))
         cmd_splitted = command.split()
         p = psutil.Popen(cmd_splitted, stdout=PIPE)
         if blocking:
             p.wait()
 
         for line in p.stdout:
-            self.agent.logger.debug('executeCommand()', str(line))
+            self.agent.logger.debug('executeCommand()', line)
 
     def add_know_host(self, hostname, ip):
         self.agent.logger.info('addKnowHost()', ' OS Plugin add to hosts file')
-        add_cmd = str("runas /noprofile /user:Administrator %s add %s %s" % (os.path.join(self.DIR, 'scripts',
-                                                                             'manage_hosts.ps1'), hostname, ip))
+        add_cmd = 'runas /noprofile /user:Administrator {} add {} {}'.format(os.path.join(self.DIR, 'scripts',
+                                                                             'manage_hosts.ps1'), hostname, ip)
         self.execute_command(add_cmd, True)
 
     def remove_know_host(self, hostname):
         self.agent.logger.info('removeKnowHost()', ' OS Plugin remove from hosts file')
-        del_cmd = str("runas /noprofile /user:Administrator %s remove %s" % (os.path.join(self.DIR, 'scripts',
-                                                                             'manage_hosts.sh'), hostname))
+        del_cmd = 'runas /noprofile /user:Administrator {} remove {}'.format(os.path.join(self.DIR, 'scripts',
+                                                                             'manage_hosts.sh'), hostname)
         self.execute_command(del_cmd, True)
 
     def dir_exists(self, path):
@@ -88,7 +88,7 @@ class Windows(OSPlugin):
         try:
             return os.remove(path)
         except FileNotFoundError as e:
-            self.agent.logger.error('removeFile()', "OS Plugin File Not Found %s so don't need to remove" % e.strerror)
+            self.agent.logger.error('removeFile()', "OS Plugin File Not Found {} so don't need to remove".format(e.strerror))
             return
 
     def file_exists(self, file_path):
@@ -104,11 +104,11 @@ class Windows(OSPlugin):
     def read_file(self, file_path, root=False):
         data = ""
         if root:
-            file_path = str("runas /noprofile /user:Administrator type %s" % file_path)
+            file_path = 'runas /noprofile /user:Administrator type {}'.format(file_path)
             process = subprocess.Popen(file_path.split(), stdout=subprocess.PIPE)
             # read one line at a time, as it becomes available
             for line in iter(process.stdout.readline, ''):
-                data = str(data + "%s" % line)
+                data = data + "{}".format(line)
         else:
             with open(file_path, 'r') as f:
                 data = f.read()
@@ -121,10 +121,8 @@ class Windows(OSPlugin):
         return data
 
     def download_file(self, url, file_path):
-        dwn_cmd = str('wget -Uri "%s" -outfile %s -UseBasicParsing' % (url, file_path))
-        self.execute_command(str('powershell.exe %s') % dwn_cmd, True)
-        #wget_cmd = str('wget %s -O %s' % (url, file_path))
-        #os.system(wget_cmd);
+        dwn_cmd = 'wget -Uri "{}" -outfile {} -UseBasicParsing'.format(url, file_path)
+        self.execute_command('powershell.exe {}'.format(dwn_cmd), True)
 
     def get_CPU_level(self):
         return psutil.cpu_percent(interval=1)
@@ -145,24 +143,24 @@ class Windows(OSPlugin):
 
     def send_signal(self, signal, pid):
         if self.checkIfPidExists(pid) is False:
-            self.agent.logger.error('sendSignal()', 'OS Plugin Process not exists %d' % pid)
-            raise ProcessNotExistingException("Process %d not exists" % pid)
+            self.agent.logger.error('sendSignal()', 'OS Plugin Process not exists {}'.format(pid))
+            raise ProcessNotExistingException("Process {} not exists".format(pid))
         else:
             psutil.Process(pid).send_signal(signal)
         return True
 
     def send_sig_int(self, pid):
         if self.checkIfPidExists(pid) is False:
-            self.agent.logger.error('sendSigInt()', 'OS Plugin Process not exists %d' % pid)
-            raise ProcessNotExistingException("Process %d not exists" % pid)
+            self.agent.logger.error('sendSigInt()', 'OS Plugin Process not exists {}'.format(pid))
+            raise ProcessNotExistingException("Process {} not exists".format(pid))
         else:
             psutil.Process(pid).send_signal(2)
         return True
 
     def send_sig_kill(self, pid):
         if self.checkIfPidExists(pid) is False:
-            self.agent.logger.error('sendSigInt()', 'OS Plugin Process not exists %d' % pid)
-            raise ProcessNotExistingException("Process %d not exists" % pid)
+            self.agent.logger.error('sendSigInt()', 'OS Plugin Process not exists {}'.format(pid))
+            raise ProcessNotExistingException("Process {} not exists".format(pid))
         else:
             psutil.Process(pid).send_signal(9)
         return True
@@ -211,7 +209,7 @@ class Windows(OSPlugin):
                 fs = d[2]
                 disks.append({'local_address': dev, 'dimension': dim, 'mount_point': mount, 'filesystem': fs})
             except PermissionError as e:
-                self.agent.logger.error('getDisksInformation()', 'Device {0} not ready'.format(mount))
+                self.agent.logger.error('getDisksInformation()', 'Device {} not ready'.format(mount))
             finally:
                 pass
         return disks
@@ -237,7 +235,7 @@ class Windows(OSPlugin):
         p = psutil.Popen('sudo blkid /dev/sda1'.split(), stdout=PIPE)
         res = ""
         for line in p.stdout:
-            res = str(res+"%s" % line)
+            res = str(res+"{}" % line)
         m = re.search(uuid_regex, res)
         if m:
             found = m.group(1)
@@ -253,7 +251,7 @@ class Windows(OSPlugin):
         # p = psutil.Popen('sudo cat '.split(), stdout=PIPE)
         res = ""
         for line in p.stdout:
-            res = str(res + "%s" % line.decode("utf-8"))
+            res = res + "{}" % line.decode("utf-8")
 
         m = re.search(uuid_regex, res)
         if m:
@@ -269,7 +267,7 @@ class Windows(OSPlugin):
         p = psutil.Popen('hostname', stdout=PIPE)
         for line in p.stdout:
             line = line.decode()
-            res = str(res + "%s" % line)
+            res = res + "{}".format(line)
         return res.strip()
 
     def get_position_information(self):
@@ -340,7 +338,7 @@ class Windows(OSPlugin):
         return dev
 
     def __get_default_gw(self):
-        cmd = str("powershell.exe %s" % (os.path.join(self.DIR, 'scripts', 'default_gw.ps1')))
+        cmd = 'powershell.exe {}'.format(os.path.join(self.DIR, 'scripts', 'default_gw.ps1'))
         p = psutil.Popen(cmd.split(), stdout=PIPE)
         p.wait()
         iface = ""
