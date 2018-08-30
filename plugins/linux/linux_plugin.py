@@ -55,9 +55,9 @@ class Linux(OSPlugin):
         if self.distro == '':
             self.agent.logger.warning('__init__()', 'Distribution not recognized, cannot install packages')
         else:
-            self.agent.logger.info('__init__()', ' Running on {}' % self.distro)
+            self.agent.logger.info('__init__()', ' Running on {}'.format(self.distro))
             self.pm = self.__get_package_manager(self.distro)
-            self.agent.logger.info('__init__()', ' Package manger {} loaded! ' % self.pm.name)
+            self.agent.logger.info('__init__()', ' Package manger {} loaded! '.format(self.pm.name))
 
         self.io_devices = self.__get_io_devices()
         self.nw_devices = self.__get_nw_devices()
@@ -164,7 +164,7 @@ class Linux(OSPlugin):
 
     def send_signal(self, signal, pid):
         if self.check_if_pid_exists(pid) is False:
-            self.agent.logger.error('sendSignal()', 'OS Plugin Process not exists %d' % pid)
+            self.agent.logger.error('sendSignal()', 'OS Plugin Process not exists {}'.format(pid))
             #raise ProcessNotExistingException('Process %d not exists' % pid)
         else:
             psutil.Process(pid).send_signal(signal)
@@ -172,7 +172,7 @@ class Linux(OSPlugin):
 
     def send_sig_int(self, pid):
         if self.check_if_pid_exists(pid) is False:
-            self.agent.logger.error('sendSigInt()', 'OS Plugin Process not exists %d' % pid)
+            self.agent.logger.error('sendSigInt()', 'OS Plugin Process not exists {}'.format(pid))
             #raise ProcessNotExistingException('Process %d not exists' % pid)
         else:
             psutil.Process(pid).send_signal(2)
@@ -180,7 +180,7 @@ class Linux(OSPlugin):
 
     def send_sig_kill(self, pid):
         if self.check_if_pid_exists(pid) is False:
-            self.agent.logger.error('sendSigInt()', 'OS Plugin Process not exists %d' % pid)
+            self.agent.logger.error('sendSigInt()', 'OS Plugin Process not exists {}'.format(pid))
             #raise ProcessNotExistingException('Process %d not exists' % pid)
         else:
             psutil.Process(pid).send_signal(9)
