@@ -252,7 +252,7 @@ class Windows(OSPlugin):
         # p = psutil.Popen('sudo cat '.split(), stdout=PIPE)
         res = ""
         for line in p.stdout:
-            res = res + "{}" % line.decode("utf-8")
+            res = res + "{}".format(line.decode("utf-8"))
 
         m = re.search(uuid_regex, res)
         if m:
