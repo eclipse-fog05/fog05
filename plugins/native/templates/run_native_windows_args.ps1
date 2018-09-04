@@ -12,4 +12,4 @@
 #
 # Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Base plugins set
 
-(Start-Process -FilePath "{{ command }}" -ArgumentList {{ args_list }} -passthru).ID  > {{outfile}}.pid
+(Start-Process "{{ command }}" -ArgumentList {{ args_list }} -passthru).ID  > {{outfile}}.pid
