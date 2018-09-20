@@ -994,6 +994,8 @@ class LXD(RuntimePlugin):
 
         # devices = Environment().from_string(template)
         # devices = devices.render(networks=entity.networks)
+        mid = {'machine-id': {'path': 'etc/machine-id', 'source': '/etc/machine-id', 'type': 'disk'}}
+        devices.update(mid)
         return devices
 
     def __generate_container_dict(self, instance):
