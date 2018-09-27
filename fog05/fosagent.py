@@ -709,6 +709,10 @@ class FosAgent(Agent):
 
         self.sstore.close()
         '''
+        self.dstore.remove('{}/**'.format(self.dhome))
+        self.astore.remove('{}/**'.format(self.ahome))
+        self.astore.remove('{}'.format(self.ahome))
+        self.dstore.remove('{}'.format(self.dhome))
         self.dstore.close()
         self.astore.close()
         self.logger.info('__exit_gracefully()', '[ DONE ] Bye')
