@@ -47,7 +47,7 @@ class Native(RuntimePlugin):
 
     def start_runtime(self):
 
-        uri = '{}/{}/*'.format(self.agent.dhome, self.HOME)
+        uri = '{}/{}/**'.format(self.agent.dhome, self.HOME)
         self.agent.logger.info('startRuntime()', ' Native Plugin - Observing {}'.format(uri))
         self.agent.dstore.observe(uri, self.__react_to_cache)
 

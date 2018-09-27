@@ -64,7 +64,6 @@ class Linux(OSPlugin):
         self.nw_devices = self.__get_nw_devices()
         self.accelerator_devices = self.__get_acc_devices()
 
-
     def get_base_path(self):
         return '/opt/fos'
 
