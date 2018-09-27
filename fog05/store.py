@@ -36,7 +36,7 @@ class Store(object):
     def put(self, k, v):
         return self.access.put(k, v)
 
-    def dput(self, uri, value):
+    def dput(self, uri, value=None):
         data = self.get(uri)
         uri_values = ''
         if value is None:
