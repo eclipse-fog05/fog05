@@ -179,11 +179,11 @@ class WSStore(object):
 class FOSStore(object):
     def __init__(self, aroot, droot, home, host, id):
         port = '5000'
-        self.aroot = aroot #'dfos://{}'
-        self.ahome = '{}/{}'.format(aroot, home) #'dfos://{}/{}' % self.uuid)
+        self.aroot = aroot #'//dfos/{}'
+        self.ahome = '{}/{}'.format(aroot, home) #'//dfos/{}/{}' % self.uuid)
 
-        self.droot = droot  # 'dfos://{}'
-        self.dhome = '{}/{}'.format(droot, home)  # 'dfos://{}/{}' % self.uuid)
+        self.droot = droot  # '//dfos/{}'
+        self.dhome = '{}/{}'.format(droot, home)  # '//dfos/{}/{}' % self.uuid)
 
         self.auth = 'a1b2c3d4'
         #id = random.randint(int(time.time() - 1000), int(time.time()))
@@ -203,8 +203,8 @@ class FOSCli(object):
         #self.agent = None
         self.store = None
         self.sys_id = 0
-        self.aroot = 'afos://{}'.format(self.sys_id)
-        self.droot = 'dfos://{}'.format(self.sys_id)
+        self.aroot = '//afos/{}'.format(self.sys_id)
+        self.droot = '//dfos/{}'.format(self.sys_id)
         self.uuid = 'localhost'
         self.host = host
 
@@ -1180,49 +1180,51 @@ class FOSCli(object):
 
         if kwargs['cmd'] == 'start':
             self.start(kwargs['plugins'], kwargs['verbose'], kwargs['daemon'])
-
-        elif kwargs['cmd'] == 'manifest':
-            type = ''
-            if kwargs['network'] is True: type = 'network'
-            if kwargs['entity'] is True: type = 'entity'
-            if kwargs['application'] is True: type = 'application'
-            self.manifest(type, kwargs['manifest'])
-
         else:
-            self.__initialize()
-            if kwargs['cmd'] == 'node':
-                action = ''
-                if kwargs['add'] is True: action = 'add'
-                elif kwargs['remove'] is True: action = 'remove'
-                self.node(kwargs['list'], kwargs['uuid'], kwargs['plugin'], action, kwargs['manifest'],
-                          kwargs['puuid'],kwargs['info'])
-                self.exit(0)
-            elif kwargs['cmd'] == 'network':
-                self.network(kwargs['list'],kwargs['uuid'], kwargs['add'], kwargs['remove'], kwargs['manifest'],
-                             kwargs['nuuid'])
-                self.exit(0)
-            elif kwargs['cmd'] == 'entity':
-
-                action = ''
-                if kwargs['add'] is True: action = 'add'
-                if kwargs['remove'] is True: action = 'remove'
-                if kwargs['define'] is True: action = 'define'
-                if kwargs['undefine'] is True: action = 'undefine'
-                if kwargs['configure'] is True: action = 'configure'
-                if kwargs['clean'] is True: action = 'clean'
-                if kwargs['run'] is True: action = 'run'
-                if kwargs['stop'] is True: action = 'stop'
-                if kwargs['pause'] is True: action = 'pause'
-                if kwargs['resume'] is True: action = 'resume'
-                if kwargs['migrate'] is True: action = 'migrate'
-
-                self.entity(kwargs['list'], action, kwargs['uuid'], kwargs['manifest'], kwargs['euuid'],
-                            kwargs['iuuid'], kwargs['duuid'])
-
-                self.exit(0)
-            else:
-                print('Error check your command line!!')
-                exit(-1)
+            print('This is deprecated and cannot be used')
+            exit(-1)
+        # elif kwargs['cmd'] == 'manifest':
+        #     type = ''
+        #     if kwargs['network'] is True: type = 'network'
+        #     if kwargs['entity'] is True: type = 'entity'
+        #     if kwargs['application'] is True: type = 'application'
+        #     self.manifest(type, kwargs['manifest'])
+        #
+        # else:
+        #     self.__initialize()
+        #     if kwargs['cmd'] == 'node':
+        #         action = ''
+        #         if kwargs['add'] is True: action = 'add'
+        #         elif kwargs['remove'] is True: action = 'remove'
+        #         self.node(kwargs['list'], kwargs['uuid'], kwargs['plugin'], action, kwargs['manifest'],
+        #                   kwargs['puuid'],kwargs['info'])
+        #         self.exit(0)
+        #     elif kwargs['cmd'] == 'network':
+        #         self.network(kwargs['list'],kwargs['uuid'], kwargs['add'], kwargs['remove'], kwargs['manifest'],
+        #                      kwargs['nuuid'])
+        #         self.exit(0)
+        #     elif kwargs['cmd'] == 'entity':
+        #
+        #         action = ''
+        #         if kwargs['add'] is True: action = 'add'
+        #         if kwargs['remove'] is True: action = 'remove'
+        #         if kwargs['define'] is True: action = 'define'
+        #         if kwargs['undefine'] is True: action = 'undefine'
+        #         if kwargs['configure'] is True: action = 'configure'
+        #         if kwargs['clean'] is True: action = 'clean'
+        #         if kwargs['run'] is True: action = 'run'
+        #         if kwargs['stop'] is True: action = 'stop'
+        #         if kwargs['pause'] is True: action = 'pause'
+        #         if kwargs['resume'] is True: action = 'resume'
+        #         if kwargs['migrate'] is True: action = 'migrate'
+        #
+        #         self.entity(kwargs['list'], action, kwargs['uuid'], kwargs['manifest'], kwargs['euuid'],
+        #                     kwargs['iuuid'], kwargs['duuid'])
+        #
+        #         self.exit(0)
+        #     else:
+        #         print('Error check your command line!!')
+        #         exit(-1)
 
 
 if __name__ == '__main__':

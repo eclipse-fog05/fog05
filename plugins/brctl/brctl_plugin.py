@@ -50,9 +50,9 @@ class brctl(NetworkPlugin):
         '''
         should listen on:
         
-        - dfos://<sys-id>/<node-id>/network/<myuuid>/networks/*
-        - dfos://<sys-id>/<node-id>/network/<myuuid>/bridges/*
-        - dfos://<sys-id>/<node-id>/network/<myuuid>/interfaces/*
+        - //dfos/<sys-id>/<node-id>/network/<myuuid>/networks/*
+        - //dfos/<sys-id>/<node-id>/network/<myuuid>/bridges/*
+        - //dfos/<sys-id>/<node-id>/network/<myuuid>/interfaces/*
         
         '''
 

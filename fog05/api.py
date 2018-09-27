@@ -14,40 +14,45 @@
 
 from jsonschema import validate, ValidationError
 from fog05 import Schemas
-from dstore import Store
+#from dstore import Store
 from enum import Enum
 import re
 import uuid
 import json
 import fnmatch
 import time
+from yaks_api import api
+from .store import Store
 
 
 class FOSStore(object):
     "Helper class to interact with the Store"
 
-    def __init__(self, aroot, droot,sroot, home):
+    def __init__(self, server, aroot, droot, sroot, home):
         '''
 
         Initialize the Store with root and home
 
+        :param server: the address of the YAKS server
         :param aroot: actual store root
         :param droot: desired store root
         :param home: store home also used to generate store id
         '''
 
-        self.aroot = aroot  # 'dfos://{}'
+        self.y = api.YAKS(server)
+
+        self.aroot = aroot  # '//dfos/{}'
         self.ahome = '{}/{}'.format(aroot, home)
 
-        self.droot = droot  # 'dfos://{}'
+        self.droot = droot  # '//dfos/{}'
         self.dhome = '{}/{}'.format(droot, home)
 
         self.sroot = sroot
         self.shome = '{}/{}'.format(sroot, home)
 
-        self.actual = Store('a{}'.format(home), self.aroot, self.ahome, 1024)
-        self.desired = Store('d{}'.format(home), self.droot, self.dhome, 1024)
-        #self.system = Store('s{}'.format(home), self.sroot, self.dhome, 1024)
+        self.actual = Store(self.y, self.aroot, self.ahome, 1024)
+        self.desired = Store(self.y, self.droot, self.dhome, 1024)
+        self.system = Store(self.y,  self.sroot, self.shome, 1024)
 
     def close(self):
         '''
@@ -66,13 +71,13 @@ class API(object):
         Need the distributed store
     '''
 
-    def __init__(self, sysid=0, store_id="python-api"):
+    def __init__(self, sysid=0, store_id="python-api", endpoint='127.0.0.1'):
 
-        self.a_root = 'afos://{}'.format(sysid)
-        self.d_root = 'dfos://{}'.format(sysid)
-        self.s_root = 'sfos://{}'.format(sysid)
-        self.store = FOSStore(self.a_root, self.d_root, self.s_root, store_id)
-
+        self.a_root = '//afos/{}'.format(sysid)
+        self.d_root = '//dfos/{}'.format(sysid)
+        self.s_root = '//sfos/{}'.format(sysid)
+        self.store = FOSStore(endpoint, self.a_root, self.d_root, self.s_root, store_id)
+        self.endpoint = endpoint
         self.manifest = self.Manifest(self.store)
         self.node = self.Node(self.store)
         self.plugin = self.Plugin(self.store)
@@ -82,6 +87,9 @@ class API(object):
         self.flavor = self.Flavor(self.store)
         self.onboard = self.add
         self.offload = self.remove
+
+    def close(self):
+        self.store.close()
 
     def add(self, manifest):
         manifest.update({'status': 'define'})
@@ -278,9 +286,8 @@ class API(object):
             uri = '{}/*'.format(self.store.aroot)
             infos = self.store.actual.resolveAll(uri)
             for i in infos:
-                if len(i[0].split('/')) == 4:
-                    node_info = json.loads(i[1])
-                    nodes.append((node_info.get('uuid'), node_info.get('name')))
+                node_info = json.loads(i[1])
+                nodes.append((node_info.get('uuid'), node_info.get('name')))
             return nodes
 
         def info(self, node_uuid):
@@ -878,6 +885,36 @@ class API(object):
 
         def search(self, search_dict, node_uuid=None):
             pass
+
+        def info(self, entity_uuid):
+            uri = '{}/*/runtime/*/entity/{}/instance/*'.format(self.store.aroot, entity_uuid)
+            info = self.store.actual.get(uri)
+            if info is None or len(info) == 0:
+                return {}
+            i = {}
+            for e in info:
+                k = e.get('key')
+                v = e.get('value')
+                i_uuid = k.spit('/')[-1]
+                i.update({i_uuid: v})
+            return {entity_uuid: i}
+
+        def instance_info(self, entity_uuid, instance_uuid):
+            uri = '{}/*/runtime/*/entity/{}/instance/{}'.format(self.store.aroot, entity_uuid, instance_uuid)
+            info = self.store.actual.get(uri)
+            if info is None or len(info) == 0:
+                return {}
+            return info[0].get('value')
+
+        def instances(self, entity_uuid):
+            uri = '{}/*/runtime/*/entity/{}/instance/*'.format(self.store.aroot, entity_uuid)
+            info = self.store.actual.get(uri)
+            if info is None:
+                return None
+            i = []
+            for e in info:
+                i.append(e.get('key').spit('/')[-1])
+            return i
 
         def list(self, node_uuid=None):
             '''
