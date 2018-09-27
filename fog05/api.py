@@ -146,8 +146,7 @@ class API(object):
     def remove(self, entity_uuid):
         nodes = self.node.list()
         if len(nodes) > 0:
-            u = nodes[0][0]
-            uri = "{}/{}/onboard/{}".format(self.a_root, u, entity_uuid)
+            uri = "{}/*/onboard/{}".format(self.a_root, entity_uuid)
             data = self.store.actual.resolve(uri)
             entities = self.entity.list()  # {node uuid: {entity uuid: [instance list]} list}
             # print('entities {}'.format(entities))
@@ -508,14 +507,14 @@ class API(object):
 
             if node_uuid is not None:
                 n_list = []
-                uri = '{}/{}/network/*/networks/'.format(self.store.aroot, node_uuid)
+                uri = '{}/{}/network/*/networks/**'.format(self.store.aroot, node_uuid)
                 response = self.store.actual.resolveAll(uri)
                 for i in response:
                     n_list.append(json.loads(i[1]))
                 return {node_uuid: n_list}
 
             nets = {}
-            uri = '{}/*/network/*/networks/'.format(self.store.aroot)
+            uri = '{}/*/network/*/networks/**'.format(self.store.aroot)
             response = self.store.actual.resolveAll(uri)
             for i in response:
                 id = i[0].split('/')[2]
@@ -887,7 +886,7 @@ class API(object):
             pass
 
         def info(self, entity_uuid):
-            uri = '{}/*/runtime/*/entity/{}/instance/*'.format(self.store.aroot, entity_uuid)
+            uri = '{}/*/runtime/*/entity/{}/instance/**'.format(self.store.aroot, entity_uuid)
             info = self.store.actual.get(uri)
             if info is None or len(info) == 0:
                 return {}
@@ -907,7 +906,7 @@ class API(object):
             return info[0].get('value')
 
         def instances(self, entity_uuid):
-            uri = '{}/*/runtime/*/entity/{}/instance/*'.format(self.store.aroot, entity_uuid)
+            uri = '{}/*/runtime/*/entity/{}/instance/**'.format(self.store.aroot, entity_uuid)
             info = self.store.actual.get(uri)
             if info is None:
                 return None
@@ -927,25 +926,25 @@ class API(object):
 
             if node_uuid is not None:
                 entity_list = {}
-                uri = '{}/{}/runtime/*/entity/*'.format(self.store.aroot, node_uuid)
+                uri = '{}/{}/runtime/*/entity/**'.format(self.store.aroot, node_uuid)
                 response = self.store.actual.resolveAll(uri)
                 for i in response:
                     rid = i[0]
-                    en_uuid = rid.split('/')[7]
+                    en_uuid = rid.split('/')[8]
                     if en_uuid not in entity_list:
                         entity_list.update({en_uuid: []})
-                    if len(rid.split('/')) == 8 and en_uuid in entity_list:
+                    if len(rid.split('/')) == 9 and en_uuid in entity_list:
                         pass
-                    if len(rid.split('/')) == 10:
-                        entity_list.get(en_uuid).append(rid.split('/')[9])
+                    if len(rid.split('/')) == 11:
+                        entity_list.get(en_uuid).append(rid.split('/')[10])
 
                 return {node_uuid: entity_list}
 
             entities = {}
-            uri = '{}/*/runtime/*/entity/*'.format(self.store.aroot)
+            uri = '{}/*/runtime/*/entity/**'.format(self.store.aroot)
             response = self.store.actual.resolveAll(uri)
             for i in response:
-                node_id = i[0].split('/')[3]
+                node_id = i[0].split('/')[4]
                 elist = self.list(node_id)
                 entities.update({node_id: elist.get(node_id)})
             return entities
