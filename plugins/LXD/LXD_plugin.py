@@ -60,15 +60,15 @@ class LXD(RuntimePlugin):
         self.agent.logger.info('startRuntime()', ' LXD Plugin - Connecting to LXD')
         self.conn = Client()
         self.agent.logger.info('startRuntime()', '[ DONE ] LXD Plugin - Connecting to LXD')
-        uri = '{}/{}/*'.format(self.agent.dhome, self.HOME)
+        uri = '{}/{}/**'.format(self.agent.dhome, self.HOME)
         self.agent.logger.info('startRuntime()', ' LXD Plugin - Observing {} for entity'.format(uri))
         self.agent.dstore.observe(uri, self.__react_to_cache_entity)
 
-        uri = '{}/{}/*'.format(self.agent.dhome, self.HOME_FLAVOR)
+        uri = '{}/{}/**'.format(self.agent.dhome, self.HOME_FLAVOR)
         self.agent.logger.info('startRuntime()', ' LXD Plugin - Observing {} for flavor'.format(uri))
         self.agent.dstore.observe(uri, self.__react_to_cache_flavor)
 
-        uri = '{}/{}/*'.format(self.agent.dhome, self.HOME_IMAGE)
+        uri = '{}/{}/**'.format(self.agent.dhome, self.HOME_IMAGE)
         self.agent.logger.info('startRuntime()', ' LXD Plugin - Observing {} for image'.format(uri))
         self.agent.dstore.observe(uri, self.__react_to_cache_image)
 

@@ -252,11 +252,11 @@ class WSStore(object):
 
 class FOSStore(object):
     def __init__(self, aroot, droot, home, host):
-        self.aroot = aroot  # 'dfos://<sys-id>'
-        self.ahome = str('{}/{}'.format(aroot, home))  # str('dfos://<sys-id>/{}' % self.uuid)
+        self.aroot = aroot  # '//dfos/<sys-id>'
+        self.ahome = str('{}/{}'.format(aroot, home))  # str('//dfos/<sys-id>/{}' % self.uuid)
 
-        self.droot = droot  # 'dfos://<sys-id>'
-        self.dhome = str('{}/{}'.format(droot, home))  # str('dfos://<sys-id>/{}' % self.uuid)
+        self.droot = droot  # '//dfos/<sys-id>'
+        self.dhome = str('{}/{}'.format(droot, home))  # str('//dfos/<sys-id>/{}' % self.uuid)
 
         self.actual = WSStore('a{}'.format(home), self.aroot, self.ahome, host)
         self.desired = WSStore('d{}'.format(home), self.droot, self.dhome, host)
@@ -317,8 +317,8 @@ class vimconnector(vimconn.vimconnector):
 
         self.home = home
         self.root = root
-        self.aroot = 'afos://{}'.format(self.root)
-        self.droot = 'dfos://{}'.format(self.root)
+        self.aroot = '//afos/{}'.format(self.root)
+        self.droot = '//dfos/{}'.format(self.root)
         self.sid = sid
 
         if not self.url:
@@ -1083,7 +1083,7 @@ class vimconnector(vimconn.vimconnector):
         # In OpenStack Identity, a project must be owned by a specific domain.
         #
         # in fog05 we can map tenant as the system-id?
-        # or have a root like afos://<sys-id>/<tenant-id>/<node-id>?
+        # or have a root like //afos/<sys-id>/<tenant-id>/<node-id>?
         # but a node can be part of different tenant
         raise vimconnNotImplemented("Should have implemented this")
 
@@ -1384,7 +1384,7 @@ class vimconnector(vimconn.vimconnector):
             public: "yes" or "no"
             metadata: metadata of the image
         """
-        # TODO writing image information to dfos://<sys-id>/<node-id>/runtime/<r id>/image/<image_id>
+        # TODO writing image information to //dfos/<sys-id>/<node-id>/runtime/<r id>/image/<image_id>
         self.logger.debug('Adding new image {}'.format(image_dict))
         if "disk_format" in image_dict:
             disk_format = image_dict.get("disk_format")

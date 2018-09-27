@@ -72,6 +72,7 @@ def plugin_list(node_uuid=None):
 
 # Network
 
+
 @app.route('/network/remove/<net_uuid>/<node_uuid>', methods=['DELETE'])
 def network_remove(net_uuid, node_uuid=None):
     if node_uuid is None:
@@ -101,16 +102,37 @@ def network_list(node_uuid=None):
 
 # Entity
 
+
+@app.route('/entity/<entity_uuid>', methods=['GET'])
+def entity_info(entity_uuid):
+    v = api.entity.info(entity_uuid)
+    return json.dumps(v)
+
+
+@app.route('/entity/<entity_uuid>/instances', methods=['GET'])
+def entity_instances(entity_uuid):
+    v = api.entity.instances(entity_uuid)
+    return json.dumps(v)
+
+
+@app.route('/entity/<entity_uuid>/instance/<instance_uuid>', methods=['GET'])
+def entity_instance_info(entity_uuid, instance_uuid):
+    v = api.entity.instance_info(entity_uuid, instance_uuid)
+    return json.dumps(v)
+
+
 @app.route('/entity/define/<node_uuid>', methods=['PUT'])
 def entity_define(node_uuid):
     manifest = request.form.get('manifest')
-    v = {'response': api.entity.define(manifest, node_uuid,wait=True)}
+    v = {'response': api.entity.define(manifest, node_uuid, wait=True)}
     return json.dumps(v)
+
 
 @app.route('/entity/undefine/<entity_uuid>/<node_uuid>', methods=['DELETE'])
 def entity_undefine(entity_uuid, node_uuid):
     v = {'response': api.entity.undefine(entity_uuid, node_uuid, wait=True)}
     return json.dumps(v)
+
 
 @app.route('/entity/configure/<entity_uuid>/<node_uuid>', methods=['PATCH'])
 def entity_configure(entity_uuid, node_uuid):
@@ -122,6 +144,7 @@ def entity_configure(entity_uuid, node_uuid):
 def entity_clean(entity_uuid, instance_uuid,node_uuid):
     v = {'response': api.entity.clean(entity_uuid, node_uuid, instance_uuid, wait=True)}
     return json.dumps(v)
+
 
 @app.route('/entity/run/<entity_uuid>/<instance_uuid>/<node_uuid>', methods=['PATCH'])
 def entity_run(entity_uuid, instance_uuid,node_uuid):
@@ -145,6 +168,7 @@ def entity_pause(entity_uuid, instance_uuid,node_uuid):
 def entity_resume(entity_uuid, instance_uuid,node_uuid):
     v = {'response': api.entity.resume(entity_uuid, node_uuid, instance_uuid, wait=True)}
     return json.dumps(v)
+
 
 @app.route('/entity/migrate/<entity_uuid>/<instance_uuid>/<node_uuid>/<destination_node_uuid>', methods=['PATCH'])
 def entity_migrate(entity_uuid, instance_uuid, node_uuid, destination_node_uuid):

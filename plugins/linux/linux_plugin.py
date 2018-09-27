@@ -64,7 +64,6 @@ class Linux(OSPlugin):
         self.nw_devices = self.__get_nw_devices()
         self.accelerator_devices = self.__get_acc_devices()
 
-
     def get_base_path(self):
         return '/opt/fos'
 
@@ -201,7 +200,10 @@ class Linux(OSPlugin):
 
     def get_processor_information(self):
         cpu = []
-        num_cpu = min(psutil.cpu_count(), len(psutil.cpu_freq(percpu=True)))
+        num_cpu = psutil.cpu_count()
+        if len(psutil.cpu_freq(percpu=True)) != 0:
+            num_cpu = \
+                min(psutil.cpu_count(), len(psutil.cpu_freq(percpu=True)))
         for i in range(0, num_cpu):
             model = self.__get_processor_name()
             try:

@@ -21,14 +21,14 @@ import sys
 import json
 import uuid
 from fog05.DLogger import DLogger
-from dstore import Store
+from .store import Store
 from fog05.PluginLoader import PluginLoader
 from fog05.interfaces.Agent import Agent
-
+from yaks_api import api
 
 class FosAgent(Agent):
 
-    def __init__(self, debug=True, plugins_path=None):
+    def __init__(self, debug=True, plugins_path=None, configuration=None):
         print(' _____            ____   ____\n'
               '|  ___|__   __ _ / __ \ | ___|\n'
               '| |_ / _ \ / _` | | /| ||___ \ \n'
@@ -50,7 +50,12 @@ class FosAgent(Agent):
         try:
 
             self.logger.info('__init__()', 'Plugins Dir: {}'.format(self.__PLUGINDIR))
-            self.config = self.__load_configuration('etc/agent.ini')
+
+            self.conf_file = configuration
+            if configuration is None:
+                self.conf_file = 'etc/agent.ini'
+
+            self.config = self.__load_configuration(self.conf_file)
 
             self.pl = PluginLoader(self.__PLUGINDIR)
             self.pl.get_plugins()
@@ -68,6 +73,7 @@ class FosAgent(Agent):
             self.sys_id = 0
             self.__PLUGIN_AUTOLOAD = True
             self.__autoload_list = []
+            self.yaks_server = '127.0.0.1'
 
             # Configuration Parsing
 
@@ -75,7 +81,9 @@ class FosAgent(Agent):
                 if 'SYSID' in self.config['agent']:
                     self.sys_id = int(self.config['agent']['SYSID'])
                 if 'UUID' in self.config['agent']:
-                    self.uuid = self.config['agent']['uuid']
+                    self.uuid = self.config['agent']['UUID']
+                if 'YAKS' in self.config['agent']:
+                    self.yaks_server = self.config['agent']['YAKS']
             if 'plugins' in self.config:
                 if 'autoload' in self.config['plugins']:
                     self.__PLUGIN_AUTOLOAD = self.config['plugins'].getboolean('autoload')
@@ -83,19 +91,22 @@ class FosAgent(Agent):
                     self.__autoload_list = json.loads(self.config['plugins']['auto'])
             sid = str(self.uuid)
 
+            self.yaks = api.YAKS(self.yaks_server)
+
             self.logger.info('__init__()', '[ INIT ] #############################')
             self.logger.info('__init__()', '[ INIT ] fog05 Agent configuration is:')
             self.logger.info('__init__()', '[ INIT ] SYSID: {}'.format(self.sys_id))
             self.logger.info('__init__()', '[ INIT ] UUID: {}'.format(self.uuid))
+            self.logger.info('__init__()', '[ INIT ] YAKS SEVER: {}'.format(self.yaks_server))
             self.logger.info('__init__()', '[ INIT ] Plugins directory : {}'.format(self.__PLUGINDIR))
             self.logger.info('__init__()', '[ INIT ] AUTOLOAD Plugins: {}'.format(self.__PLUGIN_AUTOLOAD))
             self.logger.info('__init__()', '[ INIT ] Plugins to autoload: {} (empty means all plugin in the directory)'.format(' '.join(self.__autoload_list)))
             self.logger.info('__init__()', '[ INIT ] #############################')
             '''
-            self.sroot = 'sfos://{}'.format(self.sys_id)
+            self.sroot = '//sfos/{}'.format(self.sys_id)
             self.shome = '{}/{}'.format(self.sroot, 'info')
             self.logger.info('__init__()', '[ INIT ] Creating System Info Store ROOT: {} HOME: {}'.format(self.sroot, self.shome))
-            self.sstore = Store(sid, self.sroot, self.shome, 1024)
+            self.sstore = Store(self.yaks, self.sroot, self.shome, 1024)
             self.logger.info('__init__()', '[ INIT ] fog05 System Information loading')
 
             self.users = []
@@ -158,17 +169,17 @@ class FosAgent(Agent):
             self.logger.info('__init__()', '[ INIT ] #############################')
             '''
             # Desired Store. containing the desired state
-            self.droot = 'dfos://{}'.format(self.sys_id)
+            self.droot = '//dfos/{}'.format(self.sys_id)
             self.dhome = '{}/{}'.format(self.droot, sid)
             self.logger.info('__init__()', '[ INIT ] Creating Desired State Store ROOT: {} HOME: {}'.format(self.droot, self.dhome))
-            self.dstore = Store(sid, self.droot, self.dhome, 1024)
+            self.dstore = Store(self.yaks, self.droot, self.dhome, 1024)
             self.logger.info('__init__()', '[ DONE ] Creating Desired State Store')
 
             # Actual Store, containing the Actual State
-            self.aroot = 'afos://{}'.format(self.sys_id)
+            self.aroot = '//afos/{}'.format(self.sys_id)
             self.ahome = '{}/{}'.format(self.aroot, sid)
             self.logger.info('__init__()', '[ INIT ] Creating Actual State Store ROOT: {} HOME: {}'.format(self.aroot, self.ahome))
-            self.astore = Store(sid, self.aroot, self.ahome, 1024)
+            self.astore = Store(self.yaks, self.aroot, self.ahome, 1024)
             self.logger.info('__init__()', '[ DONE ] Creating Actual State Store')
 
             self.logger.info('__init__()', '[ INIT ] Populating Actual Store with data from OS Plugin')
@@ -458,13 +469,13 @@ class FosAgent(Agent):
                 json_data = json.dumps(entity_definition)
 
                 self.logger.info('__application_onboarding()', ' Define VM')
-                uri = 'dfos://<sys-id>/{}/runtime/{}/entity/{}'.format(node_uuid, kvm.get('uuid'), vm_uuid)
+                uri = '//dfos/<sys-id>/{}/runtime/{}/entity/{}'.format(node_uuid, kvm.get('uuid'), vm_uuid)
                 self.dstore.put(uri, json_data)
 
                 while True:
                     self.logger.info('__application_onboarding()', ' Waiting VM to be DEFINED')
                     time.sleep(1)
-                    uri = 'afos://<sys-id>/{}/runtime/{}/entity/{}'.format(node_uuid, kvm.get('uuid'), vm_uuid)
+                    uri = '//afos/<sys-id>/{}/runtime/{}/entity/{}'.format(node_uuid, kvm.get('uuid'), vm_uuid)
                     vm_info = json.loads(self.astore.get(uri))
                     if vm_info is not None and vm_info.get('status') == 'defined':
                         break
@@ -473,26 +484,26 @@ class FosAgent(Agent):
                 instance_uuid = str(uuid.uuid4())
 
                 self.logger.info('__application_onboarding()', 'Configure VM')
-                uri = 'dfos://<sys-id>/{}/runtime/{}/entity/{}/instance/{}#status=configure'.format(node_uuid, kvm.get('uuid'), vm_uuid, instance_uuid)
+                uri = '//dfos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}#status=configure'.format(node_uuid, kvm.get('uuid'), vm_uuid, instance_uuid)
                 self.dstore.dput(uri)
 
                 while True:
                     self.logger.info('__application_onboarding()', 'Waiting VM to be CONFIGURED')
                     time.sleep(1)
-                    uri = 'afos://<sys-id>/{}/runtime/{}/entity/{}/instance/{}'.format(node_uuid, kvm.get('uuid'), vm_uuid, instance_uuid)
+                    uri = '//afos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}'.format(node_uuid, kvm.get('uuid'), vm_uuid, instance_uuid)
                     vm_info = json.loads(self.astore.get(uri))
                     if vm_info is not None and vm_info.get('status') == 'configured':
                         break
                 self.logger.info('__application_onboarding()', '[ DONE ] VM Configured')
 
                 self.logger.info('__application_onboarding()', 'Staring VM')
-                uri = 'dfos://<sys-id>/{}/runtime/{}/entity/{}/instance/{}#status=run'.format(node_uuid, kvm.get('uuid'), vm_uuid, instance_uuid)
+                uri = '//dfos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}#status=run'.format(node_uuid, kvm.get('uuid'), vm_uuid, instance_uuid)
                 self.dstore.dput(uri)
 
                 while True:
                     self.logger.info('__application_onboarding()', 'Waiting VM to be RUN')
                     time.sleep(1)
-                    uri = 'afos://<sys-id>/{}/runtime/{}/entity/{}/instance/{}'.format(node_uuid, kvm.get('uuid'), vm_uuid, instance_uuid)
+                    uri = '//afos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}'.format(node_uuid, kvm.get('uuid'), vm_uuid, instance_uuid)
                     vm_info = json.loads(self.astore.get(uri))
                     if vm_info is not None and vm_info.get('status') == 'run':
                         break
@@ -516,13 +527,13 @@ class FosAgent(Agent):
                 json_data = json.dumps(entity_definition)
 
                 self.logger.info('__application_onboarding()', 'Define Native')
-                uri = 'dfos://<sys-id>/{}/runtime/{}/entity/{}'.format(node_uuid, native.get('uuid'), na_uuid)
+                uri = '//dfos/<sys-id>/{}/runtime/{}/entity/{}'.format(node_uuid, native.get('uuid'), na_uuid)
                 self.dstore.put(uri, json_data)
 
                 while True:
                     self.logger.info('__application_onboarding()', 'Native to be DEFINED')
                     time.sleep(1)
-                    uri = 'afos://<sys-id>/{}/runtime/{}/entity/{}'.format(node_uuid, native.get('uuid'), na_uuid)
+                    uri = '//afos/<sys-id>/{}/runtime/{}/entity/{}'.format(node_uuid, native.get('uuid'), na_uuid)
                     vm_info = json.loads(self.astore.get(uri))
                     if vm_info is not None and vm_info.get('status') == 'defined':
                         break
@@ -531,26 +542,26 @@ class FosAgent(Agent):
                 instance_uuid = str(uuid.uuid4())
 
                 self.logger.info('__application_onboarding()', ' Configure Native')
-                uri = 'dfos://<sys-id>/{}/runtime/{}/entity/{}/instance/{}#status=configure'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
+                uri = '//dfos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}#status=configure'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
                 self.dstore.dput(uri)
 
                 while True:
                     self.logger.info('__application_onboarding()', 'Native to be CONFIGURED')
                     time.sleep(1)
-                    uri = 'afos://<sys-id>/{}/runtime/{}/entity/{}/instance/{}'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
+                    uri = '//afos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
                     vm_info = json.loads(self.astore.get(uri))
                     if vm_info is not None and vm_info.get('status') == 'configured':
                         break
                 self.logger.info('__application_onboarding()', '[ DONE ] Native CONFIGURED')
 
                 self.logger.info('__application_onboarding()', 'Starting Native')
-                uri = 'dfos://<sys-id>/{}/runtime/{}/entity/{}/instance/{}#status=run'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
+                uri = '//dfos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}#status=run'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
                 self.dstore.dput(uri)
 
                 while True:
                     self.logger.info('__application_onboarding()', 'Native to be RUN')
                     time.sleep(1)
-                    uri = 'afos://<sys-id>/{}/runtime/{}/entity/{}/instance/{}'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
+                    uri = '//afos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
                     vm_info = json.loads(self.astore.get(uri))
                     if vm_info is not None and vm_info.get('status') == 'run':
                         break
@@ -570,13 +581,13 @@ class FosAgent(Agent):
                 json_data = json.dumps(entity_definition)
 
                 self.logger.info('__application_onboarding()', 'Define ROS2')
-                uri = 'dfos://<sys-id>/{}/runtime/{}/entity/{}'.format(node_uuid, native.get('uuid'), na_uuid)
+                uri = '//dfos/<sys-id>/{}/runtime/{}/entity/{}'.format(node_uuid, native.get('uuid'), na_uuid)
                 self.dstore.put(uri, json_data)
 
                 while True:
                     self.logger.info('__application_onboarding()', 'ROS2 to be DEFINED')
                     time.sleep(1)
-                    uri = 'afos://<sys-id>/{}/runtime/{}/entity/{}'.format(node_uuid, native.get('uuid'), na_uuid)
+                    uri = '//afos/<sys-id>/{}/runtime/{}/entity/{}'.format(node_uuid, native.get('uuid'), na_uuid)
                     vm_info = json.loads(self.astore.get(uri))
                     if vm_info is not None and vm_info.get('status') == 'defined':
                         break
@@ -584,26 +595,26 @@ class FosAgent(Agent):
 
                 instance_uuid = str(uuid.uuid4())
                 self.logger.info('__application_onboarding()', 'Configure Native')
-                uri = 'dfos://<sys-id>/{}/runtime/{}/entity/{}/instance/{}#status=configure'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
+                uri = '//dfos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}#status=configure'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
                 self.dstore.dput(uri)
 
                 while True:
                     self.logger.info('__application_onboarding()', 'ROS2 to be CONFIGURED')
                     time.sleep(1)
-                    uri = 'afos://<sys-id>/{}/runtime/{}/entity/{}/instance/{}'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
+                    uri = '//afos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
                     vm_info = json.loads(self.astore.get(uri))
                     if vm_info is not None and vm_info.get('status') == 'configured':
                         break
                 self.logger.info('__application_onboarding()', '[ DONE ] ROS2 CONFIGURED')
 
                 self.logger.info('__application_onboarding()', 'Starting ROS2')
-                uri = 'dfos://<sys-id>/{}/runtime/{}/entity/{}/instance/{}#status=run'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
+                uri = '//dfos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}#status=run'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
                 self.dstore.dput(uri)
 
                 while True:
                     self.logger.info('__application_onboarding()', 'ROS2 to be RUN')
                     time.sleep(1)
-                    uri = 'afos://<sys-id>/{}/runtime/{}/entity/{}/instance/{}'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
+                    uri = '//afos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
                     vm_info = json.loads(self.astore.get(uri))
                     if vm_info is not None and vm_info.get('status') == 'run':
                         break
@@ -705,7 +716,7 @@ class FosAgent(Agent):
 
     def run(self):
 
-        uri = '{}/onboard/*'.format(self.dhome)
+        uri = '{}/onboard/**'.format(self.dhome)
         self.dstore.observe(uri, self.__react_to_onboarding)
         self.logger.info('run()', 'fosAgent Observing for onboarding on: {}'.format(uri))
 
@@ -722,7 +733,7 @@ class FosAgent(Agent):
         self.logger.info('run()', 'fosAgent Observing entities on: {}'.format(uri))
         '''
 
-        self.logger.info('run()','[ DONE ] fosAgent Up and Running')
+        self.logger.info('run()', '[ DONE ] fosAgent Up and Running')
         return self
 
     def stop(self):
