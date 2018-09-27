@@ -16,7 +16,7 @@
 #!/usr/bin/env python3
 
 
-from dstore import Store
+from fog05.store import Store
 
 import uuid
 import argparse
@@ -28,11 +28,11 @@ import time
 
 class FOSStore(object):
     def __init__(self, aroot, droot, home):
-        self.aroot = aroot #'dfos://<sys-id>'
-        self.ahome = str('{}/{}'.format(aroot, home)) #str('dfos://<sys-id>/%s' % self.uuid)
+        self.aroot = aroot #'//dfos/<sys-id>'
+        self.ahome = str('{}/{}'.format(aroot, home)) #str('//dfos/<sys-id>/%s' % self.uuid)
 
-        self.droot = droot  # 'dfos://<sys-id>'
-        self.dhome = str('{}/{}'.format(droot, home))  # str('dfos://<sys-id>/%s' % self.uuid)
+        self.droot = droot  # '//dfos/<sys-id>'
+        self.dhome = str('{}/{}'.format(droot, home))  # str('//dfos/<sys-id>/%s' % self.uuid)
 
         self.actual = Store(home, self.aroot, self.ahome, 1024)
         self.desired = Store(home, self.droot, self.dhome, 1024)
@@ -48,8 +48,8 @@ class FOSGetCli(object):
         self.agent = None
         self.store = None
         self.sys_id = 0
-        self.aroot = 'afos://{}'.format(self.sys_id)
-        self.droot = 'dfos://{}'.format(self.sys_id)
+        self.aroot = '//afos/{}'.format(self.sys_id)
+        self.droot = '//dfos/{}'.format(self.sys_id)
         self.uuid = str(uuid.uuid4())
 
 
