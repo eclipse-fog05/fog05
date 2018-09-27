@@ -50,13 +50,13 @@ class brctl(NetworkPlugin):
         '''
         should listen on:
         
-        - //dfos/<sys-id>/<node-id>/network/<myuuid>/networks/*
-        - //dfos/<sys-id>/<node-id>/network/<myuuid>/bridges/*
-        - //dfos/<sys-id>/<node-id>/network/<myuuid>/interfaces/*
+        - //dfos/<sys-id>/<node-id>/network/<myuuid>/networks/**
+        - //dfos/<sys-id>/<node-id>/network/<myuuid>/bridges/**
+        - //dfos/<sys-id>/<node-id>/network/<myuuid>/interfaces/**
         
         '''
 
-        uri = '{}/{}/networks/*'.format(self.agent.dhome, self.HOME)
+        uri = '{}/{}/networks/**'.format(self.agent.dhome, self.HOME)
         self.agent.dstore.observe(uri, self.__react_to_cache_networks)
         self.agent.logger.info('startRuntime()', ' bridge-utils Plugin - Observing {}'.format(uri))
 

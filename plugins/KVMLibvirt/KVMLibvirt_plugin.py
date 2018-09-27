@@ -59,15 +59,15 @@ class KVMLibvirt(RuntimePlugin):
         self.agent.logger.info('startRuntime()', ' KVM Plugin - Connecting to KVM')
         self.conn = libvirt.open('qemu:///system')
         self.agent.logger.info('startRuntime()', '[ DONE ] KVM Plugin - Connecting to KVM')
-        uri = '{}/{}/*'.format(self.agent.dhome, self.HOME_ENTITY)
+        uri = '{}/{}/**'.format(self.agent.dhome, self.HOME_ENTITY)
         self.agent.logger.info('startRuntime()', ' KVM Plugin - Observing {} for entity'.format(uri))
         self.agent.dstore.observe(uri, self.__react_to_cache_entity)
 
-        uri = '{}/{}/*'.format(self.agent.dhome, self.HOME_FLAVOR)
+        uri = '{}/{}/**'.format(self.agent.dhome, self.HOME_FLAVOR)
         self.agent.logger.info('startRuntime()', ' KVM Plugin - Observing {} for flavor'.format(uri))
         self.agent.dstore.observe(uri, self.__react_to_cache_flavor)
 
-        uri = '{}/{}/*'.format(self.agent.dhome, self.HOME_IMAGE)
+        uri = '{}/{}/**'.format(self.agent.dhome, self.HOME_IMAGE)
         self.agent.logger.info('startRuntime()', ' KVM Plugin - Observing {} for image'.format(uri))
         self.agent.dstore.observe(uri, self.__react_to_cache_image)
 
