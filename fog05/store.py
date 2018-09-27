@@ -67,7 +67,7 @@ class Store(object):
 
     def observe(self, k, callback):
         def adapter_callback(values):
-            key, value = values[0].get('key'), values[0].get(values)
+            key, value = values[0].get('key'), values[0].get('value')
             callback(key, value, 0)
         self.access.subscribe(k, adapter_callback)
 
