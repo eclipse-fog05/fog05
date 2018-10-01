@@ -162,7 +162,7 @@ class API(object):
                             # print('instances {}'.format(instances))
                             for inst in instances:
                                 # print('I should stop {} -> {} -> {}'.format(inst,eid, nid))
-                                self.entity.stop(eid, nid, inst, wait=True)
+                                #self.entity.stop(eid, nid, inst, wait=True)
                                 # print('I should clean {} -> {} -> {}'.format(inst, eid, nid))
                                 self.entity.clean(eid, nid, inst, wait=True)
                             # print('I should undefine {} -> {}'.format(eid, nid))
