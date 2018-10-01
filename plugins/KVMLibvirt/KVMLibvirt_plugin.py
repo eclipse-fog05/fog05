@@ -293,9 +293,14 @@ class KVMLibvirt(RuntimePlugin):
 
                 vm_xml = self.__generate_dom_xml(instance, flavor, img)
 
+                vendor_conf = self.__generate_vendor_data(instance_uuid, entity_uuid, self.agent.get_os_plugin().get_uuid())
+                vendor_filename = 'vendor_{}.yaml'.format(instance_uuid)
+                self.agent.get_os_plugin().store_file(vendor_conf, self.BASE_DIR, vendor_filename)
+                vendor_filename = os.path.join(self.BASE_DIR, vendor_filename)
                 ### creating cloud-init initial drive TODO: check all the possibilities provided by OSM
-                conf_cmd = '{} --hostname {} --uuid {}'.format(os.path.join(self.DIR, 'templates',
-                                                                            'create_config_drive.sh'), entity.name, entity_uuid)
+                conf_cmd = '{} --hostname {} --uuid {} --vendor-data {}'.format(os.path.join(self.DIR, 'templates',
+                                                                            'create_config_drive.sh'), entity.name, entity_uuid,
+                                                                              vendor_filename)
 
                 rm_temp_cmd = 'rm'
                 if instance.user_file is not None and instance.user_file != '':
@@ -308,6 +313,7 @@ class KVMLibvirt(RuntimePlugin):
                     self.agent.get_os_plugin().store_file(instance.ssh_key, self.BASE_DIR, key_filename)
                     key_filename = os.path.join(self.BASE_DIR, key_filename)
                     conf_cmd = conf_cmd + ' --ssh-key {}'.format(key_filename)
+
 
                 conf_cmd = conf_cmd + ' {}'.format(instance.cdrom)
                 #############
@@ -1109,6 +1115,12 @@ class KVMLibvirt(RuntimePlugin):
                                cpu=flavor.get('cpu'), disk_image=instance.disk,
                                iso_image=instance.cdrom, networks=instance.networks, format=image.get('format'))
         return vm_xml
+
+    def __generate_vendor_data(self, instanceid, entityid, nodeid):
+        vendor_yaml = self.agent.get_os_plugin().read_file(os.path.join(self.DIR, 'templates', 'vendor_data.yaml'))
+        vendor_conf = Environment().from_string(vendor_yaml)
+        vendor_conf = vendor_conf.render(instanceid=instanceid, nodeid=nodeid, entityid=entityid)
+        return vendor_conf
 
     def __update_actual_store(self, uri, value):
         uri = '{}/{}'.format(self.agent.ahome, uri)
