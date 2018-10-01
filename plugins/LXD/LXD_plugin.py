@@ -394,6 +394,10 @@ class LXD(RuntimePlugin):
                                                      'Entity {} is not in DEFINED state'.format(entity_uuid))
         else:
             instance = entity.get_instance(instance_uuid)
+            if instance.get_state() == State.RUNNING:
+                self.agent.logger.error('run_entity()',
+                                        'Native Plugin - Instance already running')
+                return True
             if instance.get_state() != State.CONFIGURED:
                 self.agent.logger.error('clean_entity()',
                                         'LXD Plugin - Instance state is wrong, or transition not allowed')
@@ -1112,8 +1116,6 @@ class LXD(RuntimePlugin):
         r = {
             'define': self.define_entity,
             'configure': self.configure_entity,
-            'clean': self.clean_entity,
-            'undefine': self.undefine_entity,
             'stop': self.stop_entity,
             'resume': self.resume_entity,
             'run': self.run_entity,
