@@ -31,7 +31,6 @@ class NativeEntityInstance(EntityInstance):
         self.source = source
         self.process = None
 
-
     def on_configured(self):
         self.state = State.CONFIGURED
 
