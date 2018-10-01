@@ -128,7 +128,6 @@ class API(object):
                 # print(res)
                 if not res:
                     raise Exception('Error on define entity {} -> {} on {}   (RES={})'.format(manifest.get('uuid'), mf.get('uuid'), component.get('node'), res))
-                time.sleep(0.5)
                 c_i_uuid = '{}'.format(uuid.uuid4())
                 res = self.entity.configure(mf.get('uuid'), component.get('node'), instance_uuid=c_i_uuid, wait=True)
                 # print(res)
@@ -136,7 +135,6 @@ class API(object):
                     raise Exception('Error on define entity {} -> {} on {}   (RES={})'.format(manifest.get('uuid'), mf.get('uuid'), component.get('node'), res))
                 res = self.entity.run(mf.get('uuid'), component.get('node'), instance_uuid=c_i_uuid, wait=True)
                 # print(res)
-                time.sleep(2)
                 if not res:
                     raise Exception('Error on define entity {} -> {} on {}   (RES={})'.format(manifest.get('uuid'), mf.get('uuid'), component.get('node'), res))
                 instances_uuids.update({mf.get('uuid'): c_i_uuid})
@@ -486,11 +484,11 @@ class API(object):
                     print('No network plugin loaded on node, aborting')
                     return False
                 brctl = nws[0]  # will use the first plugin
-                uri = '{}/{}/network/{}/networks/{}'.format(self.store.droot, node_uuid, brctl, net_uuid)
+                uri = '{}/{}/network/{}/networks/{}#status=undefine'.format(self.store.droot, node_uuid, brctl, net_uuid)
             else:
-                uri = '{}/*/network/*/networks/{}'.format(self.store.droot, net_uuid)
+                uri = '{}/*/network/*/networks/{}#status=undefine'.format(self.store.droot, net_uuid)
 
-            res = self.store.desired.remove(uri)
+            res = self.store.desired.dput(uri)
             if res:
                 return True
             else:
@@ -588,7 +586,7 @@ class API(object):
 
         def __wait_atomic_entity_state_change(self, node_uuid, handler_uuid, entity_uuid, state):
             while True:
-                time.sleep(1)
+                time.sleep(0.005)
                 uri = '{}/{}/runtime/{}/entity/{}'.format(self.store.aroot, node_uuid, handler_uuid, entity_uuid)
                 data = self.store.actual.get(uri)
                 if data is not None:
@@ -598,7 +596,7 @@ class API(object):
 
         def __wait_atomic_entity_instance_state_change(self, node_uuid, handler_uuid, entity_uuid, instance_uuid, state):
             while True:
-                time.sleep(1)
+                time.sleep(0.005)
                 uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.store.aroot, node_uuid, handler_uuid, entity_uuid, instance_uuid)
                 data = self.store.actual.get(uri)
                 if data is not None:
@@ -674,9 +672,8 @@ class API(object):
             :return: boolean
             '''
             handler = self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
-            uri = '{}/{}/runtime/{}/entity/{}'.format(self.store.droot, node_uuid, handler, entity_uuid)
-
-            res = self.store.desired.remove(uri)
+            uri = '{}/{}/runtime/{}/entity/{}#status=undefine'.format(self.store.droot, node_uuid, handler, entity_uuid)
+            res = self.store.desired.dput(uri)
             return True
             # if res >= 0:
             #     return True
@@ -720,7 +717,7 @@ class API(object):
             :return: boolean
             '''
             handler = self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
-            uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.store.droot, node_uuid, handler, entity_uuid, instance_uuid)
+            uri = '{}/{}/runtime/{}/entity/{}/instance/{}#status=clean'.format(self.store.droot, node_uuid, handler, entity_uuid, instance_uuid)
             res = self.store.desired.remove(uri)
             # if res >= 0:
             #     return True
@@ -747,7 +744,6 @@ class API(object):
                 if wait:
                     state = "run"
                     while True:
-                        time.sleep(1)
                         uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.store.aroot, node_uuid, handler, entity_uuid, instance_uuid)
                         data = self.store.actual.get(uri)
                         if data is not None:
@@ -994,9 +990,9 @@ class API(object):
             '''
 
             if node_uuid is None:
-                uri = '{}/*/runtime/*/image/{}'.format(self.store.droot, image_uuid)
+                uri = '{}/*/runtime/*/image/{}#status=undefine'.format(self.store.droot, image_uuid)
             else:
-                uri = '{}/{}/runtime/*/image/{}'.format(self.store.droot, node_uuid, image_uuid)
+                uri = '{}/{}/runtime/*/image/{}#status=undefine'.format(self.store.droot, node_uuid, image_uuid)
             res = self.store.desired.remove(uri)
             if res:
                 return True
@@ -1005,6 +1001,13 @@ class API(object):
 
         def search(self, search_dict, node_uuid=None):
             pass
+
+        def list(self, node_uuid=None):
+
+            uri = '{}/*/runtime/*/image/'
+            if node_uuid:
+                uri = '{}/{}/runtime/*/image/**'
+            return self.store.actual.getAll(uri)
 
     class Flavor(object):
         '''
@@ -1048,14 +1051,21 @@ class API(object):
             :return: boolean
             '''
             if node_uuid is None:
-                uri = '{}/*/runtime/*/flavor/{}'.format(self.store.droot, flavor_uuid)
+                uri = '{}/*/runtime/*/flavor/{}#status=undefine'.format(self.store.droot, flavor_uuid)
             else:
-                uri = '{}/{}/runtime/*/flavor/{}'.format(self.store.droot, node_uuid, flavor_uuid)
+                uri = '{}/{}/runtime/*/flavor/{}#status=undefine'.format(self.store.droot, node_uuid, flavor_uuid)
             res = self.store.desired.remove(uri)
             if res:
                 return True
             else:
                 return False
+
+        def list(self, node_uuid=None):
+
+            uri = '{}/*/runtime/*/flavor/'
+            if node_uuid:
+                uri = '{}/{}/runtime/*/flavor/**'
+            return self.store.actual.getAll(uri)
 
         def search(self, search_dict, node_uuid=None):
             pass

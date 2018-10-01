@@ -278,8 +278,10 @@ class brctl(NetworkPlugin):
             value = json.loads(value)
             action = value.get('status')
             react_func = self.__react(action)
-            if react_func is not None: # and value is None:
+            if react_func is not None and action != 'undefine':
                 react_func(**value)
+            elif action == 'undefine':
+                self.delete_virtual_network(uuid)
             #elif react_func is not None:
             #    value.update({'uuid': uuid})
             #    if action == 'define':
@@ -304,6 +306,7 @@ class brctl(NetworkPlugin):
         r = {
             'add': self.__parse_manifest_for_add,
             'remove': self.__parse_manifest_for_remove,
+            'undefine': self.delete_virtual_network
         }
 
         return r.get(action, None)
