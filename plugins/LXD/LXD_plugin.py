@@ -278,7 +278,10 @@ class LXD(RuntimePlugin):
                         user_data = self.__generate_custom_profile_userdata_configuration(instance.user_file)
                         custom_profile_for_instance.config = user_data
 
-                    conf = {'environment.FOSUUID': instance_uuid}
+                    conf = {'environment.FOSUUID': instance_uuid,
+                            'environment.FOSENTITYUUID': entity_uuid,
+                            'environment.FOSNODEUUID': self.agent.get_os_plugin().get_uuid()
+                            }
                     dev = self.__generate_custom_profile_devices_configuration(instance)
                     custom_profile_for_instance.config = conf
                     custom_profile_for_instance.devices = dev
