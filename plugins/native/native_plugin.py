@@ -408,7 +408,7 @@ class Native(RuntimePlugin):
                         self.agent.get_os_plugin().execute_command('sudo pkill -9 -P {}'.format(pid))
                         if self.agent.get_os_plugin().check_if_pid_exists(pid):
                             self.agent.get_os_plugin().send_sig_int(pid)
-                            time.sleep(10)
+                            time.sleep(3)
                         if self.agent.get_os_plugin().check_if_pid_exists(pid):
                             self.agent.get_os_plugin().send_sig_kill(pid)
 
@@ -420,7 +420,7 @@ class Native(RuntimePlugin):
                         self.agent.get_os_plugin().execute_command('sudo pkill -9 -P {}'.format(pid))
                         if self.agent.get_os_plugin().check_if_pid_exists(pid):
                             self.agent.get_os_plugin().send_sig_int(pid)
-                            time.sleep(10)
+                            time.sleep(3)
                         if self.agent.get_os_plugin().check_if_pid_exists(pid):
                             self.agent.get_os_plugin().send_sig_kill(pid)
 
@@ -433,7 +433,7 @@ class Native(RuntimePlugin):
                         self.agent.get_os_plugin().execute_command('sudo pkill -9 -P {}'.format(pid))
                     if self.agent.get_os_plugin().check_if_pid_exists(pid):
                         self.agent.get_os_plugin().send_sig_int(pid)
-                        time.sleep(10)
+                        time.sleep(3)
                     if self.agent.get_os_plugin().check_if_pid_exists(pid):
                         self.agent.get_os_plugin().send_sig_kill(pid)
 
