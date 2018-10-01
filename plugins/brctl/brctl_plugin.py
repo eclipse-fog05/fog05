@@ -21,6 +21,7 @@ from fog05.interfaces.NetworkPlugin import *
 from jinja2 import Environment
 import socket
 
+
 # TODO Plugins should not be aware of the Agent - The Agent is in OCaml no way to access his store, his logger and the OS plugin
 
 class brctl(NetworkPlugin):
@@ -34,7 +35,7 @@ class brctl(NetworkPlugin):
         self.netmap = {}
         self.agent.logger.info('__init__()', ' Hello from bridge-utils Plugin')
         self.BASE_DIR = os.path.join(self.agent.base_path, 'brctl')
-        #self.BASE_DIR = '/opt/fos/brctl'
+        # self.BASE_DIR = '/opt/fos/brctl'
         self.DHCP_DIR = 'dhcp'
         self.HOME = 'network/{}'.format(self.uuid)
         file_dir = os.path.dirname(__file__)
@@ -60,12 +61,10 @@ class brctl(NetworkPlugin):
         self.agent.dstore.observe(uri, self.__react_to_cache_networks)
         self.agent.logger.info('startRuntime()', ' bridge-utils Plugin - Observing {}'.format(uri))
 
-
-
     def create_virtual_interface(self, name, uuid):
-        #sudo ip link add type veth
-        #sudo ip link set dev veth1 addr 00:01:02:aa:bb:cc name vnic0
-        #sudo ip link add name vnic0 type veth peer name vnic0-vm
+        # sudo ip link add type veth
+        # sudo ip link set dev veth1 addr 00:01:02:aa:bb:cc name vnic0
+        # sudo ip link add name vnic0 type veth peer name vnic0-vm
 
         cmd = '{}{}'.format(name, name)
         self.agent.get_os_plugin().execute_command(cmd)
@@ -83,7 +82,8 @@ class brctl(NetworkPlugin):
 
     def create_virtual_network(self, network_name, net_uuid, ip_range=None, has_dhcp=False, gateway=None, manifest=None):
 
-        self.agent.logger.info('create_virtual_network()', 'Parameters network_name:{} net_uudi:{} ip_range:{} has_dhcp:{} gateway:{} manifest:{}'.format(network_name, net_uuid, ip_range, has_dhcp, gateway, manifest))
+        self.agent.logger.info('create_virtual_network()',
+                               'Parameters network_name:{} net_uudi:{} ip_range:{} has_dhcp:{} gateway:{} manifest:{}'.format(network_name, net_uuid, ip_range, has_dhcp, gateway, manifest))
 
         net = self.netmap.get(net_uuid, None)
         if net is not None:
@@ -100,13 +100,13 @@ class brctl(NetworkPlugin):
         info.update({'ip_range': ip_range})
         info.update({'gateway': gateway})
 
-        #TODO these information should be loaded from manifest
+        # TODO these information should be loaded from manifest
         info.update({'dns': ''})
         info.update({'dhcp_range': ''})
         info.update({'ip_type': ''})
         info.update({'network_type': 'vxlan'})
-        #brcmd = 'sudo brctl addbr {}-net', network_name)
-        #net_uuid = uuid
+        # brcmd = 'sudo brctl addbr {}-net', network_name)
+        # net_uuid = uuid
         #
         br_name = 'br-{}'.format(net_uuid.split('-')[0])
 
@@ -118,10 +118,7 @@ class brctl(NetworkPlugin):
         info.update({'vxlan_id': vxlan_id})
         info.update({'multicast_address': vxlan_mcast})
 
-
-
-
-        #self.agent.getOSPlugin().executeCommand(brcmd)
+        # self.agent.getOSPlugin().executeCommand(brcmd)
 
         if has_dhcp is True:
             address = self.__cird2block(ip_range)
@@ -153,7 +150,7 @@ class brctl(NetworkPlugin):
         raise NotImplemented
 
     def assign_interface_to_network(self, network_uuid, intf_uuid):
-        #brctl addif virbr0 vnet0
+        # brctl addif virbr0 vnet0
         intf = self.interfaces_map.get(intf_uuid, None)
         if intf is None:
             raise InterfaceNotExistingException('{} interface not exists'.format(intf_uuid))
@@ -167,7 +164,7 @@ class brctl(NetworkPlugin):
         return True
 
     def delete_virtual_interface(self, intf_uuid):
-        #ip link delete dev ${interface name}
+        # ip link delete dev ${interface name}
         intf = self.interfaces_map.get(intf_uuid, None)
         if intf is None:
             raise InterfaceNotExistingException('{} interface not exists'.format(intf_uuid))
@@ -189,8 +186,6 @@ class brctl(NetworkPlugin):
         self.agent.get_os_plugin().execute_command(rm_cmd)
         self.brmap.pop(br_uuid)
         return True
-
-
 
     def remove_interface_from_network(self, network_uuid, intf_uuid):
         net = self.netmap.get(network_uuid, None)
@@ -243,7 +238,6 @@ class brctl(NetworkPlugin):
         uri = '{}/{}/{}'.format(self.agent.ahome, self.HOME, net_uuid)
         self.agent.astore.remove(uri)
 
-
     def __update_actual_store(self, uri, value):
         uri = '{}/{}/{}'.format(self.agent.ahome, self.HOME, uri)
         value = json.dumps(value)
@@ -265,29 +259,18 @@ class brctl(NetworkPlugin):
         end = i | ((1 << host_bits) - 1)
 
         return socket.inet_ntoa(struct.pack('>I', start + 1)), socket.inet_ntoa(
-            struct.pack('>I', start + 2)), socket.inet_ntoa(struct.pack('>I', end - 1)),netmask
+            struct.pack('>I', start + 2)), socket.inet_ntoa(struct.pack('>I', end - 1)), netmask
 
     def __react_to_cache_networks(self, key, value, v):
         self.agent.logger.info('__react_to_cache_networks()', ' BRCTL Plugin - React to to URI: {} Value: {} Version: {}'.format(key, value, v))
-        if value is None and v is None:
-            self.agent.logger.info('__react_to_cache()', ' BRCTL Plugin - This is a remove for URI: {}'.format(key))
-            net_uuid = key.split('/')[-1]
-            self.delete_virtual_network(net_uuid)
-        else:
-            uuid = key.split('/')[-1]
-            value = json.loads(value)
-            action = value.get('status')
-            react_func = self.__react(action)
-            if react_func is not None and action != 'undefine':
-                react_func(**value)
-            elif action == 'undefine':
-                self.delete_virtual_network(uuid)
-            #elif react_func is not None:
-            #    value.update({'uuid': uuid})
-            #    if action == 'define':
-            #        react_func(**value)
-            #    else:
-            #        react_func(value)
+        uuid = key.split('/')[-1]
+        value = json.loads(value)
+        action = value.get('status')
+        react_func = self.__react(action)
+        if action == 'undefine':
+            self.delete_virtual_network(uuid)
+        if react_func is not None and action != 'undefine':
+            react_func(**value)
 
     def __parse_manifest_for_add(self, **kwargs):
         net_uuid = kwargs.get('uuid')
@@ -298,18 +281,20 @@ class brctl(NetworkPlugin):
         manifest = kwargs
         self.create_virtual_network(name, net_uuid, ip_range, has_dhcp, gw, manifest)
 
+
     def __parse_manifest_for_remove(self, **kwargs):
         net_uuid = kwargs.get('uuid')
         self.delete_virtual_network(net_uuid)
+
 
     def __react(self, action):
         r = {
             'add': self.__parse_manifest_for_add,
             'remove': self.__parse_manifest_for_remove,
-            'undefine': self.delete_virtual_network
         }
 
         return r.get(action, None)
+
 
     def __generate_vxlan_shutdown_script(self, net_uuid):
         template_sh = self.agent.get_os_plugin().read_file(os.path.join(self.DIR, 'templates', 'vxlan_destroy.sh'))
@@ -327,6 +312,7 @@ class brctl(NetworkPlugin):
 
         return file_name
 
+
     def __generate_dnsmaq_script(self, br_name, start_addr, end_addr, listen_addr, pid_file):
         template_sh = self.agent.get_os_plugin().read_file(os.path.join(self.DIR, 'templates', 'dnsmasq.sh'))
         dnsmasq_sh = Environment().from_string(template_sh)
@@ -338,6 +324,7 @@ class brctl(NetworkPlugin):
         self.agent.get_os_plugin().execute_command(chmod_cmd, True)
 
         return file_name
+
 
     def __generate_vxlan_script(self, net_uuid, manifest=None):
         template_sh = self.agent.get_os_plugin().read_file(os.path.join(self.DIR, 'templates', 'vxlan_creation.sh'))
