@@ -1116,8 +1116,6 @@ class LXD(RuntimePlugin):
         r = {
             'define': self.define_entity,
             'configure': self.configure_entity,
-            'clean': self.clean_entity,
-            'undefine': self.undefine_entity,
             'stop': self.stop_entity,
             'resume': self.resume_entity,
             'run': self.run_entity,
