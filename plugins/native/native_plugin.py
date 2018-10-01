@@ -237,6 +237,10 @@ class Native(RuntimePlugin):
                 self.agent.logger.error('clean_entity()', 'Native Plugin - Instance not found!!')
             else:
                 instance = entity.get_instance(instance_uuid)
+                if not instance:
+                    self.agent.logger.error('clean_entity()',
+                                            'Instance {} not existing'.format(instance_uuid))
+                    return False
                 if instance.get_state() != State.CONFIGURED:
                     self.agent.logger.error('clean_entity()',
                                             'has_instance Plugin - Instance state is wrong, or transition not allowed')
@@ -279,8 +283,8 @@ class Native(RuntimePlugin):
         else:
             instance = entity.get_instance(instance_uuid)
             if instance.get_state() != State.CONFIGURED:
-                self.agent.logger.error('clean_entity()',
-                                        'Native Plugin - Instance state is wrong, or transition not allowed')
+                self.agent.logger.error('run_entity()',
+                                        'Native Plugin - Instance state is wrong, or transition not allowed - State: {}'.format(instance.get_state()))
                 raise StateTransitionNotAllowedException('Instance is not in CONFIGURED state',
                                                          'Instance {} is not in CONFIGURED state'.format(instance_uuid))
             else:
@@ -408,7 +412,7 @@ class Native(RuntimePlugin):
                         self.agent.get_os_plugin().execute_command('sudo pkill -9 -P {}'.format(pid))
                         if self.agent.get_os_plugin().check_if_pid_exists(pid):
                             self.agent.get_os_plugin().send_sig_int(pid)
-                            time.sleep(10)
+                            time.sleep(3)
                         if self.agent.get_os_plugin().check_if_pid_exists(pid):
                             self.agent.get_os_plugin().send_sig_kill(pid)
 
@@ -420,7 +424,7 @@ class Native(RuntimePlugin):
                         self.agent.get_os_plugin().execute_command('sudo pkill -9 -P {}'.format(pid))
                         if self.agent.get_os_plugin().check_if_pid_exists(pid):
                             self.agent.get_os_plugin().send_sig_int(pid)
-                            time.sleep(10)
+                            time.sleep(3)
                         if self.agent.get_os_plugin().check_if_pid_exists(pid):
                             self.agent.get_os_plugin().send_sig_kill(pid)
 
@@ -433,7 +437,7 @@ class Native(RuntimePlugin):
                         self.agent.get_os_plugin().execute_command('sudo pkill -9 -P {}'.format(pid))
                     if self.agent.get_os_plugin().check_if_pid_exists(pid):
                         self.agent.get_os_plugin().send_sig_int(pid)
-                        time.sleep(10)
+                        time.sleep(3)
                     if self.agent.get_os_plugin().check_if_pid_exists(pid):
                         self.agent.get_os_plugin().send_sig_kill(pid)
 
@@ -517,49 +521,42 @@ class Native(RuntimePlugin):
     def __react_to_cache(self, uri, value, v):
         self.agent.logger.info('__react_to_cache()', ' Native Plugin - React to to URI: {} Value: {} Version: {}'.format(uri, value, v))
         if uri.split('/')[-2] == 'entity':
-            if value is None and v is None:
+            uuid = uri.split('/')[-1]
+            value = json.loads(value)
+            action = value.get('status')
+            entity_data = value.get('entity_data')
+            react_func = self.__react(action)
+            if action == 'undefine':
                 self.agent.logger.info('__react_to_cache()', ' Native Plugin - This is a remove for URI: {}'.format(uri))
-                entity_uuid = uri.split('/')[-1]
-                self.undefine_entity(entity_uuid)
-            else:
-                uuid = uri.split('/')[-1]
-                value = json.loads(value)
-                action = value.get('status')
-                entity_data = value.get('entity_data')
-                react_func = self.__react(action)
-                if react_func is not None and entity_data is None:
-                    react_func(uuid)
-                elif react_func is not None:
-                    entity_data.update({'entity_uuid': uuid})
-                    if action == 'define':
-                        react_func(**entity_data)
-                    else:
-                        react_func(entity_data)
+                self.undefine_entity(uuid)
+            elif react_func is not None and entity_data is None:
+                react_func(uuid)
+            elif react_func is not None:
+                entity_data.update({'entity_uuid': uuid})
+                if action == 'define':
+                    react_func(**entity_data)
+                else:
+                    react_func(entity_data)
         elif uri.split('/')[-2] == 'instance':
-            if value is None and v is None:
+            instance_uuid = uri.split('/')[-1]
+            entity_uuid = uri.split('/')[-3]
+            value = json.loads(value)
+            action = value.get('status')
+            entity_data = value.get('entity_data')
+            # print(type(entity_data))
+            react_func = self.__react(action)
+            if action == 'clean':
                 self.agent.logger.info('__react_to_cache()', ' Native Plugin - This is a remove for URI: {}'.format(uri))
-                instance_uuid = uri.split('/')[-1]
-                entity_uuid = uri.split('/')[-3]
                 self.__force_entity_instance_termination(entity_uuid, instance_uuid)
-            else:
-                instance_uuid = uri.split('/')[-1]
-                entity_uuid = uri.split('/')[-3]
-                value = json.loads(value)
-                action = value.get('status')
-                entity_data = value.get('entity_data')
-                # print(type(entity_data))
-                react_func = self.__react(action)
-                if react_func is not None and entity_data is None:
-                    react_func(entity_uuid, instance_uuid)
-                elif react_func is not None:
-                    entity_data.update({'entity_uuid': entity_uuid})
+            elif react_func is not None and entity_data is None:
+                react_func(entity_uuid, instance_uuid)
+            elif react_func is not None:
+                entity_data.update({'entity_uuid': entity_uuid})
 
     def __react(self, action):
         r = {
             'define': self.define_entity,
             'configure': self.configure_entity,
-            'clean': self.clean_entity,
-            'undefine': self.undefine_entity,
             'stop': self.stop_entity,
             'resume': self.resume_entity,
             'run': self.run_entity
