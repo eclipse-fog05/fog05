@@ -220,10 +220,6 @@ class Native(RuntimePlugin):
                 return True
 
     def clean_entity(self, entity_uuid, instance_uuid=None):
-        import inspect
-        curframe = inspect.currentframe()
-        calframe = inspect.getouterframes(curframe, 2)
-        self.agent.logger.info('>>>>>>>>>CALLER: {}'.format(calframe[1][3]))
         if type(entity_uuid) == dict:
             entity_uuid = entity_uuid.get('entity_uuid')
         self.agent.logger.info('cleanEntity()', ' Native Plugin - Clean BE uuid {}'.format(entity_uuid))
