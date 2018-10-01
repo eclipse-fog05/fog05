@@ -1,0 +1,23 @@
+#cloud-config
+
+bootcmd:
+ - export FOSUUID={{ instanceid }}
+ - export FOSENTITYUUID={{ entityid }}
+ - export FOSNODEUUID={{ nodeid }}
+
+ users:
+  - default
+  - name: ato
+    primary_group: ato
+    groups: sudo
+    home: /home/ato
+    shell: /bin/bash
+chpasswd:
+  list: |
+    ato:ato
+  expire: false
+
+
+runcmd:
+  - mkdir /home/ato
+  - chown ato:ato /home/ato
