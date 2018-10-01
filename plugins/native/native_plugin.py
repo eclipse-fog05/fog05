@@ -527,14 +527,14 @@ class Native(RuntimePlugin):
                 action = value.get('status')
                 entity_data = value.get('entity_data')
                 react_func = self.__react(action)
-                if react_func is not None and entity_data is None:
+                if action == 'undefine':
+                    self.undefine_entity(uuid)
+                elif react_func is not None and entity_data is None:
                     react_func(uuid)
                 elif react_func is not None:
                     entity_data.update({'entity_uuid': uuid})
                     if action == 'define':
                         react_func(**entity_data)
-                    elif action == 'undefine':
-                        self.undefine_entity(uuid)
                     else:
                         react_func(entity_data)
         elif uri.split('/')[-2] == 'instance':
@@ -551,19 +551,18 @@ class Native(RuntimePlugin):
                 entity_data = value.get('entity_data')
                 # print(type(entity_data))
                 react_func = self.__react(action)
-                if react_func is not None and entity_data is None:
+                if action == 'clean':
+                    self.__force_entity_instance_termination(entity_uuid, instance_uuid)
+                elif react_func is not None and entity_data is None:
                     react_func(entity_uuid, instance_uuid)
                 elif react_func is not None:
                     entity_data.update({'entity_uuid': entity_uuid})
-                elif action == 'clean':
-                    self.__force_entity_instance_termination(entity_uuid, instance_uuid)
 
     def __react(self, action):
         r = {
             'define': self.define_entity,
             'configure': self.configure_entity,
             'clean': self.clean_entity,
-            'undefine': self.undefine_entity,
             'stop': self.stop_entity,
             'resume': self.resume_entity,
             'run': self.run_entity
