@@ -992,51 +992,38 @@ class KVMLibvirt(RuntimePlugin):
     def __react_to_cache_entity(self, uri, value, v):
         self.agent.logger.info('__react_to_cache_entity()', 'KVM Plugin - React to to URI: {} Value: {} Version: {}'.format(uri, value, v))
         if uri.split('/')[-2] == 'entity':
-            if value is None and v is None:
-                self.agent.logger.info('__react_to_cache_entity()', 'KVM Plugin - This is a remove for URI: {}'.format(uri))
-                entity_uuid = uri.split('/')[-1]
-                self.undefine_entity(entity_uuid)
-            else:
-                uuid = uri.split('/')[-1]
-                value = json.loads(value)
-                action = value.get('status')
-                entity_data = value.get('entity_data')
-                # print(type(entity_data))
-                react_func = self.__react(action)
-                if react_func is not None and entity_data is None:
-                    react_func(uuid)
-                elif react_func is not None:
-                    entity_data.update({'entity_uuid': uuid})
-                    if action == 'define':
-                        react_func(**entity_data)
-                    elif action == 'undefine':
-                        self.undefine_entity(uuid)
+            uuid = uri.split('/')[-1]
+            value = json.loads(value)
+            action = value.get('status')
+            entity_data = value.get('entity_data')
+            # print(type(entity_data))
+            react_func = self.__react(action)
+            if action == 'undefine':
+                self.undefine_entity(uuid)
+            elif react_func is not None and entity_data is None:
+                react_func(uuid)
+            elif react_func is not None:
+                entity_data.update({'entity_uuid': uuid})
+                if action == 'define':
+                    react_func(**entity_data)
         elif uri.split('/')[-2] == 'instance':
-            if value is None and v is None:
-                self.agent.logger.info('__react_to_cache_entity()', 'KVM Plugin - This is a remove for URI: {}'.format(uri))
-                instance_uuid = uri.split('/')[-1]
-                entity_uuid = uri.split('/')[-3]
+            instance_uuid = uri.split('/')[-1]
+            entity_uuid = uri.split('/')[-3]
+            value = json.loads(value)
+            action = value.get('status')
+            entity_data = value.get('entity_data')
+            # print(type(entity_data))
+            react_func = self.__react(action)
+            if action == 'clean':
                 self.__force_entity_instance_termination(entity_uuid, instance_uuid)
-            else:
-                instance_uuid = uri.split('/')[-1]
-                entity_uuid = uri.split('/')[-3]
-                value = json.loads(value)
-                action = value.get('status')
-                entity_data = value.get('entity_data')
-                # print(type(entity_data))
-                react_func = self.__react(action)
-                if react_func is not None and entity_data is None:
-                    react_func(entity_uuid, instance_uuid)
-                elif react_func is not None:
-                    entity_data.update({'entity_uuid': entity_uuid})
-                    if action in ['landing', 'taking_off']:
-                        self.agent.logger.warning('__react_to_cache_entity()', 'ACTION = {} on separate thread!!'.format(action))
-                        threading.Thread(target=react_func, args=[entity_data, True, instance_uuid]).start()
-                        # react_func(entity_data, dst=True, instance_uuid=instance_uuid)
-                    elif action == 'clean':
-                        self.__force_entity_instance_termination(entity_uuid, instance_uuid)
-                    else:
-                        react_func(entity_data, instance_uuid=instance_uuid)
+            elif react_func is not None and entity_data is None:
+                react_func(entity_uuid, instance_uuid)
+            elif react_func is not None:
+                entity_data.update({'entity_uuid': entity_uuid})
+                if action in ['landing', 'taking_off']:
+                    react_func(entity_data, dst=True, instance_uuid=instance_uuid)
+                else:
+                    react_func(entity_data, instance_uuid=instance_uuid)
 
     def __random_mac_generator(self):
         mac = [0x00, 0x16, 0x3e,
