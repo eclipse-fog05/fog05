@@ -220,6 +220,10 @@ class Native(RuntimePlugin):
                 return True
 
     def clean_entity(self, entity_uuid, instance_uuid=None):
+        import inspect
+        curframe = inspect.currentframe()
+        calframe = inspect.getouterframes(curframe, 2)
+        self.agent.logger.info('>>>>>>>>>CALLER: {}'.format(calframe[1][3]))
         if type(entity_uuid) == dict:
             entity_uuid = entity_uuid.get('entity_uuid')
         self.agent.logger.info('cleanEntity()', ' Native Plugin - Clean BE uuid {}'.format(entity_uuid))
@@ -237,6 +241,10 @@ class Native(RuntimePlugin):
                 self.agent.logger.error('clean_entity()', 'Native Plugin - Instance not found!!')
             else:
                 instance = entity.get_instance(instance_uuid)
+                if not instance:
+                    self.agent.logger.error('clean_entity()',
+                                            'Instance {} not existing'.format(instance_uuid))
+                    return False
                 if instance.get_state() != State.CONFIGURED:
                     self.agent.logger.error('clean_entity()',
                                             'has_instance Plugin - Instance state is wrong, or transition not allowed')
