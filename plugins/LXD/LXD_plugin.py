@@ -832,6 +832,8 @@ class LXD(RuntimePlugin):
                     entity_data.update({'entity_uuid': uuid})
                     if action == 'define':
                         react_func(**entity_data)
+                    elif action == 'undefine':
+                        self.undefine_entity(uuid)
                     # else:
                     #    if action == 'landing':
                     #        react_func(entity_data, dst=True)
@@ -859,6 +861,8 @@ class LXD(RuntimePlugin):
                         self.agent.logger.warning('__react_to_cache_entity()', 'ACTION = {} on separate thread!!'.format(action))
                         threading.Thread(target=react_func, args=[entity_data, True, instance_uuid]).start()
                         # react_func(entity_data, dst=True, instance_uuid=instance_uuid)
+                    elif action == 'clean':
+                        self.__force_entity_instance_termination(entity_uuid, instance_uuid)
                     else:
                         react_func(entity_data, instance_uuid=instance_uuid)
 

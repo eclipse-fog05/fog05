@@ -18,7 +18,7 @@ from setuptools import setup
 
 setup(
     name='fog05',
-    version='0.1.5',
+    version='0.1.6',
     python_requires='>=3',
     author='ADLINK_ATO',
     packages=['fog05', 'fog05/interfaces'],
