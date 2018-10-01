@@ -282,6 +282,10 @@ class Native(RuntimePlugin):
                                                      'Entity {} is not in DEFINED state'.format(entity_uuid))
         else:
             instance = entity.get_instance(instance_uuid)
+            if instance.get_state() == State.RUNNING:
+                self.agent.logger.error('run_entity()',
+                                        'Native Plugin - Instance already running')
+                return True
             if instance.get_state() != State.CONFIGURED:
                 self.agent.logger.error('run_entity()',
                                         'Native Plugin - Instance state is wrong, or transition not allowed - State: {}'.format(instance.get_state()))
