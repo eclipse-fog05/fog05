@@ -336,6 +336,8 @@ class KVMLibvirt(RuntimePlugin):
                 if instance.user_file is not None and instance.user_file != '':
                     self.agent.get_os_plugin().remove_file(data_filename)
 
+                self.agent.get_os_plugin().remove_file(vendor_filename)
+
                 try:
                     self.conn.defineXML(vm_xml)
                 except libvirt.libvirtError as err:

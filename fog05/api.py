@@ -722,7 +722,7 @@ class API(object):
             '''
             handler = self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
             uri = '{}/{}/runtime/{}/entity/{}/instance/{}#status=clean'.format(self.store.droot, node_uuid, handler, entity_uuid, instance_uuid)
-            res = self.store.desired.remove(uri)
+            res = self.store.desired.dput(uri)
             # if res >= 0:
             #     return True
             # else:
@@ -755,9 +755,6 @@ class API(object):
                             if entity_info is not None:
                                 if entity_info.get('status') == state:
                                     break
-                                elif entity_info.get('status') != "starting":
-                                    uri = '{}/{}/runtime/{}/entity/{}/instance/{}#status=run'.format(self.store.droot, node_uuid, handler, entity_uuid, instance_uuid)
-                                    self.store.desired.dput(uri)
                 return True
             else:
                 return False
@@ -997,7 +994,7 @@ class API(object):
                 uri = '{}/*/runtime/*/image/{}#status=undefine'.format(self.store.droot, image_uuid)
             else:
                 uri = '{}/{}/runtime/*/image/{}#status=undefine'.format(self.store.droot, node_uuid, image_uuid)
-            res = self.store.desired.remove(uri)
+            res = self.store.desired.dput(uri)
             if res:
                 return True
             else:
@@ -1058,7 +1055,7 @@ class API(object):
                 uri = '{}/*/runtime/*/flavor/{}#status=undefine'.format(self.store.droot, flavor_uuid)
             else:
                 uri = '{}/{}/runtime/*/flavor/{}#status=undefine'.format(self.store.droot, node_uuid, flavor_uuid)
-            res = self.store.desired.remove(uri)
+            res = self.store.desired.dput(uri)
             if res:
                 return True
             else:
