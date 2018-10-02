@@ -488,7 +488,7 @@ class API(object):
                     print('No network plugin loaded on node, aborting')
                     return False
                 brctl = nws[0]  # will use the first plugin
-                uri = '{}/{}/network/{}/networks/{}#status=undefine'.format(self.store.droot, node_uuid, brctl, net_uuid)
+                uri = '{}/{}/network/{}/networks/{}#status=undefine'.format(self.store.droot, node_uuid, brctl.get('uuid'), net_uuid)
             else:
                 uri = '{}/*/network/*/networks/{}#status=undefine'.format(self.store.droot, net_uuid)
 
