@@ -161,12 +161,16 @@ class API(object):
                             instances = entities.get(nid).get(eid)
                             # print('instances {}'.format(instances))
                             for inst in instances:
-                                # print('I should stop {} -> {} -> {}'.format(inst,eid, nid))
-                                #self.entity.stop(eid, nid, inst, wait=True)
+                                #print('I should stop {} -> {} -> {}'.format(inst,eid, nid))
+                                self.entity.stop(eid, nid, inst, wait=True)
                                 # print('I should clean {} -> {} -> {}'.format(inst, eid, nid))
                                 self.entity.clean(eid, nid, inst, wait=True)
                             # print('I should undefine {} -> {}'.format(eid, nid))
                             self.entity.undefine(eid, nid, wait=True)
+                for n in data.get('networks'):
+                    for nid in entities:
+                        net_id = n.get('uuid')
+                        self.network.remove(net_id, nid)
                 for n in nodes:
                     u = n[0]
                     uri = "{}/{}/onboard/{}".format(self.d_root, u, entity_uuid)
