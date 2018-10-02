@@ -1027,7 +1027,6 @@ class KVMLibvirt(RuntimePlugin):
             value = json.loads(value)
             action = value.get('status')
             entity_data = value.get('entity_data')
-            # print(type(entity_data))
             react_func = self.__react(action)
             if action == 'clean':
                 self.__force_entity_instance_termination(entity_uuid, instance_uuid)
@@ -1188,8 +1187,6 @@ class KVMLibvirt(RuntimePlugin):
         r = {
             'define': self.define_entity,
             'configure': self.configure_entity,
-            'clean': self.clean_entity,
-            'undefine': self.undefine_entity,
             'stop': self.stop_entity,
             'pause': self.pause_entity,
             'resume': self.resume_entity,
