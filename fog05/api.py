@@ -161,12 +161,16 @@ class API(object):
                             instances = entities.get(nid).get(eid)
                             # print('instances {}'.format(instances))
                             for inst in instances:
-                                # print('I should stop {} -> {} -> {}'.format(inst,eid, nid))
-                                #self.entity.stop(eid, nid, inst, wait=True)
+                                #print('I should stop {} -> {} -> {}'.format(inst,eid, nid))
+                                self.entity.stop(eid, nid, inst, wait=True)
                                 # print('I should clean {} -> {} -> {}'.format(inst, eid, nid))
                                 self.entity.clean(eid, nid, inst, wait=True)
                             # print('I should undefine {} -> {}'.format(eid, nid))
                             self.entity.undefine(eid, nid, wait=True)
+                for n in data.get('networks'):
+                    for nid in entities:
+                        net_id = n.get('uuid')
+                        self.network.remove(net_id, nid)
                 for n in nodes:
                     u = n[0]
                     uri = "{}/{}/onboard/{}".format(self.d_root, u, entity_uuid)
@@ -484,7 +488,7 @@ class API(object):
                     print('No network plugin loaded on node, aborting')
                     return False
                 brctl = nws[0]  # will use the first plugin
-                uri = '{}/{}/network/{}/networks/{}#status=undefine'.format(self.store.droot, node_uuid, brctl, net_uuid)
+                uri = '{}/{}/network/{}/networks/{}#status=undefine'.format(self.store.droot, node_uuid, brctl.get('uuid'), net_uuid)
             else:
                 uri = '{}/*/network/*/networks/{}#status=undefine'.format(self.store.droot, net_uuid)
 
@@ -718,7 +722,7 @@ class API(object):
             '''
             handler = self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
             uri = '{}/{}/runtime/{}/entity/{}/instance/{}#status=clean'.format(self.store.droot, node_uuid, handler, entity_uuid, instance_uuid)
-            res = self.store.desired.remove(uri)
+            res = self.store.desired.dput(uri)
             # if res >= 0:
             #     return True
             # else:
@@ -751,9 +755,6 @@ class API(object):
                             if entity_info is not None:
                                 if entity_info.get('status') == state:
                                     break
-                                elif entity_info.get('status') != "starting":
-                                    uri = '{}/{}/runtime/{}/entity/{}/instance/{}#status=run'.format(self.store.droot, node_uuid, handler, entity_uuid, instance_uuid)
-                                    self.store.desired.dput(uri)
                 return True
             else:
                 return False
@@ -993,7 +994,7 @@ class API(object):
                 uri = '{}/*/runtime/*/image/{}#status=undefine'.format(self.store.droot, image_uuid)
             else:
                 uri = '{}/{}/runtime/*/image/{}#status=undefine'.format(self.store.droot, node_uuid, image_uuid)
-            res = self.store.desired.remove(uri)
+            res = self.store.desired.dput(uri)
             if res:
                 return True
             else:
@@ -1054,7 +1055,7 @@ class API(object):
                 uri = '{}/*/runtime/*/flavor/{}#status=undefine'.format(self.store.droot, flavor_uuid)
             else:
                 uri = '{}/{}/runtime/*/flavor/{}#status=undefine'.format(self.store.droot, node_uuid, flavor_uuid)
-            res = self.store.desired.remove(uri)
+            res = self.store.desired.dput(uri)
             if res:
                 return True
             else:

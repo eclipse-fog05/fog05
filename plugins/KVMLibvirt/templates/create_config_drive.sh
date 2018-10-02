@@ -1,3 +1,4 @@
+#!/bin/sh
 
 # Copyright (c) 2014,2018 ADLINK Technology Inc.
 # 
@@ -13,7 +14,7 @@
 #
 # Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Base plugins set
 
-#!/bin/sh
+
 
 # This will generate a openstack-style config drive image suitable for
 # use with cloud-init.  You may optionally pass in an ssh public key

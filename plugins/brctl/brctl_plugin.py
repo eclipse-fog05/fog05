@@ -111,6 +111,10 @@ class brctl(NetworkPlugin):
         br_name = 'br-{}'.format(net_uuid.split('-')[0])
 
         vxlan_file, vxlan_dev, vxlan_id, vxlan_mcast = self.__generate_vxlan_script(net_uuid, manifest)
+        shutdown_file = self.__generate_vxlan_shutdown_script(net_uuid)
+
+        shutdown_file = os.path.join(self.BASE_DIR, shutdown_file)
+
         self.agent.get_os_plugin().execute_command(os.path.join(self.BASE_DIR, vxlan_file), True)
 
         info.update({'virtual_device': br_name})
@@ -212,7 +216,7 @@ class brctl(NetworkPlugin):
         start_file = os.path.join(self.BASE_DIR, '{}.sh'.format(network_uuid.split('-')[0]))
         dnsmasq_file = os.path.join(self.BASE_DIR, self.DHCP_DIR, 'br-{}_dnsmasq.sh'.format(network_uuid.split('-')[0]))
 
-        self.agent.get_os_plugin().execute_command(shutdown_file)
+        self.agent.get_os_plugin().execute_command('sudo {}'.format(shutdown_file), True)
         self.agent.get_os_plugin().remove_file(shutdown_file)
         self.agent.get_os_plugin().remove_file(start_file)
         self.agent.get_os_plugin().remove_file(dnsmasq_file)
@@ -295,7 +299,6 @@ class brctl(NetworkPlugin):
 
         return r.get(action, None)
 
-
     def __generate_vxlan_shutdown_script(self, net_uuid):
         template_sh = self.agent.get_os_plugin().read_file(os.path.join(self.DIR, 'templates', 'vxlan_destroy.sh'))
         br_name = 'br-{}'.format(net_uuid.split('-')[0])
@@ -312,7 +315,6 @@ class brctl(NetworkPlugin):
 
         return file_name
 
-
     def __generate_dnsmaq_script(self, br_name, start_addr, end_addr, listen_addr, pid_file):
         template_sh = self.agent.get_os_plugin().read_file(os.path.join(self.DIR, 'templates', 'dnsmasq.sh'))
         dnsmasq_sh = Environment().from_string(template_sh)
@@ -324,7 +326,6 @@ class brctl(NetworkPlugin):
         self.agent.get_os_plugin().execute_command(chmod_cmd, True)
 
         return file_name
-
 
     def __generate_vxlan_script(self, net_uuid, manifest=None):
         template_sh = self.agent.get_os_plugin().read_file(os.path.join(self.DIR, 'templates', 'vxlan_creation.sh'))
