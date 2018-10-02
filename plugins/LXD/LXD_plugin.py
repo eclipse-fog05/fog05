@@ -401,7 +401,7 @@ class LXD(RuntimePlugin):
             instance = entity.get_instance(instance_uuid)
             if instance.get_state() == State.RUNNING:
                 self.agent.logger.error('run_entity()',
-                                        'Native Plugin - Instance already running')
+                                        'LXD Plugin - Instance already running')
                 return True
             if instance.get_state() != State.CONFIGURED:
                 self.agent.logger.error('clean_entity()',

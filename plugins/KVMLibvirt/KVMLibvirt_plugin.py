@@ -428,15 +428,18 @@ class KVMLibvirt(RuntimePlugin):
                 instance = entity.get_instance(instance_uuid)
                 if instance.get_state() == State.RUNNING:
                     self.agent.logger.error('run_entity()',
-                                            'Native Plugin - Instance already running')
+                                            'KVM Plugin - Instance already running')
                     return True
                 if instance.get_state() != State.CONFIGURED:
                     self.agent.logger.error('clean_entity()', 'KVM Plugin - Instance state is wrong, or transition not allowed')
                     raise StateTransitionNotAllowedException('Instance is not in CONFIGURED state', 'Instance {} is not in CONFIGURED state'.format(instance_uuid))
                 else:
-                    self.__lookup_by_uuid(instance_uuid).create()
-                    instance.on_start()
+                    dom = self.__lookup_by_uuid(instance_uuid)
+                    dom.create()
+                    while dom.state()[0] != 1:
+                        pass
 
+                    instance.on_start()
                     # log_filename = '{}/{}/{}_log.log'.format(self.BASE_DIR, self.LOG_DIR, instance_uuid)
                     # if instance.user_file is not None and instance.user_file != '':
                     #     self.__wait_boot(log_filename, True)
@@ -477,7 +480,11 @@ class KVMLibvirt(RuntimePlugin):
                     self.__write_error_instance(entity_uuid, instance_uuid, 'Entity Instance not exist')
                     raise StateTransitionNotAllowedException('Instance is not in RUNNING state', 'Instance {} is not in RUNNING state'.format(instance_uuid))
                 else:
-                    self.__lookup_by_uuid(instance_uuid).destroy()
+                    dom = self.__lookup_by_uuid(instance_uuid)
+                    dom.destroy()
+                    while dom.state()[0] != 5:
+                        pass
+                    dom.undefine()
                     instance.on_stop()
                     self.current_entities.update({entity_uuid: entity})
 
