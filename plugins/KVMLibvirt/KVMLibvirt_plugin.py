@@ -484,7 +484,6 @@ class KVMLibvirt(RuntimePlugin):
                     dom.destroy()
                     while dom.state()[0] != 5:
                         pass
-                    dom.undefine()
                     instance.on_stop()
                     self.current_entities.update({entity_uuid: entity})
 
