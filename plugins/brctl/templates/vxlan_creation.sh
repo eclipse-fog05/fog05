@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 
 # Copyright (c) 2014,2018 ADLINK Technology Inc.
 # 
@@ -13,7 +15,7 @@
 #
 # Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Base plugins set
 
-#!/usr/bin/env bash
+
 
 #sudo brctl addbr {{ bridge_name }}
 WAN=$(awk '$2 == 00000000 { print $1 }' /proc/net/route)
