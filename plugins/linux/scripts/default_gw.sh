@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # Copyright (c) 2014,2018 ADLINK Technology Inc.
 # 
 # See the NOTICE file(s) distributed with this work for additional
@@ -12,5 +14,5 @@
 #
 # Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Base plugins set
 
-#!/usr/bin/env bash
+
 awk '$2 == 00000000 { print $1 }' /proc/net/route
