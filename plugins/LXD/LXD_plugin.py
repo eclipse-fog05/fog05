@@ -421,7 +421,10 @@ class LXD(RuntimePlugin):
                     c.sync()
 
                 fm = c.FilesManager(self.conn, c)
-                envs = 'export FOSUUID={{ instanceid }} \nexport FOSENTITYUUID={{ entityid }}\nexport FOSNODEUUID={{ nodeid }}'
+                envs = 'export FOSUUID={} \n' \
+                       'export FOSENTITYUUID={}\n' \
+                       'export FOSNODEUUID={}'\
+                    .format(instance_uuid, entity_uuid, self.agent.get_os_plugin().get_uuid())
                 fm.put('/etc/profile.d/99-fos', envs, mode="0644")
                 instance.on_start()
 
