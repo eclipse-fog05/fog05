@@ -420,6 +420,8 @@ class LXD(RuntimePlugin):
                 while c.status != 'Running':
                     c.sync()
 
+                vars = 'export FOSUUID={{ instanceid }} \nexport FOSENTITYUUID={{ entityid }}\nexport FOSNODEUUID={{ nodeid }}'
+                c.put('/etc/profile.d/99-fos', vars, mode="0644")
                 instance.on_start()
 
                 container_info = json.loads(self.agent.astore.get(uri))
