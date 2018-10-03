@@ -12,14 +12,14 @@ class Store(object):
 
     def get(self, k):
         r = self.access.get(k)
-        if len(r) > 0:
+        if r is not None and len(r) > 0:
             v = r[0].get('value')
             return v
         return None
 
     def getAll(self, k):
         r = self.access.get(k)
-        if len(r) > 0:
+        if r is not None and len(r) > 0:
             res = []
             for e in r:
                 k, v = e.get('key'), e.get('value')
