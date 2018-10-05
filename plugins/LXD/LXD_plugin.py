@@ -933,7 +933,7 @@ class LXD(RuntimePlugin):
         template_value_bridge = '{"name":"%s","type":"nic","parent":"%s","nictype":"bridged"}'
         template_value_bridge_mac = '{"name":"%s","type":"nic","parent":"%s","nictype":"bridged","hwaddr":"%s"}'
         template_value_phy = '{"name":"%s","type":"nic","parent":"%s","nictype":"physical"}'
-        template_value_macvlan = '{"name":"%s","type":"nic","parent":"%s","nictype":"macvlan, "mode":"bridge""}'
+        template_value_macvlan = '{"name":"%s","type":"nic","parent":"%s","nictype":"macvlan","mode":"bridge""}'
 
         '''
         # Create tenant's storage pool
