@@ -434,7 +434,7 @@ class FosAgent(Agent):
             'runtime': self.__load_runtime_plugin,
             'network': self.__load_network_plugin,
             'monitoring': self.__load_monitoring_plugin,
-            'orchestration': self.__load_orchestration_plugig,
+            'orchestration': self.__load_orchestration_plugin,
         }
         return r.get(type, None)
 
