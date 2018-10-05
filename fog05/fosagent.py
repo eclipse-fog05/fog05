@@ -63,6 +63,7 @@ class FosAgent(Agent):
             self.__rtPlugins = {}
             self.__nwPlugins = {}
             self.__monPlugins = {}
+            self.__orchPlugins = {}
             self.logger.info('__init__()', '[ INIT ] Loading OS Plugin...')
             self.__load_os_plugin()
             self.logger.info('__init__()', '[ DONE ] Loading OS Plugin...')
@@ -74,6 +75,7 @@ class FosAgent(Agent):
             self.__PLUGIN_AUTOLOAD = True
             self.__autoload_list = []
             self.yaks_server = '127.0.0.1'
+            self.export = True
 
             # Configuration Parsing
 
@@ -84,6 +86,8 @@ class FosAgent(Agent):
                     self.uuid = self.config['agent']['UUID']
                 if 'YAKS' in self.config['agent']:
                     self.yaks_server = self.config['agent']['YAKS']
+                if 'EXPORT' in self.config['agent']:
+                    self.export = self.config['agent'].getboolean('EXPORT')
             if 'plugins' in self.config:
                 if 'autoload' in self.config['plugins']:
                     self.__PLUGIN_AUTOLOAD = self.config['plugins'].getboolean('autoload')
@@ -182,22 +186,31 @@ class FosAgent(Agent):
             self.astore = Store(self.yaks, self.aroot, self.ahome, 1024)
             self.logger.info('__init__()', '[ DONE ] Creating Actual State Store')
 
-            self.logger.info('__init__()', '[ INIT ] Populating Actual Store with data from OS Plugin')
-            val = {'version': self.__osPlugin.version, 'description': '{} plugin'.format(self.__osPlugin.name)}
-            uri = '{}/plugins/{}/{}'.format(self.ahome, self.__osPlugin.name, self.__osPlugin.uuid)
-            self.astore.put(uri, json.dumps(val))
+            if self.export:
+                self.logger.info('__init__()', '[ INIT ] Populating Actual Store with data from OS Plugin')
+                val = {'version': self.__osPlugin.version, 'description': '{} plugin'.format(self.__osPlugin.name)}
+                uri = '{}/plugins/{}/{}'.format(self.ahome, self.__osPlugin.name, self.__osPlugin.uuid)
+                self.astore.put(uri, json.dumps(val))
 
-            val = {'plugins': [{'name': self.__osPlugin.name, 'version': self.__osPlugin.version, 'uuid': str(
-                self.__osPlugin.uuid), 'type': 'os', 'status': 'loaded'}]}
-            uri = '{}/plugins'.format(self.ahome)
-            self.astore.put(uri, json.dumps(val))
+                val = {'plugins': [{'name': self.__osPlugin.name, 'version': self.__osPlugin.version, 'uuid': str(
+                    self.__osPlugin.uuid), 'type': 'os', 'status': 'loaded'}]}
+                uri = '{}/plugins'.format(self.ahome)
+                self.astore.put(uri, json.dumps(val))
 
-            val = {'plugins': []}
-            uri = '{}/plugins'.format(self.dhome)
-            self.dstore.put(uri, json.dumps(val))
+                val = {'plugins': []}
+                uri = '{}/plugins'.format(self.dhome)
+                self.dstore.put(uri, json.dumps(val))
 
-            self.__populate_node_information()
-            self.logger.info('__init__()', '[ DONE ] Populating Actual Store with data from OS Plugin')
+                self.__populate_node_information()
+                self.logger.info('__init__()', '[ DONE ] Populating Actual Store with data from OS Plugin')
+            else:
+                self.logger.info('__init__()', '[ INIT ] Populating Actual Store with data as Orchestrator Node')
+                node_info = {}
+                node_info.update({'uuid': str(self.uuid)})
+                node_info.update({'name': self.__osPlugin.get_hostname()})
+                node_info.update({'orchestrator': True})
+                self.astore.put(self.ahome, json.dumps(node_info))
+                self.logger.info('__init__()', '[ DONE ] Populating Actual Store with data as Orchestrator Node')
 
             if self.__PLUGIN_AUTOLOAD:
                 self.logger.info('__init__()', 'Autoloading plugins....')
@@ -336,7 +349,7 @@ class FosAgent(Agent):
             self.astore.put(uri, json.dumps(val))
 
             val = {'plugins': [{'name': mon.name, 'version': mon.version, 'uuid': str(mon.uuid),
-                                'type': 'network', 'status': 'loaded'}]}
+                                'type': 'monitoring', 'status': 'loaded'}]}
             uri = '{}/plugins'.format(self.ahome)
             self.astore.dput(uri, json.dumps(val))
             self.logger.info('__load_monitoring_plugin()', '[ DONE ] Loading a Monitoring plugin: {}'.format(plugin_name))
@@ -344,6 +357,30 @@ class FosAgent(Agent):
             return mon
         else:
             self.logger.warning('__load_monitoring_plugin()', '[ WARN ] Monitoring: {} plugin not found!'.format(plugin_name))
+            return None
+
+    def __load_orchestration_plugin(self, plugin_name, plugin_uuid, configuration = None):
+        self.logger.info('__load_orchestration_plugin()', 'Loading a Orchestration plugin: {}'.format(plugin_name))
+        orch = self.pl.locate_plugin(plugin_name)
+        if orch is not None:
+            self.logger.info('__load_orchestration_plugin()', '[ INIT ] Loading a Orchestration plugin: {}'.format(plugin_name))
+            orch = self.pl.load_plugin(orch)
+            orch = orch.run(agent=self, uuid=plugin_uuid, configuration=configuration)
+            self.__orchPlugins.update({orch.uuid: orch})
+
+            val = {'version': orch.version, 'description': 'orchestration {}'.format(orch.name), 'plugin': ''}
+            uri = '{}/plugins/{}/{}'.format(self.ahome, orch.name, orch.uuid)
+            self.astore.put(uri, json.dumps(val))
+
+            val = {'plugins': [{'name': orch.name, 'version': orch.version, 'uuid': str(orch.uuid),
+                                'type': 'orchestration', 'status': 'loaded'}]}
+            uri = '{}/plugins'.format(self.ahome)
+            self.astore.dput(uri, json.dumps(val))
+            self.logger.info('__load_monitoring_plugin()', '[ DONE ] Loading a Orchestration plugin: {}'.format(plugin_name))
+
+            return orch
+        else:
+            self.logger.warning('__load_orchestration_plugin()', '[ WARN ] Orchestration: {} plugin not found!'.format(plugin_name))
             return None
 
     def __populate_node_information(self):
@@ -396,7 +433,8 @@ class FosAgent(Agent):
         r = {
             'runtime': self.__load_runtime_plugin,
             'network': self.__load_network_plugin,
-            'monitoring': self.__load_monitoring_plugin
+            'monitoring': self.__load_monitoring_plugin,
+            'orchestration': self.__load_orchestration_plugin,
         }
         return r.get(type, None)
 

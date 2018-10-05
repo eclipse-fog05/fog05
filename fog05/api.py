@@ -519,7 +519,7 @@ class API(object):
             uri = '{}/*/network/*/networks/**'.format(self.store.aroot)
             response = self.store.actual.resolveAll(uri)
             for i in response:
-                id = i[0].split('/')[2]
+                id = i[0].split('/')[-1]
                 net = json.loads(i[1])
                 net_list = nets.get(id, None)
                 if net_list is None:

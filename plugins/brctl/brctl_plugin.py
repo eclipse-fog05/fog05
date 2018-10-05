@@ -144,7 +144,8 @@ class brctl(NetworkPlugin):
             self.agent.get_os_plugin().execute_command(dhcp_cmd)
 
         self.netmap.update({net_uuid: info})
-        self.__update_actual_store(net_uuid, info)
+        uri = 'networks/{}'.format(net_uuid)
+        self.__update_actual_store(uri, info)
 
         self.agent.logger.info('createVirtualNetwork()', 'Created {} Network'.format(net_uuid))
 
@@ -221,7 +222,8 @@ class brctl(NetworkPlugin):
         self.agent.get_os_plugin().remove_file(start_file)
         self.agent.get_os_plugin().remove_file(dnsmasq_file)
         self.netmap.pop(network_uuid)
-        self.__pop_actual_store(network_uuid)
+        uri = 'networks/{}'.format(network_uuid)
+        self.__pop_actual_store(uri)
 
         self.agent.logger.info('deleteVirtualNetwork()', 'Deleted {}'.format(network_uuid))
 

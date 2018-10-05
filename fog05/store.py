@@ -9,6 +9,7 @@ class Store(object):
         self.home = home_path
         self.cachesize = cachesize
         self.access = self.yaks.create_access(root_path, cachesize)
+        self.subscriptions = []
 
     def get(self, k):
         r = self.access.get(k)
@@ -68,9 +69,12 @@ class Store(object):
         def adapter_callback(values):
             key, value = values[0].get('key'), values[0].get('value')
             callback(key, value, 0)
-        self.access.subscribe(k, adapter_callback)
+        subid = self.access.subscribe(k, adapter_callback)
+        self.subscriptions.append(subid)
 
     def close(self):
+        for subid in self.subscriptions:
+            self.access.unsubscribe(subid)
         self.access.dispose()
 
     def dot2dict(self, dot_notation, value=None):
