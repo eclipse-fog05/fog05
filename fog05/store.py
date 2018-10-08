@@ -26,7 +26,7 @@ class Store(object):
                 k, v = e.get('key'), e.get('value')
                 res.append((k, v, 0))
             return res
-        return None
+        return []
 
     def resolve(self, k):
         return self.get(k)
