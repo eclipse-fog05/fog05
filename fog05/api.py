@@ -905,7 +905,7 @@ class API(object):
             info = self.store.actual.get(uri)
             if info is None or len(info) == 0:
                 return {}
-            return info
+            return json.loads(info)
 
         def instances(self, entity_uuid):
             uri = '{}/*/runtime/*/entity/{}/instance/**'.format(self.store.aroot, entity_uuid)
