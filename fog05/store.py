@@ -39,9 +39,6 @@ class Store(object):
 
     def dput(self, uri, value=None):
         data = self.get(uri)
-        print('<<<<<<<<<<<<<< URI IS: {}'.format(uri))
-        print('<<<<<<<<<<<<<< DATA IS: {}'.format(data))
-
         uri_values = ''
         if value is None:
             uri = uri.split('#')
@@ -63,8 +60,6 @@ class Store(object):
             jvalues = json.loads(value)
             data = self.data_merge(data, jvalues)
         value = json.dumps(data)
-
-        print('>>>>>>>>>>>>>>> DATA IS: {}'.format(value))
 
         return self.access.put(uri, value)
 
