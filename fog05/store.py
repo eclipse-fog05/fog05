@@ -39,7 +39,7 @@ class Store(object):
 
     def dput(self, uri, value=None):
         data = self.get(uri)
-
+        print('<<<<<<<<<<<<<< URI IS: {}'.format(uri))
         print('<<<<<<<<<<<<<< DATA IS: {}'.format(data))
 
         uri_values = ''
