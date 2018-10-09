@@ -889,14 +889,14 @@ class API(object):
 
         def info(self, entity_uuid):
             uri = '{}/*/runtime/*/entity/{}/instance/**'.format(self.store.aroot, entity_uuid)
-            info = self.store.actual.get(uri)
+            info = self.store.actual.getAll(uri)
             if info is None or len(info) == 0:
                 return {}
             i = {}
             for e in info:
-                k = e.get('key')
-                v = e.get('value')
-                i_uuid = k.spit('/')[-1]
+                k = e[0]
+                v = e[1]
+                i_uuid = k.split('/')[-1]
                 i.update({i_uuid: v})
             return {entity_uuid: i}
 
@@ -905,16 +905,16 @@ class API(object):
             info = self.store.actual.get(uri)
             if info is None or len(info) == 0:
                 return {}
-            return info[0].get('value')
+            return info
 
         def instances(self, entity_uuid):
             uri = '{}/*/runtime/*/entity/{}/instance/**'.format(self.store.aroot, entity_uuid)
-            info = self.store.actual.get(uri)
+            info = self.store.actual.getAll(uri)
             if info is None:
                 return None
             i = []
             for e in info:
-                i.append(e.get('key').spit('/')[-1])
+                i.append(e[0].split('/')[-1])
             return i
 
         def list(self, node_uuid=None):
