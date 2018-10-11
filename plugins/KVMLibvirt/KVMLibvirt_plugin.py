@@ -884,7 +884,6 @@ class KVMLibvirt(RuntimePlugin):
                 while True:
                     uri_entity = '{}/{}/runtime/{}/entity/{}'.format(self.agent.aroot, destination_node_uuid, kvm_uuid, entity_uuid)
                     jdata = self.agent.astore.get(uri_entity)
-                    print('{}'.format(jdata))
                     if jdata is not None:
                         self.agent.logger.info('before_migrate_entity_actions()', 'KVM Plugin - Entity in destination!')
                         entity_info = json.loads(jdata)
