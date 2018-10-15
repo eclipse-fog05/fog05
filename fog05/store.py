@@ -26,7 +26,7 @@ class Store(object):
                 k, v = e.get('key'), e.get('value')
                 res.append((k, v, 0))
             return res
-        return None
+        return []
 
     def resolve(self, k):
         return self.get(k)
@@ -60,6 +60,7 @@ class Store(object):
             jvalues = json.loads(value)
             data = self.data_merge(data, jvalues)
         value = json.dumps(data)
+
         return self.access.put(uri, value)
 
     def remove(self, k):

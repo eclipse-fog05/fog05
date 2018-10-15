@@ -504,7 +504,7 @@ class API(object):
             List all network element available in the system/teneant or in a specified node
 
             :param node_uuid: optional node uuid
-            :return: dictionary {node uuid: network element list}
+            :return: dictionary {network uuid: {network manifest dictionary, pluginid, nodes}}
             '''
 
             if node_uuid is not None:
@@ -519,13 +519,18 @@ class API(object):
             uri = '{}/*/network/*/networks/**'.format(self.store.aroot)
             response = self.store.actual.resolveAll(uri)
             for i in response:
-                id = i[0].split('/')[-1]
-                net = json.loads(i[1])
-                net_list = nets.get(id, None)
-                if net_list is None:
-                    net_list = []
-                net_list.append(net)
-                nets.update({id: net_list})
+                nodeid = i[0].split('/')[4]
+                pluginid = i[0].split('/')[6]
+                netid = i[0].split('/')[-1]
+                net = nets.get(netid, None)
+                if net is None:
+                    net = json.loads(i[1])
+                    net.update({'plugin': pluginid,
+                                'nodes': [nodeid]})
+                    nets.update({netid: net})
+                else:
+                    net.get('nodes').append(nodeid)
+
             return nets
 
         def search(self, search_dict, node_uuid=None):
@@ -884,14 +889,14 @@ class API(object):
 
         def info(self, entity_uuid):
             uri = '{}/*/runtime/*/entity/{}/instance/**'.format(self.store.aroot, entity_uuid)
-            info = self.store.actual.get(uri)
+            info = self.store.actual.getAll(uri)
             if info is None or len(info) == 0:
                 return {}
             i = {}
             for e in info:
-                k = e.get('key')
-                v = e.get('value')
-                i_uuid = k.spit('/')[-1]
+                k = e[0]
+                v = e[1]
+                i_uuid = k.split('/')[-1]
                 i.update({i_uuid: v})
             return {entity_uuid: i}
 
@@ -900,16 +905,16 @@ class API(object):
             info = self.store.actual.get(uri)
             if info is None or len(info) == 0:
                 return {}
-            return info[0].get('value')
+            return json.loads(info)
 
         def instances(self, entity_uuid):
             uri = '{}/*/runtime/*/entity/{}/instance/**'.format(self.store.aroot, entity_uuid)
-            info = self.store.actual.get(uri)
+            info = self.store.actual.getAll(uri)
             if info is None:
                 return None
             i = []
             for e in info:
-                i.append(e.get('key').spit('/')[-1])
+                i.append(e[0].split('/')[-1])
             return i
 
         def list(self, node_uuid=None):
@@ -1004,11 +1009,32 @@ class API(object):
             pass
 
         def list(self, node_uuid=None):
+            '''
 
-            uri = '{}/*/runtime/*/image/'
+            List available entity images
+
+            :param node_uuid: optional node id
+            :return: dictionaty {nodeid: {runtimeid: [images list]}}
+            '''
+
+            uri = '{}/*/runtime/*/image/**'.format(self.store.aroot)
             if node_uuid:
-                uri = '{}/{}/runtime/*/image/**'
-            return self.store.actual.getAll(uri)
+                uri = '{}/{}/runtime/*/image/**'.format(self.store.aroot, node_uuid)
+            data = self.store.actual.getAll(uri)
+            images = {}
+            for i in data:
+                nodeid = i[0].split('/')[4]
+                pluginid = i[0].split('/')[6]
+                img_data = json.loads(i[1])
+                imgs = images.get(nodeid, None)
+                if imgs is None:
+                    images.update({nodeid: {pluginid: [img_data]}})
+                else:
+                    if pluginid not in imgs.keys():
+                        images.update({nodeid: {pluginid: [img_data]}})
+                    else:
+                        images.get(nodeid).get(pluginid).append(img_data)
+            return images
 
     class Flavor(object):
         '''
@@ -1062,11 +1088,31 @@ class API(object):
                 return False
 
         def list(self, node_uuid=None):
+            '''
 
-            uri = '{}/*/runtime/*/flavor/'
+            List available entity flavors
+
+            :param node_uuid: optional node id
+            :return: dictionaty {nodeid: {runtimeid: [flavor list]}}
+            '''
+            uri = '{}/*/runtime/*/flavor/**'.format(self.store.aroot)
             if node_uuid:
-                uri = '{}/{}/runtime/*/flavor/**'
-            return self.store.actual.getAll(uri)
+                uri = '{}/{}/runtime/*/flavor/**'.format(self.store.aroot, node_uuid)
+            data = self.store.actual.getAll(uri)
+            flavors = {}
+            for i in data:
+                nodeid = i[0].split('/')[4]
+                pluginid = i[0].split('/')[6]
+                flv_data = json.loads(i[1])
+                flvs = flavors.get(nodeid, None)
+                if flvs is None:
+                    flavors.update({nodeid: {pluginid: [flv_data]}})
+                else:
+                    if pluginid not in flvs.keys():
+                        flavors.update({nodeid: {pluginid: [flv_data]}})
+                    else:
+                        flavors.get(nodeid).get(pluginid).append(flv_data)
+            return flavors
 
         def search(self, search_dict, node_uuid=None):
             pass
