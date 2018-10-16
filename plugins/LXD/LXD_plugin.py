@@ -458,7 +458,7 @@ class LXD(RuntimePlugin):
             else:
 
                 c = self.conn.containers.get(instance.name)
-                c.stop()
+                c.stop(force=False, wait=True)
                 c.sync()
 
                 while c.status != 'Stopped':
