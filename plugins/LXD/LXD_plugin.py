@@ -147,6 +147,8 @@ class LXD(RuntimePlugin):
 
         entity.image = image_name
         entity.set_state(State.DEFINED)
+        if kwargs.get('devices'):
+            entity.devices = json.loads(kwargs.get('devices'))
 
         # TODO check what can go here and what should be in instance configuration
         # i think image should be here and profile generation in instance configuration
@@ -259,6 +261,8 @@ class LXD(RuntimePlugin):
                                              entity.user_file, entity.ssh_key, entity.storage, entity.profiles,
                                              entity_uuid)
 
+                instance.devices = entity.devices
+
                 self.agent.logger.info('configureEntity()', '[ INFO ] LXD Plugin - Creating profile...')
                 try:
                     # img = self.conn.images.create(image_data, public=True, wait=True)
@@ -283,6 +287,10 @@ class LXD(RuntimePlugin):
                             'environment.FOSNODEUUID': self.agent.get_os_plugin().get_uuid()
                             }
                     dev = self.__generate_custom_profile_devices_configuration(instance)
+                    if instance.devices:
+                        for d in instance.devices:
+                            dev.update(d)
+
                     custom_profile_for_instance.config = conf
                     custom_profile_for_instance.devices = dev
                     custom_profile_for_instance.save()
