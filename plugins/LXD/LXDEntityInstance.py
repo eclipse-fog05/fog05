@@ -30,6 +30,7 @@ class LXDEntityInstance(EntityInstance):
         self.ssh_key = ssh_key
         self.storage = storage
         self.profiles = profiles
+        self.devices = None
         self.conf = None
 
     def on_configured(self, configuration):

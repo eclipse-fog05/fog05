@@ -18,6 +18,7 @@ sys.path.append(os.path.join(sys.path[0],'interfaces'))
 from fog05.interfaces.States import State
 from fog05.interfaces.Entity import Entity
 
+
 class LXDEntity(Entity):
 
     def __init__(self, uuid, name, networks, image, user_file, ssh_key, storage, profiles):
@@ -31,6 +32,7 @@ class LXDEntity(Entity):
         self.ssh_key = ssh_key
         self.storage = storage
         self.profiles = profiles
+        self.devices = None
         self.conf = None
         self.image = ""
 
