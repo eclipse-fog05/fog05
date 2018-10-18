@@ -23,6 +23,6 @@ def run(*args,**kwargs):
 
     sys.path.append(os.path.join(sys.path[0], 'plugins', 'brctl'))
     from brctl_plugin import brctl
-    br = brctl('brctl', VERSION, kwargs.get('agent'), kwargs.get('uuid'))
+    br = brctl('brctl', VERSION, kwargs.get('agent'), kwargs.get('uuid'), kwargs.get('configuration'))
     return br
 
