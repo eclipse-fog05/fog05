@@ -26,13 +26,14 @@ import socket
 
 class brctl(NetworkPlugin):
 
-    def __init__(self, name, version, agent, plugin_uuid):
+    def __init__(self, name, version, agent, plugin_uuid, configuration={}):
         super(brctl, self).__init__(version, plugin_uuid)
         self.name = name
         self.agent = agent
         self.interfaces_map = {}
         self.brmap = {}
         self.netmap = {}
+        self.configuration = configuration
         self.agent.logger.info('__init__()', ' Hello from bridge-utils Plugin')
         self.BASE_DIR = os.path.join(self.agent.base_path, 'brctl')
         # self.BASE_DIR = '/opt/fos/brctl'
@@ -40,6 +41,7 @@ class brctl(NetworkPlugin):
         self.HOME = 'network/{}'.format(self.uuid)
         file_dir = os.path.dirname(__file__)
         self.DIR = os.path.abspath(file_dir)
+        self.overlay_interface = None
 
         if self.agent.get_os_plugin().dir_exists(self.BASE_DIR):
             if not self.agent.get_os_plugin().dir_exists(os.path.join(self.BASE_DIR, self.DHCP_DIR)):
@@ -47,6 +49,40 @@ class brctl(NetworkPlugin):
         else:
             self.agent.get_os_plugin().create_dir(self.BASE_DIR)
             self.agent.get_os_plugin().create_dir(os.path.join(self.BASE_DIR, self.DHCP_DIR))
+
+        if self.configuration.get('data_subnet'):
+            cird = self.configuration.get('data_subnet')
+
+            data = json.loads(self.agent.astore.get(self.agent.ahome))
+            for n in data.get('network'):
+                intf_cird = self.__ip_mask_to_cird(
+                    n.get('inft_configuration').get('ipv4_address'),
+                    n.get('inft_configuration').get('ipv4_netmask')
+                )
+                if cird == intf_cird:
+                    self.overlay_interface = n.get('intf_name')
+
+
+            '''
+            
+             d['network']
+            [
+                {'intf_name': 'virbr0', 'inft_configuration': 
+                    {
+                    'ipv4_address': '192.168.122.1',
+                    'ipv4_netmask': '255.255.255.0', 
+                    'ipv4_gateway': '',
+                    'ipv6_address': '',
+                    'ipv6_netmask': ''},
+                'intf_mac_address': '52:54:00:6d:db:1f',
+                'intf_speed': 0,
+                'type': 'virtual bridge',
+                'available': True,
+                'default_gw': False
+                }, {'intf_name': 'lo', 'inft_configuration': {'ipv4_address': '127.0.0.1', 'ipv4_netmask': '255.0.0.0', 'ipv4_gateway': '', 'ipv6_address': '::1', 'ipv6_netmask': 'ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff'}, 'intf_mac_address': '00:00:00:00:00:00', 'intf_speed': 0, 'type': 'loopback', 'available': True, 'default_gw': False}, {'intf_name': 'lxdbr0', 'inft_configuration': {'ipv4_address': '10.34.58.1', 'ipv4_netmask': '255.255.255.0', 'ipv4_gateway': '', 'ipv6_address': 'fe80::9082:bff:fe47:9f44%lxdbr0', 'ipv6_netmask': 'ffff:ffff:ffff:ffff::'}, 'intf_mac_address': '92:82:0b:47:9f:44', 'intf_speed': 0, 'type': 'container bridge', 'available': True, 'default_gw': False}, {'intf_name': 'ens2', 'inft_configuration': {'ipv4_address': '10.100.1.215', 'ipv4_netmask': '255.255.255.0', 'ipv4_gateway': '10.100.1.1', 'ipv6_address': 'fe80::94a7:f2ff:fe11:fcea%ens2', 'ipv6_netmask': 'ffff:ffff:ffff:ffff::'}, 'intf_mac_address': '96:a7:f2:11:fc:ea', 'intf_speed': 100, 'type': 'ethernet', 'available': False, 'default_gw': True}, {'intf_name': 'virbr0-nic', 'inft_configuration': {'ipv4_address': '', 'ipv4_netmask': '', 'ipv4_gateway': '', 'ipv6_address': '', 'ipv6_netmask': ''}, 'intf_mac_address': '52:54:00:6d:db:1f', 'intf_speed': 10, 'type': 'virtual bridge', 'available': True, 'default_gw': False}]
+            
+            
+            '''
 
         '''
         should listen on:
@@ -267,6 +303,25 @@ class brctl(NetworkPlugin):
         return socket.inet_ntoa(struct.pack('>I', start + 1)), socket.inet_ntoa(
             struct.pack('>I', start + 2)), socket.inet_ntoa(struct.pack('>I', end - 1)), netmask
 
+    def __get_net_size(self, netmask):
+        binary_str = ''
+        for octet in netmask:
+            binary_str += bin(int(octet))[2:].zfill(8)
+        return str(len(binary_str.rstrip('0')))
+
+    def __ip_mask_to_cird(self, ip, mask):
+
+        try:
+            socket.inet_aton(ip)
+            socket.inet_aton(mask)
+        except:
+            return "0.0.0.0/0"
+
+        ip = ip.split('.')
+        mask = mask.split('.')
+        net_start = [str(int(ip[x]) & int(mask[x])) for x in range(0, 4)]
+        return '.'.join(net_start) + '/' + self.__get_net_size(mask)
+
     def __react_to_cache_networks(self, key, value, v):
         self.agent.logger.info('__react_to_cache_networks()', ' BRCTL Plugin - React to to URI: {} Value: {} Version: {}'.format(key, value, v))
         uuid = key.split('/')[-1]
@@ -287,11 +342,9 @@ class brctl(NetworkPlugin):
         manifest = kwargs
         self.create_virtual_network(name, net_uuid, ip_range, has_dhcp, gw, manifest)
 
-
     def __parse_manifest_for_remove(self, **kwargs):
         net_uuid = kwargs.get('uuid')
         self.delete_virtual_network(net_uuid)
-
 
     def __react(self, action):
         r = {
@@ -302,14 +355,15 @@ class brctl(NetworkPlugin):
         return r.get(action, None)
 
     def __generate_vxlan_shutdown_script(self, net_uuid):
+
         template_sh = self.agent.get_os_plugin().read_file(os.path.join(self.DIR, 'templates', 'vxlan_destroy.sh'))
         br_name = 'br-{}'.format(net_uuid.split('-')[0])
         vxlan_name = 'vxl-{}'.format(net_uuid.split('-')[0])
         file_name = '{}_dnsmasq.pid'.format(br_name)
         pid_file_path = os.path.join(self.BASE_DIR, self.DHCP_DIR, file_name)
-
         net_sh = Environment().from_string(template_sh)
         net_sh = net_sh.render(bridge=br_name, vxlan_intf_name=vxlan_name, dnsmasq_pid_file=pid_file_path)
+
         file_name = '{}_stop.sh'.format(br_name)
         self.agent.get_os_plugin().store_file(net_sh, self.BASE_DIR, file_name)
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, file_name))
@@ -330,7 +384,10 @@ class brctl(NetworkPlugin):
         return file_name
 
     def __generate_vxlan_script(self, net_uuid, manifest=None):
-        template_sh = self.agent.get_os_plugin().read_file(os.path.join(self.DIR, 'templates', 'vxlan_creation.sh'))
+        if not self.overlay_interface:
+            template_sh = self.agent.get_os_plugin().read_file(os.path.join(self.DIR, 'templates', 'vxlan_creation.sh'))
+        else:
+            template_sh = self.agent.get_os_plugin().read_file(os.path.join(self.DIR, 'templates', 'vxlan_creation_intf.sh'))
         net_sh = Environment().from_string(template_sh)
         br_name = 'br-{}'.format(net_uuid.split('-')[0])
         vxlan_name = 'vxl-{}'.format(net_uuid.split('-')[0])
@@ -351,7 +408,7 @@ class brctl(NetworkPlugin):
             mcast_addr = '239.0.0.{}'.format(vxlan_id)
 
         net_sh = net_sh.render(bridge_name=br_name, vxlan_intf_name=vxlan_name,
-                               group_id=vxlan_id, mcast_group_address=mcast_addr)
+                               group_id=vxlan_id, mcast_group_address=mcast_addr, wan=self.overlay_interface)
         self.agent.get_os_plugin().store_file(net_sh, self.BASE_DIR, '{}.sh'.format(net_uuid.split('-')[0]))
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, '{}.sh'.format(net_uuid.split('-')[0])))
         # TODO chmod should be also executed by OSPlugin
