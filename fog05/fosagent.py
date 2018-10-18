@@ -217,7 +217,7 @@ class FosAgent(Agent):
                 plugins = self.pl.plugins
                 for p in plugins:
                     if p['name'] in self.__autoload_list or len(self.__autoload_list) == 0:
-                        mfile = p.get('info').replace('__init__.py','{}_plugin.json'.format(p.get('name')))
+                        mfile = p.get('info').replace('__init__.py', '{}_plugin.json'.format(p.get('name')))
                         if self.__osPlugin.file_exists(mfile):
                             manifest = json.loads(self.__osPlugin.read_file(mfile))
                             name = manifest.get('name')
@@ -310,13 +310,13 @@ class FosAgent(Agent):
             self.logger.warning('__load_runtime_plugin()', '[ WARN ] Runtime: {} plugin not found!'.format(plugin_name))
             return None
 
-    def __load_network_plugin(self, plugin_name, plugin_uuid, configuration = None):
+    def __load_network_plugin(self, plugin_name, plugin_uuid, configuration = {}):
         self.logger.info('__load_network_plugin()', 'Loading a Network plugin: {}'.format(plugin_name))
         net = self.pl.locate_plugin(plugin_name)
         if net is not None:
             self.logger.info('__load_network_plugin()', '[ INIT ] Loading a Network plugin: {}'.format(plugin_name))
             net = self.pl.load_plugin(net)
-            net = net.run(agent=self, uuid=plugin_uuid)
+            net = net.run(agent=self, uuid=plugin_uuid, configuration=configuration)
             self.__nwPlugins.update({net.uuid: net})
 
             val = {'version': net.version, 'description': 'network {}'.format(net.name),
