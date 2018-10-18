@@ -112,10 +112,20 @@ class API(object):
         nws = manifest.get('networks')
         # print('networks: {}'.format(nws))
         for n in nws:
-            for node in nodes:
-                res = self.network.add(manifest=n, node_uuid=node[0])
-                if not res:
-                    raise Exception('Error on define network {} -> {} on {}  (RES={})'.format(n.get('uuid'), manifest.get('uuid'), node[0], res))
+            if n.get('nodes') is None:
+                print('I will create network in all nodes')
+                for node in nodes:
+                    res = self.network.add(manifest=n, node_uuid=node[0])
+                    if not res:
+                        raise Exception('Error on define network {} -> {} on {}  (RES={})'.format(n.get('uuid'), manifest.get('uuid'), node[0], res))
+            else:
+                net_nodes = n.get('nodes')
+                print('I will create network on {}'.format(net_nodes))
+                for netn in net_nodes:
+                    res = self.network.add(manifest=n, node_uuid=netn)
+                    if not res:
+                        raise Exception('Error on define network {} -> {} on {}  (RES={})'.format(n.get('uuid'), manifest.get('uuid'), netn, res))
+
             networks_uuid.append(n.get('uuid'))
         c_list = self.resolve_dependencies(manifest.get('components'))
         for c in c_list:
