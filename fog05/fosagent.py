@@ -63,6 +63,7 @@ class FosAgent(Agent):
             self.__rtPlugins = {}
             self.__nwPlugins = {}
             self.__monPlugins = {}
+            self.__manPlugins = {}
             self.__orchPlugins = {}
             self.logger.info('__init__()', '[ INIT ] Loading OS Plugin...')
             self.__load_os_plugin()
@@ -287,7 +288,7 @@ class FosAgent(Agent):
         else:
             return self.__nwPlugins.get(cnetwork_uuid)
 
-    def __load_runtime_plugin(self, plugin_name, plugin_uuid, configuration = None):
+    def __load_runtime_plugin(self, plugin_name, plugin_uuid, configuration=None):
         self.logger.info('__load_runtime_plugin()', 'Loading a Runtime plugin: {}'.format(plugin_name))
         rt = self.pl.locate_plugin(plugin_name)
         if rt is not None:
@@ -310,7 +311,7 @@ class FosAgent(Agent):
             self.logger.warning('__load_runtime_plugin()', '[ WARN ] Runtime: {} plugin not found!'.format(plugin_name))
             return None
 
-    def __load_network_plugin(self, plugin_name, plugin_uuid, configuration = {}):
+    def __load_network_plugin(self, plugin_name, plugin_uuid, configuration={}):
         self.logger.info('__load_network_plugin()', 'Loading a Network plugin: {}'.format(plugin_name))
         net = self.pl.locate_plugin(plugin_name)
         if net is not None:
@@ -335,13 +336,13 @@ class FosAgent(Agent):
             self.logger.warning('__load_network_plugin()', '[ WARN ] Network: {} plugin not found!'.format(plugin_name))
             return None
 
-    def __load_monitoring_plugin(self, plugin_name, plugin_uuid, configuration = None):
+    def __load_monitoring_plugin(self, plugin_name, plugin_uuid, configuration=None):
         self.logger.info('__load_monitoring_plugin()', 'Loading a Monitoring plugin: {}'.format(plugin_name))
         mon = self.pl.locate_plugin(plugin_name)
         if mon is not None:
             self.logger.info('__load_monitoring_plugin()', '[ INIT ] Loading a Monitoring plugin: {}'.format(plugin_name))
             mon = self.pl.load_plugin(mon)
-            mon = mon.run(agent=self, uuid=plugin_uuid)
+            mon = mon.run(agent=self, uuid=plugin_uuid, configuration=configuration)
             self.__monPlugins.update({mon.uuid: mon})
 
             val = {'version': mon.version, 'description': 'monitoring {}'.format(mon.name), 'plugin': ''}
@@ -359,7 +360,7 @@ class FosAgent(Agent):
             self.logger.warning('__load_monitoring_plugin()', '[ WARN ] Monitoring: {} plugin not found!'.format(plugin_name))
             return None
 
-    def __load_orchestration_plugin(self, plugin_name, plugin_uuid, configuration = None):
+    def __load_orchestration_plugin(self, plugin_name, plugin_uuid, configuration=None):
         self.logger.info('__load_orchestration_plugin()', 'Loading a Orchestration plugin: {}'.format(plugin_name))
         orch = self.pl.locate_plugin(plugin_name)
         if orch is not None:
@@ -376,11 +377,35 @@ class FosAgent(Agent):
                                 'type': 'orchestration', 'status': 'loaded'}]}
             uri = '{}/plugins'.format(self.ahome)
             self.astore.dput(uri, json.dumps(val))
-            self.logger.info('__load_monitoring_plugin()', '[ DONE ] Loading a Orchestration plugin: {}'.format(plugin_name))
+            self.logger.info('__load_orchestration_plugin()', '[ DONE ] Loading a Orchestration plugin: {}'.format(plugin_name))
 
             return orch
         else:
             self.logger.warning('__load_orchestration_plugin()', '[ WARN ] Orchestration: {} plugin not found!'.format(plugin_name))
+            return None
+
+    def __load_manager_plugin(self, plugin_name, plugin_uuid, configuration=None):
+        self.logger.info('__load_manager_plugin()', 'Loading a Manager plugin: {}'.format(plugin_name))
+        man = self.pl.locate_plugin(plugin_name)
+        if man is not None:
+            self.logger.info('__load_manager_plugin()', '[ INIT ] Loading a Manager plugin: {}'.format(plugin_name))
+            man = self.pl.load_plugin(man)
+            man = man.run(agent=self, uuid=plugin_uuid, configuration=configuration)
+            self.__manPlugins.update({man.uuid: man})
+        
+            val = {'version': man.version, 'description': 'manager {}'.format(man.name), 'plugin': ''}
+            uri = '{}/plugins/{}/{}'.format(self.ahome, man.name, man.uuid)
+            self.astore.put(uri, json.dumps(val))
+        
+            val = {'plugins': [{'name': man.name, 'version': man.version, 'uuid': str(man.uuid),
+                                'type': 'manager', 'status': 'loaded'}]}
+            uri = '{}/plugins'.format(self.ahome)
+            self.astore.dput(uri, json.dumps(val))
+            self.logger.info('__load_manager_plugin()', '[ DONE ] Loading a Manager plugin: {}'.format(plugin_name))
+        
+            return man
+        else:
+            self.logger.warning('__load_manager_plugin()', '[ WARN ] Manager: {} plugin not found!'.format(plugin_name))
             return None
 
     def __populate_node_information(self):
@@ -435,6 +460,7 @@ class FosAgent(Agent):
             'network': self.__load_network_plugin,
             'monitoring': self.__load_monitoring_plugin,
             'orchestration': self.__load_orchestration_plugin,
+            'manager': self.__load_manager_plugin
         }
         return r.get(type, None)
 
