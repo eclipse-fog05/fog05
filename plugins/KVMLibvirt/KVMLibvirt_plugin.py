@@ -483,9 +483,17 @@ class KVMLibvirt(RuntimePlugin):
                     raise StateTransitionNotAllowedException('Instance is not in RUNNING state', 'Instance {} is not in RUNNING state'.format(instance_uuid))
                 else:
                     dom = self.__lookup_by_uuid(instance_uuid)
-                    dom.destory()
-                    while dom.state()[0] != 5:
-                        pass
+                    dom.shutdown()
+                    retries = 100
+                    for i in range(0, retries):
+                        if dom.state()[0] != 5:
+                            break
+                        else:
+                            time.sleep(0.015)
+
+                    if dom.state()[0] != 5:
+                        dom.destroy()
+
                     instance.on_stop()
                     self.current_entities.update({entity_uuid: entity})
 
