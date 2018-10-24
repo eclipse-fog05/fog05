@@ -400,7 +400,7 @@ class brctl(NetworkPlugin):
                 vxlan_id = len(self.netmap) + 1
             vxl_mcast_manifest = manifest.get('multicast_address')
             if vxl_mcast_manifest is not None:
-                mcast_addr = vxl_mcast_manifest
+                mcast_addr = vxl_mcast_manifests
             else:
                 mcast_addr = '239.0.0.{}'.format(vxlan_id)
         else:
