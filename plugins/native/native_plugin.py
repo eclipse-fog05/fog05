@@ -410,6 +410,7 @@ class Native(RuntimePlugin):
             else:
                 p = instance.process
                 p.terminate()
+                os.system("sudo kill -15 {}".format(p.pid))
                 self.agent.logger.info('stopEntity()', 'Sended sigterm - Sleep 3 seconds')
 
                 cmd = '{} {}'.format(entity.command, ' '.join(str(x) for x in entity.args))
@@ -422,13 +423,14 @@ class Native(RuntimePlugin):
                     self.agent.logger.info('stopEntity()', 'Native Plugin - PID {}'.format(pid))
                     self.agent.logger.info('stopEntity()', 'Still Alive - Sending sigint - Sleep 2 seconds')
                     p.send_signal(2)
-                    self.agent.get_os_plugin().send_sig_int(pid)
+                    os.system("sudo kill -2 {}".format(p.pid))
                     f_name = '{}_{}.pid'.format(entity_uuid, instance_uuid)
                     f_path = self.BASE_DIR
                     time.sleep(2)
                     if p.is_running():
                         self.agent.logger.info('stopEntity()', 'Still Alive!!!!! - Sending sigkill')
                         p.kill()
+                        os.system("sudo kill -9 {}".format(p.pid))
 
                     pid_file = os.path.join(f_path, f_name)
                     self.agent.logger.info('stopEntity()', 'Check if PID file exists {}'.format(pid_file))
