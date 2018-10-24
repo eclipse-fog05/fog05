@@ -417,7 +417,8 @@ class Native(RuntimePlugin):
                 cmd = '{} {}'.format(entity.command, ' '.join(str(x) for x in entity.args))
                 time.sleep(3)
                 if instance.source is None and p.is_running():
-                    pid = int(self.agent.get_os_plugin().read_file(os.path.join(self.BASE_DIR,entity_uuid)))
+                    pid_file = '{}.pid'.format(os.path.join(self.BASE_DIR, self.STORE_DIR, entity_uuid, instance.name, instance_uuid))
+                    pid = int(self.agent.get_os_plugin().read_file(pid_file))
                     self.agent.logger.info('stopEntity()', 'FILE PID: {}'.format(pid))
                     #pid = instance.pid
                     pid = p.pid
