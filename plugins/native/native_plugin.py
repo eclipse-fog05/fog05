@@ -408,27 +408,30 @@ class Native(RuntimePlugin):
                 raise StateTransitionNotAllowedException('Instance is not in RUNNING state',
                                                          'Instance {} is not in RUNNING state'.format(instance_uuid))
             else:
-                p = instance.process
-                p.terminate()
+                pid_file = '{}.pid'.format(os.path.join(self.BASE_DIR, self.STORE_DIR, entity_uuid, instance.name, instance_uuid))
+                pid = int(self.agent.get_os_plugin().read_file(pid_file))
+
+                proc = psutil.Process(pid)
+                proc.terminate()
+                # os.system("sudo kill -15 {}".format(p.pid))
                 self.agent.logger.info('stopEntity()', 'Sended sigterm - Sleep 3 seconds')
+                # self.agent.logger.info('stopEntity()', 'sigterm - sudo kill -15 {}'.format(pid))
 
                 cmd = '{} {}'.format(entity.command, ' '.join(str(x) for x in entity.args))
                 time.sleep(3)
-                if instance.source is None and p.is_running():
-                    # pid = int(self.agent.get_os_plugin().read_file(os.path.join(self.BASE_DIR,entity_uuid)))
-                    #pid = instance.pid
-                    pid = p.pid
+                if instance.source is None and proc.is_running():
+
+                    self.agent.logger.info('stopEntity()', 'FILE PID: {}'.format(pid))
                     self.agent.logger.info('stopEntity()', 'Instance source is none')
                     self.agent.logger.info('stopEntity()', 'Native Plugin - PID {}'.format(pid))
                     self.agent.logger.info('stopEntity()', 'Still Alive - Sending sigint - Sleep 2 seconds')
-                    p.send_signal(2)
-                    self.agent.get_os_plugin().send_sig_int(pid)
+                    proc.send_signal(2)
                     f_name = '{}_{}.pid'.format(entity_uuid, instance_uuid)
                     f_path = self.BASE_DIR
                     time.sleep(2)
-                    if p.is_running():
+                    if proc.is_running():
                         self.agent.logger.info('stopEntity()', 'Still Alive!!!!! - Sending sigkill')
-                        p.kill()
+                        proc.kill()
 
                     pid_file = os.path.join(f_path, f_name)
                     self.agent.logger.info('stopEntity()', 'Check if PID file exists {}'.format(pid_file))
