@@ -422,7 +422,7 @@ class Native(RuntimePlugin):
                     self.agent.logger.info('stopEntity()', 'Native Plugin - PID {}'.format(pid))
                     self.agent.logger.info('stopEntity()', 'Still Alive - Sending sigint - Sleep 2 seconds')
                     p.send_signal(2)
-                    # self.agent.get_os_plugin().send_sig_int(pid)
+                    self.agent.get_os_plugin().send_sig_int(pid)
                     f_name = '{}_{}.pid'.format(entity_uuid, instance_uuid)
                     f_path = self.BASE_DIR
                     time.sleep(2)
