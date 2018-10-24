@@ -483,7 +483,7 @@ class KVMLibvirt(RuntimePlugin):
                     raise StateTransitionNotAllowedException('Instance is not in RUNNING state', 'Instance {} is not in RUNNING state'.format(instance_uuid))
                 else:
                     dom = self.__lookup_by_uuid(instance_uuid)
-                    dom.shutdown()
+                    dom.destory()
                     while dom.state()[0] != 5:
                         pass
                     instance.on_stop()
