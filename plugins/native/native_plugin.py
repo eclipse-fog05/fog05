@@ -412,6 +412,7 @@ class Native(RuntimePlugin):
                 p.terminate()
                 os.system("sudo kill -15 {}".format(p.pid))
                 self.agent.logger.info('stopEntity()', 'Sended sigterm - Sleep 3 seconds')
+                self.agent.logger.info('stopEntity()', 'sigterm - sudo kill -15 {}'.format(p.pid))
 
                 cmd = '{} {}'.format(entity.command, ' '.join(str(x) for x in entity.args))
                 time.sleep(3)
@@ -422,6 +423,7 @@ class Native(RuntimePlugin):
                     self.agent.logger.info('stopEntity()', 'Instance source is none')
                     self.agent.logger.info('stopEntity()', 'Native Plugin - PID {}'.format(pid))
                     self.agent.logger.info('stopEntity()', 'Still Alive - Sending sigint - Sleep 2 seconds')
+                    self.agent.logger.info('stopEntity()', 'sigterm - sudo kill -2 {}'.format(p.pid))
                     p.send_signal(2)
                     os.system("sudo kill -2 {}".format(p.pid))
                     f_name = '{}_{}.pid'.format(entity_uuid, instance_uuid)
@@ -431,6 +433,7 @@ class Native(RuntimePlugin):
                         self.agent.logger.info('stopEntity()', 'Still Alive!!!!! - Sending sigkill')
                         p.kill()
                         os.system("sudo kill -9 {}".format(p.pid))
+                        self.agent.logger.info('stopEntity()', 'sigterm - sudo kill -9 {}'.format(p.pid))
 
                     pid_file = os.path.join(f_path, f_name)
                     self.agent.logger.info('stopEntity()', 'Check if PID file exists {}'.format(pid_file))
