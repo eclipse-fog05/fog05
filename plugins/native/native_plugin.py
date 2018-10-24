@@ -237,7 +237,7 @@ class Native(RuntimePlugin):
                 self.agent.logger.error('clean_entity()', 'Native Plugin - Instance not found!!')
             else:
                 instance = entity.get_instance(instance_uuid)
-                if not instance:
+                if instance is None:
                     self.agent.logger.error('clean_entity()',
                                             'Instance {} not existing'.format(instance_uuid))
                     return False
@@ -282,6 +282,10 @@ class Native(RuntimePlugin):
                                                      'Entity {} is not in DEFINED state'.format(entity_uuid))
         else:
             instance = entity.get_instance(instance_uuid)
+            if instance is None:
+                self.agent.logger.error('clean_entity()',
+                                        'Instance {} not existing'.format(instance_uuid))
+                return False
             if instance.get_state() == State.RUNNING:
                 self.agent.logger.error('run_entity()',
                                         'Native Plugin - Instance already running')
@@ -581,15 +585,15 @@ class Native(RuntimePlugin):
     def __force_entity_instance_termination(self, entity_uuid, instance_uuid):
         if type(entity_uuid) == dict:
             entity_uuid = entity_uuid.get('entity_uuid')
-        self.agent.logger.info('__force_entity_instance_termination()', ' Native Plugin - Stop a container uuid {} '.format(entity_uuid))
+        self.agent.logger.info('__force_entity_instance_termination()', ' Native Plugin - Stop a BE uuid {} '.format(entity_uuid))
         entity = self.current_entities.get(entity_uuid, None)
         if entity is None:
-            self.agent.logger.error('__force_entity_instance_termination()', 'LXD Plugin - Entity not exists')
+            self.agent.logger.error('__force_entity_instance_termination()', 'Native Plugin - Entity not exists')
             raise EntityNotExistingException('Native not existing',
                                              'Entity {} not in runtime {}'.format(entity_uuid, self.uuid))
         else:
             if instance_uuid is None or not entity.has_instance(instance_uuid):
-                self.agent.logger.error('__force_entity_instance_termination()', 'LXD Plugin - Instance not found!!')
+                self.agent.logger.error('__force_entity_instance_termination()', 'Native Plugin - Instance not found!!')
             else:
                 instance = entity.get_instance(instance_uuid)
                 if instance.get_state() == State.PAUSED:
