@@ -410,17 +410,25 @@ class Native(RuntimePlugin):
             else:
                 p = instance.process
                 p.terminate()
+                self.agent.logger.info('stopEntity()', 'Sended sigterm - Sleep 3 seconds')
 
                 cmd = '{} {}'.format(entity.command, ' '.join(str(x) for x in entity.args))
-
-                if instance.source is None:
+                time.sleep(3)
+                if instance.source is None and p.is_running():
                     # pid = int(self.agent.get_os_plugin().read_file(os.path.join(self.BASE_DIR,entity_uuid)))
-                    pid = instance.pid
+                    #pid = instance.pid
+                    pid = p.pid
                     self.agent.logger.info('stopEntity()', 'Instance source is none')
                     self.agent.logger.info('stopEntity()', 'Native Plugin - PID {}'.format(pid))
-                    self.agent.get_os_plugin().send_sig_int(pid)
+                    self.agent.logger.info('stopEntity()', 'Still Alive - Sending sigint - Sleep 2 seconds')
+                    p.send_signal(-2)
+                    # self.agent.get_os_plugin().send_sig_int(pid)
                     f_name = '{}_{}.pid'.format(entity_uuid, instance_uuid)
                     f_path = self.BASE_DIR
+                    time.sleep(2)
+                    if p.is_running():
+                        self.agent.logger.info('stopEntity()', 'Still Alive!!!!! - Sending sigkill')
+                        p.kill()
 
                     pid_file = os.path.join(f_path, f_name)
                     self.agent.logger.info('stopEntity()', 'Check if PID file exists {}'.format(pid_file))
