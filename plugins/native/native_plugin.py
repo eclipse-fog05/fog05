@@ -410,6 +410,7 @@ class Native(RuntimePlugin):
             else:
                 pid_file = '{}.pid'.format(os.path.join(self.BASE_DIR, self.STORE_DIR, entity_uuid, instance.name, instance_uuid))
                 pid = int(self.agent.get_os_plugin().read_file(pid_file))
+                self.agent.logger.info('stopEntity()', 'FILE PID: {}'.format(pid))
 
                 proc = psutil.Process(pid)
                 proc.terminate()
