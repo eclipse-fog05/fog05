@@ -134,6 +134,7 @@ class KVMLibvirt(RuntimePlugin):
                 img_info.update({'uuid': entity_uuid})
                 img_info.update({'name': '{}_img'.format(name)})
                 img_info.update({'base_image': base_image})
+                img_info.update({'type':'kvm'})
                 img_info.update({'format': base_image.split('.')[-1]})
                 self.__add_image(img_info)
                 img = self.images.get(entity_uuid, None)
@@ -153,6 +154,7 @@ class KVMLibvirt(RuntimePlugin):
                 flavor_info.update({'cpu': cpu})
                 flavor_info.update({'memory': mem})
                 flavor_info.update({'disk_size': disk_size})
+                flavor_info.update({'type':'kvm'})
                 self.__add_flavor(flavor_info)
                 flavor = self.flavors.get(entity_uuid, None)
                 if flavor is None:
@@ -994,7 +996,8 @@ class KVMLibvirt(RuntimePlugin):
         self.agent.logger.info('__react_to_cache_image()', 'KVM Plugin - React to to URI: {} Value: {} Version: {}'.format(uri, value, v))
         if uri.split('/')[-2] == 'image':
             image_uuid = uri.split('/')[-1]
-            if value is None and v is None:
+            action = value.get('status')
+            if action == 'undefine':
                 self.agent.logger.info('__react_to_cache_image()', 'KVM Plugin - This is a remove for URI: {}'.format(uri))
                 self.__remove_image(image_uuid)
             else:
@@ -1005,7 +1008,8 @@ class KVMLibvirt(RuntimePlugin):
         self.agent.logger.info('__react_to_cache_flavor()', 'KVM Plugin - React to to URI: {} Value: {} Version: {}'.format(uri, value, v))
         if uri.split('/')[-2] == 'flavor':
             flavor_uuid = uri.split('/')[-1]
-            if value is None and v is None:
+            action = value.get('status')
+            if action == 'undefine':
                 self.agent.logger.info('__react_to_cache_flavor()', 'KVM Plugin - This is a remove for URI: {}'.format(uri))
                 self.__remove_flavor(flavor_uuid)
             else:
