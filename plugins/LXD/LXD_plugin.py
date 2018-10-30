@@ -156,8 +156,13 @@ class LXD(RuntimePlugin):
         img_info = {}
         try:
             self.agent.logger.info('defineEntity()', '[ INFO ] LXD Plugin - Creating image with alias {}'.format(entity_uuid))
-            img = self.conn.images.create(image_data, public=True, wait=True)
-            img.add_alias(entity_uuid, description=entity.name)
+            try:
+                img = self.conn.images.create(image_data, public=True, wait=True)
+                img.add_alias(entity_uuid, description=entity.name)
+            except LXDAPIException as e:
+                if '{}'.format(e) == 'Image with same fingerprint already exists':
+                    pass
+
             self.agent.logger.info('defineEntity()', '[ DONE ] LXD Plugin - Created image with alias {}'.format(entity_uuid))
             img_info = {}
             img_info.update({'uuid': entity_uuid})
@@ -219,7 +224,7 @@ class LXD(RuntimePlugin):
                 pass
 
             self.current_entities.pop(entity_uuid, None)
-            self.agent.get_os_plugin().remove_file(os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image.get('path')))
+            # self.agent.get_os_plugin().remove_file(os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image.get('base_image')))
             self.__pop_actual_store(entity_uuid)
             self.agent.logger.info('undefineEntity()', '[ DONE ] LXD Plugin - Undefine a Container uuid {}'.format(entity_uuid))
             return True
