@@ -215,13 +215,13 @@ class LXD(RuntimePlugin):
             for i in list(entity.instances.keys()):
                 self.__force_entity_instance_termination(entity_uuid, i)
 
-            try:
-
-                img = self.conn.images.get_by_alias(entity_uuid)
-                img.delete()
-            except LXDAPIException as e:
-                self.agent.logger.error('undefine_entity()', 'Error {}'.format(e))
-                pass
+            # try:
+            #
+            #     img = self.conn.images.get_by_alias(entity_uuid)
+            #     img.delete()
+            # except LXDAPIException as e:
+            #     self.agent.logger.error('undefine_entity()', 'Error {}'.format(e))
+            #     pass
 
             self.current_entities.pop(entity_uuid, None)
             # self.agent.get_os_plugin().remove_file(os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image.get('base_image')))
