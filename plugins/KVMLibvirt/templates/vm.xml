@@ -65,7 +65,7 @@
         </disk>
         {% endfor %}
 
-        {if networks %}
+        {% if networks %}
         {% for net in networks %}
          {% if net.type is defined %}
         <devices>
@@ -85,7 +85,6 @@
             <!-- <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/> -->
         </interface>
          {% endif %}
-
         {% endfor %}
         {% endif %}
         <serial type='file'>
