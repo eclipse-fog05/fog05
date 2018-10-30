@@ -65,6 +65,7 @@
         </disk>
         {% endfor %}
 
+        {if networks %}
         {% for net in networks %}
          {% if net.type is defined %}
         <devices>
@@ -86,6 +87,7 @@
          {% endif %}
 
         {% endfor %}
+        {% endif %}
         <serial type='file'>
             <source path='/opt/fos/kvm/logs/{{ uuid }}_log.log'/>
             <target port='0'/>
