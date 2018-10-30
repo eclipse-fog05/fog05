@@ -52,6 +52,7 @@ class KVMLibvirt(RuntimePlugin):
         self.conn = None
         self.images = {}
         self.flavors = {}
+        self.lock = threading.Lock()
 
         self.start_runtime()
 
@@ -110,6 +111,7 @@ class KVMLibvirt(RuntimePlugin):
         return self.current_entities
 
     def define_entity(self, *args, **kwargs):
+        
         self.agent.logger.info('define_entity()', ' KVM Plugin - Defining a VM')
 
         entity = None
@@ -123,12 +125,14 @@ class KVMLibvirt(RuntimePlugin):
             name = kwargs.get('name')
 
             if self.is_uuid(base_image):
-                time.sleep(1)
+                self.lock.acquire()
                 img = self.images.get(base_image, None)
                 if img is None:
                     self.agent.logger.error('define_entity()', '[ ERRO ] KVM Plugin - Cannot find image {}'.format(base_image))
                     self.__write_error_entity(entity_uuid, 'Image not found!')
+                    self.lock.release()
                     return
+                self.lock.release()
             else:
                 self.agent.logger.warning('define_entity()', '[ WARN ] KVM Plugin - No image id specified defining from manifest information new image id uuid:{}'.format(entity_uuid))
                 img_info = {}
@@ -142,6 +146,7 @@ class KVMLibvirt(RuntimePlugin):
                 if img is None:
                     self.agent.logger.error('define_entity()', '[ ERRO ] KVM Plugin - Cannot find image {}'.format(entity_uuid))
                     self.__write_error_entity(entity_uuid, 'Image not found!')
+                    
                     return
 
             if kwargs.get('flavor_id', None) is None:
@@ -161,13 +166,17 @@ class KVMLibvirt(RuntimePlugin):
                 if flavor is None:
                     self.agent.logger.error('define_entity()', '[ ERRO ] KVM Plugin - Cannot find flavor {}'.format(entity_uuid))
                     self.__write_error_entity(entity_uuid, 'Flavor not found!')
+                    
                     return
             else:
+                self.lock.acquire()
                 flavor = self.flavors.get(kwargs.get('flavor_id'), None)
                 if flavor is None:
                     self.agent.logger.error('define_entity()', '[ ERRO ] KVM Plugin - Cannot find flavor {}'.format(kwargs.get('flavor_id')))
                     self.__write_error_entity(entity_uuid, 'Flavor not found!')
+                    self.lock.release()
                     return
+                self.lock.release()
 
             entity = KVMLibvirtEntity(entity_uuid, name, img.get('uuid'), flavor.get('uuid'))
             entity.set_user_file(kwargs.get('user-data'))
@@ -177,6 +186,7 @@ class KVMLibvirt(RuntimePlugin):
             self.agent.logger.error('define_entity()', '[ ERRO ] KVM Plugin - Wrong parameters args:{} kwargs:{}'.format(args, kwargs))
             e = {'errors': 'wrong parameters to define_entity'}
             self.__update_actual_store(self.ERRORS, e)
+            
             return
 
         entity.on_defined()
@@ -195,10 +205,11 @@ class KVMLibvirt(RuntimePlugin):
         vm_info.update({'entity_data': data})
         self.__update_actual_store_entity(entity_uuid, vm_info)
         self.agent.logger.info('define_entity()', '[ DONE ] KVM Plugin - VM Defined uuid: {}'.format(entity_uuid))
+        
         return entity_uuid
 
     def undefine_entity(self, entity_uuid):
-
+        
         if type(entity_uuid) == dict:
             entity_uuid = entity_uuid.get('entity_uuid')
         self.agent.logger.info('undefine_entity()', ' KVM Plugin - Undefine a VM uuid {}'.format(entity_uuid))
@@ -206,11 +217,13 @@ class KVMLibvirt(RuntimePlugin):
         if entity is None:
             self.agent.logger.error('undefine_entity()', 'KVM Plugin - Entity not exists')
             self.__write_error_entity(entity_uuid, 'Entity not exist')
+            
             raise EntityNotExistingException('Enitity not existing', 'Entity {} not in runtime {}'.format(entity_uuid, self.uuid))
 
         elif entity.get_state() != State.DEFINED:
             self.agent.logger.error('undefine_entity()', 'KVM Plugin - Entity state is wrong, or transition not allowed')
             self.__write_error_entity(entity_uuid, 'Entity state transition not allowed')
+            
             raise StateTransitionNotAllowedException('Entity is not in DEFINED state', 'Entity {} is not in DEFINED state'.format(entity_uuid))
         else:
             if (self.current_entities.pop(entity_uuid, None)) is None:
@@ -221,6 +234,7 @@ class KVMLibvirt(RuntimePlugin):
 
             self.__pop_actual_store_entity(entity_uuid)
             self.agent.logger.info('undefine_entity()', '[ DONE ] KVM Plugin - Undefine a VM uuid {} '.format(entity_uuid))
+            
             return True
 
     def configure_entity(self, entity_uuid, instance_uuid=None):
@@ -229,7 +243,7 @@ class KVMLibvirt(RuntimePlugin):
         :param instance_uuid:
         :return:
         '''
-
+        
         if type(entity_uuid) == dict:
             entity_uuid = entity_uuid.get('entity_uuid')
         self.agent.logger.info('configure_entity()', ' KVM Plugin - Configure a VM uuid {} '.format(entity_uuid))
@@ -237,10 +251,12 @@ class KVMLibvirt(RuntimePlugin):
         if entity is None:
             self.agent.logger.error('configure_entity()', 'KVM Plugin - Entity not exists')
             self.__write_error_entity(entity_uuid, 'Entity not exist')
+            
             raise EntityNotExistingException('Enitity not existing', 'Entity {} not in runtime {}'.format(entity_uuid, self.uuid))
         elif entity.get_state() != State.DEFINED:
             self.agent.logger.error('configure_entity()', 'KVM Plugin - Entity state is wrong, or transition not allowed')
             self.__write_error_entity(entity_uuid, 'Entity state transition not allowed')
+            
             raise StateTransitionNotAllowedException('Entity is not in DEFINED state', 'Entity {} is not in DEFINED state'.format(entity_uuid))
         else:
 
@@ -249,6 +265,7 @@ class KVMLibvirt(RuntimePlugin):
 
             if entity.has_instance(instance_uuid):
                 print('This instance already existis!!')
+                
             else:
 
                 id = len(entity.instances)
@@ -258,11 +275,13 @@ class KVMLibvirt(RuntimePlugin):
                 if flavor is None:
                     self.agent.logger.error('define_entity()', '[ ERRO ] KVM Plugin - Cannot find flavor {}'.format(entity.flavor_id))
                     self.__write_error_instance(entity_uuid, instance_uuid, 'Flavor not found!')
+                    
                     return
 
                 if img is None:
                     self.agent.logger.error('define_entity()', '[ ERRO ] KVM Plugin - Cannot find image {}'.format(entity.image_id))
                     self.__write_error_instance(entity_uuid, instance_uuid, 'Image not found!')
+                    
                     return
 
                 disk_path = '{}.{}'.format(instance_uuid, img.get('format'))
@@ -365,10 +384,11 @@ class KVMLibvirt(RuntimePlugin):
                 self.__update_actual_store_instance(entity_uuid, instance_uuid, vm_info)
 
                 self.agent.logger.info('configure_entity()', '[ DONE ] KVM Plugin - Configure a VM uuid {}'.format(instance_uuid))
+                
                 return True
 
     def clean_entity(self, entity_uuid, instance_uuid=None):
-
+        
         if type(entity_uuid) == dict:
             entity_uuid = entity_uuid.get('entity_uuid')
         self.agent.logger.info('clean_entity()', ' KVM Plugin - Clean a VM uuid {} '.format(entity_uuid))
@@ -376,22 +396,26 @@ class KVMLibvirt(RuntimePlugin):
         if entity is None:
             self.agent.logger.error('clean_entity()', 'KVM Plugin - Entity not exists')
             self.__write_error_entity(entity_uuid, 'Entity not exist')
+            
             raise EntityNotExistingException('Enitity not existing', 'Entity {} not in runtime {}'.format(entity_uuid, self.uuid))
         elif entity.get_state() != State.DEFINED:
             self.agent.logger.error('clean_entity()', 'KVM Plugin - Entity state is wrong, or transition not allowed')
             self.__write_error_entity(entity_uuid, 'Entity state transition not allowed')
+            
             raise StateTransitionNotAllowedException('Entity is not in DEFINED state', 'Entity {} is not in DEFINED state'.format(entity_uuid))
         else:
 
             if instance_uuid is None or not entity.has_instance(instance_uuid):
                 self.agent.logger.error('clean_entity()', 'KVM Plugin - Instance not found!!')
                 self.__write_error_instance(entity_uuid, instance_uuid, 'Entity Instance not exist')
+                
                 return
             else:
                 instance = entity.get_instance(instance_uuid)
                 if instance.get_state() != State.CONFIGURED:
                     self.agent.logger.error('clean_entity()', 'KVM Plugin - Instance state is wrong, or transition not allowed')
                     self.__write_error_instance(entity_uuid, instance_uuid, 'Entity Instance state transition not allowed')
+                    
                     raise StateTransitionNotAllowedException('Instance is not in CONFIGURED state', 'Instance {} is not in CONFIGURED state'.format(instance_uuid))
                 else:
                     dom = self.__lookup_by_uuid(instance_uuid)
@@ -410,10 +434,11 @@ class KVMLibvirt(RuntimePlugin):
                     self.current_entities.update({entity_uuid: entity})
                     self.__pop_actual_store_instance(entity_uuid, instance_uuid)
                     self.agent.logger.info('clean_entity()', '[ DONE ] KVM Plugin - Clean a VM uuid {} '.format(entity_uuid))
-
+                
                 return True
 
     def run_entity(self, entity_uuid, instance_uuid=None):
+        
         if type(entity_uuid) == dict:
             entity_uuid = entity_uuid.get('entity_uuid')
         self.agent.logger.info('run_entity()', 'KVM Plugin - Starting a VM uuid {}'.format(entity_uuid))
@@ -421,24 +446,29 @@ class KVMLibvirt(RuntimePlugin):
         if entity is None:
             self.agent.logger.error('run_entity()', 'KVM Plugin - Entity not exists')
             self.__write_error_entity(entity_uuid, 'Entity not exist')
+            
             raise EntityNotExistingException('Enitity not existing', 'Entity {} not in runtime {}'.format(entity_uuid, self.uuid))
         elif entity.get_state() != State.DEFINED:
             self.agent.logger.error('run_entity()', 'KVM Plugin - Entity state is wrong, or transition not allowed')
             self.__write_error_entity(entity_uuid, 'Entity state transition not allowed')
+            
             raise StateTransitionNotAllowedException('Entity is not in DEFINED state', 'Entity {} is not in DEFINED state'.format(entity_uuid))
         else:
             if instance_uuid is None or not entity.has_instance(instance_uuid):
                 self.agent.logger.error('run_entity()', 'KVM Plugin - Instance not found!!')
                 self.__write_error_instance(entity_uuid, instance_uuid, 'Entity Instance not exist')
+                
                 return
             else:
                 instance = entity.get_instance(instance_uuid)
                 if instance.get_state() == State.RUNNING:
                     self.agent.logger.error('run_entity()',
                                             'KVM Plugin - Instance already running')
+                    
                     return True
                 if instance.get_state() != State.CONFIGURED:
                     self.agent.logger.error('clean_entity()', 'KVM Plugin - Instance state is wrong, or transition not allowed')
+                    
                     raise StateTransitionNotAllowedException('Instance is not in CONFIGURED state', 'Instance {} is not in CONFIGURED state'.format(instance_uuid))
                 else:
                     dom = self.__lookup_by_uuid(instance_uuid)
@@ -461,9 +491,11 @@ class KVMLibvirt(RuntimePlugin):
                     self.__update_actual_store_instance(entity_uuid, instance_uuid, vm_info)
                     self.current_entities.update({entity_uuid: entity})
                     self.agent.logger.info('run_entity()', '[ DONE ] KVM Plugin - Starting a VM uuid {}'.format(entity_uuid))
+                    
                     return True
 
     def stop_entity(self, entity_uuid, instance_uuid=None):
+        
         if type(entity_uuid) == dict:
             entity_uuid = entity_uuid.get('entity_uuid')
         self.agent.logger.info('stop_entity()', ' KVM Plugin - Stop a VM uuid {}'.format(entity_uuid))
@@ -471,20 +503,24 @@ class KVMLibvirt(RuntimePlugin):
         if entity is None:
             self.agent.logger.error('stop_entity()', 'KVM Plugin - Entity not exists')
             self.__write_error_entity(entity_uuid, 'Entity not exist')
+            
             raise EntityNotExistingException('Enitity not existing', 'Entity {} not in runtime {}'.format(entity_uuid, self.uuid))
         elif entity.get_state() != State.DEFINED:
             self.__write_error_entity(entity_uuid, 'Entity state transition not allowed')
             self.agent.logger.error('stop_entity()', 'KVM Plugin - Entity state is wrong, or transition not allowed')
+            
             raise StateTransitionNotAllowedException('Entity is not in DEFINED state', 'Entity {} is not in DEFINED state'.format(entity_uuid))
         else:
             if instance_uuid is None or not entity.has_instance(instance_uuid):
                 self.agent.logger.error('run_entity()', 'KVM Plugin - Instance not found!!')
+                
                 return
             else:
                 instance = entity.get_instance(instance_uuid)
                 if instance.get_state() != State.RUNNING:
                     self.agent.logger.error('clean_entity()', 'KVM Plugin - Instance state is wrong, or transition not allowed')
                     self.__write_error_instance(entity_uuid, instance_uuid, 'Entity Instance not exist')
+                    
                     raise StateTransitionNotAllowedException('Instance is not in RUNNING state', 'Instance {} is not in RUNNING state'.format(instance_uuid))
                 else:
                     dom = self.__lookup_by_uuid(instance_uuid)
@@ -507,10 +543,11 @@ class KVMLibvirt(RuntimePlugin):
                     vm_info.update({'status': 'stop'})
                     self.__update_actual_store_instance(entity_uuid, instance_uuid, vm_info)
                     self.agent.logger.info('stop_entity()', '[ DONE ] KVM Plugin - Stop a VM uuid {}'.format(instance_uuid))
-
+            
             return True
 
     def pause_entity(self, entity_uuid, instance_uuid=None):
+        
         if type(entity_uuid) == dict:
             entity_uuid = entity_uuid.get('entity_uuid')
         self.agent.logger.info('pause_entity()', ' KVM Plugin - Pause a VM uuid {}'.format(entity_uuid))
@@ -518,21 +555,25 @@ class KVMLibvirt(RuntimePlugin):
         if entity is None:
             self.agent.logger.error('pause_entity()', 'KVM Plugin - Entity not exists')
             self.__write_error_entity(entity_uuid, 'Entity not exist')
+            
             raise EntityNotExistingException('Enitity not existing', 'Entity {} not in runtime {}'.format(entity_uuid, self.uuid))
         elif entity.get_state() != State.DEFINED:
             self.agent.logger.error('pause_entity()', 'KVM Plugin - Entity state is wrong, or transition not allowed')
             self.__write_error_entity(entity_uuid, 'Entity state transition not allowed')
+            
             raise StateTransitionNotAllowedException('Entity is not in DEFINED state', 'Entity {} is not in DEFINED state'.format(entity_uuid))
         else:
             if instance_uuid is None or not entity.has_instance(instance_uuid):
                 self.agent.logger.error('run_entity()', 'KVM Plugin - Instance not found!!')
                 self.__write_error_instance(entity_uuid, instance_uuid, 'Entity Instance not exist')
+                
                 return
             else:
                 instance = entity.get_instance(instance_uuid)
                 if instance.get_state() != State.RUNNING:
                     self.agent.logger.error('clean_entity()', 'KVM Plugin - Instance state is wrong, or transition not allowed')
                     self.__write_error_instance(entity_uuid, instance_uuid, 'Entity Instance state transition not allowed')
+                    
                     raise StateTransitionNotAllowedException('Instance is not in RUNNING state', 'Instance {} is not in RUNNING state'.format(instance_uuid))
                 else:
                     self.__lookup_by_uuid(instance_uuid).suspend()
@@ -543,9 +584,11 @@ class KVMLibvirt(RuntimePlugin):
                     vm_info.update({'status': 'pause'})
                     self.__update_actual_store_instance(entity_uuid, instance_uuid, vm_info)
                     self.agent.logger.info('pause_entity()', '[ DONE ] KVM Plugin - Pause a VM uuid {}'.format(instance_uuid))
+                    
                     return True
 
     def resume_entity(self, entity_uuid, instance_uuid=None):
+        
         if type(entity_uuid) == dict:
             entity_uuid = entity_uuid.get('entity_uuid')
         self.agent.logger.info('resume_entity()', ' KVM Plugin - Resume a VM uuid {}'.format(entity_uuid))
@@ -973,6 +1016,7 @@ class KVMLibvirt(RuntimePlugin):
         self.images.update({manifest.get('uuid'): manifest})
 
     def __remove_image(self, image_uuid):
+        self.lock.acquire()
         image = self.images.get(image_uuid, None)
         if image is None:
             self.agent.logger.info('__remove_image()', ' KVM Plugin - Image not found!!')
@@ -981,11 +1025,14 @@ class KVMLibvirt(RuntimePlugin):
         self.images.pop(image_uuid)
         uri = '{}/{}'.format(self.HOME_IMAGE, image_uuid)
         self.__pop_actual_store(uri)
+        self.lock.release()
 
     def __add_flavor(self, manifest):
+        self.lock.acquire()
         uri = '{}/{}'.format(self.HOME_FLAVOR, manifest.get('uuid'))
         self.__update_actual_store(uri, manifest)
         self.flavors.update({manifest.get('uuid'): manifest})
+        self.lock.release()
 
     def __remove_flavor(self, flavor_uuid):
         self.flavors.pop(flavor_uuid)
