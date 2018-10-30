@@ -111,6 +111,15 @@ class LXD(RuntimePlugin):
             #     self.undefine_entity(k)
             if entity.get_state() == State.DEFINED:
                 self.undefine_entity(k)
+        keys = list(self.images.keys())
+        for k in keys:
+            self.agent.logger.info('stopRuntime()', 'Removing Image {}'.format(k))
+            try:
+                img = self.conn.images.get_by_alias(k)
+                img.delete()
+            except LXDAPIException as e:
+                self.agent.logger.error('stopRuntime()', 'Error {}'.format(e))
+                pass
 
         self.conn = None
         self.agent.logger.info('stopRuntime()', '[ DONE ] LXD Plugin - Bye Bye')
