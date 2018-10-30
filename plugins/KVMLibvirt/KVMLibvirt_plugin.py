@@ -273,24 +273,26 @@ class KVMLibvirt(RuntimePlugin):
                 instance = KVMLibvirtEntityInstance(instance_uuid, name, disk_path, cdrom_path, entity.networks, entity.user_file,
                                                     entity.ssh_key, entity_uuid, flavor.get('uuid'), img.get('uuid'))
 
-                ### vm networking TODO: add support for SR-IOV
-                for i, n in enumerate(instance.networks):
-                    if n.get('type') in ['wifi']:
 
-                        nw_ifaces = self.agent.get_os_plugin().get_network_informations()
-                        for iface in nw_ifaces:
-                            if self.agent.get_os_plugin().get_intf_type(iface.get('intf_name')) == 'wireless' and iface.get('available') is True:
-                                self.agent.get_os_plugin().set_interface_unaviable(iface.get('intf_name'))
-                                n.update({'direct_intf': iface.get('intf_name')})
-                        # TODO get available interface from os plugin
-                    if n.get('network_uuid') is not None:
-                        nws = self.agent.get_network_plugin(None).get(list(self.agent.get_network_plugin(None).keys())[0])
-                        # print(nws.getNetworkInfo(n.get('network_uuid')))
-                        br_name = nws.get_network_info(n.get('network_uuid')).get('virtual_device')
-                        # print(br_name)
-                        n.update({'br_name': br_name})
-                    if n.get('intf_name') is None:
-                        n.update({'intf_name': 'veth{0}'.format(i)})
+                ### vm networking TODO: add support for SR-IOV
+                if instance.networks is not None:
+                    for i, n in enumerate(instance.networks):
+                        if n.get('type') in ['wifi']:
+
+                            nw_ifaces = self.agent.get_os_plugin().get_network_informations()
+                            for iface in nw_ifaces:
+                                if self.agent.get_os_plugin().get_intf_type(iface.get('intf_name')) == 'wireless' and iface.get('available') is True:
+                                    self.agent.get_os_plugin().set_interface_unaviable(iface.get('intf_name'))
+                                    n.update({'direct_intf': iface.get('intf_name')})
+                            # TODO get available interface from os plugin
+                        if n.get('network_uuid') is not None:
+                            nws = self.agent.get_network_plugin(None).get(list(self.agent.get_network_plugin(None).keys())[0])
+                            # print(nws.getNetworkInfo(n.get('network_uuid')))
+                            br_name = nws.get_network_info(n.get('network_uuid')).get('virtual_device')
+                            # print(br_name)
+                            n.update({'br_name': br_name})
+                        if n.get('intf_name') is None:
+                            n.update({'intf_name': 'veth{0}'.format(i)})
                 ######
 
                 vm_xml = self.__generate_dom_xml(instance, flavor, img)
