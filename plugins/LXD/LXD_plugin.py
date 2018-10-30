@@ -165,9 +165,10 @@ class LXD(RuntimePlugin):
             img_info.update({'base_image': image_name})
             img_info.update({'type': 'lxd'})
             img_info.update({'format': image_name.split('.')[-2:]})
-            self.__add_image(img_info)
             entity.image = img_info
             self.images.update({entity_uuid: img_info})
+            uri = '{}/{}'.format(self.HOME_IMAGE, entity_uuid)
+            self.__update_actual_store(uri, img_info)
 
         except LXDAPIException as e:
             self.agent.logger.error('define_entity()', 'Error {}'.format(e))
