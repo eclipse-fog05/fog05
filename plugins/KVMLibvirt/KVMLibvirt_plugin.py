@@ -998,24 +998,24 @@ class KVMLibvirt(RuntimePlugin):
         self.agent.logger.info('__react_to_cache_image()', 'KVM Plugin - React to to URI: {} Value: {} Version: {}'.format(uri, value, v))
         if uri.split('/')[-2] == 'image':
             image_uuid = uri.split('/')[-1]
+            value = json.loads(value)
             action = value.get('status')
             if action == 'undefine':
                 self.agent.logger.info('__react_to_cache_image()', 'KVM Plugin - This is a remove for URI: {}'.format(uri))
                 self.__remove_image(image_uuid)
             else:
-                value = json.loads(value)
                 self.__add_image(value)
 
     def __react_to_cache_flavor(self, uri, value, v):
         self.agent.logger.info('__react_to_cache_flavor()', 'KVM Plugin - React to to URI: {} Value: {} Version: {}'.format(uri, value, v))
         if uri.split('/')[-2] == 'flavor':
             flavor_uuid = uri.split('/')[-1]
+            value = json.loads(value)
             action = value.get('status')
             if action == 'undefine':
                 self.agent.logger.info('__react_to_cache_flavor()', 'KVM Plugin - This is a remove for URI: {}'.format(uri))
                 self.__remove_flavor(flavor_uuid)
             else:
-                value = json.loads(value)
                 self.__add_flavor(value)
 
     def __react_to_cache_entity(self, uri, value, v):
