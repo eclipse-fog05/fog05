@@ -123,6 +123,7 @@ class KVMLibvirt(RuntimePlugin):
             name = kwargs.get('name')
 
             if self.is_uuid(base_image):
+                time.sleep(1)
                 img = self.images.get(base_image, None)
                 if img is None:
                     self.agent.logger.error('define_entity()', '[ ERRO ] KVM Plugin - Cannot find image {}'.format(base_image))
@@ -753,9 +754,6 @@ class KVMLibvirt(RuntimePlugin):
                 if entity_uuid in self.current_entities.keys():
                     break
             self.agent.logger.info('before_migrate_entity_actions()', ' Entity {} defined!!!'.format(entity_uuid))
-
-            # v = self.agent.astore.resolve('{}/{}/{}'.format(self.agent.ahome, self.HOME_ENTITY, entity_uuid))
-            # print('>>>>>> V: {}'.format(v))
 
             img_info = self.images.get(base_image)
             flavor_info = self.flavors.get(flavor_id)
