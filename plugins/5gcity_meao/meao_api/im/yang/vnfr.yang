@@ -1,0 +1,708 @@
+
+/*
+ *
+ *   Copyright 2016-2017 RIFT.IO Inc
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ *
+ *
+ */
+
+module vnfr
+{
+  namespace "urn:ietf:params:xml:ns:yang:nfvo:vnfr";
+  prefix "vnfr";
+
+  import mano-types {
+    prefix "manotypes";
+  }
+
+  import vnfd-base {
+    prefix "vnfd-base";
+  }
+
+  import project-vnfd {
+    prefix "project-vnfd";
+  }
+
+  import project-nsd {
+    prefix "project-nsd";
+  }
+
+  import vlr {
+    prefix "vlr";
+  }
+
+  import ietf-yang-types {
+    prefix "yang";
+  }
+
+  import ietf-inet-types {
+    prefix "inet";
+  }
+
+  import rw-project {
+    prefix "rw-project";
+  }
+
+  revision 2017-02-28 {
+    description
+      "Update model to support projects.";
+  }
+
+  revision 2015-09-10 {
+    description
+      "Initial revision. This YANG file defines
+       the Virtual Network Function Record (VNFR)";
+    reference
+      "Derived from earlier versions of base YANG files";
+  }
+
+  typedef vdu-operational-status {
+    type enumeration {
+      enum init;
+      enum vm-init-phase;
+      enum vm-alloc-pending;
+      enum running;
+      enum upgrading;
+      enum terminate;
+      enum vl-terminate-phase;
+      enum terminated;
+      enum failed;
+    }
+  }
+
+  typedef vnf-operational-status {
+    type enumeration {
+      enum pre-init;
+      enum init;
+      enum vl-init-phase;
+      enum vm-init-phase;
+      enum running;
+      enum upgrading;   // Experimental
+      enum terminate;
+      enum vm-terminate-phase;
+      enum vl-terminate-phase;
+      enum terminated;
+      enum failed;
+    }
+  }
+
+  grouping placement-group-info {
+    list placement-groups-info {
+      description
+          "
+          Placement groups to which this VDU belongs and its
+          cloud construct
+          ";
+      key "name";
+      uses manotypes:placement-group-info;
+      uses manotypes:placement-group-input;
+    }
+  }
+
+  grouping virtual-interface {
+    container virtual-interface {
+      description
+          "Container for the virtual interface properties";
+
+      leaf type {
+        description
+            "Specifies the type of virtual interface
+             between VM and host.
+             PARAVIRT        : Use the default paravirtualized interface for the VIM (virtio, vmxnet3, etc.).
+             VIRTIO          : Deprecated! Use the traditional VIRTIO interface.
+             PCI-PASSTHROUGH : Use PCI-PASSTHROUGH interface.
+             SR-IOV          : Use SR-IOV interface.";
+        type enumeration {
+          enum PARAVIRT;
+          enum VIRTIO;
+          enum PCI-PASSTHROUGH;
+          enum SR-IOV;
+        }
+      }
+
+      leaf bandwidth {
+        description
+            "Aggregate bandwidth of the NIC.";
+        type uint64;
+      }
+
+      leaf ovs-offload {
+        description
+            "Defines if the NIC supports OVS offload.
+             MANDATORY : OVS offload support in the NIC is mandatory.
+             PREFERRED : OVS offload support in the NIC is preferred.";
+        type enumeration {
+          enum MANDATORY;
+          enum PREFERRED;
+        }
+      }
+
+      leaf vendor-id {
+        description
+            "Specifies the vendor specific id for
+             the device. This is used when a NIC from
+             specific HW vendor is required.";
+        type string;
+      }
+
+      leaf datapath-library {
+        description
+            "Specifies the name and version of the datapath
+             library the NIC is expected to support.";
+        type string;
+      }
+
+      leaf provider-network-name {
+        description
+            "Name of the provider network to which this
+             NIC is attached.";
+        type string;
+      }
+    }
+  }
+
+  grouping associated-virtual-cps {
+    list virtual-cps {
+      key "name";
+      uses vnfd-base:common-connection-point;
+
+      leaf ip-address {
+        description
+            "IP address assigned to the virtual connection point";
+        type inet:ip-address;
+      }
+
+      leaf mac-address {
+        description
+            "MAC address assigned to the virtual connection point";
+        type string;
+      }
+
+      leaf connection-point-id {
+        description "VIM identifier for connection point";
+        type string;
+      }
+    }
+  }
+
+  augment "/rw-project:project" {
+    container vnfr-catalog {
+      leaf schema-version {
+        description "Schema version for the VNFR. If unspecified, it assumes v3.0";
+        type string;
+        default "v3.0";
+      }
+
+      config false;
+      list vnfr {
+        description
+          "Virtual Network Function Record (VNFR).";
+        key "id";
+        unique "name";
+
+        leaf id {
+          description "Identifier for the VNFR.";
+          type yang:uuid;
+        }
+
+        leaf nsr-id-ref {
+          description
+            "NS instance identifier.
+             This is a leafref /nsr:ns-instance-config/nsr:nsr/nsr:id";
+          type yang:uuid;
+        }
+
+        leaf member-vnf-index-ref {
+          description "Reference to member VNF index in Network service.";
+          type leafref {
+            path "../../../project-nsd:nsd-catalog/project-nsd:nsd/project-nsd:constituent-vnfd/project-nsd:member-vnf-index";
+          }
+        }
+
+        leaf dashboard-url {
+          description "Dashboard URL";
+          type inet:uri;
+        }
+
+        leaf name {
+          description "VNFR name.";
+          type string;
+        }
+
+        leaf short-name {
+          description "VNFR short name.";
+          type string;
+        }
+
+        leaf vendor {
+          description "Vendor of the VNFR.";
+          type string;
+        }
+
+        leaf description {
+          description "Description of the VNFR.";
+          type string;
+        }
+
+        leaf version {
+          description "Version of the VNFR";
+          type string;
+        }
+
+        leaf create-time {
+          description
+            "Creation timestamp of this Virtual Network
+          Function.  The timestamp is expressed as
+          seconds since unix epoch - 1970-01-01T00:00:00Z";
+
+          type uint32;
+        }
+
+        leaf uptime {
+          description
+            "Active period of this Virtual Network Function.
+          Uptime is expressed in seconds";
+
+          type uint32;
+        }
+
+        container vnfd {
+          description "VNF descriptor used to instantiate this VNF";
+          uses vnfd-base:vnfd-descriptor;
+        }
+
+        leaf vnfd-ref {
+          description "Reference to VNFD";
+          type leafref {
+            path "../../../project-vnfd:vnfd-catalog/project-vnfd:vnfd/project-vnfd:id";
+          }
+        }
+
+        // Use parameters provided here to configure this VNF
+        container vnf-configuration {
+          uses manotypes:vca-configuration;
+        }
+
+        // Mainly used by Mon-params & dashboard url
+        container mgmt-interface {
+          leaf ip-address {
+            type inet:ip-address;
+          }
+
+          leaf port {
+            type inet:port-number;
+          }
+
+          container ssh-key {
+            description "SSH key pair used for this VNF";
+            leaf public-key {
+              description "Public key configured on this VNF";
+              type string;
+            }
+
+            leaf private-key-file {
+              description "Path to the private key file";
+              type string;
+            }
+          }
+        }
+
+        list internal-vlr {
+          key "vlr-ref";
+
+          leaf vlr-ref {
+            description "Reference to a VLR record in the VLR catalog";
+            type leafref {
+              path "../../../../vlr:vlr-catalog/vlr:vlr/vlr:id";
+            }
+          }
+
+          leaf-list internal-connection-point-ref {
+            type leafref {
+              path "../../vdur/internal-connection-point/id";
+            }
+          }
+        }
+
+        list connection-point {
+          key "name";
+          description
+            "List for external connection points. Each VNF has one
+             or more external connection points. As the name
+             implies that external connection points are used for
+             connecting the VNF to other VNFs or to external networks.
+             Each VNF exposes these connection points to the
+             orchestrator. The orchestrator can construct network
+             services by connecting the connection points between
+             different VNFs. The NFVO will use VLDs and VNFFGs at
+             the network service level to construct network services.";
+
+          uses vnfd-base:common-connection-point;
+
+          leaf vlr-ref {
+            description
+              "Reference to the VLR associated with this connection point";
+            type  leafref {
+              path "../../../../vlr:vlr-catalog/vlr:vlr/vlr:id";
+            }
+          }
+
+          leaf ip-address {
+            description
+              "IP address assigned to the external connection point";
+            type inet:ip-address;
+          }
+
+          leaf mac-address {
+            description
+              "MAC address assigned to the external connection point";
+            // type inet:mac-address;
+            type string;
+          }
+
+          leaf connection-point-id {
+            type string;
+          }
+
+          uses associated-virtual-cps;
+        }
+
+        list vdur {
+          description "List of Virtual Deployment Units";
+          key "id";
+          unique "name";
+
+          leaf id {
+            description "Unique id for the VDU";
+            type yang:uuid;
+          }
+
+          leaf name {
+            description "name of the instantiated VDUR";
+            type string;
+          }
+
+          leaf unique-short-name {
+            description "Short Unique name of the VDU
+                  This will be of the format NSR name-ShortnedString-VDUname
+                  NSR name and VDU name shall be constrained to 10 characters";
+            type string;
+          }
+
+          leaf vdu-id-ref {
+            type leafref {
+              path "../../vnfd/vdu/id";
+            }
+          }
+
+          leaf vim-id {
+            description "Allocated VM resource id";
+            type string;
+          }
+
+          leaf flavor-id {
+            description "VIM assigned flavor id";
+            type string;
+          }
+
+          leaf image-id {
+            description "VIM assigned image id";
+            type string;
+          }
+
+          leaf management-ip {
+            description "Management IP address";
+            type inet:ip-address;
+          }
+
+          leaf vm-management-ip {
+            description "VM Private Management IP address";
+            type inet:ip-address;
+          }
+
+          leaf console-url {
+            description "Console URL for this VDU, if available";
+            type inet:uri;
+          }
+
+          uses manotypes:vm-flavor;
+          uses manotypes:guest-epa;
+          uses manotypes:vswitch-epa;
+          uses manotypes:hypervisor-epa;
+          uses manotypes:host-epa;
+
+          uses manotypes:supplemental-boot-data;
+
+          container vdu-configuration {
+            uses manotypes:vca-configuration;
+          }
+
+          list monitoring-param {
+            description
+              "List of VDU-related monitoring parameters at NFVI level";
+            key id;
+            leaf id {
+              description "The unique id of the monitoring param at VDU level";
+              type string;
+            }
+
+            leaf nfvi-metric {
+              description "The associated NFVI metric to be monitored";
+              type manotypes:nfvi-metric-type;
+            }
+
+            leaf interface-name-ref {
+              description
+                "Reference to a VDU interface name. Applicable only when the nfvi-metric
+                refers to an interface and not to the VM";
+              type leafref {
+                path "../../interface/name";
+              }
+            }
+          }
+
+          list volumes {
+            key "name";
+
+            leaf name {
+              description "Name of the disk-volumes, e.g. vda, vdb etc";
+              type string;
+            }
+
+            leaf volume-id {
+              description "VIM assigned volume id";
+              type string;
+            }
+
+            uses manotypes:volume-info;
+          }
+
+          list internal-connection-point {
+            key "id";
+            description
+              "List for internal connection points. Each VNFC
+               has zero or more internal connection points.
+               Internal connection points are used for connecting
+               the VNF components internal to the VNF. If a VNF
+               has only one VNFC, it may not have any internal
+               connection points.";
+
+            uses vnfd-base:common-connection-point;
+
+            leaf ip-address {
+              description
+                "IP address assigned to the internal connection point";
+              type inet:ip-address;
+            }
+
+            leaf mac-address {
+              description
+                "MAC address assigned to the internal connection point";
+              // type inet:mac-address;
+              type string;
+            }
+
+            leaf connection-point-id {
+              type string;
+            }
+
+            uses associated-virtual-cps;
+          }
+
+          list interface {
+            description
+                "List of interfaces (internal and external) for the VNF";
+            key name;
+
+            leaf name {
+              description
+                  "Name of the interface. Note that this
+                  name has only local significance to the VDU.";
+              type string;
+            }
+
+            leaf position {
+              description
+                  "Explicit Position of the interface within the list";
+              type uint32;
+            }
+
+            leaf type {
+              description
+                  "Type of the Interface";
+
+              type vnfd-base:interface-type;
+
+              default "EXTERNAL";
+            }
+            choice connection-point-type {
+              case internal {
+                leaf internal-connection-point-ref {
+                  description
+                      "Leaf Ref to the particular internal connection point";
+                  type leafref {
+                    path "../../internal-connection-point/id";
+                  }
+                }
+              }
+              case external {
+                leaf external-connection-point-ref {
+                  description
+                      "Leaf Ref to the particular external connection point";
+                  type leafref {
+                    path "../../../connection-point/name";
+                  }
+                }
+              }
+            }
+            uses virtual-interface;
+          }
+
+          leaf operational-status {
+            description
+              "The operational status of the VDU
+                init                : The VDU has just started.
+                vm-init-phase       : The VDUs in the VNF is being created in VIM.
+                vm-alloc-pending    : The  VM alloc is pending in VIM
+                running             : The VDU is active in VM
+                upgrading           : The VDU is being upgraded (EXPERIMENTAL)
+                terminate           : The VDU is being terminated
+                vm-terminate-phase  : The VDU in the VNF is being terminated in VIM.
+                terminated          : The VDU is in the terminated state.
+                failed              : The VDU  instantiation failed.
+              ";
+            type vdu-operational-status;
+          }
+
+          uses placement-group-info;
+        }
+
+        list monitoring-param {
+          description
+            "List of monitoring parameters at the network service level";
+          key id;
+          leaf id {
+            type string;
+          }
+
+          leaf name {
+            type string;
+          }
+
+          uses manotypes:monitoring-param-aggregation;
+
+          choice monitoring-type {
+            description
+              "Defines the type of monitoring param to be used:
+                * vdu-monitorin-param:     VDU-related metric (from NFVI)
+                * vnf-metric:              VNF-related metric (from VCA)
+                * vdu-metric:              VDU-related metric (from VCA)
+              ";
+
+            case vdu-monitoring-param {
+              description "VDU-related metric from the infrastructure";
+              container vdu-monitoring-param {
+                leaf vdu-ref {
+                  type leafref {
+                    path "../../../vdur/id";
+                  }
+                }
+                leaf vdu-monitoring-param-ref {
+                  type leafref {
+                    path "../../../vdur[id = current()/../vdu-ref]/monitoring-param/id";
+                  }
+                }
+              }
+            }
+
+            case vnf-metric {
+              description "VNF-related metric (from VCA)";
+              container vnf-metric {
+                leaf vnf-metric-name-ref {
+                  type leafref {
+                    path "../../../vnf-configuration/metrics/name";
+                  }
+                }
+              }
+            }
+
+            case vdu-metric {
+              description "VDU-related metric (from VCA)";
+              container vdu-metric {
+                leaf vdu-ref {
+                  type leafref {
+                    path "../../../vdur/id";
+                  }
+                }
+                leaf vdu-metric-name-ref {
+                  type leafref {
+                    path "../../../vdur[id = current()/../vdu-ref]/vdu-configuration/metrics/name";
+                  }
+                }
+              }
+            }
+
+          }
+
+        }
+
+        leaf operational-status {
+          description
+            "The operational status of the VNFR instance
+              pre-init            : The VNF before Input Param Substitution.
+              init                : The VNF has just started.
+              vl-init-phase       : The internal VLs in the VNF are being instantiated.
+              vm-init-phase       : The VMs for VDUs in the VNF are being instantiated.
+              running             : The VNF is in running state.
+              terminate           : The VNF is being terminated.
+              vm-terminate-phase  : The VMs in the VNF are being terminated.
+              vl-terminate-phase  : The internal VLs in the VNF are being terminated.
+              terminated          : The VNF is in the terminated state.
+              failed              : The VNF instantiation failed
+            ";
+          type vnf-operational-status;
+        }
+
+        leaf config-status {
+          description
+            "The configuration status of the NS instance
+            configuring: At least one of the VNFs in this instance is in configuring state
+            configured:  All the VNFs in this NS instance are configured or config-not-needed state
+          ";
+
+          type enumeration {
+            enum configuring {
+              value 1;
+            }
+            enum configured {
+              value 2;
+            }
+            enum failed {
+              value 3;
+            }
+            enum config-not-needed {
+              value 4;
+            }
+          }
+        }
+        uses placement-group-info;
+
+        container cloud-config {
+          uses manotypes:cloud-config;
+        }
+      }
+    }
+  }
+}

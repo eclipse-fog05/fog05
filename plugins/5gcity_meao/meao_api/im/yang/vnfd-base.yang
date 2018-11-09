@@ -1,0 +1,936 @@
+
+/*
+ *
+ *   Copyright 2017 RIFT.IO Inc
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ *
+ *
+ */
+
+module vnfd-base
+{
+  namespace "http://riftio.com/ns/riftware-1.0/vnfd-base";
+  prefix "vnfd-base";
+
+  import mano-types {
+    prefix "manotypes";
+  }
+
+  import ietf-inet-types {
+    prefix "inet";
+  }
+
+  revision 2017-02-28 {
+    description
+      "Initial revision. This YANG file defines
+       the common types for Virtual Network Function
+       (VNF) descriptor";
+    reference
+      "Derived from earlier versions of base YANG files";
+  }
+
+  grouping common-connection-point {
+    leaf name {
+      description "Name of the connection point";
+      type string;
+    }
+
+    leaf id {
+      description "Identifier for the internal connection points";
+      type string;
+    }
+
+    leaf short-name {
+      description "Short name to appear as label in the UI";
+      type string;
+    }
+
+    leaf type {
+      description "Type of the connection point.";
+      type manotypes:connection-point-type;
+    }
+
+    leaf port-security-enabled {
+      description "Enables the port security for the port.";
+      type boolean;
+      default true;
+    }
+  }
+
+  typedef interface-type {
+    type enumeration {
+      enum INTERNAL;
+      enum EXTERNAL;
+    }
+  }
+
+  typedef vnf-operational-status {
+    type enumeration {
+      enum init;
+      enum running;
+      enum upgrading;
+      enum terminate;
+      enum terminated;
+      enum failed;
+    }
+  }
+
+  grouping virtual-interface {
+    container virtual-interface {
+      description
+          "Container for the virtual interface properties";
+
+      leaf type {
+        description
+            "Specifies the type of virtual interface
+             between VM and host.
+             PARAVIRT        : Use the default paravirtualized interface for the VIM (virtio, vmxnet3, etc.).
+             VIRTIO          : Deprecated! Use the traditional VIRTIO interface.
+             PCI-PASSTHROUGH : Use PCI-PASSTHROUGH interface.
+             SR-IOV          : Use SR-IOV interface.
+             E1000           : Emulate E1000 interface.
+             RTL8139         : Emulate RTL8139 interface.
+             PCNET           : Emulate PCNET interface.
+             OM-MGMT         : Deprecated! Use PARAVIRT instead and set the VNF management interface at vnfd:mgmt-interface:cp";
+
+        type enumeration {
+          enum PARAVIRT;
+          enum OM-MGMT;
+          enum PCI-PASSTHROUGH;
+          enum SR-IOV;
+          enum VIRTIO;
+          enum E1000;
+          enum RTL8139;
+          enum PCNET;
+        }
+        default "PARAVIRT";
+      }
+
+      leaf vpci {
+        description
+            "Specifies the virtual PCI address. Expressed in
+             the following format dddd:dd:dd.d. For example
+             0000:00:12.0. This information can be used to
+             pass as metadata during the VM creation.";
+        type string;
+      }
+
+      leaf bandwidth {
+        description
+            "Aggregate bandwidth of the NIC.";
+        type uint64;
+      }
+    }
+  }
+
+  grouping vnfd-descriptor {
+      leaf id {
+        description "Identifier for the VNFD.";
+        type string {
+          length "1..63";
+        }
+      }
+
+      leaf name {
+        description "VNFD name.";
+        mandatory true;
+        type string;
+      }
+
+      leaf short-name {
+        description "Short name to appear as label in the UI";
+        type string;
+      }
+
+      leaf vendor {
+        description "Vendor of the VNFD.";
+        type string;
+      }
+
+      leaf logo {
+        description
+            "Vendor logo for the Virtual Network Function";
+        type string;
+      }
+
+      leaf description {
+        description "Description of the VNFD.";
+        type string;
+      }
+
+      leaf version {
+        description "Version of the VNFD";
+        type string;
+      }
+
+      container vnf-configuration {
+        uses manotypes:vca-configuration;
+      }
+
+      leaf operational-status {
+         description
+           "The operational status of the VNF
+             init                : The VNF has just started.
+             running             : The VNF is active in VM
+             upgrading           : The VNF is being upgraded (EXPERIMENTAL)
+             terminate           : The VNF is being terminated
+             terminated          : The VNF is in the terminated state.
+             failed              : The VNF  instantiation failed.
+           ";
+         type vnf-operational-status;
+      }
+
+      container mgmt-interface {
+        description
+            "Interface over which the VNF is managed.";
+
+        choice endpoint-type {
+          description
+              "Indicates the type of management endpoint.";
+
+          case ip {
+            description
+                "Specifies the static IP address for managing the VNF.";
+            leaf ip-address {
+              type inet:ip-address;
+            }
+          }
+
+          case vdu-id {
+            description
+                "Use the default management interface on this VDU.";
+            leaf vdu-id {
+              type leafref {
+                path "../../vdu/id";
+              }
+            }
+          }
+
+          case cp {
+            description
+                "Use the ip address associated with this connection point. This cp is then considered as management.";
+            leaf cp {
+              type leafref {
+                path "../../connection-point/name";
+              }
+            }
+          }
+        }
+
+        leaf port {
+          description
+              "Port for the management interface.";
+          type inet:port-number;
+        }
+
+        container dashboard-params {
+          description "Parameters for the VNF dashboard";
+
+          leaf path {
+            description "The HTTP path for the dashboard";
+            type string;
+          }
+
+          leaf https {
+            description "Pick HTTPS instead of HTTP , Default is false";
+            type boolean;
+          }
+
+          leaf port {
+            description "The HTTP port for the dashboard";
+            type inet:port-number;
+          }
+        }
+      }
+
+      list internal-vld {
+        key "id";
+        description
+          "List of Internal Virtual Link Descriptors (VLD).
+          The internal VLD describes the basic topology of
+          the connectivity such as E-LAN, E-Line, E-Tree.
+          between internal VNF components of the system.";
+
+        leaf id {
+          description "Identifier for the VLD";
+          type string;
+        }
+
+        leaf name {
+          description "Name of the internal VLD";
+          type string;
+        }
+
+        leaf short-name {
+          description "Short name to appear as label in the UI";
+          type string;
+        }
+
+        leaf description {
+          type string;
+        }
+
+        leaf type {
+          type manotypes:virtual-link-type;
+        }
+
+        leaf root-bandwidth {
+          description
+              "For ELAN this is the aggregate bandwidth.";
+          type uint64;
+        }
+
+        leaf leaf-bandwidth {
+          description
+              "For ELAN this is the bandwidth of branches.";
+          type uint64;
+        }
+
+        list internal-connection-point {
+          key "id-ref";
+          description "List of internal connection points in this VLD";
+          leaf id-ref {
+            description "Reference to the internal connection point id";
+            type leafref {
+              path "../../../vdu/internal-connection-point/id";
+            }
+          }
+
+          leaf ip-address {
+            description "IP address of the internal connection point";
+            type inet:ip-address;
+          }
+        }
+
+        uses manotypes:provider-network;
+        choice init-params {
+          description "Extra parameters for VLD instantiation";
+
+          case vim-network-ref {
+            leaf vim-network-name {
+              description
+                  "Name of network in VIM account. This is used to indicate
+                    pre-provisioned network name in cloud account.";
+              type string;
+            }
+          }
+
+          case vim-network-profile {
+            leaf ip-profile-ref {
+              description "Named reference to IP-profile object";
+              type string;
+            }
+          }
+
+        }
+      }
+
+      uses manotypes:ip-profile-list;
+
+      list connection-point {
+        key "name";
+        description
+          "List for external connection points. Each VNF has one
+          or more external connection points that connect the VNF
+          to other VNFs or to external networks. Each VNF exposes
+          connection points to the orchestrator, which can construct
+          network services by connecting the connection points
+          between different VNFs. The NFVO will use VLDs and VNFFGs
+          at the network service level to construct network services.";
+
+        uses common-connection-point;
+
+        leaf internal-vld-ref {
+          description
+            "Reference to an internal VLD of the VNF. This field is
+            optional. It allows exposing an internal VLD through a
+            connection point. When building a NS, this VNF CP might be
+            connected to a NS VLD, then both VLDs (the i-VLD of the VNF and the
+            VLD of the NS) will become the same network and the IP profile will
+            be the one configured at NS level.";
+          type leafref {
+            path "../../internal-vld/id";
+          }
+        }
+      }
+
+      list vdu {
+        description "List of Virtual Deployment Units";
+        key "id";
+
+        leaf id {
+          description "Unique id for the VDU";
+          type string;
+        }
+
+        leaf name {
+          description "Unique name for the VDU";
+          type string;
+        }
+
+        leaf description {
+            description "Description of the VDU.";
+            type string;
+        }
+
+        leaf pdu-type {
+          description
+            "Type of PDU. If this field exists, the deployment unit must be
+            understood as a PDU, not as a VDU. This field is used to identify
+            the category of PDU instances to be used at instantiation time. For
+            the instantiation to be successful, there must be available
+            PDU instances of this type in the selected datacenter.";
+          type string;
+        }
+
+        leaf count {
+          description "Number of instances of VDU";
+          type uint64;
+        }
+
+        leaf mgmt-vpci {
+          description
+              "Specifies the virtual PCI address. Expressed in
+             the following format dddd:dd:dd.d. For example
+             0000:00:12.0. This information can be used to
+             pass as metadata during the VM creation.";
+          type string;
+        }
+
+        uses manotypes:vm-flavor;
+        uses manotypes:guest-epa;
+        uses manotypes:vswitch-epa;
+        uses manotypes:hypervisor-epa;
+        uses manotypes:host-epa;
+
+        list alarm {
+          key "alarm-id";
+
+          uses manotypes:alarm;
+        }
+
+        uses manotypes:image-properties;
+
+        list alternative-images {
+          key "vim-type";
+          description
+            "List of alternative images per VIM type.
+            Different images can be used for specific types of VIMs instead
+            of the default image. This allows deployments in sites where the
+            image identifier in the VIM is given by the VIM provider and
+            cannot be modified.
+            If an alternative image is specified for a VIM type, it will prevail
+            over the default image";
+
+          leaf vim-type {
+            description "VIM type: openvim, openstack, vmware, aws, etc.";
+            type string;
+          }
+
+          uses manotypes:image-properties;
+        }
+
+        container vdu-configuration {
+          uses manotypes:vca-configuration;
+        }
+
+        list monitoring-param {
+          description
+            "List of VDU-related monitoring parameters at NFVI level";
+          key id;
+          leaf id {
+            description "The unique id of the monitoring param at VDU level";
+            type string;
+          }
+
+          leaf nfvi-metric {
+            description "The associated NFVI metric to be monitored";
+            type manotypes:nfvi-metric-type;
+          }
+
+          leaf interface-name-ref {
+            description
+              "Reference to a VDU interface name. Applicable only when the nfvi-metric
+              refers to an interface and not to the VM";
+            type leafref {
+              path "../../interface/name";
+            }
+          }
+        }
+
+        choice cloud-init-input {
+          description
+            "Indicates how the contents of cloud-init script are provided.
+             There are 2 choices - inline or in a file";
+
+          case inline {
+            leaf cloud-init {
+              description
+                "Contents of cloud-init script, provided inline, in cloud-config format";
+              type string;
+            }
+          }
+
+          case filename {
+            leaf cloud-init-file {
+              description
+                "Name of file with contents of cloud-init script in cloud-config format";
+                type string;
+            }
+          }
+        }
+
+        uses manotypes:supplemental-boot-data;
+
+        list internal-connection-point {
+          key "id";
+          description
+            "List for internal connection points. Each VNFC
+            has zero or more internal connection points.
+            Internal connection points are used for connecting
+            the VNF with components internal to the VNF. If a VNF
+            has only one VNFC, it may not have any internal
+            connection points.";
+
+          uses common-connection-point;
+
+          leaf internal-vld-ref {
+            type leafref {
+              path "../../../internal-vld/id";
+            }
+          }
+        }
+
+        list interface {
+          description
+              "List of Interfaces (external and internal) for the VNF";
+          key name;
+
+          leaf name {
+            description
+                "Name of the interface. Note that this
+                name has only local significance to the VDU.";
+            type string;
+          }
+
+          leaf position {
+            description
+                "Explicit Position of the interface within the list";
+            type uint32;
+          }
+
+          leaf mgmt-interface {
+            description
+                "Flag to indicate that this is the mgmt interface
+                to be used for VDU configuration";
+            type boolean;
+            default false;
+          }
+
+          leaf type {
+            description
+                "Type of the Interface";
+            type interface-type;
+
+            default "EXTERNAL";
+          }
+
+          leaf mac-address {
+            description
+                "MAC address of the interface.
+                Some VNFs require a specific MAC address to be configured
+                in the interface. While this is not recommended at all in
+                NFV environments, this parameter exists to allow those
+                scenarios.
+                This parameter will be likely deprecated in the future.";
+            type string;
+          }
+
+          choice connection-point-type {
+            case internal {
+              leaf internal-connection-point-ref {
+                description
+                    "Leaf Ref to the particular internal connection point";
+                type leafref {
+                   path "../../internal-connection-point/id";
+                 }
+              }
+            }
+            case external {
+              leaf external-connection-point-ref {
+                description
+                    "Leaf Ref to the particular external connection point";
+                type leafref {
+                   path "../../../connection-point/name";
+                 }
+              }
+            }
+          }
+
+          uses virtual-interface;
+        }
+
+
+        list volumes {
+          key "name";
+
+          leaf name {
+            description "Name of the disk-volumes, e.g. vda, vdb etc";
+            type string;
+          }
+
+          uses manotypes:volume-info;
+        }
+      }
+
+      list vdu-dependency {
+        description
+            "List of VDU dependencies.";
+
+        key vdu-source-ref;
+        leaf vdu-source-ref {
+          type leafref {
+            path "../../vdu/id";
+          }
+        }
+
+        leaf vdu-depends-on-ref {
+          description
+            "Reference to the VDU on which
+            the source VDU depends.";
+          type leafref {
+            path "../../vdu/id";
+          }
+        }
+      }
+
+      leaf service-function-chain {
+        description "Type of node in Service Function Chaining Architecture";
+
+        type enumeration {
+          enum UNAWARE;
+          enum CLASSIFIER;
+          enum SF;
+          enum SFF;
+        }
+        default "UNAWARE";
+      }
+
+      leaf service-function-type {
+        description
+          "Type of Service Function.
+           NOTE: This needs to map with Service Function Type in ODL to
+           support VNFFG. Service Function Type is mandatory param in ODL
+           SFC. This is temporarily set to string for ease of use";
+        type string;
+      }
+
+      uses manotypes:http-endpoints;
+
+      list scaling-group-descriptor {
+        description
+            "scaling group descriptor within the VNF.
+             The scaling group defines a group of VDUs,
+             and the ratio of VDUs in the VNF
+             that is used as target for scaling action";
+
+        key "name";
+
+        leaf name {
+          description "Name of this scaling group.";
+          type string;
+        }
+
+        list scaling-policy {
+
+          key "name";
+
+          leaf name {
+            description
+                "Name of the scaling policy";
+            type string;
+          }
+
+          leaf scaling-type {
+            description
+                "Type of scaling";
+            type manotypes:scaling-policy-type;
+          }
+
+          leaf enabled {
+            description
+              "Specifies if the scaling policy can be applied";
+            type boolean;
+            default true;
+          }
+
+          leaf scale-in-operation-type {
+            description
+                "Operation to be applied to check between scaling criterias to
+                 check if the scale in threshold condition has been met.
+                 Defaults to AND";
+            type manotypes:scaling-criteria-operation;
+            default AND;
+          }
+
+          leaf scale-out-operation-type {
+            description
+                "Operation to be applied to check between scaling criterias to
+                 check if the scale out threshold condition has been met.
+                 Defauls to OR";
+            type manotypes:scaling-criteria-operation;
+            default OR;
+          }
+
+          leaf threshold-time {
+            description
+              "The duration for which the criteria must hold true";
+            type uint32;
+            mandatory true;
+          }
+
+          leaf cooldown-time {
+            description
+              "The duration after a scaling-in/scaling-out action has been
+              triggered, for which there will be no further optional";
+            type uint32;
+            mandatory true;
+          }
+
+          list scaling-criteria {
+            description
+                "list of conditions to be met for generating scaling
+                   requests";
+            key "name";
+
+            leaf name {
+              type string;
+            }
+
+            leaf scale-in-threshold {
+              description
+                  "Value below which scale-in requests are generated";
+              type uint64;
+            }
+
+            leaf scale-in-relational-operation {
+              description
+                "The relational operator used to compare the monitoring param
+                against the scale-in-threshold.";
+              type manotypes:relational-operation-type;
+              default LE;
+            }
+
+            leaf scale-out-threshold {
+              description
+                  "Value above which scale-out requests are generated";
+              type uint64;
+            }
+
+            leaf scale-out-relational-operation {
+              description
+                "The relational operator used to compare the monitoring param
+                against the scale-out-threshold.";
+              type manotypes:relational-operation-type;
+              default GE;
+            }
+
+            leaf vnf-monitoring-param-ref {
+              description
+                 "Reference to the VNF level monitoring parameter
+                  that is aggregated";
+              type leafref {
+                path "../../../../monitoring-param/id";
+              }
+            }
+          }
+        }
+
+        list vdu {
+          description "List of VDUs in this scaling group";
+          key "vdu-id-ref";
+
+          leaf vdu-id-ref {
+            description "Reference to the VDU id";
+            type leafref {
+              path "../../../vdu/id";
+            }
+          }
+
+          leaf count {
+            description
+              "count of this VDU id within this scaling group.
+               The count allows to define the number of instances
+               when a scaling action targets this scaling group";
+            type uint32;
+            default 1;
+          }
+        }
+
+        leaf min-instance-count {
+          description
+            "Minimum instances of the scaling group which are allowed.
+            These instances are created by default when the network service
+            is instantiated.";
+          type uint32;
+          default 0;
+        }
+
+        leaf max-instance-count {
+          description
+            "Maximum instances of this scaling group that are allowed
+             in a single network service. The network service scaling
+             will fail, when the number of service group instances
+             exceed the max-instance-count specified.";
+          type uint32;
+          default 10;
+        }
+
+        list scaling-config-action {
+          description "List of scaling config actions";
+          key "trigger";
+
+          leaf trigger {
+            description "scaling trigger";
+            type manotypes:scaling-trigger;
+          }
+
+          leaf vnf-config-primitive-name-ref {
+            description "Reference to the VNF config primitive";
+            type leafref {
+              path "../../../vnf-configuration/config-primitive/name";
+            }
+          }
+        }
+      }
+
+      list monitoring-param {
+        description
+          "List of monitoring parameters at the network service level";
+        key id;
+        leaf id {
+          type string;
+        }
+
+        leaf name {
+          type string;
+        }
+
+        uses manotypes:monitoring-param-aggregation;
+
+        choice monitoring-type {
+          description
+            "Defines the type of monitoring param to be used:
+              * vdu-monitorin-param:     VDU-related metric (from NFVI)
+              * vnf-metric:              VNF-related metric (from VCA)
+              * vdu-metric:              VDU-related metric (from VCA)
+            ";
+
+          case vdu-monitoring-param {
+            description "VDU-related metric from the infrastructure";
+            container vdu-monitoring-param {
+              leaf vdu-ref {
+                type leafref {
+                  path "../../../vdu/id";
+                }
+              }
+              leaf vdu-monitoring-param-ref {
+                type leafref {
+                  path "../../../vdu[id = current()/../vdu-ref]/monitoring-param/id";
+                }
+              }
+            }
+          }
+
+          case vnf-metric {
+            description "VNF-related metric (from VCA)";
+            container vnf-metric {
+              leaf vnf-metric-name-ref {
+                type leafref {
+                  path "../../../vnf-configuration/metrics/name";
+                }
+              }
+            }
+          }
+
+          case vdu-metric {
+            description "VDU-related metric (from VCA)";
+            container vdu-metric {
+              leaf vdu-ref {
+                type leafref {
+                  path "../../../vdu/id";
+                }
+              }
+              leaf vdu-metric-name-ref {
+                type leafref {
+                  path "../../../vdu[id = current()/../vdu-ref]/vdu-configuration/metrics/name";
+                }
+              }
+            }
+          }
+
+        }
+
+        leaf http-endpoint-ref {
+          type leafref {
+            path "../../http-endpoint/path";
+          }
+        }
+
+        leaf json-query-method {
+          type manotypes:json-query-method;
+          default "NAMEKEY";
+        }
+
+        container json-query-params {
+          leaf json-path {
+            description
+              "The jsonpath to use to extract value from JSON structure";
+            type string;
+          }
+          leaf object-path {
+            description
+              "The objectpath to use to extract value from JSON structure";
+            type string;
+          }
+        }
+
+        uses manotypes:monitoring-param-ui-data;
+        uses manotypes:monitoring-param-value;
+
+      }
+
+      list placement-groups {
+        description "List of placement groups at VNF level";
+
+        key "name";
+        uses manotypes:placement-group-info;
+
+        list member-vdus {
+
+          description
+              "List of VDUs that are part of this placement group";
+          key "member-vdu-ref";
+
+          leaf member-vdu-ref {
+            type leafref {
+              path "../../../vdu/id";
+            }
+          }
+        }
+      }
+  }
+}
+
+// vim: sw=2

@@ -1,0 +1,855 @@
+
+/*
+ * 
+ *   Copyright 2017 RIFT.IO Inc
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ *
+ *
+ */
+
+module nsd-base
+{
+  namespace "http://riftio.com/ns/riftware-1.0/nsd-base";
+  prefix "nsd-base";
+
+  import ietf-inet-types {
+    prefix "inet";
+  }
+
+  import mano-types {
+    prefix "manotypes";
+  }
+
+  import vnfd {
+    prefix "vnfd";
+  }
+
+  revision 2017-02-28 {
+    description
+      "Initial revision. This YANG file defines
+       the Network Service Descriptor (NSD)
+       common groupings";
+    reference
+      "Derived from earlier versions of base YANG files";
+  }
+
+  typedef scaling-trigger {
+    type enumeration {
+      enum pre-scale-in {
+        value 1;
+      }
+      enum post-scale-in {
+        value 2;
+      }
+      enum pre-scale-out {
+        value 3;
+      }
+      enum post-scale-out {
+        value 4;
+      }
+    }
+  }
+
+  typedef scaling-criteria-operation {
+    type enumeration {
+      enum AND {
+        value 1;
+      }
+      enum OR {
+        value 2;
+      }
+    }
+  }
+
+  grouping primitive-parameter {
+    leaf name {
+      description
+          "Name of the parameter.";
+      type string;
+    }
+
+    leaf data-type {
+      description
+          "Data type associated with the name.";
+      type manotypes:parameter-data-type;
+    }
+
+    leaf mandatory {
+      description "Is this field mandatory";
+      type boolean;
+      default false;
+    }
+
+    leaf default-value {
+      description "The default value for this field";
+      type string;
+    }
+
+    leaf parameter-pool {
+      description "NSD parameter pool name to use for this parameter";
+      type string;
+    }
+  }
+
+  grouping nsd-descriptor-common {
+    leaf id {
+      description "Identifier for the NSD.";
+      type string {
+        length 1..63;
+      }
+    }
+
+    leaf name {
+      description "NSD name.";
+      mandatory true;
+      type string;
+    }
+
+    leaf short-name {
+      description "Short name to appear as label in the UI";
+      type string;
+    }
+
+    leaf vendor {
+      description "Vendor of the NSD.";
+      type string;
+    }
+
+    leaf logo {
+      description
+        "File path for  the vendor specific logo. For example icons/mylogo.png.
+         The logo  should be part of the network service";
+      type string;
+    }
+
+    leaf description {
+      description "Description of the NSD.";
+      type string;
+    }
+
+    leaf version {
+      description "Version of the NSD";
+      type string;
+    }
+
+    list connection-point {
+      description
+          "List for external connection points.
+          Each NS has one or more external connection
+          points. As the name implies that external
+          connection points are used for connecting
+          the NS to other NS or to external networks.
+          Each NS exposes these connection points to
+          the orchestrator. The orchestrator can
+          construct network service chains by
+          connecting the connection points between
+          different NS.";
+
+      key "name";
+      leaf name {
+        description
+            "Name of the NS connection point.";
+        type string;
+      }
+
+      leaf type {
+        description
+            "Type of the connection point.";
+        type manotypes:connection-point-type;
+      }
+
+      leaf floating-ip-required {
+        description
+            "Boolean parameter to indicate whether the CP must be exposed.
+             A public IP address will be allocated to this CP if exposed is true.
+             The default is false meaning a floating IP address is not required.
+             It must be explicitly asked for a floating IP address to be allocated.";
+        type boolean;
+      }
+
+      choice connection {
+        description "Logical connection of the CP to a VLD or to a VNF CP";
+
+        case vld-ref {
+
+          leaf vld-id-ref {
+            description
+              "ID reference to a VLD in the NS";
+            type leafref {
+              path "../../vld/id";
+            }
+          }
+
+        }
+
+        case vnfd-connection-point-ref {
+
+          leaf member-vnf-index-ref {
+            description "Reference to member-vnf within constituent-vnfd";
+            type leafref {
+              path "../../constituent-vnfd/member-vnf-index";
+            }
+          }
+
+          leaf vnfd-id-ref {
+            description
+              "A reference to a vnfd. This is a leafref to path:
+                  ../../nsd:constituent-vnfd
+                  + [nsd:id = current()/../nsd:id-ref]
+                  + /nsd:vnfd-id-ref";
+            type leafref {
+              path "../../constituent-vnfd" +
+                   "[member-vnf-index = current()/../member-vnf-index-ref]" +
+                   "/vnfd-id-ref";
+            }
+          }
+
+          leaf vnfd-connection-point-ref {
+            description
+              "A reference to a connection point name
+                  in a vnfd. This is a leafref to path:
+                      /vnfd:vnfd-catalog/vnfd:vnfd
+                      + [vnfd:id = current()/../nsd:vnfd-id-ref]
+                      + /vnfd:connection-point/vnfd:name";
+            type leafref {
+              path "/vnfd:vnfd-catalog/vnfd:vnfd" +
+                   "[vnfd:id = current()/../vnfd-id-ref]" +
+                   "/vnfd:connection-point/vnfd:name";
+            }
+          }
+
+        }
+
+      }
+
+    }
+
+    list scaling-group-descriptor {
+      description
+          "scaling group descriptor within this network service.
+           The scaling group defines a group of VNFs,
+           and the ratio of VNFs in the network service
+           that is used as target for scaling action";
+
+      key "name";
+
+      leaf name {
+        description "Name of this scaling group.";
+        type string;
+      }
+
+      list scaling-policy {
+
+        key "name";
+
+        leaf name {
+          description
+              "Name of the scaling policy";
+          type string;
+        }
+
+        leaf scaling-type {
+          description
+              "Type of scaling";
+          type manotypes:scaling-policy-type;
+        }
+
+        leaf enabled {
+          description
+            "Specifies if the scaling policy can be applied";
+          type boolean;
+          default true;
+        }
+
+        leaf scale-in-operation-type {
+          description
+              "Operation to be applied to check between scaling criterias to
+               check if the scale in threshold condition has been met.
+               Defaults to AND";
+          type manotypes:scaling-criteria-operation;
+          default AND;
+        }
+
+        leaf scale-out-operation-type {
+          description
+              "Operation to be applied to check between scaling criterias to
+               check if the scale out threshold condition has been met.
+               Defauls to OR";
+          type manotypes:scaling-criteria-operation;
+          default OR;
+        }
+
+        leaf threshold-time {
+          description
+            "The duration for which the criteria must hold true";
+          type uint32;
+          mandatory true;
+        }
+
+        leaf cooldown-time {
+          description
+            "The duration after a scaling-in/scaling-out action has been
+            triggered, for which there will be no further optional";
+          type uint32;
+          mandatory true;
+        }
+
+        list scaling-criteria {
+          description
+              "list of conditions to be met for generating scaling
+                 requests";
+          key "name";
+
+          leaf name {
+            type string;
+          }
+
+          leaf scale-in-threshold {
+            description
+                "Value below which scale-in requests are generated";
+            type uint64;
+          }
+
+          leaf scale-in-relational-operation {
+            description
+              "The relational operator used to compare the monitoring param
+              against the scale-in-threshold.";
+            type manotypes:relational-operation-type;
+            default LE;
+          }
+
+          leaf scale-out-threshold {
+            description
+                "Value above which scale-out requests are generated";
+            type uint64;
+          }
+
+          leaf scale-out-relational-operation {
+            description
+              "The relational operator used to compare the monitoring param
+              against the scale-out-threshold.";
+            type manotypes:relational-operation-type;
+            default GE;
+          }
+
+          leaf ns-monitoring-param-ref {
+            description
+               "Reference to the NS level monitoring parameter
+                that is aggregated";
+            type leafref {
+              path "../../../../monitoring-param/id";
+            }
+          }
+        }
+      }
+
+      list vnfd-member {
+        description "List of VNFs in this scaling group";
+        key "member-vnf-index-ref";
+
+        leaf member-vnf-index-ref {
+          description "member VNF index of this member VNF";
+          type leafref {
+            path "../../../constituent-vnfd/member-vnf-index";
+          }
+        }
+
+        leaf count {
+          description
+            "count of this member VNF  within this scaling group.
+             The count allows to define  the number of instances
+             when a scaling action targets this scaling group";
+          type uint32;
+          default 1;
+        }
+      }
+
+      leaf min-instance-count {
+        description
+          "Minimum instances of the scaling group which are allowed.
+          These instances are created by default when the network service
+          is instantiated.";
+        type uint32;
+        default 0;
+      }
+
+      leaf max-instance-count {
+        description
+          "Maximum instances of this scaling group that are allowed
+           in a single network service. The network service scaling
+           will fail, when the number of service group instances
+           exceed the max-instance-count specified.";
+        type uint32;
+        default 10;
+      }
+
+      list scaling-config-action {
+        description "List of scaling config actions";
+        key "trigger";
+
+        leaf trigger {
+          description "scaling trigger";
+          type manotypes:scaling-trigger;
+        }
+
+        leaf ns-service-primitive-name-ref {
+          description "Reference to the NS service primitive";
+          type leafref {
+            path "../../../service-primitive/name";
+          }
+        }
+      }
+    }
+
+
+    list vnffgd {
+      description
+          "List of VNF Forwarding Graph Descriptors (VNFFGD).";
+
+      key "id";
+
+      leaf id {
+        description
+            "Identifier for the VNFFGD.";
+        type string;
+      }
+
+      leaf name {
+        description
+            "VNFFGD name.";
+        type string;
+      }
+
+      leaf short-name {
+        description
+            "Short name to appear as label in the UI";
+        type string;
+      }
+
+      leaf vendor {
+        description "Provider of the VNFFGD.";
+        type string;
+      }
+
+      leaf description {
+        description "Description of the VNFFGD.";
+        type string;
+      }
+
+      leaf version {
+        description "Version of the VNFFGD";
+        type string;
+      }
+
+      list rsp {
+        description
+          "List of Rendered Service Paths (RSP).";
+
+        key "id";
+
+        leaf id {
+          description
+            "Identifier for the RSP.";
+          type string;
+        }
+
+        leaf name {
+          description
+            "RSP name.";
+          type string;
+        }
+
+        list vnfd-connection-point-ref {
+          description
+            "A list of references to connection points.";
+          key "member-vnf-index-ref";
+
+          leaf member-vnf-index-ref {
+            description "Reference to member-vnf within constituent-vnfds";
+            type leafref {
+              path "../../../../constituent-vnfd/member-vnf-index";
+            }
+          }
+
+          leaf order {
+            type uint8;
+            description
+              "A number that denotes the order of a VNF in a chain";
+          }
+
+          leaf vnfd-id-ref {
+            description
+              "A reference to a vnfd. This is a
+                  leafref to path:
+                      ../../../../nsd:constituent-vnfd
+                      + [nsd:id = current()/../nsd:id-ref]
+                      + /nsd:vnfd-id-ref";
+
+             type leafref {
+                path "../../../../constituent-vnfd" +
+                     "[member-vnf-index = current()/../member-vnf-index-ref]" +
+                     "/vnfd-id-ref";
+             }
+           }
+
+          leaf vnfd-connection-point-ref {
+            description
+              "A reference to a connection point name
+                  in a vnfd. This is a leafref to path:
+                      /vnfd:vnfd-catalog/vnfd:vnfd
+                      + [vnfd:id = current()/../nsd:vnfd-id-ref]
+                      + /vnfd:connection-point/vnfd:name
+                  NOTE: An issue with confd is preventing the
+                  use of xpath. Seems to be an issue with leafref
+                  to leafref, whose target is in a different module.
+                  Once that is resolved this will switched to use
+                  leafref";
+            // TODO: Keeping as string as this needs to be
+            // diffenent lvel based of if it is nsd-catalog or
+            // in nsr.
+            // type leafref {
+            //   path "../../../../../../vnfd:vnfd-catalog/vnfd:vnfd" +
+            //        "[vnfd:id = current()/../vnfd-id-ref]/" +
+            //        "vnfd:connection-point/vnfd:name";
+            // }
+            type string;
+          }
+        }
+      } //rsp
+
+      list classifier {
+        description
+            "List of classifier rules.";
+
+        key "id";
+
+        leaf id {
+          description
+              "Identifier for the classifier rule.";
+          type string;
+        }
+
+        leaf name {
+          description
+              "Name of the classifier.";
+          type string;
+        }
+
+        leaf rsp-id-ref {
+          description
+              "A reference to the RSP.";
+          type leafref {
+            path "../../rsp/id";
+          }
+        }
+
+        leaf member-vnf-index-ref {
+          description "Reference to member-vnf within constituent-vnfds";
+          type leafref {
+            path "../../../constituent-vnfd/member-vnf-index";
+          }
+        }
+
+        leaf vnfd-id-ref {
+          description
+              "A reference to a vnfd. This is a
+                  leafref to path:
+                      ../../../nsd:constituent-vnfd
+                      + [nsd:id = current()/../nsd:id-ref]
+                      + /nsd:vnfd-id-ref";
+
+          type leafref {
+              path "../../../constituent-vnfd" +
+                   "[member-vnf-index = current()/../member-vnf-index-ref]" +
+                   "/vnfd-id-ref";
+          }
+        }
+
+        leaf vnfd-connection-point-ref {
+          description
+              "A reference to a connection point name
+                  in a vnfd. This is a leafref to path:
+                      /vnfd:vnfd-catalog/vnfd:vnfd
+                      + [vnfd:id = current()/../nsd:vnfd-id-ref]
+                      + /vnfd:connection-point/vnfd:name
+                  NOTE: An issue with confd is preventing the
+                  use of xpath. Seems to be an issue with leafref
+                  to leafref, whose target is in a different module.
+                  Once that is resolved this will switched to use
+                  leafref";
+          // TODO: Keeping as string as this needs to be
+          // diffenent lvel based of if it is nsd-catalog or
+          // in nsr.
+          // type leafref {
+          //     path "../../../../../vnfd:vnfd-catalog/vnfd:vnfd" +
+          //          "[vnfd:id = current()/../vnfd-id-ref]/" +
+          //          "vnfd:connection-point/vnfd:name";
+          // }
+          type string;
+        }
+
+        list match-attributes {
+          description
+              "List of match attributes.";
+
+          key "id";
+
+          leaf id {
+            description
+                "Identifier for the classifier match attribute rule.";
+            type string;
+          }
+
+          leaf ip-proto {
+            description
+                "IP Protocol.";
+            type uint8;
+          }
+
+          leaf source-ip-address {
+            description
+                "Source IP address.";
+            type inet:ip-address;
+          }
+
+          leaf destination-ip-address {
+            description
+                "Destination IP address.";
+            type inet:ip-address;
+          }
+
+          leaf source-port {
+            description
+                "Source port number.";
+            type inet:port-number;
+          }
+
+          leaf destination-port {
+            description
+                "Destination port number.";
+            type inet:port-number;
+          }
+          //TODO: Add more match criteria
+        } //match-attributes
+      } // classifier
+    } // vnffgd
+
+    uses manotypes:ip-profile-list;
+
+    list initial-service-primitive {
+      description
+        "Initial set of service primitives for NSD.";
+      key "seq";
+
+      uses manotypes:event-config;
+    }
+
+    list terminate-service-primitive {
+      description
+        "Set of service primitives during
+         termination for NSD.";
+      key "seq";
+
+      uses manotypes:event-config;
+    }
+
+    uses manotypes:input-parameter-xpath;
+
+    list parameter-pool {
+      description
+        "Pool of parameter values which must be
+         pulled from during configuration";
+      key "name";
+
+      leaf name {
+        description
+            "Name of the configuration value pool";
+        type string;
+      }
+
+      container range {
+        description
+            "Create a range of values to populate the pool with";
+
+        leaf start-value {
+          description
+              "Generated pool values start at this value";
+          type uint32;
+          mandatory true;
+        }
+
+        leaf end-value {
+          description
+              "Generated pool values stop at this value";
+          type uint32;
+          mandatory true;
+        }
+      }
+    }
+
+    list key-pair {
+      key "name";
+      description "Used to configure the list of public keys to be injected as part
+          of ns instantiation";
+
+      leaf name {
+        description "Name of this key pair";
+        type string;
+      }
+
+      leaf key {
+        description "Key associated with this key pair";
+        type string;
+      }
+    }
+
+    list user {
+      key "name";
+      description "List of users to be added through cloud-config";
+
+      leaf name {
+        description "Name of the user ";
+        type string;
+      }
+
+      leaf user-info {
+        description "The user name's real name";
+        type string;
+      }
+
+      list key-pair {
+        key "name";
+        description "Used to configure the list of public keys to be injected as part
+            of ns instantiation";
+
+        leaf name {
+          description "Name of this key pair";
+          type string;
+        }
+
+        leaf key {
+          description "Key associated with this key pair";
+          type string;
+        }
+      }
+    }
+  }
+
+  grouping nsd-vld-common {
+    /* Still having issues modelling this,
+       see the comments under vnfd-connection-point-ref
+    */
+    description
+      "List of Virtual Link Descriptors.";
+
+    leaf id {
+      description
+        "Identifier for the VLD.";
+      type string;
+    }
+
+    leaf name {
+      description
+        "Virtual Link Descriptor (VLD) name.";
+      type string;
+    }
+
+    leaf short-name {
+      description
+        "Short name to appear as label in the UI";
+      type string;
+    }
+
+    leaf vendor {
+      description "Provider of the VLD.";
+      type string;
+    }
+
+    leaf description {
+      description "Description of the VLD.";
+      type string;
+    }
+
+    leaf version {
+      description "Version of the VLD";
+      type string;
+    }
+
+    leaf type {
+      type manotypes:virtual-link-type;
+    }
+
+    leaf root-bandwidth {
+      description
+        "For ELAN this is the aggregate bandwidth.";
+      type uint64;
+    }
+
+    leaf leaf-bandwidth {
+      description
+        "For ELAN this is the bandwidth of branches.";
+      type uint64;
+    }
+
+    // replicate for pnfd container here
+    uses manotypes:provider-network;
+
+    leaf mgmt-network {
+      description "Flag indicating whether this network is a VIM management network";
+      type boolean;
+      default false;
+    }
+
+    choice init-params {
+      description "Extra parameters for VLD instantiation";
+
+      case vim-network-ref {
+        leaf vim-network-name {
+          description
+            "Name of network in VIM account. This is used to indicate
+                   pre-provisioned network name in cloud account.";
+          type string;
+        }
+      }
+
+      case vim-network-profile {
+        leaf ip-profile-ref {
+          description "Named reference to IP-profile object";
+          type leafref {
+            path "../../ip-profiles/name";
+          }
+        }
+      }
+
+    }
+  }
+
+  grouping monitoring-param-common {
+    description
+      "List of monitoring parameters from VNF's that should be
+        propogated up into NSR";
+
+    leaf id {
+      type string;
+    }
+
+    leaf name {
+      type string;
+    }
+
+    uses manotypes:monitoring-param-value;
+    uses manotypes:monitoring-param-ui-data;
+    uses manotypes:monitoring-param-aggregation;
+  }
+}

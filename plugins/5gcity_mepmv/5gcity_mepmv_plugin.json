@@ -1,0 +1,11 @@
+{
+      "name": "5gcity_mepmv",
+      "version": 1,
+      "uuid": "FC6CFC86-CCA5-47E1-9191-09032A408BD4",
+      "type": "manager",
+      "configuration":{
+            "meaod":"//dfos/meao",
+            "meaoa":"//afos/meao",
+            "mehost":"zone_name"
+      }
+}

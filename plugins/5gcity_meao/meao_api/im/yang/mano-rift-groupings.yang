@@ -1,0 +1,95 @@
+/*
+ * 
+ *   Copyright 2016-2017 RIFT.IO Inc
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ *
+ *
+ */
+
+ module mano-rift-groupings
+{
+  namespace "urn:ietf:params:xml:ns:yang:nfvo:mano-rift-groupings";
+  prefix "mano-rift";
+
+  import mano-types {
+    prefix "manotypes";
+  }
+
+  grouping custom-meta-data {
+    description "Grouping for instance-specific meta data";
+    list custom-meta-data {
+      description
+          "List of meta-data to be associated with the instance";
+      key "name";
+      leaf name {
+        description "Name of the meta-data parameter";
+        type string;
+      }
+
+      leaf data-type {
+        description "Data-type the meta-data parameter";
+        type manotypes:meta-data-type;
+        default "STRING";
+      }
+
+      leaf value {
+        description "Value of the meta-data parameter";
+        type string;
+      }
+
+      leaf destination {
+        description "Type of input parameter";
+        type enumeration {
+            enum "CLOUD_INIT";
+            enum "CLOUD_METADATA";
+        }
+        default "CLOUD_METADATA";
+      }
+    }
+  }
+
+  grouping volume-info-additions {
+  	leaf boot-volume {
+      description "This flag indicates if this is boot volume or not";
+      type boolean;
+    }
+
+    leaf boot-priority {
+      description "Boot priority associated with volume";
+      type int32;
+    }
+  }
+
+  grouping http-end-point-additions {
+  	leaf data {
+      description
+        "This is the data to be sent with POST ";
+      type  string;
+    }
+  }
+
+  grouping ssh-key-generated {
+  	container ssh-key-generated {
+      description "SSH key pair generated for this NS";
+      leaf public-key {
+        description "Public key generated";
+        type string;
+      }
+      leaf private-key-file {
+        description "Path to the private key file";
+        type string;
+      }
+    }
+  }
+}

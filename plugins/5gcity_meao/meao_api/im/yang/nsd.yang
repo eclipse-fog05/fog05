@@ -1,0 +1,335 @@
+
+/*
+ *
+ *   Copyright 2016-2017 RIFT.IO Inc
+ *
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
+ *
+ *
+ */
+
+module nsd
+{
+  namespace "urn:ietf:params:xml:ns:yang:nfvo:nsd";
+  prefix "nsd";
+
+  import vnfd {
+    prefix "vnfd";
+  }
+
+  import nsd-base {
+    prefix "nsd-base";
+  }
+
+  import mano-types {
+    prefix "manotypes";
+  }
+
+  import ietf-inet-types {
+    prefix "inet";
+  }
+
+  revision 2017-02-28 {
+    description
+      "Update model to support projects.";
+  }
+
+  revision 2014-10-27 {
+    description
+      "Initial revision. This YANG file defines
+       the Network Service Descriptor (NSD)";
+    reference
+      "Derived from earlier versions of base YANG files";
+  }
+
+  grouping nsd-constituent-vnfd {
+    list constituent-vnfd {
+      description
+          "List of VNFDs that are part of this
+          network service.";
+
+      key "member-vnf-index";
+
+      leaf member-vnf-index {
+        description
+          "Identifier/index for the VNFD. This separate id
+           is required to ensure that multiple VNFs can be
+           part of single NS";
+        type string;
+      }
+
+      leaf vnfd-id-ref {
+        description
+          "Identifier for the VNFD.";
+        type leafref {
+          path "/vnfd:vnfd-catalog/vnfd:vnfd/vnfd:id";
+        }
+      }
+
+      leaf start-by-default {
+        description
+          "VNFD is started as part of the NS instantiation";
+        type boolean;
+        default true;
+      }
+    }
+  }
+
+  grouping nsd-vld {
+    list vld {
+
+      key "id";
+
+      uses nsd-base:nsd-vld-common;
+
+      list vnfd-connection-point-ref {
+        description
+            "A list of references to connection points.";
+        key "member-vnf-index-ref vnfd-connection-point-ref";
+
+        leaf member-vnf-index-ref {
+          description "Reference to member-vnf within constituent-vnfds";
+          type leafref {
+            path "../../../constituent-vnfd/member-vnf-index";
+          }
+        }
+
+        leaf vnfd-connection-point-ref {
+          description "A reference to a connection point name";
+          type leafref {
+            path "/vnfd:vnfd-catalog/vnfd:vnfd" +
+                 "[vnfd:id = current()/../vnfd-id-ref]/" +
+                 "vnfd:connection-point/vnfd:name";
+          }
+        }
+
+        leaf vnfd-id-ref {
+          description
+              "A reference to a VNFD";
+          type leafref {
+            path "../../../constituent-vnfd" +
+                 "[member-vnf-index = current()/../member-vnf-index-ref]" +
+                 "/vnfd-id-ref";
+          }
+        }
+
+        leaf ip-address {
+          description "IP address of the connection point";
+          type inet:ip-address;
+        }
+
+      }
+    }
+  }
+
+  grouping nsd-vnf-dependency {
+    list vnf-dependency {
+      description
+          "List of VNF dependencies.";
+      key vnf-source-ref;
+      leaf vnf-source-ref {
+        type leafref {
+          path "/vnfd:vnfd-catalog/vnfd:vnfd/vnfd:id";
+        }
+      }
+      leaf vnf-depends-on-ref {
+        description
+            "Reference to VNF that sorce VNF depends.";
+        type leafref {
+          path "/vnfd:vnfd-catalog/vnfd:vnfd/vnfd:id";
+        }
+      }
+    }
+  }
+
+  grouping nsd-placement-groups {
+    list placement-groups {
+      description "List of placement groups at NS level";
+
+      key "name";
+      uses manotypes:placement-group-info;
+
+      list member-vnfd {
+        description
+            "List of VNFDs that are part of this placement group";
+
+        key "member-vnf-index-ref";
+
+        leaf member-vnf-index-ref {
+          description "Member VNF index of this member VNF";
+          type leafref {
+            path "../../../constituent-vnfd/member-vnf-index";
+          }
+        }
+
+        leaf vnfd-id-ref {
+          description
+              "Identifier for the VNFD.";
+          type leafref {
+            path "../../../constituent-vnfd" + 
+                 "[member-vnf-index = current()/../member-vnf-index-ref]" +
+                 "/vnfd-id-ref";
+          }
+        }
+      }
+    }
+  }
+
+  grouping nsd-monitoring-param {
+
+    list monitoring-param {
+      key id;
+
+      uses nsd-base:monitoring-param-common;
+
+      list vnfd-monitoring-param {
+        description "A list of VNFD monitoring params";
+        key "member-vnf-index-ref vnfd-monitoring-param-ref";
+
+        leaf vnfd-id-ref {
+          description
+             "A reference to a VNFD. This is a leafref";
+
+          type leafref {
+            path "../../../constituent-vnfd" +
+                 "[member-vnf-index = current()/../member-vnf-index-ref]" +
+                 "/vnfd-id-ref";
+          }
+        }
+
+        leaf vnfd-monitoring-param-ref {
+          description "A reference to the VNFD monitoring param";
+          type leafref {
+            path "/vnfd:vnfd-catalog/vnfd:vnfd"
+              + "[vnfd:id = current()/../vnfd-id-ref]"
+              + "/vnfd:monitoring-param/vnfd:id";
+          }
+        }
+
+        leaf member-vnf-index-ref {
+          description
+            "Mandatory reference to member-vnf within constituent-vnfds";
+          type leafref {
+            path "../../../constituent-vnfd/member-vnf-index";
+          }
+        }
+      }
+    }
+  }
+
+  grouping nsd-service-primitive {
+   list service-primitive {
+      description
+          "Network service level service primitives.";
+
+      key "name";
+
+      leaf name {
+        description
+            "Name of the service primitive.";
+        type string;
+      }
+
+      list parameter {
+        description
+            "List of parameters for the service primitive.";
+
+        key "name";
+        uses manotypes:primitive-parameter;
+      }
+
+      uses manotypes:ui-primitive-group;
+
+      list vnf-primitive-group {
+        description
+            "List of service primitives grouped by VNF.";
+
+        key "member-vnf-index-ref";
+        leaf member-vnf-index-ref {
+          description
+              "Reference to member-vnf within constituent-vnfds";
+          type leafref {
+             path "../../../constituent-vnfd/member-vnf-index";
+          }
+        }
+
+        leaf vnfd-id-ref {
+          description
+              "A reference to a VNFD. This is a leafref";
+
+          type leafref {
+             path "../../../constituent-vnfd" +
+                "[member-vnf-index = current()/../member-vnf-index-ref]" + "/vnfd-id-ref";
+          }
+        }
+
+        leaf vnfd-name {
+          description
+              "Name of the VNFD";
+          type leafref {
+              path "/vnfd:vnfd-catalog/vnfd:vnfd"
+                    + "[vnfd:id = current()/../vnfd-id-ref]"
+                    + "/vnfd:name";
+          }
+        }
+
+        list primitive {
+          key "index";
+
+          leaf index {
+            description "Index of this primitive";
+            type uint32;
+          }
+
+          leaf name {
+            description "Name of the primitive in the VNF primitive ";
+            type string;
+          }
+        }
+      }
+
+      leaf user-defined-script {
+        description
+            "A user defined script.";
+        type string;
+      }
+    }
+  }
+
+  container nsd-catalog {
+
+    leaf schema-version {
+      description "Schema version for the NSD. If unspecified, it assumes v3.0";
+      type string;
+      default "v3.0";
+    }
+
+    list nsd {
+      key id;
+
+      uses nsd-base:nsd-descriptor-common;
+
+      uses nsd-vld;
+
+      uses nsd-constituent-vnfd;
+
+      uses nsd-placement-groups;
+
+      uses nsd-vnf-dependency;
+
+      uses nsd-monitoring-param;
+
+      uses nsd-service-primitive;
+    }
+  }
+}

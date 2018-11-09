@@ -1,0 +1,358 @@
+/* STANDARD_RIFT_IO_COPYRIGHT */
+
+/**
+ * @file rw-pb-ext.yang
+ * @author Tim Mortsolf, Anil Gunturu, Tom Seidenberg
+ * @date 2013/03/21
+ * @brief RiftWare yang to protobuf conversion extensions
+ */
+
+module rw-pb-ext
+{
+  namespace "http://riftio.com/ns/riftware-1.0/rw-pb-ext";
+  prefix "rwpb";
+
+  revision 2014-03-28 {
+    description
+      "Initial revision.";
+    reference
+      "RIFT yang extensions for converting yang files to Google
+      Protocol Buffers (protobuf) using rift protoc-c extensions.";
+  }
+
+  extension msg-new {
+    argument "typename";
+    description
+      "Generate an equivalent, top-level, protobuf message for this
+      container, list, rpc input, rpc output, or notification.  The
+      argument is the name of the protobuf message type.  Allowed
+      values are valid C identifiers.
+
+      The protobuf definition will only be generated when processing
+      the same module that defines the yang object - a duplicate will
+      not be generated when importing reusing a yang object via uses,
+      or when importing the module.";
+  }
+
+  extension msg-name {
+    argument "typename";
+    description
+      "Change the name of an embedded protobuf message type for this
+      container or list.  Allowed values are valid C identifiers.
+
+      In lieu of this extension, embedded protobuf message typenames
+      are based on the fieldname, and further mangled by removing
+      underscores and CamelCased at underscore boundaries.  This
+      extension allows the automatic mangling procedure to be
+      overridden.
+
+      This extension is incompatible with msg-new, which already
+      defines the typename for top-level messages.  Use this extension
+      solely for embedded messages.";
+  }
+
+  extension msg-flat {
+    argument "selection";
+    description
+      "Set the protobuf message rw_msgopts flat option on a container
+      or list statement.  Allowed values are 'true', 'false', and
+      'auto'.  The default is 'false' for top-level messages, and
+      'auto' for embedded messages.  If 'auto' is specified, the
+      behavior is the same as the enclosing container or list.
+
+      Unless overridden, this extension effectively applies to all
+      enclosed descendent container and list statements.  Flatness will
+      be required by the protobuf compilation step.";
+  }
+
+  extension msg-tag-base {
+    argument "value";
+    description
+      "Specify a base tag value for a container, list, grouping, or
+      uses statement.  Field tags may be specified relative to this
+      base.  Allowed values are positive
+      decimal integers.";
+    // ATTN:  would really like to specify field-relative in uses!
+  }
+
+/*
+  extension msg-tag-reserve {
+    argument "value";
+    description
+      "Reserve space in the tag numbering for future expansion of the
+      enclosing grouping, container, or choice.  Must be a positive
+      decimal integer.  Choose carefully, as you cannot increase the
+      value at a later time.";
+  }
+*/
+
+  extension msg-proto-max-size {
+    argument "value";
+    description
+      "Specify the maximum size of this message in the C structure or
+      so in bytes.  Allowed values are positive decimal integers.";
+  }
+
+  extension msg-typedef {
+    argument "typename";
+    description
+      "Create a prototbuf-c message typedef for the original, base
+      definition of the container, list, grouping, rpc input, rpc
+      output, or notification.  Allowed values are valid C identifiers.
+
+      typename will be appended to the mangeled protobuf package name
+      and an underscore, to ensure name uniqueness across the global
+      schema.
+
+      The typedef will only be generated when processing
+      the same module that defines the yang object - a duplicate will
+      not be generated when importing reusing a yang object via uses,
+      or when importing the module.";
+  }
+
+  extension field-name {
+    argument "fieldname";
+    description
+      "Change the name of the element to fieldname, when converting the
+      object to protobuf.  Allowed values are valid C identifiers.
+
+      In lieu of this extension, element names will be used as-is, if
+      possible, or mangled to fit in the C identifier character space
+      (invalid C identifier characters will be replaced with
+      underscore).  This extension allows the automatic mangling
+      procedure to be overridden.";
+  }
+
+  extension field-inline {
+    argument "selection";
+    description
+      "Set the protobuf field 'inline' option on a container, list,
+      leaf-list, or leaf statement.  Allowed values are 'true',
+      'false', and 'auto'.  If 'auto' is specified, the behavior is
+      controlled by the enclosing container or list's protobuf-msg-flat
+      setting.
+
+      When applied to a container or list statement, this extension is
+      inherited by all enclosed objects, unless overridden.";
+  }
+
+  extension field-inline-max {
+    argument "limit";
+    description
+      "Set the protobuf field 'inline_max' option for list and
+      leaf-list statements.  Allowed values are a positive decimal
+      integer, 'yang', or 'none'.  Example limits:
+
+        '64'
+        'yang'
+        'none'
+
+      If 'none' is specified, then the inline_max protobuf extension
+      will not be used.
+
+      If 'yang' is specified, then the number of elements specified in
+      the yang 'max-elements' statement is used.  If there is no
+      'max-elements' statement, the behavior defaults to 'none'.
+
+      If a decimal integer is specified, that number is used as the
+      maximum length.
+
+      If this extension is not specified, the behavior defaults to
+      'yang'.  Descendant list and leaf-list objects do not inherit
+      this extension.";
+  }
+
+  extension field-string-max {
+    argument "limit";
+    description
+      "Set the protobuf field 'string_max' option for a leaf or
+      leaf-list of type string, binary, leafref, identityref, or
+      instance-identifier.  Allowed values are a positive decimal
+      integer, 'yang', or 'none'.  An optional encoding specifier may
+      also be specified, as octet or utf8, which specifies how
+      characters are counted.  If specified, the encoding must come
+      first.  Example limits:
+
+        'octet 64'
+        'utf8 20'
+        'utf8 yang'
+        'utf8'
+        '128'
+        'none'
+
+      If 'none' is specified, then the string_max protobuf extension
+      will not be used.  'none' cannot be combined with 'octet' or
+      'utf8'.
+
+      If 'yang' is specified, the yang type must be string or binary.
+      If the yang type includes the length statement, then the
+      statements maximum length is used as the length.  Otherwise,
+      behavior defaults to 'none'.
+
+      If a decimal integer is specified, that number is used as the
+      length.
+
+      The encoding specifiers are used to determine the actual number
+      of bytes used in the protobuf extension.  If the 'octet'
+      specifier is used, then the maximum length is used literally as
+      the byte length.  If the 'utf8' specified is used, then the
+      maximum length is considered to be in terms of worst-case UTF-8
+      characters, in which case the protobuf byte length will actually
+      be 4 times the specified length.
+
+      For string and binary types, the default encoding is 'octet'.
+      For the remaining types, the default encoding is 'utf8',
+      reflecting those types fundemental description as XML entities
+      assumed to be encoded in UTF-8.
+
+      If this extension is not specified, then the default is 'yang'
+      for string and binary, and 'none' for the other types.  This
+      extension cannot be specified on aggregate objects, and so it
+      cannot be inherited.";
+  }
+
+  extension field-tag {
+    argument "value";
+    description
+      "Set the protobuf field tag.  Allowed values are a positive
+      decimal integer, 'auto', a base-relative addition expression, or
+      a field-relative addition expression.
+
+      If a decimal integer is specified, then the tag is set to the
+      specified number.  You should avoid using this form in a
+      grouping, because you may not be able to guarantee uniqueness
+      across all the uses of the group.  However, the syntax will be
+      allowed.
+
+      A base-relative addition expression allows the tag of a field to
+      be defined in terms of the base tag of an enclosing grouping,
+      container, list, or uses statement.  The expression has the form
+      '+NUMBER', where NUMBER is the value to add to the base to derive
+      the current field's tag.
+
+      A field-relative addition expression allows the tag of one field
+      to be defined in terms of another field.  The expression has the
+      form 'NAME+NUMBER', where NAME is the name of the other field,
+      and NUMBER is the value to add to the other fields tag to derive
+      the current field's tag.
+
+      If this extension is not specified, the default behavior is
+      'auto'.";
+  }
+
+  extension field-type {
+    argument "type";
+    description
+      "Override the default protobuf field type mapping for a leaf or
+      leaf-list type, and use the specified protobuf type instead.
+
+      Allowed values are any of the Protobuf scalar types, as
+      restricted by the yang leaf type:
+
+      +---------------------------+-------------------------------+
+      | (pseudo) yang leaf type   | (pseudo) protobuf scalar type |
+      |---------------------------+-------------------------------+
+      | int8, int16, int32        | int32, sint32, sfixed32, auto |
+      +---------------------------+-------------------------------+
+      | int64                     | int64, sint64, sfixed64, auto |
+      +---------------------------+-------------------------------+
+      | uint8, uint16, uint32     | uint32, fixed32, auto         |
+      +---------------------------+-------------------------------+
+      | uint64                    | uint64, fixed64, auto         |
+      +---------------------------+-------------------------------+
+      | decimal                   | uint64, sint64, int64,        |
+      |                           | fixed64, sfixed64,            |
+      |                           | float, double, auto           |
+      +---------------------------+-------------------------------+
+      | empty, boolean            | bool, auto                    |
+      +---------------------------+-------------------------------+
+      | string, leafref,          | string, auto                  |
+      | identityref,              |                               |
+      | instance-identifier,      |                               |
+      | anyxml                    |                               |
+      +---------------------------+-------------------------------+
+      | bits, binary              | bytes, auto                   |
+      +---------------------------+-------------------------------+
+
+      If 'auto' is specified, the default conversion will be used.  The
+      protobuf pseudo-type utf8 is equivalent to string, except that
+      length limits will be adjusted in protobuf extentions to allow
+      the string to be composed entirely of the maximum sized UTF-8
+      multibyte characters (byte length is 4 times larger than the
+      character length).";
+  }
+
+  extension field-c-type {
+    argument "type";
+    description
+      "Override the default protoc-c C-language type mapping for a leaf
+      or leaf-list type, and use the specified C type instead.";
+  }
+
+  /* ATTN: Stop using this extension? */
+  extension package-name {
+    argument "pkgname";
+    description
+      "Specifies the name of the package name in the generated .proto
+      file on a module statement The argument is the name of the
+      package-name.  Allowed values are valid C identifiers When
+      package-name is not specified the generated package name defaults
+      to the Yang module name";
+  }
+
+  extension application-request-point {
+    description
+      "This extension is used temporarily until the config and data portions
+       are split into different namespaces and keyspecs. This allows
+       applications to provide data at a keyspec, and request config at a
+       different level";
+  }
+
+  extension enum-name {
+    argument "enumname";
+    description
+      "Use the specified name for the enum enumerator in the .proto
+      instead of the default mangled name of the yang identifer.
+      If there is a name conflict with other enum name either specified
+      explicitly or generated one, the yangpbc conversion will fail.
+      Allowed values are valid C identifiers.";
+  }
+
+  extension enum-type {
+    argument "enumtypename";
+    description
+      "Use the specified name for the enum type in the .proto instead
+      of the default mangled name of the yang identifier.  If there is
+      a name conflict with another enum type, either auto-generated or
+      explicitly specified one, the yangpbc conversion will fail.
+      Allowed values are valid C identifiers.";
+  }
+
+  extension file-pbc-include {
+    argument "pathstring";
+    description
+      "A module level extension to specify the include files for pb-c.h
+      when any rift specific c-types are used.  This extension can
+      occur multiple times as a child of module statement.  The value
+      should be a valid path string.";
+  }
+
+  extension field-merge-behavior {
+    argument "value";
+    description
+      "An extension for controlling the merge done for listy types
+       during upacking of protobuf. It can take 3 different value:
+       
+       1) default: The default is whatever protobuf-c does today 
+          (for keyed lists, the default is equivalent to by-keys).
+
+       2) by-keys: allowed on keyed lists (and leaf-lists): merge 
+          elements with matching key.
+
+       3) none: allowed on keyed lists (and leaf-lists): do not 
+          attempt to merge elements. This must ONLY be used when it 
+          is known or expected that the proto message would contain
+          large number of list items.";
+  }
+
+} // rw-pb-ext
