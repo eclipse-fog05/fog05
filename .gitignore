@@ -5,9 +5,11 @@ __pycache__
 *.log
 *.pyc
 
-build
-dist
-fog05.egg-info
+.vscode
+
+build/
+dist/
+*.egg-info
 
 nohup.out
 .merlin

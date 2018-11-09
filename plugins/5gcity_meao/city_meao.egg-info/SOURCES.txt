@@ -1,9 +1,0 @@
-README.md
-setup.py
-city_meao.egg-info/PKG-INFO
-city_meao.egg-info/SOURCES.txt
-city_meao.egg-info/dependency_links.txt
-city_meao.egg-info/requires.txt
-city_meao.egg-info/top_level.txt
-meao_api/__init__.py
-meao_api/api.py
