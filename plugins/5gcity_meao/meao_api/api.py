@@ -15,7 +15,7 @@
 # This API is part of EU H2020 5GCity Project Platform
 #
 
-from yaks_api import YAKS
+from yaks import YAKS
 
 
 class MEAO_API(object):
