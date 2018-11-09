@@ -37,7 +37,7 @@ Q?=@
 
 PYANG_OPTIONS := -Werror
 
-all: $(PYTHON_MODELS)
+all: $(PYTHON_MODELS) pyang-json-schema-plugin $(PYTHON_JSONSCHEMAS)
  #pyang-json-schema-plugin $(PYTHON_JSONSCHEMAS) trees
 
 trees: $(YANG_DESC_TREES) $(YANG_DESC_JSTREES) $(YANG_RECORD_TREES) $(YANG_RECORD_JSTREES)
@@ -56,8 +56,8 @@ $(TREES_DIR):
 
 %.jsonschema: $(OUT_DIR) $(RW_PB_EXT) pyang-json-schema-plugin
 	$(Q)echo generating $@ from $*.yang
-	$(Q)echo pyang --plugindir pyang-json-schema-plugin -f json-schema -o $(OUT_DIR)/$@ $(MODEL_DIR)/$*.yang
-	$(Q)pyang --plugindir pyang-json-schema-plugin -f json-schema -o $(OUT_DIR)/$@ $(MODEL_DIR)/$*.yang
+	$(Q)echo pyang  $(PYANG_OPTIONS) --path build/yang --path $(MODEL_DIR) --plugindir pyang-json-schema-plugin/jsonschema -f jsonschema $(MODEL_DIR)/$*.yang > $(OUT_DIR)/$@
+	$(Q)pyang -Werror $(PYANG_OPTIONS) --path build/yang --path $(MODEL_DIR) --plugindir pyang-json-schema-plugin/jsonschema -f jsonschema $(MODEL_DIR)/$*.yang > $(OUT_DIR)/$@
 
 %.tree.txt: $(TREES_DIR)
 	$(Q)echo generating $@ from $*.yang
