@@ -1,7 +1,5 @@
 # fog05
 
-# CURRENT MASTER BRANCH VERSION IS BREAK USE [0.1.3](https://github.com/eclipse/fog05/tree/0.1.3)
-
 Unifies compute/networking fabric end-to-end
 
 Thanks to its plugin architecture can manage near everything
@@ -13,6 +11,8 @@ See [Installation](https://github.com/eclipse/fog05/wiki/Installation) for insta
 Inside [plugins](./plugins) there are some plugins for entity
 
 See also [Introduction](https://github.com/eclipse/fog05/blob/master/Introduction.md) for more information
+
+For the version that uses Cyclone DDS go to branch [0.1.3](https://github.com/eclipse/fog05/tree/0.1.3)
 
 ### Interact with the nodes
 
