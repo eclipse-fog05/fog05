@@ -20,7 +20,7 @@ PYANG:= pyang
 PYBINDPLUGIN:=$(shell /usr/bin/env python3 -c \
 	            'import pyangbind; import os; print("{}/plugin".format(os.path.dirname(pyangbind.__file__)))')
 
-YANG_DESC_MODELS := appd
+YANG_DESC_MODELS := appd-catalog appd-descriptor
 YANG_RECORD_MODELS := appr
 PYTHON_MODELS := $(addsuffix .py, $(YANG_DESC_MODELS))
 PYTHON_JSONSCHEMAS := $(addsuffix .jsonschema, $(YANG_DESC_MODELS))
@@ -37,7 +37,7 @@ Q?=@
 
 PYANG_OPTIONS := -Werror
 
-all: $(PYTHON_MODELS) pyang-json-schema-plugin $(PYTHON_JSONSCHEMAS)
+all: $(PYTHON_MODELS) pyang-json-schema-plugin $(PYTHON_JSONSCHEMAS) clean-plugin
  #pyang-json-schema-plugin $(PYTHON_JSONSCHEMAS) trees
 
 trees: $(YANG_DESC_TREES) $(YANG_DESC_JSTREES) $(YANG_RECORD_TREES) $(YANG_RECORD_JSTREES)
@@ -111,6 +111,9 @@ pyang:
 
 pyang-json-schema-plugin:
 	git clone https://github.com/cmoberg/pyang-json-schema-plugin
+
+clean-plugin:
+	$(Q)rm -rf pyang-json-schema-plugin
 
 clean:
 	$(Q)rm -rf build dist osm_im.egg-info deb deb_dist *.gz pyang pyangbind pyang-json-schema-plugin $(OUT_DIR) $(TREES_DIR)
