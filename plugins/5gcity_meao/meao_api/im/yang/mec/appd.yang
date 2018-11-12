@@ -17,22 +17,18 @@
  */
 
 
- module appd-catalog {
+ module appd {
 
-    namespace "urn:fog05:params:xml:mec:yang:meao:catalog:appd";
-    prefix "appd-catalog";
+    namespace "urn:fog05:params:xml:mec:yang:meao:descriptor:appd";
+    prefix "appd-descriptor";
 
     import appd-base {
         prefix "appd-base";
     }
 
-    container appd-catalog {
+    container appd-descriptor {
         description
-          "Mobile Edge Application Desciptor Catalog (AppD).";
-
-        list appd {
-            key "id";
-            uses appd-base:appd-descriptor;
-        }
+          "Mobile Edge Application Desciptor (AppD).";
+        uses appd-base:appd-descriptor;
     }
 }

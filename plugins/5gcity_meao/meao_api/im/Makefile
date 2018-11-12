@@ -20,7 +20,7 @@ PYANG:= pyang
 PYBINDPLUGIN:=$(shell /usr/bin/env python3 -c \
 	            'import pyangbind; import os; print("{}/plugin".format(os.path.dirname(pyangbind.__file__)))')
 
-YANG_DESC_MODELS := appd-catalog appd-descriptor
+YANG_DESC_MODELS := meccatalog appd
 YANG_RECORD_MODELS := appr
 PYTHON_MODELS := $(addsuffix .py, $(YANG_DESC_MODELS))
 PYTHON_JSONSCHEMAS := $(addsuffix .jsonschema, $(YANG_DESC_MODELS))
@@ -29,7 +29,7 @@ YANG_DESC_JSTREES := $(addsuffix .html, $(YANG_DESC_MODELS))
 YANG_RECORD_TREES := $(addsuffix .rec.tree.txt, $(YANG_RECORD_MODELS))
 YANG_RECORD_JSTREES := $(addsuffix .rec.html, $(YANG_RECORD_MODELS))
 
-OUT_DIR := meao_im
+OUT_DIR := ../meao_im
 #TREES_DIR := osm_im_trees
 MODEL_DIR := yang/mec
 RW_PB_EXT := build/yang/rw-pb-ext.yang
