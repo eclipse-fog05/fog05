@@ -111,6 +111,15 @@ class LXD(RuntimePlugin):
             #     self.undefine_entity(k)
             if entity.get_state() == State.DEFINED:
                 self.undefine_entity(k)
+        keys = list(self.images.keys())
+        for k in keys:
+            self.agent.logger.info('stopRuntime()', 'Removing Image {}'.format(k))
+            try:
+                img = self.conn.images.get_by_alias(k)
+                img.delete()
+            except LXDAPIException as e:
+                self.agent.logger.error('stopRuntime()', 'Error {}'.format(e))
+                pass
 
         self.conn = None
         self.agent.logger.info('stopRuntime()', '[ DONE ] LXD Plugin - Bye Bye')
@@ -150,26 +159,30 @@ class LXD(RuntimePlugin):
         if kwargs.get('devices'):
             entity.devices = json.loads(kwargs.get('devices'))
 
-        # TODO check what can go here and what should be in instance configuration
-        # i think image should be here and profile generation in instance configuration
         self.agent.logger.info('defineEntity()', '[ INFO ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image)))
         image_data = self.agent.get_os_plugin().read_binary_file(os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image))
         self.agent.logger.info('defineEntity()', '[ DONE ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image)))
-        img_info = {'url': entity.image_url, 'path': entity.image, 'uuid': entity_uuid}
+        img_info = {}
         try:
             self.agent.logger.info('defineEntity()', '[ INFO ] LXD Plugin - Creating image with alias {}'.format(entity_uuid))
-            img = self.conn.images.create(image_data, public=True, wait=True)
-            img.add_alias(entity_uuid, description=entity.name)
-            self.agent.logger.info('defineEntity()', '[ DONE ] LXD Plugin - Created image with alias {}'.format(entity_uuid))
+            try:
+                img = self.conn.images.create(image_data, public=True, wait=True)
+                img.add_alias(entity_uuid, description=entity.name)
+            except LXDAPIException as e:
+                if '{}'.format(e) == 'Image with same fingerprint already exists':
+                    pass
 
-            # custom_profile_for_network = self.conn.profiles.create(entity_uuid)
-            #
-            # # WAN=$(awk '$2 == 00000000 { print $1 }' /proc/net/route)
-            # ## eno1
-            #
-            # dev = self.__generate_custom_profile_devices_configuration(entity)
-            # custom_profile_for_network.devices = dev
-            # custom_profile_for_network.save()
+            self.agent.logger.info('defineEntity()', '[ DONE ] LXD Plugin - Created image with alias {}'.format(entity_uuid))
+            img_info = {}
+            img_info.update({'uuid': entity_uuid})
+            img_info.update({'name': '{}_img'.format(entity.name)})
+            img_info.update({'base_image': image_name})
+            img_info.update({'type': 'lxd'})
+            img_info.update({'format': image_name.split('.')[-2:]})
+            entity.image = img_info
+            self.images.update({entity_uuid: img_info})
+            uri = '{}/{}'.format(self.HOME_IMAGE, entity_uuid)
+            self.__update_actual_store(uri, img_info)
 
         except LXDAPIException as e:
             self.agent.logger.error('define_entity()', 'Error {}'.format(e))
@@ -182,8 +195,6 @@ class LXD(RuntimePlugin):
             self.agent.logger.info('defineEntity()', '[ ERRO ] LXD Plugin - Container uuid: {}'.format(entity_uuid))
             return entity_uuid
 
-        entity.image = img_info
-        self.images.update({entity_uuid: img_info})
         self.current_entities.update({entity_uuid: entity})
         uri = '{}/{}/{}'.format(self.agent.dhome, self.HOME, entity_uuid)
         lxd_info = json.loads(self.agent.dstore.get(uri))
@@ -213,16 +224,16 @@ class LXD(RuntimePlugin):
             for i in list(entity.instances.keys()):
                 self.__force_entity_instance_termination(entity_uuid, i)
 
-            try:
-
-                img = self.conn.images.get_by_alias(entity_uuid)
-                img.delete()
-            except LXDAPIException as e:
-                self.agent.logger.error('undefine_entity()', 'Error {}'.format(e))
-                pass
+            # try:
+            #
+            #     img = self.conn.images.get_by_alias(entity_uuid)
+            #     img.delete()
+            # except LXDAPIException as e:
+            #     self.agent.logger.error('undefine_entity()', 'Error {}'.format(e))
+            #     pass
 
             self.current_entities.pop(entity_uuid, None)
-            self.agent.get_os_plugin().remove_file(os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image.get('path')))
+            # self.agent.get_os_plugin().remove_file(os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image.get('base_image')))
             self.__pop_actual_store(entity_uuid)
             self.agent.logger.info('undefineEntity()', '[ DONE ] LXD Plugin - Undefine a Container uuid {}'.format(entity_uuid))
             return True

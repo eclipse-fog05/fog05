@@ -467,7 +467,8 @@ class FosAgent(Agent):
     def __react_to_onboarding(self, uri, value, v):
         self.logger.info('__react_to_onboarding()', 'Received a onboard action on Desired Store with URI:{} Value:{} Version:{}'.format(uri, value, v))
         application_uuid = uri.split('/')[-1]
-        if value is None and v is None:
+        dvalue = json.loads(value)
+        if dvalue.get('status') == 'undefine':
             self.logger.info('__react_to_onboarding()', 'This is a remove for URI: %s' % uri)
             nuri = '{}/onboard/{}'.format(self.ahome, application_uuid)
             self.astore.remove(nuri)
