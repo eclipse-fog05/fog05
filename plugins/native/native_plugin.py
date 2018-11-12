@@ -410,6 +410,7 @@ class Native(RuntimePlugin):
             else:
                 pid_file = '{}.pid'.format(os.path.join(self.BASE_DIR, self.STORE_DIR, entity_uuid, instance.name, instance_uuid))
                 pid = int(self.agent.get_os_plugin().read_file(pid_file))
+                self.agent.logger.info('stopEntity()', 'FILE PID: {}'.format(pid))
 
                 proc = psutil.Process(pid)
                 proc.terminate()
@@ -514,6 +515,7 @@ class Native(RuntimePlugin):
             cmd_splitted = command.split()
             self.agent.logger.info('__execute_command()', 'CMD SPLIT = {}'.format(cmd_splitted))
             p = psutil.Popen(cmd_splitted, shell=False, stdout=f, stderr=f)
+        self.agent.logger.info('__execute_command()', 'PID = {}'.format(p.pid))
         return p
 
     def __generate_run_script(self, cmd, args, directory, outfile):

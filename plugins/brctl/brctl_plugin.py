@@ -62,28 +62,6 @@ class brctl(NetworkPlugin):
                 if cird == intf_cird:
                     self.overlay_interface = n.get('intf_name')
 
-
-            '''
-            
-             d['network']
-            [
-                {'intf_name': 'virbr0', 'inft_configuration': 
-                    {
-                    'ipv4_address': '192.168.122.1',
-                    'ipv4_netmask': '255.255.255.0', 
-                    'ipv4_gateway': '',
-                    'ipv6_address': '',
-                    'ipv6_netmask': ''},
-                'intf_mac_address': '52:54:00:6d:db:1f',
-                'intf_speed': 0,
-                'type': 'virtual bridge',
-                'available': True,
-                'default_gw': False
-                }, {'intf_name': 'lo', 'inft_configuration': {'ipv4_address': '127.0.0.1', 'ipv4_netmask': '255.0.0.0', 'ipv4_gateway': '', 'ipv6_address': '::1', 'ipv6_netmask': 'ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff'}, 'intf_mac_address': '00:00:00:00:00:00', 'intf_speed': 0, 'type': 'loopback', 'available': True, 'default_gw': False}, {'intf_name': 'lxdbr0', 'inft_configuration': {'ipv4_address': '10.34.58.1', 'ipv4_netmask': '255.255.255.0', 'ipv4_gateway': '', 'ipv6_address': 'fe80::9082:bff:fe47:9f44%lxdbr0', 'ipv6_netmask': 'ffff:ffff:ffff:ffff::'}, 'intf_mac_address': '92:82:0b:47:9f:44', 'intf_speed': 0, 'type': 'container bridge', 'available': True, 'default_gw': False}, {'intf_name': 'ens2', 'inft_configuration': {'ipv4_address': '10.100.1.215', 'ipv4_netmask': '255.255.255.0', 'ipv4_gateway': '10.100.1.1', 'ipv6_address': 'fe80::94a7:f2ff:fe11:fcea%ens2', 'ipv6_netmask': 'ffff:ffff:ffff:ffff::'}, 'intf_mac_address': '96:a7:f2:11:fc:ea', 'intf_speed': 100, 'type': 'ethernet', 'available': False, 'default_gw': True}, {'intf_name': 'virbr0-nic', 'inft_configuration': {'ipv4_address': '', 'ipv4_netmask': '', 'ipv4_gateway': '', 'ipv6_address': '', 'ipv6_netmask': ''}, 'intf_mac_address': '52:54:00:6d:db:1f', 'intf_speed': 10, 'type': 'virtual bridge', 'available': True, 'default_gw': False}]
-            
-            
-            '''
-
         '''
         should listen on:
         
@@ -393,14 +371,12 @@ class brctl(NetworkPlugin):
         vxlan_name = 'vxl-{}'.format(net_uuid.split('-')[0])
 
         if manifest is not None:
-            vxl_id_manifest = manifest.get('vxlan_id')
-            if vxl_id_manifest is not None:
-                vxlan_id = vxl_id_manifest
+            if manifest.get('overlay_info') is not None and manifest.get('overlay_info').get('vxlan_id') is not None:
+                vxlan_id = manifest.get('overlay_info').get('vxlan_id')
             else:
                 vxlan_id = len(self.netmap) + 1
-            vxl_mcast_manifest = manifest.get('multicast_address')
-            if vxl_mcast_manifest is not None:
-                mcast_addr = vxl_mcast_manifests
+            if manifest.get('overlay_info') is not None and  manifest.get('overlay_info').get('multicast_address') is not None:
+                mcast_addr = manifest.get('overlay_info').get('multicast_address')
             else:
                 mcast_addr = '239.0.0.{}'.format(vxlan_id)
         else:

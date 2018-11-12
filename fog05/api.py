@@ -21,7 +21,7 @@ import uuid
 import json
 import fnmatch
 import time
-from yaks_api import api
+from yaks import api
 from .store import Store
 
 

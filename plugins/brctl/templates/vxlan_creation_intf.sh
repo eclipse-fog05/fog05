@@ -17,7 +17,7 @@
 
 
 sudo ip link add {{ bridge_name }} type bridge
-sudo ip link add name {{ vxlan_intf_name }} type vxlan id {{ group_id }} group {{ mcast_group_address }} dstport 4789 dev {{ wan }} nolearning
+sudo ip link add name {{ vxlan_intf_name }} type vxlan id {{ group_id }} group {{ mcast_group_address }} dstport 4789 dev {{ wan }}
 sudo ip link set dev {{ vxlan_intf_name }} master {{ bridge_name }}
 #sudo brctl addif  {{ bridge_name }} {{ vxlan_intf_name }}
 #sudo brctl stp  {{ bridge_name }} off

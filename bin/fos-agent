@@ -28,15 +28,18 @@ class FOSAgentCli(object):
     def __init__(self):
         self.agent = None
 
-    def __catch_signal(self, signal, _):
-        if signal == 2:
+    def __catch_signal(self, signo, _):
+        if signo in [2, 15, 0]:
             if self.agent is not None:
                 self.agent.stop()
                 time.sleep(1)
 
     def __start_node(self, plugin_path, debug, config):
         signal.signal(signal.SIGINT, self.__catch_signal)
-        # TODO should also catch CTRL-BREAK on Windows
+        signal.signal(signal.SIGTERM, self.__catch_signal)
+        if sys.platform in ['windows', 'Windows', 'win32']:
+            signal.signal(signal.CTRL_BREAK_EVENT, self.__catch_signal)
+            signal.signal(signal.CTRL_C_EVENT, self.__catch_signal)
         self.agent = FosAgent(debug=debug, plugins_path=plugin_path, configuration=config)
         self.agent.run()
         while True:
