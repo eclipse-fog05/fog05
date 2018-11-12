@@ -24,7 +24,7 @@ from fog05.DLogger import DLogger
 from .store import Store
 from fog05.PluginLoader import PluginLoader
 from fog05.interfaces.Agent import Agent
-from yaks_api import api
+from yaks import api
 
 class FosAgent(Agent):
 
