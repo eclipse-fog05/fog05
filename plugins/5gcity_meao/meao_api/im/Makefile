@@ -51,12 +51,12 @@ $(TREES_DIR):
 
 %.py: $(OUT_DIR) $(RW_PB_EXT)
 	$(Q)echo generating $@ from $*.yang
-	$(Q)echo pyang $(PYANG_OPTIONS) --path build/yang --path $(MODEL_DIR) --plugindir $(PYBINDPLUGIN) -f pybind -o $(OUT_DIR)/$@ $(MODEL_DIR)/$*.yang
+	#$(Q)echo pyang $(PYANG_OPTIONS) --path build/yang --path $(MODEL_DIR) --plugindir $(PYBINDPLUGIN) -f pybind -o $(OUT_DIR)/$@ $(MODEL_DIR)/$*.yang
 	$(Q)pyang $(PYANG_OPTIONS) --path build/yang --path $(MODEL_DIR) --plugindir $(PYBINDPLUGIN) -f pybind -o $(OUT_DIR)/$@ $(MODEL_DIR)/$*.yang
 
 %.jsonschema: $(OUT_DIR) $(RW_PB_EXT) pyang-json-schema-plugin
 	$(Q)echo generating $@ from $*.yang
-	$(Q)echo pyang  $(PYANG_OPTIONS) --path build/yang --path $(MODEL_DIR) --plugindir pyang-json-schema-plugin/jsonschema -f jsonschema $(MODEL_DIR)/$*.yang > $(OUT_DIR)/$@
+	#$(Q)echo pyang  $(PYANG_OPTIONS) --path build/yang --path $(MODEL_DIR) --plugindir pyang-json-schema-plugin/jsonschema -f jsonschema $(MODEL_DIR)/$*.yang > $(OUT_DIR)/$@
 	$(Q)pyang -Werror $(PYANG_OPTIONS) --path build/yang --path $(MODEL_DIR) --plugindir pyang-json-schema-plugin/jsonschema -f jsonschema $(MODEL_DIR)/$*.yang > $(OUT_DIR)/$@
 
 %.tree.txt: $(TREES_DIR)
