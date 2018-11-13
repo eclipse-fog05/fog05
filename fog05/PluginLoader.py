@@ -12,7 +12,6 @@
 #
 # Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Initial implementation and API
 
-#import imp
 import importlib
 import importlib.machinery
 import os

@@ -14,6 +14,7 @@
 
 import uuid
 
+
 class Plugin(object):
 
     def __init__(self, version, plugin_uuid=None):

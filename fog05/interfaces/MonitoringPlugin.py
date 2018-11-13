@@ -22,7 +22,7 @@ class MonitoringPlugin(Plugin):
 
     def __init__(self, version, plugin_uuid=None):
         super(MonitoringPlugin, self).__init__(version, plugin_uuid)
-        self.name=''
+        self.name = ''
 
     def start_monitoring(self):
         '''
@@ -36,5 +36,6 @@ class MonitoringPlugin(Plugin):
         stop this runtime
         '''
         raise NotImplementedError('This is and interface!')
+
 
 

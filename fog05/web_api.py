@@ -20,8 +20,6 @@ import time
 import requests
 
 
-
-
 class WebAPI(object):
     '''
         This class allow the interaction with fog05 using simple HTTP REST API

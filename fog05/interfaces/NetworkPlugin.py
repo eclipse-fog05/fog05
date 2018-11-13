@@ -189,6 +189,7 @@ class NetworkPlugin(Plugin):
     def get_network_info(self, network_uuid):
         raise NotImplemented
 
+
 class BridgeAssociatedToNetworkException(Exception):
     def __init__(self, message, errors):
         super(BridgeAssociatedToNetworkException, self).__init__(message)

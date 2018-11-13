@@ -16,12 +16,14 @@ import logging
 import time
 import sys
 
+
 class DLogger:
     class __SingletonLogger:
         def __init__(self, file_name=None, debug_flag=False):
 
             if file_name is None:
-                self.log_file = 'fosagent_log.log' # str('fosagent_log_%d.log' % int(time.time()))
+                self.log_file = 'fosagent_log.log'
+                # str('fosagent_log_%d.log' % int(time.time()))
             else:
                 self.log_file = file_name
 

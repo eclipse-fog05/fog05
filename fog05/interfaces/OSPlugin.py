@@ -15,6 +15,7 @@
 from fog05.interfaces.Plugin import Plugin
 import uuid
 
+
 class OSPlugin(Plugin):
     '''
     Interfaces for plugins that allow interaction with underlying operating system
@@ -22,12 +23,13 @@ class OSPlugin(Plugin):
 
     '''
 
-    def __init__(self,version, plugin_uuid=None):
+    def __init__(self, version, plugin_uuid=None):
         super(OSPlugin, self).__init__(version, plugin_uuid)
         self.requirements = []
 
     def get_base_path(self):
         raise NotImplemented
+
     def execute_command(self, command, blocking, external):
 
         '''
@@ -257,6 +259,7 @@ class OSPlugin(Plugin):
 
     def get_hostname(self):
         raise NotImplemented
+
 
 class ProcessNotExistingException(Exception):
     def __init__(self, message, errors):

@@ -12,6 +12,7 @@
 #
 # Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Initial implementation and API
 
+
 class Agent(object):
 
     def __init__(self, uuid):
@@ -49,4 +50,3 @@ class Agent(object):
     
     def list_network_plugins(self):
         raise NotImplementedError
-
