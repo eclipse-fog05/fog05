@@ -17,14 +17,14 @@ import sys
 import os
 from fog05.interfaces.States import State
 
+
 class EntityInstance(object):
 
     def __init__(self,uuid, entity_uuid):
-        self.state=State.CONFIGURED
-        self.uuid=uuid
-        self.name=''
+        self.state = State.CONFIGURED
+        self.uuid = uuid
+        self.name = ''
         self.entity_uuid = entity_uuid
-
 
     def get_state(self):
         return self.state

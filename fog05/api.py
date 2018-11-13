@@ -26,7 +26,9 @@ from .store import Store
 
 
 class FOSStore(object):
-    "Helper class to interact with the Store"
+    """
+    Helper class to interact with the Store
+    """
 
     def __init__(self, server, aroot, droot, sroot, home):
         '''

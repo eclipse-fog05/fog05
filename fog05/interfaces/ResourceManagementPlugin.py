@@ -12,13 +12,13 @@
 #
 # Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Initial implementation and API
 
-from fog05.interfaces import Plugin
+from fog05.interfaces.Plugin import Plugin
 
 
-class ResourceManagmentPlugin(Plugin):
+class ResourceManagementPlugin(Plugin):
 
     def __init__(self, version, plugin_uuid=None):
-        super(ResourceManagmentPlugin, self).__init__(version, plugin_uuid)
+        super(ResourceManagementPlugin, self).__init__(version, plugin_uuid)
 
     def configure_application(self, application_uuid, application_manifest):
         raise NotImplemented

@@ -16,14 +16,14 @@ import sys
 import os
 from fog05.interfaces.States import State
 
+
 class Entity(object):
 
     def __init__(self):
-        self.state=State.UNDEFINED
-        self.uuid=''
-        self.name=''
-        self.instances={}
-
+        self.state = State.UNDEFINED
+        self.uuid = ''
+        self.name = ''
+        self.instances = {}
 
     def get_state(self):
         return self.state
@@ -71,3 +71,4 @@ class Entity(object):
 
     def get_instance(self,instance_uuid):
         return self.instances.get(instance_uuid, None)
+

@@ -21,9 +21,9 @@ class RuntimePlugin(Plugin):
 
     def __init__(self, version, plugin_uuid=None):
         super(RuntimePlugin, self).__init__(version, plugin_uuid)
-        self.pid=-1
-        self.name=''
-        self.current_entities={}
+        self.pid = -1
+        self.name = ''
+        self.current_entities = {}
 
     def start_runtime(self):
         '''
@@ -222,11 +222,13 @@ class RuntimePlugin(Plugin):
             return False
         return True
 
+
 class EntityNotExistingException(Exception):
     def __init__(self, message, errors):
 
         super(EntityNotExistingException, self).__init__(message)
         self.errors = errors
+
 
 class MigrationNotPossibleException(Exception):
     def __init__(self, message, errors):
@@ -234,11 +236,13 @@ class MigrationNotPossibleException(Exception):
         super(MigrationNotPossibleException, self).__init__(message)
         self.errors = errors
 
+
 class MigrationNotAllowedException(Exception):
     def __init__(self, message, errors):
 
         super(MigrationNotAllowedException, self).__init__(message)
         self.errors = errors
+
 
 class StateTransitionNotAllowedException(Exception):
     def __init__(self, message, errors):
