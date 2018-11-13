@@ -12,7 +12,7 @@
 #
 # Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Initial implementation and API
 
-from fog05.interfaces import Plugin
+from fog05.interfaces.Plugin import Plugin
 
 
 class ResourceOrchestratorPlugin(Plugin):

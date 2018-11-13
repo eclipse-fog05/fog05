@@ -26,6 +26,7 @@ from fog05.PluginLoader import PluginLoader
 from fog05.interfaces.Agent import Agent
 from yaks import api
 
+
 class FosAgent(Agent):
 
     def __init__(self, debug=True, plugins_path=None, configuration=None):
@@ -44,8 +45,6 @@ class FosAgent(Agent):
             self.__PLUGINDIR = './plugins'
         else:
             self.__PLUGINDIR = plugins_path
-
-
 
         try:
 

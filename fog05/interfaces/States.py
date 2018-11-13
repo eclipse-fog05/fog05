@@ -15,10 +15,13 @@
 
 from enum import Enum
 
+
 class State(Enum):
-    '''
+
+    """
     States of entities
-    '''
+    """
+
     ERROR = -1
     UNDEFINED = 0
     DEFINED = 1
@@ -27,6 +30,6 @@ class State(Enum):
     PAUSED = 5
     SCALING = 6
     MIGRATING = 7
-    ## Migration concurrent states
+    # Migration concurrent states
     TAKING_OFF = 8
     LANDING = 9
