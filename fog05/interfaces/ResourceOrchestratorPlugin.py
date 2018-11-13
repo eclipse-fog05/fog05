@@ -20,8 +20,8 @@ class ResourceManagmentPlugin(Plugin):
     def __init__(self, version, plugin_uuid=None):
         super(ResourceManagmentPlugin, self).__init__(version, plugin_uuid)
 
-    def configure_application(self, application_uuid, application_manifest):
+    def onboard_application(self, application_uuid, application_manifest):
         raise NotImplemented
 
-    def get_application_configuration(self, application_uuid):
+    def offload_application(self, application_uuid):
         raise NotImplemented
