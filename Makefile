@@ -26,4 +26,4 @@ clean:
 	#cd ./tmp/python-cdds; sudo rm -rf ./dist ./build python-cdds.egg-info;
 	#cd ./tmp/python-dstore; sudo rm -rf ./dist ./build python-dstore.egg-info;
     #cd ./client; jbuilder clean; 	rm -rf fos; rm -rf types/types*.ml types/types*.mli;
-	sudo rm -rf ./build ./dist ./fog05.egg-info;
+	rm -rf ./build ./dist ./fog05.egg-info;
