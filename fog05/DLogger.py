@@ -38,7 +38,13 @@ class DLogger:
             self.logger.setLevel(log_level)
             formatter = logging.Formatter(log_format)
             if not debug_flag:
-                handler = logging.handlers.SysLogHandler()
+                platform = sys.platform
+                if platform == 'linux':
+                    handler = logging.handlers.SysLogHandler('/dev/log')
+                elif platform == 'darwin':
+                    handler = logging.handlers.SysLogHandler('/var/run/syslog')
+                elif platform in ['windows', 'Windows', 'win32']:
+                    handler = logging.handlers.SysLogHandler()
             else:
                 handler = logging.StreamHandler(sys.stdout)
             handler.setFormatter(formatter)
