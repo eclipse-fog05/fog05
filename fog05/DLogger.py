@@ -1,8 +1,8 @@
 # Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
-# 
+#
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
-# 
+#
 # This program and the accompanying materials are made available under the
 # terms of the Eclipse Public License 2.0 which is available at
 # http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
@@ -13,6 +13,7 @@
 # Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Initial implementation and API
 
 import logging
+import logging.handlers
 import time
 import sys
 
@@ -37,8 +38,13 @@ class DLogger:
             self.logger.setLevel(log_level)
             formatter = logging.Formatter(log_format)
             if not debug_flag:
-                log_filename = self.log_file
-                handler = logging.FileHandler(log_filename)
+                platform = sys.platform
+                if platform == 'linux':
+                    handler = logging.handlers.SysLogHandler('/dev/log')
+                elif platform == 'darwin':
+                    handler = logging.handlers.SysLogHandler('/var/run/syslog')
+                elif platform in ['windows', 'Windows', 'win32']:
+                    handler = logging.handlers.SysLogHandler()
             else:
                 handler = logging.StreamHandler(sys.stdout)
             handler.setFormatter(formatter)
