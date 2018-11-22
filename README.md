@@ -21,6 +21,8 @@ pip3 install yaks
 
 You need a running YAKS server to use it.
 
+YAKS can be found [here](https://www.dropbox.com/sh/n02j94m23mven6s/AAB2tHmO4w3-aV7oHhNN7sd0a?dl=0)
+
 #### 0.1.3 
 
 
