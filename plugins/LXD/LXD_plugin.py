@@ -1,8 +1,8 @@
 # Copyright (c) 2014,2018 ADLINK Technology Inc.
-# 
+#
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
-# 
+#
 # This program and the accompanying materials are made available under the
 # terms of the Eclipse Public License 2.0 which is available at
 # http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
@@ -60,39 +60,51 @@ class LXD(RuntimePlugin):
         self.start_runtime()
 
     def start_runtime(self):
-        self.agent.logger.info('startRuntime()', ' LXD Plugin - Connecting to LXD')
+        self.agent.logger.info(
+            'startRuntime()', ' LXD Plugin - Connecting to LXD')
         self.conn = Client()
-        self.agent.logger.info('startRuntime()', '[ DONE ] LXD Plugin - Connecting to LXD')
+        self.agent.logger.info(
+            'startRuntime()', '[ DONE ] LXD Plugin - Connecting to LXD')
         uri = '{}/{}/**'.format(self.agent.dhome, self.HOME)
-        self.agent.logger.info('startRuntime()', ' LXD Plugin - Observing {} for entity'.format(uri))
+        self.agent.logger.info(
+            'startRuntime()', ' LXD Plugin - Observing {} for entity'.format(uri))
         self.agent.dstore.observe(uri, self.__react_to_cache_entity)
 
         uri = '{}/{}/**'.format(self.agent.dhome, self.HOME_FLAVOR)
-        self.agent.logger.info('startRuntime()', ' LXD Plugin - Observing {} for flavor'.format(uri))
+        self.agent.logger.info(
+            'startRuntime()', ' LXD Plugin - Observing {} for flavor'.format(uri))
         self.agent.dstore.observe(uri, self.__react_to_cache_flavor)
 
         uri = '{}/{}/**'.format(self.agent.dhome, self.HOME_IMAGE)
-        self.agent.logger.info('startRuntime()', ' LXD Plugin - Observing {} for image'.format(uri))
+        self.agent.logger.info(
+            'startRuntime()', ' LXD Plugin - Observing {} for image'.format(uri))
         self.agent.dstore.observe(uri, self.__react_to_cache_image)
 
         '''check if dirs exists if not exists create'''
         if self.agent.get_os_plugin().dir_exists(self.BASE_DIR):
             if not self.agent.get_os_plugin().dir_exists('{}/{}'.format(self.BASE_DIR, self.DISK_DIR)):
-                self.agent.get_os_plugin().create_dir('{}/{}'.format(self.BASE_DIR, self.DISK_DIR))
+                self.agent.get_os_plugin().create_dir(
+                    '{}/{}'.format(self.BASE_DIR, self.DISK_DIR))
             if not self.agent.get_os_plugin().dir_exists('{}/{}'.format(self.BASE_DIR, self.IMAGE_DIR)):
-                self.agent.get_os_plugin().create_dir('{}/{}'.format(self.BASE_DIR, self.IMAGE_DIR))
+                self.agent.get_os_plugin().create_dir(
+                    '{}/{}'.format(self.BASE_DIR, self.IMAGE_DIR))
             if not self.agent.get_os_plugin().dir_exists('{}/{}'.format(self.BASE_DIR, self.LOG_DIR)):
-                self.agent.get_os_plugin().create_dir('{}/{}'.format(self.BASE_DIR, self.LOG_DIR))
+                self.agent.get_os_plugin().create_dir(
+                    '{}/{}'.format(self.BASE_DIR, self.LOG_DIR))
         else:
             self.agent.get_os_plugin().create_dir('{}'.format(self.BASE_DIR))
-            self.agent.get_os_plugin().create_dir('{}/{}'.format(self.BASE_DIR, self.DISK_DIR))
-            self.agent.get_os_plugin().create_dir('{}/{}'.format(self.BASE_DIR, self.IMAGE_DIR))
-            self.agent.get_os_plugin().create_dir('{}/{}'.format(self.BASE_DIR, self.LOG_DIR))
+            self.agent.get_os_plugin().create_dir(
+                '{}/{}'.format(self.BASE_DIR, self.DISK_DIR))
+            self.agent.get_os_plugin().create_dir(
+                '{}/{}'.format(self.BASE_DIR, self.IMAGE_DIR))
+            self.agent.get_os_plugin().create_dir(
+                '{}/{}'.format(self.BASE_DIR, self.LOG_DIR))
 
         return self.uuid
 
     def stop_runtime(self):
-        self.agent.logger.info('stopRuntime()', 'LXD Plugin - Destroying {} running domains'.format(len(self.current_entities)))
+        self.agent.logger.info(
+            'stopRuntime()', 'LXD Plugin - Destroying {} running domains'.format(len(self.current_entities)))
         keys = list(self.current_entities.keys())
         for k in keys:
             self.agent.logger.info('stopRuntime()', 'Stopping {}'.format(k))
@@ -115,7 +127,8 @@ class LXD(RuntimePlugin):
                 self.undefine_entity(k)
         keys = list(self.images.keys())
         for k in keys:
-            self.agent.logger.info('stopRuntime()', 'Removing Image {}'.format(k))
+            self.agent.logger.info(
+                'stopRuntime()', 'Removing Image {}'.format(k))
             try:
                 img = self.conn.images.get_by_alias(k)
                 img.delete()
@@ -124,7 +137,8 @@ class LXD(RuntimePlugin):
                 pass
 
         self.conn = None
-        self.agent.logger.info('stopRuntime()', '[ DONE ] LXD Plugin - Bye Bye')
+        self.agent.logger.info(
+            'stopRuntime()', '[ DONE ] LXD Plugin - Bye Bye')
 
     def get_entities(self):
         return self.current_entities
@@ -134,7 +148,8 @@ class LXD(RuntimePlugin):
         Try defining vm
         generating xml from templates/vm.xml with jinja2
         '''
-        self.agent.logger.info('defineEntity()', ' LXD Plugin - Defining a Container')
+        self.agent.logger.info(
+            'defineEntity()', ' LXD Plugin - Defining a Container')
         if len(args) > 0:
             entity_uuid = args[4]
             '''
@@ -143,61 +158,78 @@ class LXD(RuntimePlugin):
         elif len(kwargs) > 0:
             entity_uuid = kwargs.get('entity_uuid')
             entity = LXDEntity(entity_uuid, kwargs.get('name'), kwargs.get('networks'), kwargs.get('base_image'),
-                               kwargs.get('user-data'), kwargs.get('ssh-key'), kwargs.get('storage'),
+                               kwargs.get(
+                                   'user-data'), kwargs.get('ssh-key'), kwargs.get('storage'),
                                kwargs.get('profiles'))
         else:
             return None
 
-        if entity.image_url.startswith('http'):
-            image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image_url.split('/')[-1])
-            self.agent.get_os_plugin().download_file(entity.image_url, image_name)
-        elif entity.image_url.startswith('file://'):
-            image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image_url.split('/')[-1])
-            cmd = 'cp {} {}'.format(entity.image_url[len('file://'):], image_name)
-            self.agent.get_os_plugin().execute_command(cmd, True)
+        if self.is_uuid(entity.image_url):
+            img_info = self.images.get(entity.image_url, None)
+            if img_info is None:
+                self.agent.logger.error(
+                    'define_entity()', '[ ERRO ] LXD Plugin - Cannot find image {}'.format(entity.image_url))
+                self.__write_error_entity(entity_uuid, 'Image not found!')
 
-        entity.image = image_name
+        else:
+            if entity.image_url.startswith('http'):
+                image_name = os.path.join(
+                    self.BASE_DIR, self.IMAGE_DIR, entity.image_url.split('/')[-1])
+                self.agent.get_os_plugin().download_file(entity.image_url, image_name)
+            elif entity.image_url.startswith('file://'):
+                image_name = os.path.join(
+                    self.BASE_DIR, self.IMAGE_DIR, entity.image_url.split('/')[-1])
+                cmd = 'cp {} {}'.format(
+                    entity.image_url[len('file://'):], image_name)
+                self.agent.get_os_plugin().execute_command(cmd, True)
+            self.agent.logger.info('defineEntity()', '[ INFO ] LXD Plugin - Loading image data from: {}'.format(
+                os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image)))
+            image_data = self.agent.get_os_plugin().read_binary_file(
+                os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image))
+            self.agent.logger.info('defineEntity()', '[ DONE ] LXD Plugin - Loading image data from: {}'.format(
+                os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image)))
+            img_info = {}
+            try:
+                self.agent.logger.info(
+                    'defineEntity()', '[ INFO ] LXD Plugin - Creating image with alias {}'.format(entity_uuid))
+                try:
+                    img = self.conn.images.create(
+                        image_data, public=True, wait=True)
+                    img.add_alias(entity_uuid, description=entity.name)
+                except LXDAPIException as e:
+                    if '{}'.format(e) == 'Image with same fingerprint already exists':
+                        pass
+
+                self.agent.logger.info(
+                    'defineEntity()', '[ DONE ] LXD Plugin - Created image with alias {}'.format(entity_uuid))
+                img_info = {}
+                img_info.update({'uuid': entity_uuid})
+                img_info.update({'name': '{}_img'.format(entity.name)})
+                img_info.update({'base_image': image_name})
+                img_info.update({'type': 'lxd'})
+                img_info.update({'format': image_name.split('.')[-2:]})
+                entity.image = img_info
+                self.images.update({entity_uuid: img_info})
+                uri = '{}/{}'.format(self.HOME_IMAGE, entity_uuid)
+                self.__update_actual_store(uri, img_info)
+
+            except LXDAPIException as e:
+                self.agent.logger.error('define_entity()', 'Error {}'.format(e))
+                self.current_entities.update({entity_uuid: entity})
+                uri = '{}/{}/{}'.format(self.agent.dhome,self.HOME, entity_uuid)
+                lxd_info = json.loads(self.agent.dstore.get(uri))
+                lxd_info.update({'status': 'error'})
+                lxd_info.update({'error': '{}'.format(e)})
+                self.__update_actual_store(entity_uuid, lxd_info)
+                self.agent.logger.info('defineEntity()', '[ ERRO ] LXD Plugin - Container uuid: {}'.format(entity_uuid))
+                return entity_uuid
+
+        entity.image = img_info
         entity.set_state(State.DEFINED)
         if kwargs.get('devices'):
             entity.devices = json.loads(kwargs.get('devices'))
-
-        self.agent.logger.info('defineEntity()', '[ INFO ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image)))
-        image_data = self.agent.get_os_plugin().read_binary_file(os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image))
-        self.agent.logger.info('defineEntity()', '[ DONE ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image)))
-        img_info = {}
-        try:
-            self.agent.logger.info('defineEntity()', '[ INFO ] LXD Plugin - Creating image with alias {}'.format(entity_uuid))
-            try:
-                img = self.conn.images.create(image_data, public=True, wait=True)
-                img.add_alias(entity_uuid, description=entity.name)
-            except LXDAPIException as e:
-                if '{}'.format(e) == 'Image with same fingerprint already exists':
-                    pass
-
-            self.agent.logger.info('defineEntity()', '[ DONE ] LXD Plugin - Created image with alias {}'.format(entity_uuid))
-            img_info = {}
-            img_info.update({'uuid': entity_uuid})
-            img_info.update({'name': '{}_img'.format(entity.name)})
-            img_info.update({'base_image': image_name})
-            img_info.update({'type': 'lxd'})
-            img_info.update({'format': image_name.split('.')[-2:]})
-            entity.image = img_info
-            self.images.update({entity_uuid: img_info})
-            uri = '{}/{}'.format(self.HOME_IMAGE, entity_uuid)
-            self.__update_actual_store(uri, img_info)
-
-        except LXDAPIException as e:
-            self.agent.logger.error('define_entity()', 'Error {}'.format(e))
-            self.current_entities.update({entity_uuid: entity})
-            uri = '{}/{}/{}'.format(self.agent.dhome, self.HOME, entity_uuid)
-            lxd_info = json.loads(self.agent.dstore.get(uri))
-            lxd_info.update({'status': 'error'})
-            lxd_info.update({'error': '{}'.format(e)})
-            self.__update_actual_store(entity_uuid, lxd_info)
-            self.agent.logger.info('defineEntity()', '[ ERRO ] LXD Plugin - Container uuid: {}'.format(entity_uuid))
-            return entity_uuid
-
         self.current_entities.update({entity_uuid: entity})
+
         uri = '{}/{}/{}'.format(self.agent.dhome, self.HOME, entity_uuid)
         lxd_info = json.loads(self.agent.dstore.get(uri))
         e_data = lxd_info.get('entity_data')
@@ -290,7 +322,7 @@ class LXD(RuntimePlugin):
                     custom_profile_for_instance = self.conn.profiles.create(instance_uuid)
 
                     # WAN=$(awk '$2 == 00000000 { print $1 }' /proc/net/route)
-                    ## eno1
+                    # eno1
                     if instance.user_file is not None and instance.user_file != '':
                         user_data = self.__generate_custom_profile_userdata_configuration(instance.user_file)
                         custom_profile_for_instance.config = user_data
@@ -1087,26 +1119,31 @@ class LXD(RuntimePlugin):
                 #    self.undefine_entity(k)
 
     def __monitor_instance(self, entity_id, instance_id, instance_name):
+        self.agent.logger.info('__monitor_instance()', '[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(instance_id))
         time.sleep(2)
         while True:
             time.sleep(2)
             uri = '{}/{}/{}/{}/{}'.format(self.agent.ahome, self.HOME, entity_id, self.INSTANCE, instance_id)
             container_info = json.loads(self.agent.astore.get(uri))
-            c = self.conn.containers.get(instance_name)
-            cs = c.state()
-            detailed_state = {}
-            detailed_state.update({'network':cs.network})
-            detailed_state.update({'cpu':cs.cpu})
-            detailed_state.update({'memory':cs.memory})
-            detailed_state.update({'disk':cs.disk})
-            detailed_state.update({'processes':cs.processes})
-            detailed_state.update({'pid':cs.pid})
-            container_info.update({'detailed_state': detailed_state})
-            self.__update_actual_store_instance(entity_id, instance_id, container_info)
-            self.agent.logger.info('run_entity()', '[ DONE ] LXD Plugin - Updating info a Container uuid {}'.format(instance_id))
-            if c.status == 'Stopped':
+            try:
+                c = self.conn.containers.get(instance_name)
+                cs = c.state()
+                detailed_state = {}
+                detailed_state.update({'network':cs.network})
+                detailed_state.update({'cpu':cs.cpu})
+                detailed_state.update({'memory':cs.memory})
+                detailed_state.update({'disk':cs.disk})
+                detailed_state.update({'processes':cs.processes})
+                detailed_state.update({'pid':cs.pid})
+                container_info.update({'detailed_state': detailed_state})
+                self.__update_actual_store_instance(entity_id, instance_id, container_info)
+                
+                if c.status == 'Stopped':
+                    self.agent.logger.info('__monitor_instance()', '[ INFO ] LXD Plugin - Stopping monitoring of Container uuid {}'.format(instance_id))
+                    return
+            except pylxd.exceptions.NotFound:
+                self.agent.logger.info('__monitor_instance()', '[ INFO ] LXD Plugin - Stopping monitoring of Container uuid {}'.format(instance_id))
                 return
-
                     
 
     def __add_image(self, manifest):
@@ -1120,15 +1157,15 @@ class LXD(RuntimePlugin):
             cmd = 'cp {} {}'.format(url[len('file://'):], image_name)
             self.agent.get_os_plugin().execute_command(cmd, True)
 
-        self.agent.logger.info('defineEntity()', '[ INFO ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image)))
+        self.agent.logger.info('__add_image()', '[ INFO ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, url)))
         image_data = self.agent.get_os_plugin().read_binary_file(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name))
-        self.agent.logger.info('defineEntity()', '[ DONE ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image)))
+        self.agent.logger.info('__add_image()', '[ DONE ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, url)))
         img_info = {'url': url, 'path': image_name, 'uuid': uuid}
 
-        self.agent.logger.info('defineEntity()', '[ INFO ] LXD Plugin - Creating image with alias {}'.format(uuid))
+        self.agent.logger.info('__add_image()', '[ INFO ] LXD Plugin - Creating image with alias {}'.format(uuid))
         img = self.conn.images.create(image_data, public=True, wait=True)
         img.add_alias(uuid, description=image_name)
-        self.agent.logger.info('defineEntity()', '[ DONE ] LXD Plugin - Created image with alias {}'.format(uuid))
+        self.agent.logger.info('__add_image()', '[ DONE ] LXD Plugin - Created image with alias {}'.format(uuid))
         self.images.update({uuid: img_info})
         manifest.update({'path': image_name})
         uri = '{}/{}'.format(self.HOME_IMAGE, manifest.get('uuid'))
@@ -1153,6 +1190,18 @@ class LXD(RuntimePlugin):
         self.flavors.pop(flavor_uuid)
         uri = '{}/{}'.format(self.HOME_FLAVOR, flavor_uuid)
         self.__pop_actual_store(uri)
+    
+    def __write_error_entity(self, entity_uuid, error):
+        uri = '{}/{}/{}'.format(self.agent.dhome, self.HOME_ENTITY, entity_uuid)
+        jdata = self.agent.dstore.get(uri)
+        if jdata is not None:
+            vm_info = json.loads(jdata)
+        else:
+            vm_info = {}
+
+        vm_info.update({'status': 'error'})
+        vm_info.update({'error': error})
+        self.__update_actual_store(entity_uuid, vm_info)
 
     def __react_to_cache_image(self, uri, value, v):
         self.agent.logger.info('__react_to_cache_image()', 'LXD Plugin - React to to URI: {} Value: {} Version: {}'.format(uri, value, v))
