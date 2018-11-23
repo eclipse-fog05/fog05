@@ -607,7 +607,7 @@ class API(object):
 
         def __wait_atomic_entity_state_change(self, node_uuid, handler_uuid, entity_uuid, state):
             while True:
-                time.sleep(0.005)
+                time.sleep(0.5)
                 uri = '{}/{}/runtime/{}/entity/{}'.format(self.store.aroot, node_uuid, handler_uuid, entity_uuid)
                 data = self.store.actual.get(uri)
                 if data is not None:
@@ -617,7 +617,7 @@ class API(object):
 
         def __wait_atomic_entity_instance_state_change(self, node_uuid, handler_uuid, entity_uuid, instance_uuid, state):
             while True:
-                time.sleep(0.005)
+                time.sleep(0.5)
                 uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.store.aroot, node_uuid, handler_uuid, entity_uuid, instance_uuid)
                 data = self.store.actual.get(uri)
                 if data is not None:
@@ -657,7 +657,7 @@ class API(object):
                 else:
                     print('type not recognized')
 
-                if handler is None:
+                if handler is None or handler == 'None':
                     print('Handler not found!! (Is none)')
                     return False
             except ValidationError as ve:
@@ -976,6 +976,44 @@ class API(object):
                 raise RuntimeError('store cannot be none in API!')
             self.store = store
 
+        def __search_plugin_by_name(self, name, node_uuid):
+            uri = '{}/{}/plugins'.format(self.store.aroot, node_uuid)
+            all_plugins = self.store.actual.resolve(uri)
+            if all_plugins is None or all_plugins == '':
+                print('Cannot get plugin')
+                return None
+            all_plugins = json.loads(all_plugins).get('plugins')
+            search = [x for x in all_plugins if name.upper() in x.get('name').upper()]
+            if len(search) == 0:
+                return None
+            else:
+                return search[0]
+
+        def __get_entity_handler_by_uuid(self, node_uuid, entity_uuid):
+            uri = '{}/{}/runtime/*/entity/{}'.format(self.store.aroot, node_uuid, entity_uuid)
+            all = self.store.actual.resolveAll(uri)
+            for i in all:
+                k = i[0]
+                if fnmatch.fnmatch(k, uri):
+                    # print('MATCH {0}'.format(k))
+                    # print('Extracting uuid...')
+                    regex = uri.replace('/', '\/')
+                    regex = regex.replace('*', '(.*)')
+                    reobj = re.compile(regex)
+                    mobj = reobj.match(k)
+                    uuid = mobj.group(1)
+                    # print('UUID {0}'.format(uuid))
+
+                    return uuid
+
+        def __get_entity_handler_by_type(self, node_uuid, t):
+            handler = None
+            handler = self.__search_plugin_by_name(t, node_uuid)
+            if handler is None:
+                print('type not yet supported')
+            return handler
+        
+        
         def add(self, manifest, node_uuid=None):
             '''
 
@@ -990,7 +1028,21 @@ class API(object):
             if node_uuid is None:
                 uri = '{}/*/runtime/*/image/{}'.format(self.store.droot, manifest.get('uuid'))
             else:
-                uri = '{}/{}/runtime/*/image/{}'.format(self.store.droot, node_uuid, manifest.get('uuid'))
+                handler = None
+                t = manifest.get('type')
+                if t in ['kvm', 'xen']:
+                    handler = self.__search_plugin_by_name(t, node_uuid)
+                elif t in ['container', 'lxd']:
+                    handler = self.__search_plugin_by_name(t, node_uuid)
+                else:
+                    print('type not recognized')
+                if handler is None or handler == 'None':
+                    print('Handler not found!! (Is none)')
+                    return False
+                if handler.get('uuid') is None:
+                    print('Handler not found!! (Cannot get handler uuid)')
+                    return False
+                uri = '{}/{}/runtime/{}/image/{}'.format(self.store.droot, node_uuid, handler.get('uuid'),manifest.get('uuid'))
             res = self.store.desired.put(uri, json_data)
             if res:
                 return True
