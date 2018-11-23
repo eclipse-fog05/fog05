@@ -211,7 +211,7 @@ class FosAgent(Agent):
                 node_info.update({'orchestrator': True})
                 self.astore.put(self.ahome, json.dumps(node_info))
                 self.logger.info('__init__()', '[ DONE ] Populating Actual Store with data as Orchestrator Node')
-
+            load_after = []
             if self.__PLUGIN_AUTOLOAD:
                 self.logger.info('__init__()', 'Autoloading plugins....')
                 plugins = self.pl.plugins
@@ -226,17 +226,38 @@ class FosAgent(Agent):
                             #req = manifest.get('requirements', None)
                             # if req is not None:
                             #     self.pl.install_requirements(req)
-                            load_method = self.__load_plugin_method_selection(manifest.get('type'))
-                            if load_method is not None:
-                                if conf is None:
-                                    load_method(name, plugin_uuid)
-                                else:
-                                    load_method(name, plugin_uuid, conf)
+                            if manifest.get('type') in ['manager','orchestrator']:
+                                load_after.append(p)
+                                self.logger.info('__init__()', '[ INFO ] This plugin {} will be load after'.format(p))
                             else:
-                                if len(s) != 0:
-                                    self.logger.warning('__react_to_plugins()', '[ WARN ] Plugins of type {} are not yet supported...'.format(v.get('type')))
+                                load_method = self.__load_plugin_method_selection(manifest.get('type'))
+                                if load_method is not None:
+                                    if conf is None:
+                                        load_method(name, plugin_uuid)
+                                    else:
+                                        load_method(name, plugin_uuid, conf)
                                 else:
-                                    self.logger.warning('__react_to_plugins()', '[ WARN ] Plugin already loaded')
+                                    if len(s) != 0:
+                                        self.logger.warning('__init__()', '[ WARN ] Plugins of type {} are not yet supported...'.format(v.get('type')))
+                                    else:
+                                        self.logger.warning('__init__()', '[ WARN ] Plugin already loaded')
+                for p in load_after:
+                    mfile = p.get('info').replace('__init__.py', '{}_plugin.json'.format(p.get('name')))
+                    if self.__osPlugin.file_exists(mfile):
+                        manifest = json.loads(self.__osPlugin.read_file(mfile))
+                        name = manifest.get('name')
+                        self.logger.info('__init__()', '[ INFO ] {}'.format(manifest))
+                        plugin_uuid = manifest.get('uuid')
+                        conf = manifest.get('configuration', None)
+                        load_method = self.__load_plugin_method_selection_mano(manifest.get('type'))
+                        if load_method is not None:
+                            if conf is None:
+                                load_method(name, plugin_uuid)
+                            else:
+                                load_method(name, plugin_uuid, conf)
+                        else:
+                            self.logger.warning('__react_to_plugins()', '[ WARN ] Plugins of type {} are not yet supported...'.format(manifest.get('type')))
+
 
         except FileNotFoundError as fne:
             self.logger.error('__init__()', 'File Not Found Aborting {} '.format(fne.strerror))
@@ -386,6 +407,7 @@ class FosAgent(Agent):
     def __load_manager_plugin(self, plugin_name, plugin_uuid, configuration=None):
         self.logger.info('__load_manager_plugin()', 'Loading a Manager plugin: {}'.format(plugin_name))
         man = self.pl.locate_plugin(plugin_name)
+        self.logger.info('__load_manager_plugin()', 'Manager plugin: {}'.format(man))
         if man is not None:
             self.logger.info('__load_manager_plugin()', '[ INIT ] Loading a Manager plugin: {}'.format(plugin_name))
             man = self.pl.load_plugin(man)
@@ -457,7 +479,12 @@ class FosAgent(Agent):
         r = {
             'runtime': self.__load_runtime_plugin,
             'network': self.__load_network_plugin,
-            'monitoring': self.__load_monitoring_plugin,
+            'monitoring': self.__load_monitoring_plugin
+        }
+        return r.get(type, None)
+
+    def __load_plugin_method_selection_mano(self, type):
+        r = {
             'orchestration': self.__load_orchestration_plugin,
             'manager': self.__load_manager_plugin
         }
@@ -737,6 +764,13 @@ class FosAgent(Agent):
     def __exit_gracefully(self, signal, frame):
         self.logger.info('__exit_gracefully()', 'Received signal: {}'.format(signal))
         self.logger.info('__exit_gracefully()', 'fosAgent exiting...')
+        keys = list(self.__manPlugins.keys())
+        for k in keys:
+            try:
+                self.__manPlugins.get(k).stop()
+            except Exception as e:
+                self.logger.error('__exit_gracefully()', '{}'.format(e))
+                pass
         keys = list(self.__rtPlugins.keys())
         for k in keys:
             try:
@@ -773,8 +807,10 @@ class FosAgent(Agent):
 
         self.sstore.close()
         '''
-        self.dstore.remove('{}/**'.format(self.dhome))
-        self.astore.remove('{}/**'.format(self.ahome))
+        # self.dstore.remove('{}/**'.format(self.dhome))
+        # self.astore.remove('{}/**'.format(self.ahome))
+        [self.dstore.remove(x) for (x,_,_) in self.dstore.getAll('{}/**'.format(self.dhome))]
+        [self.astore.remove(x) for (x,_,_) in self.astore.getAll('{}/**'.format(self.ahome))]
         self.astore.remove('{}'.format(self.ahome))
         self.dstore.remove('{}'.format(self.dhome))
         self.dstore.close()

@@ -28,6 +28,7 @@ import time
 import re
 from pylxd import Client
 from pylxd.exceptions import LXDAPIException
+import threading
 
 
 # TODO Plugins should not be aware of the Agent - The Agent is in OCaml no way to access his store, his logger and the OS plugin
@@ -55,6 +56,7 @@ class LXD(RuntimePlugin):
         self.conn = None
         self.images = {}
         self.flavors = {}
+        self.mon_th = {}
         self.start_runtime()
 
     def start_runtime(self):
@@ -452,6 +454,11 @@ class LXD(RuntimePlugin):
                 self.__update_actual_store_instance(entity_uuid, instance_uuid, container_info)
                 self.current_entities.update({entity_uuid: entity})
                 self.agent.logger.info('run_entity()', '[ DONE ] LXD Plugin - Starting a Container uuid {}'.format(instance_uuid))
+
+                mt = threading.Thread(target=self.__monitor_instance, args=(entity_uuid, instance_uuid, instance.name),daemon=True)
+                mt.start()
+                self.mon_th.update({instance_uuid:mt}) 
+                self.agent.logger.info('run_entity()', '[ DONE ] LXD Plugin - Starting a Monitoring of {}'.format(instance_uuid))
             return True
 
     def stop_entity(self, entity_uuid, instance_uuid=None):
@@ -477,11 +484,13 @@ class LXD(RuntimePlugin):
             else:
 
                 c = self.conn.containers.get(instance.name)
+                self.mon_th.pop(instance_uuid)
                 c.stop(force=False, wait=True)
                 c.sync()
 
                 while c.status != 'Stopped':
                     c.sync()
+
 
 
                 instance.on_stop()
@@ -1076,6 +1085,29 @@ class LXD(RuntimePlugin):
                 #    self.undefine_entity(k)
                 # if instance.get_state() == State.DEFINED:
                 #    self.undefine_entity(k)
+
+    def __monitor_instance(self, entity_id, instance_id, instance_name):
+        time.sleep(2)
+        while True:
+            time.sleep(2)
+            uri = '{}/{}/{}/{}/{}'.format(self.agent.ahome, self.HOME, entity_id, self.INSTANCE, instance_id)
+            container_info = json.loads(self.agent.astore.get(uri))
+            c = self.conn.containers.get(instance_name)
+            cs = c.state()
+            detailed_state = {}
+            detailed_state.update({'network':cs.network})
+            detailed_state.update({'cpu':cs.cpu})
+            detailed_state.update({'memory':cs.memory})
+            detailed_state.update({'disk':cs.disk})
+            detailed_state.update({'processes':cs.processes})
+            detailed_state.update({'pid':cs.pid})
+            container_info.update({'detailed_state': detailed_state})
+            self.__update_actual_store_instance(entity_id, instance_id, container_info)
+            self.agent.logger.info('run_entity()', '[ DONE ] LXD Plugin - Updating info a Container uuid {}'.format(instance_id))
+            if c.status == 'Stopped':
+                return
+
+                    
 
     def __add_image(self, manifest):
         url = manifest.get('base_image')
