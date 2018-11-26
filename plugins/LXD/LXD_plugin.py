@@ -198,6 +198,8 @@ class LXD(RuntimePlugin):
                     img.add_alias(entity_uuid, description=entity.name)
                 except LXDAPIException as e:
                     if '{}'.format(e) == 'Image with same fingerprint already exists':
+                        self.agent.logger.info(
+                    'defineEntity()', '[ INFO ] LXD Plugin - Image with same fingerprint already exists')
                         pass
 
                 self.agent.logger.info(
