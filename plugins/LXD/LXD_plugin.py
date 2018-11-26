@@ -183,11 +183,11 @@ class LXD(RuntimePlugin):
                     entity.image_url[len('file://'):], image_name)
                 self.agent.get_os_plugin().execute_command(cmd, True)
             self.agent.logger.info('defineEntity()', '[ INFO ] LXD Plugin - Loading image data from: {}'.format(
-                os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image)))
+                os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name)))
             image_data = self.agent.get_os_plugin().read_binary_file(
-                os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image))
+                os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name))
             self.agent.logger.info('defineEntity()', '[ DONE ] LXD Plugin - Loading image data from: {}'.format(
-                os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image)))
+                os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name)))
             img_info = {}
             try:
                 self.agent.logger.info(
@@ -207,7 +207,7 @@ class LXD(RuntimePlugin):
                 img_info.update({'name': '{}_img'.format(entity.name)})
                 img_info.update({'base_image': image_name})
                 img_info.update({'type': 'lxd'})
-                img_info.update({'format': image_name.split('.')[-2:]})
+                img_info.update({'format': '.'.join(image_name.split('.')[-2:])})
                 entity.image = img_info
                 self.images.update({entity_uuid: img_info})
                 uri = '{}/{}'.format(self.HOME_IMAGE, entity_uuid)
