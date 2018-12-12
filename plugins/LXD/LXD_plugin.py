@@ -1052,7 +1052,11 @@ class LXD(RuntimePlugin):
                     n.update({'intf_name': 'eth{}'.format(i)})
                 # nw_k = template_key % n.get('intf_name'))
                 nw_k = template_key2.format(i)
-                nw_v = json.loads(str(template_value_bridge % (n.get('intf_name'), n.get('br_name'))))
+                if n.get('mac') is not None:
+                    nw_v = json.loads(str(template_value_bridge_mac % (n.get('intf_name'), n.get('br_name'), n.get('mac'))))
+                else:
+                    nw_v = json.loads(str(template_value_bridge % (n.get('intf_name'), n.get('br_name'))))
+                
 
             devices.update({nw_k: nw_v})
 
