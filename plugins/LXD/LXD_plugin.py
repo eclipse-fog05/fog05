@@ -473,7 +473,11 @@ class LXD(RuntimePlugin):
                 c = self.conn.containers.get(instance.name)
                 c.start()
                 while c.status != 'Running':
-                    c.sync()
+                    try:
+                        c.sync()
+                    except Exception as e:
+                        self.agent.logger.info('run_entity()', '[ ERR ] LXD Plugin - {}'.format(e))
+                        pass
 
                 fm = c.FilesManager(self.conn, c)
                 envs = 'export FOSUUID={} \n' \
