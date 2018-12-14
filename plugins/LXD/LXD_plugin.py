@@ -1076,12 +1076,13 @@ class LXD(RuntimePlugin):
         # devices = devices.render(networks=entity.networks)
         mid = {'machine-id': {'path': 'etc/machine-id', 'source': '/etc/machine-id', 'type': 'disk'}}
         devices.update(mid)
-        self.agent.logger.info('__generate_custom_profile_devices_configuration()', 'LXD Plugin - Devices {}'.format(devices))
+       
         return devices
 
     def __generate_container_dict(self, instance):
         conf = {'name': instance.name, 'profiles': instance.profiles,
                 'source': {'type': 'image', 'alias': instance.image.get('uuid')}}
+        self.agent.logger.info('__generate_container_dict()', 'LXD Plugin - Container Configuration {}'.format(conf))
         return conf
 
     def __update_actual_store(self, uri, value):
