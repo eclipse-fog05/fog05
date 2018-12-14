@@ -337,7 +337,7 @@ class LXD(RuntimePlugin):
                     if instance.devices:
                         for d in instance.devices:
                             dev.update(d)
-
+                    self.agent.logger.info('__generate_custom_profile_devices_configuration()', 'LXD Plugin - Devices {}'.format(dev))
                     custom_profile_for_instance.config = conf
                     custom_profile_for_instance.devices = dev
                     custom_profile_for_instance.save()
@@ -1076,6 +1076,7 @@ class LXD(RuntimePlugin):
         # devices = devices.render(networks=entity.networks)
         mid = {'machine-id': {'path': 'etc/machine-id', 'source': '/etc/machine-id', 'type': 'disk'}}
         devices.update(mid)
+        self.agent.logger.info('__generate_custom_profile_devices_configuration()', 'LXD Plugin - Devices {}'.format(devices))
         return devices
 
     def __generate_container_dict(self, instance):
