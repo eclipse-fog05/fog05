@@ -409,10 +409,11 @@ class LXD(RuntimePlugin):
 
                         time.sleep(2)
                         profile = self.conn.profiles.get(instance_uuid)
-
+                        profile.sync()
                         while True:
                             if len(profile.used_by) == 0:
                                 break
+                            profile.sync()
                             time.sleep(1)
                         profile.delete()
 
@@ -1153,8 +1154,8 @@ class LXD(RuntimePlugin):
                 if c.status == 'Stopped':
                     self.agent.logger.info('__monitor_instance()', '[ INFO ] LXD Plugin - Stopping monitoring of Container uuid {}'.format(instance_id))
                     return
-            except pylxd.exceptions.NotFound:
-                self.agent.logger.info('__monitor_instance()', '[ INFO ] LXD Plugin - Stopping monitoring of Container uuid {}'.format(instance_id))
+            except Exception as e:
+                self.agent.logger.error('__monitor_instance()', '[ ERROR ] LXD Plugin - Stopping monitoring of Container uuid {} Error {}'.format(instance_id, e))
                 return
                     
 
