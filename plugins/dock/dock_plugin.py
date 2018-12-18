@@ -213,9 +213,9 @@ class Dock(RuntimePlugin):
         else:
             for i in list(entity.instances.keys()):
                 self.__force_entity_instance_termination(entity_uuid, i)
-                img = entity.image.get('docker_name')
-                self.conn.images.remove(img)
-
+                
+            img = entity.image.get('docker_name')
+            self.conn.images.remove(img)
             self.current_entities.pop(entity_uuid, None)
             # self.agent.get_os_plugin().remove_file(os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image.get('base_image')))
             self.__pop_actual_store(entity_uuid)
