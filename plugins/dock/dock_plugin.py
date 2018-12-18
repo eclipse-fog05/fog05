@@ -251,7 +251,6 @@ class Dock(RuntimePlugin):
             else:
                 id = len(entity.instances)
                 name = '{0}{1}'.format(entity.name, id)
-                print(entity.__dict__.keys())
                 instance = DockEntityInstance(instance_uuid, name, entity.image,entity.ports_mappings, entity_uuid)
 
                 entity.add_instance(instance)
@@ -345,6 +344,9 @@ class Dock(RuntimePlugin):
                     pm.update({int(k): v})
                 ports = list(pm.keys())
                 hc = self.conn.create_host_config(port_bindings=instance.ports_mappings)
+                self.agent.logger.info('run_entity()', '[ INFO ] IMAGE: {}'.format(image_name))
+                self.agent.logger.info('run_entity()', '[ INFO ] PORTS: {}'.format(ports))
+                self.agent.logger.info('run_entity()', '[ INFO ] Host Config: {}'.format(hc))
                 cid = self.conn.create_container(image_name, ports=ports, host_config=hc, name=instance.name)
                 instance.on_start(cid)
 
