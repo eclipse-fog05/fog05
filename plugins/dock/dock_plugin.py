@@ -190,7 +190,7 @@ class Dock(RuntimePlugin):
         e_data.update({'base_image': img_info.get('docker_name')})
         docker_info.update({'status': 'defined'})
         docker_info.update({'entity_data': e_data})
-        self.current_entities.update({entity_uuid: docker_info})
+        self.current_entities.update({entity_uuid: entity})
         self.__update_actual_store(entity_uuid, docker_info)
         self.agent.logger.info('defineEntity()', '[ DONE ] Docker Plugin - Container uuid: {}'.format(entity_uuid))
         return entity_uuid
