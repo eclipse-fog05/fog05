@@ -1,0 +1,13 @@
+How to connect a docker container to an existing bridge
+
+1) Create a macvlan interface connected to the bridge
+    sudo ip link add ethdocker link br0 type macvlan
+    sudo ip link set ethdocker up
+
+2) Create the docker network that uses this macvlan interface with correct ip configuration
+    docker network create -d macvlan --subnet=10.54.74.0/24 --gateway=10.54.74.1 --ip-range=10.54.74.0/25 -o parent=eth1 tnet
+
+3) Start a docker container in this network
+    docker run --net=tnet -it alpine /bin/sh
+
+4) Profit!
