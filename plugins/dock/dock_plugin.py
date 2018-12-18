@@ -213,7 +213,6 @@ class Dock(RuntimePlugin):
         else:
             for i in list(entity.instances.keys()):
                 self.__force_entity_instance_termination(entity_uuid, i)
-
                 img = entity.image.get('docker_name')
                 self.conn.images.remove(img)
 
