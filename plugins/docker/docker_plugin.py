@@ -61,6 +61,7 @@ class Docker(RuntimePlugin):
     def start_runtime(self):
         self.agent.logger.info(
             'startRuntime()', ' Docker Plugin - Connecting to Docker')
+        print(docker.__dict__.keys())
         self.conn = docker.APIClient(base_url='unix://var/run/docker.sock')
         self.agent.logger.info(
             'startRuntime()', '[ DONE ] Docker Plugin - Connecting to Docker')
