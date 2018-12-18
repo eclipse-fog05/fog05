@@ -118,7 +118,7 @@ class Dock(RuntimePlugin):
                 'stopRuntime()', 'Removing Image {}'.format(k))
             try:
                 img = self.images.get(k)
-                self.conn.remove_image(img.get('docker_name'))
+                self.conn.images.remove(img.get('docker_name'))
             except Exception as e:
                 self.agent.logger.error('stopRuntime()', 'Error {}'.format(e))
                 pass
