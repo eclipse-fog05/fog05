@@ -27,7 +27,7 @@ import random
 import time
 import re
 import threading
-import docker as dck
+import docker
 
 
 # TODO Plugins should not be aware of the Agent - The Agent is in OCaml no way to access his store, his logger and the OS plugin
@@ -61,7 +61,7 @@ class Docker(RuntimePlugin):
     def start_runtime(self):
         self.agent.logger.info(
             'startRuntime()', ' Docker Plugin - Connecting to Docker')
-        self.conn = dck.APIClient(base_url='unix://var/run/docker.sock')
+        self.conn = docker.APIClient(base_url='unix://var/run/docker.sock')
         self.agent.logger.info(
             'startRuntime()', '[ DONE ] Docker Plugin - Connecting to Docker')
         uri = '{}/{}/**'.format(self.agent.dhome, self.HOME)
