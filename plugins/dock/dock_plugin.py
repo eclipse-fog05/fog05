@@ -337,14 +337,12 @@ class Dock(RuntimePlugin):
                 self.current_entities.update({entity_uuid: entity})
 
                 image_name = instance.image.get('docker_name')
-
-                ports = list(instance.ports_mappings.keys())
+                
                 pm = {}
-                for k,v in instance.ports_mappings.keys():
+                for k,v in instance.ports_mappings:
                     pm.update({int(k): v})
-                print(pm.keys())
                 ports = list(pm.keys())
-                hc = self.conn.create_host_config(port_bindings=instance.ports_mappings)
+                hc = self.conn.create_host_config(port_bindings=pm)
                 self.agent.logger.info('run_entity()', '[ INFO ] IMAGE: {}'.format(image_name))
                 self.agent.logger.info('run_entity()', '[ INFO ] PORTS: {}'.format(ports))
                 self.agent.logger.info('run_entity()', '[ INFO ] Host Config: {}'.format(hc))
