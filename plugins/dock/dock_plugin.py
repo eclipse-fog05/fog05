@@ -338,7 +338,8 @@ class Dock(RuntimePlugin):
 
                 image_name = instance.image.get('docker_name')
                 pm = {}
-                for k,v in instance.ports_mappings:
+                for k in instance.ports_mappings:
+                    v = instance.ports_mappings.get(k)
                     pm.update({int(k): v})
                 print(pm)
                 ports = list(pm.keys())
