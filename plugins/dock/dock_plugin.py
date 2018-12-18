@@ -145,7 +145,7 @@ class Dock(RuntimePlugin):
         elif len(kwargs) > 0:
             entity_uuid = kwargs.get('entity_uuid')
             entity = DockEntity(entity_uuid, kwargs.get('name'),  kwargs.get(
-                'base_image'), kwargs.get('port-mapping'), )
+                'base_image'), kwargs.get('port-mappings'))
         else:
             return None
 
