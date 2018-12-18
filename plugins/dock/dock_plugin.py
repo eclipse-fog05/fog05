@@ -251,7 +251,7 @@ class Dock(RuntimePlugin):
             else:
                 id = len(entity.instances)
                 name = '{0}{1}'.format(entity.name, id)
-
+                print(entity.__dict__.keys())
                 instance = DockEntityInstance(instance_uuid, name, entity.image,entity.ports_mappings, entity_uuid)
 
                 entity.add_instance(instance)
