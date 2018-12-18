@@ -1032,7 +1032,7 @@ class API(object):
                 t = manifest.get('type')
                 if t in ['kvm', 'xen']:
                     handler = self.__search_plugin_by_name(t, node_uuid)
-                elif t in ['container', 'lxd']:
+                elif t in ['container', 'lxd', 'docker']:
                     handler = self.__search_plugin_by_name(t, node_uuid)
                 else:
                     print('type not recognized')
