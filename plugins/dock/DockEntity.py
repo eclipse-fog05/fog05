@@ -19,11 +19,11 @@ from fog05.interfaces.States import State
 from fog05.interfaces.Entity import Entity
 
 
-class DockerEntity(Entity):
+class DockEntity(Entity):
 
     def __init__(self, uuid, name, image, ports_mappings):
 
-        super(DockerEntity, self).__init__()
+        super(DockEntity, self).__init__()
         self.uuid = uuid
         self.name = name
         self.image_url = image

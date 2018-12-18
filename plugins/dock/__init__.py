@@ -21,7 +21,7 @@ VERSION = 1
 
 
 def run(*args, **kwargs):
-    sys.path.append(os.path.join(sys.path[0], 'plugins', 'dockerpl'))
-    from docker_plugin import Docker
-    dock = Docker('Docker', VERSION, kwargs.get('agent'), kwargs.get('uuid'))
+    sys.path.append(os.path.join(sys.path[0], 'plugins', 'dock'))
+    from dock_plugin import Dock
+    dock = Dock('docker', VERSION, kwargs.get('agent'), kwargs.get('uuid'))
     return dock

@@ -19,24 +19,24 @@ import uuid
 from packaging import version
 from fog05.interfaces.States import State
 from fog05.interfaces.RuntimePlugin import *
-from DockerEntity import DockerEntity
-from DockerEntityInstance import DockerEntityInstance
+from DockEntity import DockEntity
+from DockEntityInstance import DockEntityInstance
 from jinja2 import Environment
 import json
 import random
 import time
 import re
 import threading
-import docker as dck
+import docker
 
 
 # TODO Plugins should not be aware of the Agent - The Agent is in OCaml no way to access his store, his logger and the OS plugin
 
 
-class Docker(RuntimePlugin):
+class Dock(RuntimePlugin):
 
     def __init__(self, name, version, agent, plugin_uuid):
-        super(Docker, self).__init__(version, plugin_uuid)
+        super(Dock, self).__init__(version, plugin_uuid)
         self.name = name
         self.agent = agent
         self.agent.logger.info('__init__()', ' Hello from Docker Plugin')
@@ -61,8 +61,7 @@ class Docker(RuntimePlugin):
     def start_runtime(self):
         self.agent.logger.info(
             'startRuntime()', ' Docker Plugin - Connecting to Docker')
-        print(dck.__dict__.keys())
-        self.conn = dck.APIClient(base_url='unix://var/run/docker.sock')
+        self.conn = docker.APIClient(base_url='unix://var/run/docker.sock')
         self.agent.logger.info(
             'startRuntime()', '[ DONE ] Docker Plugin - Connecting to Docker')
         uri = '{}/{}/**'.format(self.agent.dhome, self.HOME)
