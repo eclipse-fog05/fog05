@@ -185,11 +185,11 @@ class Docker(RuntimePlugin):
         
         uri = '{}/{}/{}'.format(self.agent.dhome, self.HOME, entity_uuid)
         docker_info = json.loads(self.agent.dstore.get(uri))
-        e_data = Docker_info.get('entity_data')
+        e_data = docker_info.get('entity_data')
         e_data.update({'base_image': img_info.get('docker_name')})
-        Docker_info.update({'status': 'defined'})
-        Docker_info.update({'entity_data': e_data})
-        self.__update_actual_store(entity_uuid, Docker_info)
+        docker_info.update({'status': 'defined'})
+        docker_info.update({'entity_data': e_data})
+        self.__update_actual_store(entity_uuid, docker_info)
         self.agent.logger.info('defineEntity()', '[ DONE ] Docker Plugin - Container uuid: {}'.format(entity_uuid))
         return entity_uuid
 
@@ -212,7 +212,7 @@ class Docker(RuntimePlugin):
                 self.__force_entity_instance_termination(entity_uuid, i)
 
                 img = entity.image.get('docker_name')
-                client.remove_image(img)
+                self.conn.remove_image(img)
 
             self.current_entities.pop(entity_uuid, None)
             # self.agent.get_os_plugin().remove_file(os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image.get('base_image')))
@@ -335,15 +335,15 @@ class Docker(RuntimePlugin):
                 self.__update_actual_store_instance(entity_uuid, instance_uuid, container_info)
                 self.current_entities.update({entity_uuid: entity})
 
-                image_name = image.get('docker_name')
+                image_name = instance.image.get('docker_name')
 
                 ports = list(instance.ports_mappings.keys())
                 pm = {}
-                for k,v in instance.ports_mappings.keys()
+                for k,v in instance.ports_mappings.keys():
                     pm.update({int(k): v})
                 ports = list(pm.keys())
-                hc = client.create_host_config(port_bindings=instance.ports_mappings)
-                cid = client.create_container(, ports=ports, host_config=hc, name=instance.name)
+                hc = self.conn.create_host_config(port_bindings=instance.ports_mappings)
+                cid = self.conn.create_container(image_name, ports=ports, host_config=hc, name=instance.name)
                 instance.on_start(cid)
 
                 container_info = json.loads(self.agent.astore.get(uri))
@@ -376,8 +376,8 @@ class Docker(RuntimePlugin):
                                                          'Instance {} is not in RUNNING state'.format(entity_uuid))
             else:
 
-                client.kill(instance.cid)
-                client.remove_container(instance.cid)
+                self.conn.kill(instance.cid)
+                self.conn.remove_container(instance.cid)
 
                 instance.on_stop()
                 self.current_entities.update({entity_uuid: entity})
@@ -469,6 +469,7 @@ class Docker(RuntimePlugin):
             elif react_func is not None:
                 entity_data.update({'entity_uuid': uuid})
                 if action == 'define':
+                    react_func(**entity_data)
         elif uri.split('/')[-2] == 'instance':
             instance_uuid = uri.split('/')[-1]
             entity_uuid = uri.split('/')[-3]
