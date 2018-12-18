@@ -342,6 +342,7 @@ class Dock(RuntimePlugin):
                 pm = {}
                 for k,v in instance.ports_mappings.keys():
                     pm.update({int(k): v})
+                print(pm.keys())
                 ports = list(pm.keys())
                 hc = self.conn.create_host_config(port_bindings=instance.ports_mappings)
                 self.agent.logger.info('run_entity()', '[ INFO ] IMAGE: {}'.format(image_name))
