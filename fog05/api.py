@@ -643,7 +643,7 @@ class API(object):
                 if t in ['kvm', 'xen']:
                     handler = self.__search_plugin_by_name(t, node_uuid)
                     validate(manifest.get('entity_data'), Schemas.vm_schema)
-                elif t in ['container', 'lxd']:
+                elif t in ['container', 'lxd','docker']:
                     handler = self.__search_plugin_by_name(t, node_uuid)
                     validate(manifest.get('entity_data'), Schemas.container_schema)
                 elif t == 'native':
