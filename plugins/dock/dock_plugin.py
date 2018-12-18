@@ -348,6 +348,7 @@ class Dock(RuntimePlugin):
                 self.agent.logger.info('run_entity()', '[ INFO ] PORTS: {}'.format(ports))
                 self.agent.logger.info('run_entity()', '[ INFO ] Host Config: {}'.format(hc))
                 cid = self.conn.create_container(image_name, ports=ports, host_config=hc, name=instance.name)
+                self.conn.start(cid)
                 instance.on_start(cid)
 
                 container_info = json.loads(self.agent.astore.get(uri))
