@@ -143,19 +143,24 @@ class Docker(RuntimePlugin):
             '''
         elif len(kwargs) > 0:
             entity_uuid = kwargs.get('entity_uuid')
-            entity = DockerEntity(entity_uuid, kwargs.get('name'),  kwargs.get('base_image'), kwargs.get('port-mapping'), )
+            entity = DockerEntity(entity_uuid, kwargs.get('name'),  kwargs.get(
+                'base_image'), kwargs.get('port-mapping'), )
         else:
             return None
-        
 
         if entity.image_url.startswith('file://'):
-            image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image_url.split('/')[-1])
-            cmd = 'cp {} {}'.format(entity.image_url[len('file://'):], image_name)
+            image_name = os.path.join(
+                self.BASE_DIR, self.IMAGE_DIR, entity.image_url.split('/')[-1])
+            cmd = 'cp {} {}'.format(
+                entity.image_url[len('file://'):], image_name)
             self.agent.get_os_plugin().execute_command(cmd, True)
-            self.agent.logger.info('defineEntity()', '[ INFO ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name)))
-            image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name))
+            self.agent.logger.info('defineEntity()', '[ INFO ] LXD Plugin - Loading image data from: {}'.format(
+                os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name)))
+            image_name = os.path.join(
+                self.BASE_DIR, self.IMAGE_DIR, image_name)
         else:
-             self.agent.logger.Error('defineEntity()','Error image can only be a local file!!'
+             self.agent.logger.Error(
+                 'defineEntity()', 'Error image can only be a local file!!')
             return None
 
 
@@ -333,6 +338,10 @@ class Docker(RuntimePlugin):
                 image_name = image.get('docker_name')
 
                 ports = list(instance.ports_mappings.keys())
+                pm = {}
+                for k,v in instance.ports_mappings.keys()
+                    pm.update({int(k): v})
+                ports = list(pm.keys())
                 hc = client.create_host_config(port_bindings=instance.ports_mappings)
                 cid = client.create_container(, ports=ports, host_config=hc, name=instance.name)
                 instance.on_start(cid)
