@@ -167,7 +167,6 @@ class Dock(RuntimePlugin):
 
         img_data = self.agent.get_os_plugin().read_binary_file(image_name)
         img = self.conn.images.load(img_data)[0]
-        self.conn.import_image(src=image_name,repository=entity_uuid,tag="1")
         self.agent.logger.info('defineEntity()', '[ DONE ] Docker Plugin - Created image with alias {}:{}'.format(entity_uuid,"1"))
         img_info = {}
         img_info.update({'uuid': entity_uuid})
