@@ -143,7 +143,7 @@ class Dock(RuntimePlugin):
             '''
         elif len(kwargs) > 0:
             entity_uuid = kwargs.get('entity_uuid')
-            entity = DockerEntity(entity_uuid, kwargs.get('name'),  kwargs.get(
+            entity = DockEntity(entity_uuid, kwargs.get('name'),  kwargs.get(
                 'base_image'), kwargs.get('port-mapping'), )
         else:
             return None
@@ -250,7 +250,7 @@ class Dock(RuntimePlugin):
                 id = len(entity.instances)
                 name = '{0}{1}'.format(entity.name, id)
 
-                instance = DockerEntityInstance(instance_uuid, name, entity.image,entity.ports_mappings, entity_uuid)
+                instance = DockEntityInstance(instance_uuid, name, entity.image,entity.ports_mappings, entity_uuid)
 
                 entity.add_instance(instance)
 
