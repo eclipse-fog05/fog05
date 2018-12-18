@@ -27,7 +27,7 @@ class DockEntity(Entity):
         self.uuid = uuid
         self.name = name
         self.image_url = image
-        self.port_mapping = ports_mappings
+        self.ports_mappings = ports_mappings
 
     def on_configured(self, configuration):
         self.conf = configuration
