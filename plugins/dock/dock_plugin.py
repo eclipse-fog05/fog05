@@ -61,7 +61,7 @@ class Dock(RuntimePlugin):
     def start_runtime(self):
         self.agent.logger.info(
             'startRuntime()', ' Docker Plugin - Connecting to Docker')
-        self.conn = docker.APIClient(base_url='unix://var/run/docker.sock')
+        self.conn = docker.from_env()
         self.agent.logger.info(
             'startRuntime()', '[ DONE ] Docker Plugin - Connecting to Docker')
         uri = '{}/{}/**'.format(self.agent.dhome, self.HOME)
@@ -159,12 +159,14 @@ class Dock(RuntimePlugin):
                 os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name)))
             image_name = os.path.join(
                 self.BASE_DIR, self.IMAGE_DIR, image_name)
+
         else:
             self.agent.logger.Error(
                  'defineEntity()', 'Error image can only be a local file!!')
             return None
 
-
+        img_data = self.agent.get_os_plugin().read_binary_file(image_name)
+        img = self.conn.images.load(img_data)[0]
         self.conn.import_image(src=image_name,repository=entity_uuid,tag="1")
         self.agent.logger.info('defineEntity()', '[ DONE ] Docker Plugin - Created image with alias {}:{}'.format(entity_uuid,"1"))
         img_info = {}
@@ -172,7 +174,7 @@ class Dock(RuntimePlugin):
         img_info.update({'name': '{}_img'.format(entity.name)})
         img_info.update({'base_image': image_name})
         img_info.update({'type': 'Docker'})
-        img_info.update({'docker_name':'{}:{}'.format(entity_uuid,"1")})
+        img_info.update({'docker_name':img.tags[0]})
         img_info.update({'format': '.'.join(image_name.split('.')[-2:])})
         entity.image = img_info
         self.images.update({entity_uuid: img_info})
@@ -214,7 +216,7 @@ class Dock(RuntimePlugin):
                 self.__force_entity_instance_termination(entity_uuid, i)
 
                 img = entity.image.get('docker_name')
-                self.conn.remove_image(img)
+                self.conn.images.remove(img)
 
             self.current_entities.pop(entity_uuid, None)
             # self.agent.get_os_plugin().remove_file(os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image.get('base_image')))
@@ -347,8 +349,9 @@ class Dock(RuntimePlugin):
                 self.agent.logger.info('run_entity()', '[ INFO ] IMAGE: {}'.format(image_name))
                 self.agent.logger.info('run_entity()', '[ INFO ] PORTS: {}'.format(ports))
                 self.agent.logger.info('run_entity()', '[ INFO ] Host Config: {}'.format(hc))
-                cid = self.conn.create_container(image=image_name, ports=ports, host_config=hc, name=instance.name)
-                self.conn.start(cid)
+                cid = self.conn.containers.run(image_name, ports=pm, name=instance.name, detach = True)
+                # cid = self.conn.create_container(image=image_name, ports=ports, host_config=hc, name=instance.name)
+                # self.conn.start(cid)
                 instance.on_start(cid)
 
                 container_info = json.loads(self.agent.astore.get(uri))
@@ -381,8 +384,8 @@ class Dock(RuntimePlugin):
                                                          'Instance {} is not in RUNNING state'.format(entity_uuid))
             else:
 
-                self.conn.kill(instance.cid)
-                self.conn.remove_container(instance.cid)
+                instance.cid.stop()
+                instance.cid.remove()
 
                 instance.on_stop()
                 self.current_entities.update({entity_uuid: entity})
