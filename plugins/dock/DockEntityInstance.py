@@ -26,7 +26,7 @@ class DockEntityInstance(EntityInstance):
         super(DockEntityInstance, self).__init__(uuid, entity_uuid)
         self.name = name
         self.image = image
-        self.port_mapping = ports_mappings
+        self.ports_mappings = ports_mappings
         self.cid = None
 
     def on_configured(self, configuration):
