@@ -643,7 +643,7 @@ class API(object):
                 if t in ['kvm', 'xen']:
                     handler = self.__search_plugin_by_name(t, node_uuid)
                     validate(manifest.get('entity_data'), Schemas.vm_schema)
-                elif t in ['container', 'lxd','dock']:
+                elif t in ['container', 'lxd','docker']:
                     handler = self.__search_plugin_by_name(t, node_uuid)
                     validate(manifest.get('entity_data'), Schemas.container_schema)
                 elif t == 'native':
@@ -1032,7 +1032,7 @@ class API(object):
                 t = manifest.get('type')
                 if t in ['kvm', 'xen']:
                     handler = self.__search_plugin_by_name(t, node_uuid)
-                elif t in ['container', 'lxd', 'dock']:
+                elif t in ['container', 'lxd', 'docker']:
                     handler = self.__search_plugin_by_name(t, node_uuid)
                 else:
                     print('type not recognized')
