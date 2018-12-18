@@ -159,7 +159,7 @@ class Docker(RuntimePlugin):
             image_name = os.path.join(
                 self.BASE_DIR, self.IMAGE_DIR, image_name)
         else:
-             self.agent.logger.Error(
+            self.agent.logger.Error(
                  'defineEntity()', 'Error image can only be a local file!!')
             return None
 
