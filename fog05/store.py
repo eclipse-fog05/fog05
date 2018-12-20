@@ -12,7 +12,7 @@ class Store(object):
         self.root = root_path
         self.home = home_path
         self.cachesize = cachesize
-        self.workspace = self.yaks.create_workspace(Path(root_path))
+        self.workspace = self.yaks.workspace(Path(root_path))
         self.subscriptions = []
 
     def get(self, k):
