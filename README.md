@@ -16,7 +16,7 @@ The version on master does not use Cyclone DDS for communication between nodes
 You need to install YAKS API from pip
 
 ```
-pip3 install yaks
+pip3 install yaks==0.0.2
 ```
 
 You need a running YAKS server to use it.
