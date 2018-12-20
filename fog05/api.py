@@ -368,7 +368,7 @@ class API(object):
             uri = '{}/*/plugins'.format(self.store.aroot)
             response = self.store.actual.resolveAll(uri)
             for i in response:
-                id = i[0].split('/')[2]
+                id = i[0].split('/')[3]
                 pl = json.loads(i[1]).get('plugins')
                 plugins.update({id: pl})
             return plugins
@@ -1113,8 +1113,8 @@ class API(object):
             data = self.store.actual.getAll(uri)
             flavors = {}
             for i in data:
-                nodeid = i[0].split('/')[4]
-                pluginid = i[0].split('/')[6]
+                nodeid = i[0].split('/')[3]
+                pluginid = i[0].split('/')[5]
                 flv_data = json.loads(i[1])
                 flvs = flavors.get(nodeid, None)
                 if flvs is None:
