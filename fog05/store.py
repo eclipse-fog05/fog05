@@ -75,7 +75,7 @@ class Store(object):
             key, value = str(values[0].get('key')), \
                 values[0].get('value').get_value()
             callback(key, value, 0)
-        subid = self.workspace.subscribe(Path(k), adapter_callback)
+        subid = self.workspace.subscribe(Selector(k), adapter_callback)
         self.subscriptions.append(subid)
 
     def close(self):
