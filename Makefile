@@ -8,7 +8,7 @@ all:
 
 	#cd ./tmp; git clone https://github.com/atolab/python-dstore; cd python-dstore; sudo python3 setup.py install --record dstore_files.txt;
 
-	pip3 install python-daemon psutil netifaces jinja2 flask websockets
+	pip3 install psutil netifaces jinja2
 
 	#cd ./client; atdgen -t types/*.atd; atdgen -j types/*.atd; atdgen -v types/*.atd; jbuilder build;  cp ./_build/default/bin/fos.exe ./fos;
 
@@ -20,7 +20,9 @@ install:
     #sudo cp ./client/fos /usr/local/bin/fos-ng
     #sudo cp ./client/bin/check_pid.sh /usr/local/bin/fos-check-pid
 	sudo python3 setup.py install --record fog05_files.txt
-
+	
+unintall:
+	cat files.txt | xargs sudo rm -rf
 
 clean:
 	#cd ./tmp/python-cdds; sudo rm -rf ./dist ./build python-cdds.egg-info;

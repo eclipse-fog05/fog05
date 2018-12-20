@@ -1,8 +1,8 @@
 # Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
-# 
+#
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
-# 
+#
 # This program and the accompanying materials are made available under the
 # terms of the Eclipse Public License 2.0 which is available at
 # http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
@@ -35,7 +35,7 @@ class NetworkPlugin(Plugin):
 
         '''
         raise NotImplementedError('This is and interface!')
-    
+
     def create_virtual_bridge(self, name, uuid):
         '''
         This should create a virtual bridge 
@@ -95,7 +95,6 @@ class NetworkPlugin(Plugin):
         raise NotImplementedError('This is and interface!')
 
     def delete_virtual_interface(self, intf_uuid):
-
         '''
         This should delete a virtual interface identified by intf_uuid, if the interface is assigned to a network
         maybe can also call removeInterfaceFromNetwork() to avoid any problem,
@@ -109,7 +108,6 @@ class NetworkPlugin(Plugin):
         raise NotImplementedError('This is and interface!')
 
     def delete_virtual_bridge(self, br_uuid):
-
         ''' 
         Delete a virtual bride, if the bridge is one assigned to a network should throw an exception, if the bridge not exists throw an exception
 
@@ -120,7 +118,6 @@ class NetworkPlugin(Plugin):
         raise NotImplementedError('This is and interface!')
 
     def remove_interface_from_network(self, network_uuid, intf_uuid):
-
         '''
         Remove the interface intf_uuid from network network_uuid, if interface not present throw an exception
 
@@ -133,7 +130,6 @@ class NetworkPlugin(Plugin):
         raise NotImplementedError('This is and interface!')
 
     def delete_virtual_network(self, network_uuid):
-
         '''
         Delete the virtual network network_uuid, for correct network shutdown should kill the dnsmasq process eventually associated
         for dhcp and remove the bridge, if there are interface associate to this network should throw an exception
@@ -161,7 +157,6 @@ class NetworkPlugin(Plugin):
         :return: the virtual name (vl is a linux bridge or a openvswitch with only 2 ports)
         '''
 
-
     def create_connection_point(self, cp_uuid):
         '''
         Create a connection point with the given uuid
@@ -184,47 +179,47 @@ class NetworkPlugin(Plugin):
         '''
 
     def stop_network(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_network_info(self, network_uuid):
-        raise NotImplemented
+        raise NotImplementedError
 
 
 class BridgeAssociatedToNetworkException(Exception):
-    def __init__(self, message, errors):
+    def __init__(self, message, errors=0):
         super(BridgeAssociatedToNetworkException, self).__init__(message)
         self.errors = errors
 
 
 class NetworkAlreadyExistsException(Exception):
-    def __init__(self, message, errors):
+    def __init__(self, message, errors=0):
         super(NetworkAlreadyExistsException, self).__init__(message)
         self.errors = errors
 
 
 class NetworkHasPendingInterfacesException(Exception):
-    def __init__(self, message, errors):
+    def __init__(self, message, errors=0):
 
         super(NetworkHasPendingInterfacesException, self).__init__(message)
         self.errors = errors
 
 
 class InterfaceNotInNetworkException(Exception):
-    def __init__(self, message, errors):
+    def __init__(self, message, errors=0):
 
         super(InterfaceNotInNetworkException, self).__init__(message)
         self.errors = errors
 
 
 class BridgeNotExistingException(Exception):
-    def __init__(self, message, errors):
+    def __init__(self, message, errors=0):
 
         super(BridgeNotExistingException, self).__init__(message)
         self.errors = errors
 
 
 class InterfaceNotExistingException(Exception):
-    def __init__(self, message, errors):
+    def __init__(self, message, errors=0):
 
         super(InterfaceNotExistingException, self).__init__(message)
         self.errors = errors

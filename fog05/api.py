@@ -21,7 +21,7 @@ import uuid
 import json
 import fnmatch
 import time
-from yaks import api
+from yaks.api import YAKS
 from .store import Store
 
 
@@ -41,12 +41,13 @@ class FOSStore(object):
         :param home: store home also used to generate store id
         '''
 
-        self.y = api.YAKS(server)
+        self.y = YAKS()
+        self.y.login(server)
 
-        self.aroot = aroot  # '//dfos/{}'
+        self.aroot = aroot  # '/dfos/{}'
         self.ahome = '{}/{}'.format(aroot, home)
 
-        self.droot = droot  # '//dfos/{}'
+        self.droot = droot  # '/dfos/{}'
         self.dhome = '{}/{}'.format(droot, home)
 
         self.sroot = sroot
@@ -75,9 +76,9 @@ class API(object):
 
     def __init__(self, sysid=0, store_id="python-api", endpoint='127.0.0.1'):
 
-        self.a_root = '//afos/{}'.format(sysid)
-        self.d_root = '//dfos/{}'.format(sysid)
-        self.s_root = '//sfos/{}'.format(sysid)
+        self.a_root = '/afos/{}'.format(sysid)
+        self.d_root = '/dfos/{}'.format(sysid)
+        self.s_root = '/sfos/{}'.format(sysid)
         self.store = FOSStore(endpoint, self.a_root, self.d_root, self.s_root, store_id)
         self.endpoint = endpoint
         self.manifest = self.Manifest(self.store)

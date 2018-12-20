@@ -1,8 +1,8 @@
 # Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
-# 
+#
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
-# 
+#
 # This program and the accompanying materials are made available under the
 # terms of the Eclipse Public License 2.0 which is available at
 # http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
@@ -125,7 +125,6 @@ class RuntimePlugin(Plugin):
         raise NotImplementedError('This is and interface!')
 
     def after_migrate_entity_actions(self, entity_uuid, dst=False, instance_uuid=None):
-
         '''
         Action to be taken after a migration
         eg. delete disks of vms, delete state of µSvc, undefine entity
@@ -165,7 +164,7 @@ class RuntimePlugin(Plugin):
 
         '''
         raise NotImplementedError('This is and interface!')
-    
+
     def resume_entity(self, entity_uuid, instance_uuid=None):
         '''
         Resume an entity
@@ -224,28 +223,28 @@ class RuntimePlugin(Plugin):
 
 
 class EntityNotExistingException(Exception):
-    def __init__(self, message, errors):
+    def __init__(self, message, errors=0):
 
         super(EntityNotExistingException, self).__init__(message)
         self.errors = errors
 
 
 class MigrationNotPossibleException(Exception):
-    def __init__(self, message, errors):
+    def __init__(self, message, errors=0):
 
         super(MigrationNotPossibleException, self).__init__(message)
         self.errors = errors
 
 
 class MigrationNotAllowedException(Exception):
-    def __init__(self, message, errors):
+    def __init__(self, message, errors=0):
 
         super(MigrationNotAllowedException, self).__init__(message)
         self.errors = errors
 
 
 class StateTransitionNotAllowedException(Exception):
-    def __init__(self, message, errors):
+    def __init__(self, message, errors=0):
 
         super(StateTransitionNotAllowedException, self).__init__(message)
         self.errors = errors

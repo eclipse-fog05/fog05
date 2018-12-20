@@ -69,15 +69,15 @@ class Dock(RuntimePlugin):
             'startRuntime()', ' Docker Plugin - Observing {} for entity'.format(uri))
         self.agent.dstore.observe(uri, self.__react_to_cache_entity)
 
-        uri = '{}/{}/**'.format(self.agent.dhome, self.HOME_FLAVOR)
-        self.agent.logger.info(
-            'startRuntime()', ' Docker Plugin - Observing {} for flavor'.format(uri))
-        self.agent.dstore.observe(uri, self.__react_to_cache_flavor)
+        # uri = '{}/{}/**'.format(self.agent.dhome, self.HOME_FLAVOR)
+        # self.agent.logger.info(
+        #     'startRuntime()', ' Docker Plugin - Observing {} for flavor'.format(uri))
+        # self.agent.dstore.observe(uri, self.__react_to_cache_flavor)
 
-        uri = '{}/{}/**'.format(self.agent.dhome, self.HOME_IMAGE)
-        self.agent.logger.info(
-            'startRuntime()', ' Docker Plugin - Observing {} for image'.format(uri))
-        self.agent.dstore.observe(uri, self.__react_to_cache_image)
+        # uri = '{}/{}/**'.format(self.agent.dhome, self.HOME_IMAGE)
+        # self.agent.logger.info(
+        #     'startRuntime()', ' Docker Plugin - Observing {} for image'.format(uri))
+        # self.agent.dstore.observe(uri, self.__react_to_cache_image)
 
         '''check if dirs exists if not exists create'''
         if self.agent.get_os_plugin().dir_exists(self.BASE_DIR):
@@ -452,13 +452,13 @@ class Dock(RuntimePlugin):
             return True
 
     def migrate_entity(self, entity_uuid, dst=False, instance_uuid=None):
-        pass
+        raise NotImplementedError
 
     def before_migrate_entity_actions(self, entity_uuid, dst=False, instance_uuid=None):
-        pass
+        raise NotImplementedError
 
     def after_migrate_entity_actions(self, entity_uuid, dst=False, instance_uuid=None):
-        pass
+        raise NotImplementedError
 
     def __react_to_cache_entity(self, uri, value, v):
         self.agent.logger.info('__react_to_cache()', ' Docker Plugin - React to to URI: {} Value: {} Version: {}'.format(uri, value, v))
@@ -543,49 +543,16 @@ class Dock(RuntimePlugin):
                 #    self.undefine_entity(k)
 
     def __add_image(self, manifest):
-        url = manifest.get('base_image')
-        uuid = manifest.get('uuid')
-        if url.startswith('http'):
-            image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, url.split('/')[-1])
-            self.agent.get_os_plugin().download_file(url, image_name)
-        elif url.startswith('file://'):
-            image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, url.split('/')[-1])
-            cmd = 'cp {} {}'.format(url[len('file://'):], image_name)
-            self.agent.get_os_plugin().execute_command(cmd, True)
-
-        self.agent.logger.info('__add_image()', '[ INFO ] Docker Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, url)))
-        image_data = self.agent.get_os_plugin().read_binary_file(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name))
-        self.agent.logger.info('__add_image()', '[ DONE ] Docker Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, url)))
-        img_info = {'url': url, 'path': image_name, 'uuid': uuid}
-
-        self.agent.logger.info('__add_image()', '[ INFO ] Docker Plugin - Creating image with alias {}'.format(uuid))
-        img = self.conn.images.create(image_data, public=True, wait=True)
-        img.add_alias(uuid, description=image_name)
-        self.agent.logger.info('__add_image()', '[ DONE ] Docker Plugin - Created image with alias {}'.format(uuid))
-        self.images.update({uuid: img_info})
-        manifest.update({'path': image_name})
-        uri = '{}/{}'.format(self.HOME_IMAGE, manifest.get('uuid'))
-        self.__update_actual_store(uri, manifest)
+        raise NotImplementedError
 
     def __remove_image(self, image_uuid):
-        image = self.images.get(image_uuid, None)
-        if image is None:
-            self.agent.logger.info('__remove_image()', ' Docker Plugin - Image not found!!')
-            return
-        self.agent.get_os_plugin().remove_file(image.get('path'))
-        self.images.pop(image_uuid)
-        uri = '{}/{}'.format(self.HOME_IMAGE, image_uuid)
-        self.__pop_actual_store(uri)
+       raise NotImplementedError
 
     def __add_flavor(self, manifest):
-        uri = '{}/{}'.format(self.HOME_FLAVOR, manifest.get('uuid'))
-        self.__update_actual_store(uri, manifest)
-        self.flavors.update({manifest.get('uuid'): manifest})
+       raise NotImplementedError
 
     def __remove_flavor(self, flavor_uuid):
-        self.flavors.pop(flavor_uuid)
-        uri = '{}/{}'.format(self.HOME_FLAVOR, flavor_uuid)
-        self.__pop_actual_store(uri)
+       raise NotImplementedError
     
     def __write_error_entity(self, entity_uuid, error):
         uri = '{}/{}/{}'.format(self.agent.dhome, self.HOME_ENTITY, entity_uuid)
@@ -600,26 +567,10 @@ class Dock(RuntimePlugin):
         self.__update_actual_store(entity_uuid, vm_info)
 
     def __react_to_cache_image(self, uri, value, v):
-        self.agent.logger.info('__react_to_cache_image()', 'Docker Plugin - React to to URI: {} Value: {} Version: {}'.format(uri, value, v))
-        if uri.split('/')[-2] == 'image':
-            image_uuid = uri.split('/')[-1]
-            if value is None and v is None:
-                self.agent.logger.info('__react_to_cache_image()', 'Docker Plugin - This is a remove for URI: {}'.format(uri))
-                self.__remove_image(image_uuid)
-            else:
-                value = json.loads(value)
-                self.__add_image(value)
+        raise NotImplementedError
 
     def __react_to_cache_flavor(self, uri, value, v):
-        self.agent.logger.info('__react_to_cache_flavor()', 'Docker Plugin - React to to URI: {} Value: {} Version: {}'.format(uri, value, v))
-        if uri.split('/')[-2] == 'flavor':
-            flavor_uuid = uri.split('/')[-1]
-            if value is None and v is None:
-                self.agent.logger.info('__react_to_cache_flavor()', 'Docker Plugin - This is a remove for URI: {}'.format(uri))
-                self.__remove_flavor(flavor_uuid)
-            else:
-                value = json.loads(value)
-                self.__add_flavor(value)
+        raise NotImplementedError
 
     def __react(self, action):
         r = {

@@ -1,8 +1,8 @@
 # Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
-# 
+#
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
-# 
+#
 # This program and the accompanying materials are made available under the
 # terms of the Eclipse Public License 2.0 which is available at
 # http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
@@ -40,7 +40,8 @@ class FOSAgentCli(object):
         if sys.platform in ['windows', 'Windows', 'win32']:
             signal.signal(signal.CTRL_BREAK_EVENT, self.__catch_signal)
             signal.signal(signal.CTRL_C_EVENT, self.__catch_signal)
-        self.agent = FosAgent(debug=debug, plugins_path=plugin_path, configuration=config)
+        self.agent = FosAgent(
+            debug=debug, plugins_path=plugin_path, configuration=config)
         self.agent.run()
         while True:
             time.sleep(100)
@@ -64,22 +65,28 @@ class FOSAgentCli(object):
             print('You should specify plugin path!!')
 
     def main(self):
-        parser = argparse.ArgumentParser(description='fog05 | The Fog-Computing IaaS')
+        parser = argparse.ArgumentParser(
+            description='fog05 | The Fog-Computing IaaS')
         subparsers = parser.add_subparsers(dest='cmd')
 
         # START CMD
 
         parser_start = subparsers.add_parser('start')
-        parser_start.add_argument('-p', '--plugins', required=True, type=str, default=False, help='plugin path')
-        parser_start.add_argument('-v', '--verbose', action='store_true', default=False, help='Verbose output')
-        parser_start.add_argument('-d', '--daemon', action='store_true', default=False, help='Run as a daemon')
-        parser_start.add_argument('-c', '--conffile', type=str, default=None, help='agent configuration file')
+        parser_start.add_argument(
+            '-p', '--plugins', required=True, type=str, default=False, help='plugin path')
+        parser_start.add_argument(
+            '-v', '--verbose', action='store_true', default=False, help='Verbose output')
+        parser_start.add_argument(
+            '-d', '--daemon', action='store_true', default=False, help='Run as a daemon')
+        parser_start.add_argument(
+            '-c', '--conffile', type=str, default=None, help='agent configuration file')
 
         subparsers.add_parser('stop')
         kwargs = vars(parser.parse_args())
 
         if kwargs['cmd'] == 'start':
-            self.start(kwargs['plugins'], kwargs['verbose'], kwargs['daemon'], kwargs['conffile'])
+            self.start(kwargs['plugins'], kwargs['verbose'],
+                       kwargs['daemon'], kwargs['conffile'])
         elif kwargs['cmd'] == 'stop':
             print('Not yet...')
             exit(-1)
@@ -89,5 +96,5 @@ class FOSAgentCli(object):
 
 
 if __name__ == '__main__':
-        c = FOSAgentCli()
-        c.main()
+    c = FOSAgentCli()
+    c.main()
