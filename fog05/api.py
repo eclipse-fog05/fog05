@@ -35,7 +35,7 @@ class API(object):
 
         self.a_root = append_to_path(aroot,sysid)
         self.d_root = append_to_path(droot,sysid)
-        self.s_root = append_to_path(droot,sysid)
+        self.s_root = append_to_path(sroot,sysid)
         self.store = FOSStore(endpoint, self.a_root, self.d_root, self.s_root, store_id)
         self.endpoint = endpoint
         self.manifest = self.Manifest(self.store)
@@ -544,17 +544,7 @@ class API(object):
             all = self.store.actual.resolveAll(uri)
             for i in all:
                 k = i[0]
-                if fnmatch.fnmatch(k, uri):
-                    # print('MATCH {0}'.format(k))
-                    # print('Extracting uuid...')
-                    regex = uri.replace('/', '\/')
-                    regex = regex.replace('*', '(.*)')
-                    reobj = re.compile(regex)
-                    mobj = reobj.match(k)
-                    uuid = mobj.group(1)
-                    # print('UUID {0}'.format(uuid))
-
-                    return uuid
+                return k.split('/')[5]
 
         def __get_entity_handler_by_type(self, node_uuid, t):
             handler = None
