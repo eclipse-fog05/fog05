@@ -117,25 +117,25 @@ class API(object):
             uri = "{}/*/onboard/{}".format(self.a_root, entity_uuid)
             data = self.store.actual.resolve(uri)
             entities = self.entity.list()  # {node uuid: {entity uuid: [instance list]} list}
-            # print('entities {}'.format(entities))
+            print('entities {}'.format(entities))
             if data is not None and len(data) > 0:
                 data = json.loads(data)
-                # print('Data {}'.format(data))
+                print('Data {}'.format(data))
                 for c in data.get('components'):
-                    # print('C {}'.format(c))
+                    print('C {}'.format(c))
                     eid = c.get('manifest').get('uuid')
-                    # print('eid {}'.format(eid))
+                    print('eid {}'.format(eid))
                     for nid in entities:
-                        # print('entities.get(nid) {}'.format(entities.get(nid)))
+                        print('entities.get(nid) {}'.format(entities.get(nid)))
                         if eid in entities.get(nid):
                             instances = entities.get(nid).get(eid)
-                            # print('instances {}'.format(instances))
+                            print('instances {}'.format(instances))
                             for inst in instances:
-                                #print('I should stop {} -> {} -> {}'.format(inst,eid, nid))
+                                print('I should stop {} -> {} -> {}'.format(inst,eid, nid))
                                 self.entity.stop(eid, nid, inst, wait=True)
-                                # print('I should clean {} -> {} -> {}'.format(inst, eid, nid))
+                                print('I should clean {} -> {} -> {}'.format(inst, eid, nid))
                                 self.entity.clean(eid, nid, inst, wait=True)
-                            # print('I should undefine {} -> {}'.format(eid, nid))
+                            print('I should undefine {} -> {}'.format(eid, nid))
                             self.entity.undefine(eid, nid, wait=True)
                 for n in data.get('networks'):
                     for nid in entities:
@@ -144,7 +144,7 @@ class API(object):
                 for n in nodes:
                     u = n[0]
                     uri = "{}/{}/onboard/{}".format(self.d_root, u, entity_uuid)
-                    # print('I should remove {}'.format(uri))
+                    print('I should remove {}'.format(uri))
                     self.store.desired.remove(uri)
 
     def resolve_dependencies(self, components):
@@ -892,13 +892,13 @@ class API(object):
                 response = self.store.actual.resolveAll(uri)
                 for i in response:
                     rid = i[0]
-                    en_uuid = rid.split('/')[8]
+                    en_uuid = rid.split('/')[7]
                     if en_uuid not in entity_list:
                         entity_list.update({en_uuid: []})
-                    if len(rid.split('/')) == 9 and en_uuid in entity_list:
+                    if len(rid.split('/')) == 8 and en_uuid in entity_list:
                         pass
-                    if len(rid.split('/')) == 11:
-                        entity_list.get(en_uuid).append(rid.split('/')[10])
+                    if len(rid.split('/')) == 10:
+                        entity_list.get(en_uuid).append(rid.split('/')[9])
 
                 return {node_uuid: entity_list}
 
@@ -906,7 +906,7 @@ class API(object):
             uri = '{}/*/runtime/*/entity/**'.format(self.store.aroot)
             response = self.store.actual.resolveAll(uri)
             for i in response:
-                node_id = i[0].split('/')[4]
+                node_id = i[0].split('/')[3]
                 elist = self.list(node_id)
                 entities.update({node_id: elist.get(node_id)})
             return entities
