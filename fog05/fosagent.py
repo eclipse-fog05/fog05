@@ -25,7 +25,7 @@ from .store import Store
 from fog05.PluginLoader import PluginLoader
 from fog05.interfaces.Agent import Agent
 from yaks.api import YAKS
-
+from fog05.interfaces.Constants import *
 
 class FosAgent(Agent):
 
@@ -107,8 +107,8 @@ class FosAgent(Agent):
             self.logger.info('__init__()', '[ INIT ] AUTOLOAD Plugins: {}'.format(self.__PLUGIN_AUTOLOAD))
             self.logger.info('__init__()', '[ INIT ] Plugins to autoload: {} (empty means all plugin in the directory)'.format(' '.join(self.__autoload_list)))
             self.logger.info('__init__()', '[ INIT ] #############################')
-            '''
-            self.sroot = '/sfos/{}'.format(self.sys_id)
+            
+            self.sroot = append_to_path(sroot, self.sys_id)
             self.shome = '{}/{}'.format(self.sroot, 'info')
             self.logger.info('__init__()', '[ INIT ] Creating System Info Store ROOT: {} HOME: {}'.format(self.sroot, self.shome))
             self.sstore = Store(self.yaks, self.sroot, self.shome, 1024)
@@ -172,16 +172,16 @@ class FosAgent(Agent):
             self.logger.info('__init__()', '[ INIT ] Users: {}'.format(json.dumps(self.users)))
             self.logger.info('__init__()', '[ INIT ] Networks: {}'.format(json.dumps(self.networks)))
             self.logger.info('__init__()', '[ INIT ] #############################')
-            '''
+            
             # Desired Store. containing the desired state
-            self.droot = '/dfos/{}'.format(self.sys_id)
+            self.droot = append_to_path(droot, self.sys_id)
             self.dhome = '{}/{}'.format(self.droot, sid)
             self.logger.info('__init__()', '[ INIT ] Creating Desired State Store ROOT: {} HOME: {}'.format(self.droot, self.dhome))
             self.dstore = Store(self.yaks, self.droot, self.dhome, 1024)
             self.logger.info('__init__()', '[ DONE ] Creating Desired State Store')
 
             # Actual Store, containing the Actual State
-            self.aroot = '/afos/{}'.format(self.sys_id)
+            self.aroot = append_to_path(aroot, self.sys_id)
             self.ahome = '{}/{}'.format(self.aroot, sid)
             self.logger.info('__init__()', '[ INIT ] Creating Actual State Store ROOT: {} HOME: {}'.format(self.aroot, self.ahome))
             self.astore = Store(self.yaks, self.aroot, self.ahome, 1024)
@@ -499,251 +499,6 @@ class FosAgent(Agent):
             self.astore.put(nuri,value)
             self.logger.info('__react_to_onboarding()', 'Received a onboard information storing to -> {}'.format(nuri))
             application_uuid = uri.split('/')[-1]
-        # self.__application_onboarding(application_uuid, value)
-
-    def __application_onboarding(self, application_uuid, value):
-        self.logger.info('__application_onboarding()', ' Onboarding application with uuid: {}'.format(application_uuid))
-        deploy_order_list = self.__resolve_dependencies(value.get('components', None))
-        informations = {}
-        '''
-        With the ordered list of entities the agent should generate the graph of entities
-        eg. using NetworkX lib and looking for loops, if it find a loop should fail the application
-        onboarding, and signal in the proper uri.
-        If no loop are detected then should start instantiate the components
-        It's a MANO job to select the correct nodes, and selection should be based on proximity 
-        After each deploy the agent should collect correct information for the deploy of components that need other
-        components (eg. should retrive the ip address, and then pass in someway to others components)
-        '''
-
-        for c in deploy_order_list:
-            search = [x for x in value.get('components') if x.get('name') == c]
-            if len(search) > 0:
-                component = search[0]
-            else:
-                self.logger.warning('__application_onboarding()', '[ WARN ] Could not find component in component list WTF?')
-                raise AssertionError('Could not find component in component list WTF?')
-
-
-            '''
-            Should recover in some way the component manifest
-            
-            '''
-            mf = self.__get_manifest(component.get('manifest'))
-            '''
-            from this manifest generate the correct json 
-            '''
-            t = mf.get('type')
-
-            if t == 'kvm':
-                self.logger.info('__application_onboarding()', 'Component is a VM')
-                kvm = self.__search_plugin_by_name('KVM')
-                if kvm is None:
-                    self.logger.error('__application_onboarding()', '[ ERRO ] KVM Plugin not loaded/found!!!')
-                    return False
-
-                '''
-                Do stuffs... define, configure and run the vm
-                get information about the deploy and save them
-                eg. {'name':{ information }, 'name2':{}, .... }
-                '''
-
-                node_uuid = str(self.uuid) #@TODO: select deploy node in a smart way
-
-                vm_uuid = mf.get('entity_description').get('uuid')
-
-                entity_definition = {'status': 'define', 'name': component.get('name'), 'version': component.get(
-                    'version'), 'entity_data': mf.get('entity_description')}
-                json_data = json.dumps(entity_definition)
-
-                self.logger.info('__application_onboarding()', ' Define VM')
-                uri = '/dfos/<sys-id>/{}/runtime/{}/entity/{}'.format(node_uuid, kvm.get('uuid'), vm_uuid)
-                self.dstore.put(uri, json_data)
-
-                while True:
-                    self.logger.info('__application_onboarding()', ' Waiting VM to be DEFINED')
-                    time.sleep(1)
-                    uri = '/afos/<sys-id>/{}/runtime/{}/entity/{}'.format(node_uuid, kvm.get('uuid'), vm_uuid)
-                    vm_info = json.loads(self.astore.get(uri))
-                    if vm_info is not None and vm_info.get('status') == 'defined':
-                        break
-                self.logger.info('__application_onboarding()', '[ DONE ] VM DEFINED')
-
-                instance_uuid = str(uuid.uuid4())
-
-                self.logger.info('__application_onboarding()', 'Configure VM')
-                uri = '/dfos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}#status=configure'.format(node_uuid, kvm.get('uuid'), vm_uuid, instance_uuid)
-                self.dstore.dput(uri)
-
-                while True:
-                    self.logger.info('__application_onboarding()', 'Waiting VM to be CONFIGURED')
-                    time.sleep(1)
-                    uri = '/afos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}'.format(node_uuid, kvm.get('uuid'), vm_uuid, instance_uuid)
-                    vm_info = json.loads(self.astore.get(uri))
-                    if vm_info is not None and vm_info.get('status') == 'configured':
-                        break
-                self.logger.info('__application_onboarding()', '[ DONE ] VM Configured')
-
-                self.logger.info('__application_onboarding()', 'Staring VM')
-                uri = '/dfos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}#status=run'.format(node_uuid, kvm.get('uuid'), vm_uuid, instance_uuid)
-                self.dstore.dput(uri)
-
-                while True:
-                    self.logger.info('__application_onboarding()', 'Waiting VM to be RUN')
-                    time.sleep(1)
-                    uri = '/afos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}'.format(node_uuid, kvm.get('uuid'), vm_uuid, instance_uuid)
-                    vm_info = json.loads(self.astore.get(uri))
-                    if vm_info is not None and vm_info.get('status') == 'run':
-                        break
-
-                self.logger.info('__application_onboarding()', '[ DONE ] VM Running on node: {}'.format(node_uuid))
-
-            elif t == 'container':
-                self.logger.info('__application_onboarding()', 'Component is a Container')
-                ## TODO implement using LXD plugin
-            elif t == 'native':
-                self.logger.info('__application_onboarding()', 'Component is a Native Application')
-                native = self.__search_plugin_by_name('native')
-                if native is None:
-                    self.logger.error('__application_onboarding()', '[ ERRO ] Native Application Plugin not loaded/found!!!')
-                    return False
-
-                node_uuid = str(self.uuid)  # @TODO: select deploy node in a smart way
-                na_uuid = mf.get('entity_description').get('uuid')
-
-                entity_definition = {'status': 'define', 'name': component.get('name'), 'version': component.get('version'), 'entity_data': mf.get('entity_description')}
-                json_data = json.dumps(entity_definition)
-
-                self.logger.info('__application_onboarding()', 'Define Native')
-                uri = '/dfos/<sys-id>/{}/runtime/{}/entity/{}'.format(node_uuid, native.get('uuid'), na_uuid)
-                self.dstore.put(uri, json_data)
-
-                while True:
-                    self.logger.info('__application_onboarding()', 'Native to be DEFINED')
-                    time.sleep(1)
-                    uri = '/afos/<sys-id>/{}/runtime/{}/entity/{}'.format(node_uuid, native.get('uuid'), na_uuid)
-                    vm_info = json.loads(self.astore.get(uri))
-                    if vm_info is not None and vm_info.get('status') == 'defined':
-                        break
-                self.logger.info('__application_onboarding()', '[ DONE ] Native DEFINED')
-
-                instance_uuid = str(uuid.uuid4())
-
-                self.logger.info('__application_onboarding()', ' Configure Native')
-                uri = '/dfos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}#status=configure'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
-                self.dstore.dput(uri)
-
-                while True:
-                    self.logger.info('__application_onboarding()', 'Native to be CONFIGURED')
-                    time.sleep(1)
-                    uri = '/afos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
-                    vm_info = json.loads(self.astore.get(uri))
-                    if vm_info is not None and vm_info.get('status') == 'configured':
-                        break
-                self.logger.info('__application_onboarding()', '[ DONE ] Native CONFIGURED')
-
-                self.logger.info('__application_onboarding()', 'Starting Native')
-                uri = '/dfos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}#status=run'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
-                self.dstore.dput(uri)
-
-                while True:
-                    self.logger.info('__application_onboarding()', 'Native to be RUN')
-                    time.sleep(1)
-                    uri = '/afos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
-                    vm_info = json.loads(self.astore.get(uri))
-                    if vm_info is not None and vm_info.get('status') == 'run':
-                        break
-                self.logger.info('__application_onboarding()', '[ DONE ] Native Running on node: {}'.format(node_uuid))
-
-            elif t == 'ros2':
-                self.logger.info('__application_onboarding()', 'Component is a ROS2 Application')
-                native = self.__search_plugin_by_name('ros2')
-                if native is None:
-                    self.logger.error('__application_onboarding()', '[ ERRO ] ROS2 Application Plugin not loaded/found!!!')
-                    return False
-
-                node_uuid = str(self.uuid)  # @TODO: select deploy node in a smart way
-                na_uuid = mf.get('entity_description').get('uuid')
-
-                entity_definition = {'status': 'define', 'name': component.get('name'), 'version': component.get('version'), 'entity_data': mf.get('entity_description')}
-                json_data = json.dumps(entity_definition)
-
-                self.logger.info('__application_onboarding()', 'Define ROS2')
-                uri = '/dfos/<sys-id>/{}/runtime/{}/entity/{}'.format(node_uuid, native.get('uuid'), na_uuid)
-                self.dstore.put(uri, json_data)
-
-                while True:
-                    self.logger.info('__application_onboarding()', 'ROS2 to be DEFINED')
-                    time.sleep(1)
-                    uri = '/afos/<sys-id>/{}/runtime/{}/entity/{}'.format(node_uuid, native.get('uuid'), na_uuid)
-                    vm_info = json.loads(self.astore.get(uri))
-                    if vm_info is not None and vm_info.get('status') == 'defined':
-                        break
-                self.logger.info('__application_onboarding()', '[ DONE ] ROS2 DEFINED')
-
-                instance_uuid = str(uuid.uuid4())
-                self.logger.info('__application_onboarding()', 'Configure Native')
-                uri = '/dfos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}#status=configure'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
-                self.dstore.dput(uri)
-
-                while True:
-                    self.logger.info('__application_onboarding()', 'ROS2 to be CONFIGURED')
-                    time.sleep(1)
-                    uri = '/afos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
-                    vm_info = json.loads(self.astore.get(uri))
-                    if vm_info is not None and vm_info.get('status') == 'configured':
-                        break
-                self.logger.info('__application_onboarding()', '[ DONE ] ROS2 CONFIGURED')
-
-                self.logger.info('__application_onboarding()', 'Starting ROS2')
-                uri = '/dfos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}#status=run'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
-                self.dstore.dput(uri)
-
-                while True:
-                    self.logger.info('__application_onboarding()', 'ROS2 to be RUN')
-                    time.sleep(1)
-                    uri = '/afos/<sys-id>/{}/runtime/{}/entity/{}/instance/{}'.format(node_uuid, native.get('uuid'), na_uuid, instance_uuid)
-                    vm_info = json.loads(self.astore.get(uri))
-                    if vm_info is not None and vm_info.get('status') == 'run':
-                        break
-                self.logger.info('__application_onboarding()', '[ DONE ] ROS2 Running on node: {}'.format(node_uuid))
-
-            elif t == 'usvc':
-                self.logger.info('__application_onboarding()', 'Component is a Microservice')
-
-            elif t == 'application':
-                self.logger.info('__application_onboarding()', 'Component is a Complex Application')
-                self.__application_onboarding(mf.get('uuid'), mf.get('entity_description'))
-
-            else:
-                self.logger.error('__application_onboarding()', 'Component type not recognized {}' % t)
-                raise AssertionError('Component type not recognized {}' % t)
-
-    def __resolve_dependencies(self, components):
-        '''
-        The return list contains component's name in the order that can be used to deploy
-         @TODO: should use less cycle to do this job
-        :rtype: list
-        :param components: list like [{'name': 'c1', 'need': ['c2', 'c3']}, {'name': 'c2', 'need': ['c3']}, {'name': 'c3', 'need': ['c4']}, {'name': 'c4', 'need': []}, {'name': 'c5', 'need': []}]
-
-        no_dependable_components -> list like [[{'name': 'c4', 'need': []}, {'name': 'c5', 'need': []}], [{'name': 'c3', 'need': []}], [{'name': 'c2', 'need': []}], [{'name': 'c1', 'need': []}], []]
-        :return: list like ['c4', 'c5', 'c3', 'c2', 'c1']
-        '''
-        c = list(components)
-        no_dependable_components = []
-        for i in range(0, len(components)):
-            no_dependable_components.append([x for x in c if len(x.get('need')) == 0])
-            #print (no_dependable_components)
-            c = [x for x in c if x not in no_dependable_components[i]]
-            for y in c:
-                n = y.get('need')
-                n = [x for x in n if x not in [z.get('name') for z in no_dependable_components[i]]]
-                y.update({'need': n})
-
-        order = []
-        for i in range(0, len(no_dependable_components)):
-            n = [x.get('name') for x in no_dependable_components[i]]
-            order.extend(n)
-        return order
 
     def __get_manifest(self, manifest_path):
         return json.loads(self.dstore.get(manifest_path))

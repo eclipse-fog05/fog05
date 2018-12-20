@@ -22,51 +22,8 @@ import json
 import fnmatch
 import time
 from yaks.api import YAKS
-from .store import Store
-
-
-class FOSStore(object):
-    """
-    Helper class to interact with the Store
-    """
-
-    def __init__(self, server, aroot, droot, sroot, home):
-        '''
-
-        Initialize the Store with root and home
-
-        :param server: the address of the YAKS server
-        :param aroot: actual store root
-        :param droot: desired store root
-        :param home: store home also used to generate store id
-        '''
-
-        self.y = YAKS()
-        self.y.login(server)
-
-        self.aroot = aroot  # '/dfos/{}'
-        self.ahome = '{}/{}'.format(aroot, home)
-
-        self.droot = droot  # '/dfos/{}'
-        self.dhome = '{}/{}'.format(droot, home)
-
-        self.sroot = sroot
-        self.shome = '{}/{}'.format(sroot, home)
-
-        self.actual = Store(self.y, self.aroot, self.ahome, 1024)
-        self.desired = Store(self.y, self.droot, self.dhome, 1024)
-        self.system = Store(self.y,  self.sroot, self.shome, 1024)
-
-    def close(self):
-        '''
-        Close the store
-
-        :return: None
-        '''
-        self.actual.close()
-        self.desired.close()
-        self.system.close()
-
+from fog05.store import Store, FOSStore
+from fog05.interfaces.Constants import *
 
 class API(object):
     '''
@@ -76,9 +33,9 @@ class API(object):
 
     def __init__(self, sysid=0, store_id="python-api", endpoint='127.0.0.1'):
 
-        self.a_root = '/afos/{}'.format(sysid)
-        self.d_root = '/dfos/{}'.format(sysid)
-        self.s_root = '/sfos/{}'.format(sysid)
+        self.a_root = append_to_path(aroot,sysid)
+        self.d_root = append_to_path(droot,sysid)
+        self.s_root = append_to_path(droot,sysid)
         self.store = FOSStore(endpoint, self.a_root, self.d_root, self.s_root, store_id)
         self.endpoint = endpoint
         self.manifest = self.Manifest(self.store)
