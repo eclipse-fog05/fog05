@@ -281,7 +281,7 @@ class Linux(OSPlugin):
         return res.strip()
 
     def get_position_information(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_intf_type(self, name):
         if name[:-1] in ['ppp', 'wvdial']:

@@ -1,8 +1,8 @@
 # Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
-# 
+#
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
-# 
+#
 # This program and the accompanying materials are made available under the
 # terms of the Eclipse Public License 2.0 which is available at
 # http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
@@ -21,7 +21,7 @@ class ResourceManagementPlugin(Plugin):
         super(ResourceManagementPlugin, self).__init__(version, plugin_uuid)
 
     def configure_application(self, application_uuid, application_manifest):
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_application_configuration(self, application_uuid):
-        raise NotImplemented
+        raise NotImplementedError

@@ -14,7 +14,7 @@
 
 import uuid
 import psutil
-from fog05.interfaces.OSPlugin import OSPlugin
+from fog05.interfaces.OSPlugin import *
 from subprocess import PIPE
 import subprocess
 import re
@@ -48,7 +48,8 @@ class Windows(OSPlugin):
         return 'C:\\opt\\fos'
 
     def execute_command(self, command, blocking=False):
-        self.agent.logger.info('executeCommand()', 'OS Plugin executing command {}'.format(command))
+        self.agent.logger.info(
+            'executeCommand()', 'OS Plugin executing command {}'.format(command))
         cmd_splitted = command.split()
         p = psutil.Popen(cmd_splitted, stdout=PIPE)
         if blocking:
@@ -60,13 +61,14 @@ class Windows(OSPlugin):
     def add_know_host(self, hostname, ip):
         self.agent.logger.info('addKnowHost()', ' OS Plugin add to hosts file')
         add_cmd = 'runas /noprofile /user:Administrator {} add {} {}'.format(os.path.join(self.DIR, 'scripts',
-                                                                             'manage_hosts.ps1'), hostname, ip)
+                                                                                          'manage_hosts.ps1'), hostname, ip)
         self.execute_command(add_cmd, True)
 
     def remove_know_host(self, hostname):
-        self.agent.logger.info('removeKnowHost()', ' OS Plugin remove from hosts file')
+        self.agent.logger.info(
+            'removeKnowHost()', ' OS Plugin remove from hosts file')
         del_cmd = 'runas /noprofile /user:Administrator {} remove {}'.format(os.path.join(self.DIR, 'scripts',
-                                                                             'manage_hosts.sh'), hostname)
+                                                                                          'manage_hosts.sh'), hostname)
         self.execute_command(del_cmd, True)
 
     def dir_exists(self, path):
@@ -89,7 +91,8 @@ class Windows(OSPlugin):
         try:
             return os.remove(path)
         except FileNotFoundError as e:
-            self.agent.logger.error('removeFile()', "OS Plugin File Not Found {} so don't need to remove".format(e.strerror))
+            self.agent.logger.error(
+                'removeFile()', "OS Plugin File Not Found {} so don't need to remove".format(e.strerror))
             return
 
     def file_exists(self, file_path):
@@ -105,8 +108,10 @@ class Windows(OSPlugin):
     def read_file(self, file_path, root=False):
         data = ""
         if root:
-            file_path = 'runas /noprofile /user:Administrator type {}'.format(file_path)
-            process = subprocess.Popen(file_path.split(), stdout=subprocess.PIPE)
+            file_path = 'runas /noprofile /user:Administrator type {}'.format(
+                file_path)
+            process = subprocess.Popen(
+                file_path.split(), stdout=subprocess.PIPE)
             # read one line at a time, as it becomes available
             for line in iter(process.stdout.readline, ''):
                 data = data + "{}".format(line)
@@ -122,7 +127,8 @@ class Windows(OSPlugin):
         return data
 
     def download_file(self, url, file_path):
-        dwn_cmd = 'wget -Uri "{}" -outfile {} -UseBasicParsing'.format(url, file_path)
+        dwn_cmd = 'wget -Uri "{}" -outfile {} -UseBasicParsing'.format(
+            url, file_path)
         self.execute_command('powershell.exe {}'.format(dwn_cmd), True)
 
     def get_CPU_level(self):
@@ -144,24 +150,30 @@ class Windows(OSPlugin):
 
     def send_signal(self, signal, pid):
         if self.checkIfPidExists(pid) is False:
-            self.agent.logger.error('sendSignal()', 'OS Plugin Process not exists {}'.format(pid))
-            raise ProcessNotExistingException("Process {} not exists".format(pid))
+            self.agent.logger.error(
+                'sendSignal()', 'OS Plugin Process not exists {}'.format(pid))
+            raise ProcessNotExistingException(
+                "Process {} not exists".format(pid))
         else:
             psutil.Process(pid).send_signal(signal)
         return True
 
     def send_sig_int(self, pid):
         if self.checkIfPidExists(pid) is False:
-            self.agent.logger.error('sendSigInt()', 'OS Plugin Process not exists {}'.format(pid))
-            raise ProcessNotExistingException("Process {} not exists".format(pid))
+            self.agent.logger.error(
+                'sendSigInt()', 'OS Plugin Process not exists {}'.format(pid))
+            raise ProcessNotExistingException(
+                "Process {} not exists".format(pid))
         else:
             psutil.Process(pid).send_signal(2)
         return True
 
     def send_sig_kill(self, pid):
         if self.checkIfPidExists(pid) is False:
-            self.agent.logger.error('sendSigInt()', 'OS Plugin Process not exists {}'.format(pid))
-            raise ProcessNotExistingException("Process {} not exists".format(pid))
+            self.agent.logger.error(
+                'sendSigInt()', 'OS Plugin Process not exists {}'.format(pid))
+            raise ProcessNotExistingException(
+                "Process {} not exists".format(pid))
         else:
             psutil.Process(pid).send_signal(9)
         return True
@@ -170,10 +182,10 @@ class Windows(OSPlugin):
         raise NotImplementedError
 
     def install_package(self, packages):
-        pass
+        raise NotImplementedError
 
     def remove_package(self, packages):
-        pass
+        raise NotImplementedError
 
     def get_pid(self, process):
         raise NotImplementedError
@@ -206,11 +218,14 @@ class Windows(OSPlugin):
             try:
                 dev = d[0]
                 mount = d[1]
-                dim = psutil.disk_usage(mount)[0] / 1024 / 1024 / 1024  # conversion to gb
+                dim = psutil.disk_usage(
+                    mount)[0] / 1024 / 1024 / 1024  # conversion to gb
                 fs = d[2]
-                disks.append({'local_address': dev, 'dimension': dim, 'mount_point': mount, 'filesystem': fs})
+                disks.append({'local_address': dev, 'dimension': dim,
+                              'mount_point': mount, 'filesystem': fs})
             except PermissionError as e:
-                self.agent.logger.error('getDisksInformation()', 'Device {} not ready'.format(mount))
+                self.agent.logger.error(
+                    'getDisksInformation()', 'Device {} not ready'.format(mount))
             finally:
                 pass
         return disks
@@ -244,10 +259,9 @@ class Windows(OSPlugin):
         :return:
         '''
 
-
         uuid_regex = r"UUID.+\r\r\n(.{0,36})"
         #p = psutil.Popen('sudo cat /sys/class/dmi/id/product_uuid'.split(), stdout=PIPE)
-        #runas /noprofile /user:Administrator
+        # runas /noprofile /user:Administrator
         p = psutil.Popen('wmic csproduct get UUID'.split(), stdout=PIPE)
         # p = psutil.Popen('sudo cat '.split(), stdout=PIPE)
         res = ""
@@ -259,9 +273,7 @@ class Windows(OSPlugin):
             found = m.group(1)
             return found.lower().strip()
 
-        #return res.lower().strip()
-
-
+        # return res.lower().strip()
 
     def get_hostname(self):
         res = ''
@@ -272,7 +284,7 @@ class Windows(OSPlugin):
         return res.strip()
 
     def get_position_information(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_intf_type(self, name):
         if name[:-1] in ["ppp", "wvdial"]:
@@ -293,7 +305,7 @@ class Windows(OSPlugin):
             itype = "loopback"
         elif name[:2] in ["et", "en"]:
             itype = "ethernet"
-        elif name[:4] in ["veth" , "vtap"]:
+        elif name[:4] in ["veth", "vtap"]:
             itype = "virtual"
         else:
             itype = "unknown"
@@ -311,7 +323,7 @@ class Windows(OSPlugin):
                 found = m.group(1)
                 return found.lower().strip()
 
-            #if "model name" in line:
+            # if "model name" in line:
             #    return re.sub(".*model name.*:", "", line, 1).strip()
         return ""
 
@@ -321,7 +333,7 @@ class Windows(OSPlugin):
         freq_regex = r"@ (.+)GHz"
         for line in p.stdout:
             line = line.decode()
-            #if "cpu MHz" in line:
+            # if "cpu MHz" in line:
             #    return float(re.sub(".*cpu MHz.*:", "", line, 1))
             m = re.search(freq_regex, line)
             if m:
@@ -331,15 +343,16 @@ class Windows(OSPlugin):
 
     def __get_io_devices(self):
         dev = []
-        #gpio_path = "/sys/class/gpio" #gpiochip0
+        # gpio_path = "/sys/class/gpio" #gpiochip0
         #gpio_devices = [f for f in os.listdir(gpio_path) if f not in ['export', 'unexport']]
-        #for d in gpio_devices:
+        # for d in gpio_devices:
         #    dev.append({"name": d, "io_type": "gpio", "io_file": gpio_path+os.path.sep+d, "available": True})
 
         return dev
 
     def __get_default_gw(self):
-        cmd = 'powershell.exe {}'.format(os.path.join(self.DIR, 'scripts', 'default_gw.ps1'))
+        cmd = 'powershell.exe {}'.format(
+            os.path.join(self.DIR, 'scripts', 'default_gw.ps1'))
         p = psutil.Popen(cmd.split(), stdout=PIPE)
         p.wait()
         iface = ""
@@ -356,12 +369,15 @@ class Windows(OSPlugin):
 
         default_gw = self.__get_default_gw()
         if default_gw == "":
-            self.agent.logger.warning('__get_nw_devices()', 'Default gw not found!!')
+            self.agent.logger.warning(
+                '__get_nw_devices()', 'Default gw not found!!')
         for k in intfs:
             intf_info = psutil.net_if_addrs().get(k)
 
-            ipv4_info = [x for x in intf_info if x[0] == socket.AddressFamily.AF_INET]
-            ipv6_info = [x for x in intf_info if x[0] == socket.AddressFamily.AF_INET6]
+            ipv4_info = [x for x in intf_info if x[0]
+                         == socket.AddressFamily.AF_INET]
+            ipv6_info = [x for x in intf_info if x[0]
+                         == socket.AddressFamily.AF_INET6]
             l2_info = [x for x in intf_info if x[0] == -1]
 
             if len(ipv4_info) > 0:
@@ -389,15 +405,15 @@ class Windows(OSPlugin):
 
             if len(l2_info) > 0:
                 l2_info = l2_info[0]
-                mac = l2_info[1].replace('-',':')
+                mac = l2_info[1].replace('-', ':')
             else:
                 mac = ''
-            #print(k)
+            # print(k)
             #mac = netifaces.ifaddresses(k)[netifaces.AF_LINK][0].get('addr')
 
             speed = psutil.net_if_stats().get(k)[2]
             inft_conf = {'ipv4_address': ipv4, 'ipv4_netmask': ipv4mask, "ipv4_gateway": ipv4gateway, "ipv6_address":
-                ipv6, 'ipv6_netmask': ipv6mask}
+                         ipv6, 'ipv6_netmask': ipv6mask}
 
             iface_info = {'intf_name': k, 'inft_configuration': inft_conf, 'intf_mac_address': mac, 'intf_speed':
                           speed, "type": self.get_intf_type(k), 'available': True, "default_gw": False}
@@ -418,7 +434,8 @@ class Windows(OSPlugin):
         return None, None
 
     def set_interface_unaviable(self, intf_name):
-        i, interface_info = self.__find_interface_by_name(intf_name, self.nw_devices)
+        i, interface_info = self.__find_interface_by_name(
+            intf_name, self.nw_devices)
         if i is not None and interface_info is not None:
             interface_info.update({'available': False})
             self.nw_devices[i] = interface_info
@@ -426,7 +443,8 @@ class Windows(OSPlugin):
         return False
 
     def set_interface_available(self, intf_name):
-        i, interface_info = self.__find_interface_by_name(intf_name, self.nw_devices)
+        i, interface_info = self.__find_interface_by_name(
+            intf_name, self.nw_devices)
         if i is not None and interface_info is not None:
             interface_info.update({'available': True})
             self.nw_devices[i] = interface_info
@@ -456,7 +474,8 @@ class Windows(OSPlugin):
         return False
 
     def set_accelerator_unaviable(self, acc_name):
-        i, acc_info = self.__find_interface_by_name(acc_name, self.accelerator_devices)
+        i, acc_info = self.__find_interface_by_name(
+            acc_name, self.accelerator_devices)
         if i is not None and acc_info is not None:
             acc_info.update({'available': False})
             self.accelerator_devices[i] = acc_info
@@ -464,7 +483,8 @@ class Windows(OSPlugin):
         return False
 
     def set_accelerator_available(self, acc_name):
-        i, acc_info = self.__find_interface_by_name(acc_name, self.accelerator_devices)
+        i, acc_info = self.__find_interface_by_name(
+            acc_name, self.accelerator_devices)
         if i is not None and acc_info is not None:
             acc_info.update({'available': True})
             self.accelerator_devices[i] = acc_info

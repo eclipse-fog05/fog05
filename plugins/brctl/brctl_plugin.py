@@ -1,8 +1,8 @@
 # Copyright (c) 2014,2018 ADLINK Technology Inc.
-# 
+#
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
-# 
+#
 # This program and the accompanying materials are made available under the
 # terms of the Eclipse Public License 2.0 which is available at
 # http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
@@ -73,7 +73,8 @@ class brctl(NetworkPlugin):
 
         uri = '{}/{}/networks/**'.format(self.agent.dhome, self.HOME)
         self.agent.dstore.observe(uri, self.__react_to_cache_networks)
-        self.agent.logger.info('startRuntime()', ' bridge-utils Plugin - Observing {}'.format(uri))
+        self.agent.logger.info(
+            'startRuntime()', ' bridge-utils Plugin - Observing {}'.format(uri))
 
     def create_virtual_interface(self, name, uuid):
         # sudo ip link add type veth
@@ -101,7 +102,8 @@ class brctl(NetworkPlugin):
 
         net = self.netmap.get(net_uuid, None)
         if net is not None:
-            self.agent.logger.error('create_virtual_network()', '{} network already exists'.format(net_uuid))
+            self.agent.logger.error(
+                'create_virtual_network()', '{} network already exists'.format(net_uuid))
             return None
 
         info = {}
@@ -124,12 +126,14 @@ class brctl(NetworkPlugin):
         #
         br_name = 'br-{}'.format(net_uuid.split('-')[0])
 
-        vxlan_file, vxlan_dev, vxlan_id, vxlan_mcast = self.__generate_vxlan_script(net_uuid, manifest)
+        vxlan_file, vxlan_dev, vxlan_id, vxlan_mcast = self.__generate_vxlan_script(
+            net_uuid, manifest)
         shutdown_file = self.__generate_vxlan_shutdown_script(net_uuid)
 
         shutdown_file = os.path.join(self.BASE_DIR, shutdown_file)
 
-        self.agent.get_os_plugin().execute_command(os.path.join(self.BASE_DIR, vxlan_file), True)
+        self.agent.get_os_plugin().execute_command(
+            os.path.join(self.BASE_DIR, vxlan_file), True)
 
         info.update({'virtual_device': br_name})
         info.update({'vxlan_dev': vxlan_dev})
@@ -141,7 +145,8 @@ class brctl(NetworkPlugin):
         if has_dhcp is True:
             address = self.__cird2block(ip_range)
 
-            ifcmd = 'sudo ifconfig {} {} netmask {}'.format(br_name, address[0], address[3])
+            ifcmd = 'sudo ifconfig {} {} netmask {}'.format(
+                br_name, address[0], address[3])
             # TODO this should done by the OSPlugin
             # dhcpq_cmd = 'sudo dnsmasq -d  --interface={} --bind-interfaces  --dhcp-range={},'
             #                '{} --listen-address {} > {}/{}/{}.out 2>&1 & echo $! > {}/{}/{}.pid' %
@@ -149,9 +154,11 @@ class brctl(NetworkPlugin):
             #                 self.BASE_DIR,
             #                 self.DHCP_DIR, br_name))
             file_name = '{}_dnsmasq.pid'.format(br_name)
-            pid_file_path = os.path.join(self.BASE_DIR, self.DHCP_DIR, file_name)
+            pid_file_path = os.path.join(
+                self.BASE_DIR, self.DHCP_DIR, file_name)
 
-            dhcp_cmd = self.__generate_dnsmaq_script(br_name, address[1], address[2], address[0], pid_file_path)
+            dhcp_cmd = self.__generate_dnsmaq_script(
+                br_name, address[1], address[2], address[0], pid_file_path)
             dhcp_cmd = os.path.join(self.BASE_DIR, self.DHCP_DIR, dhcp_cmd)
 
             self.agent.get_os_plugin().execute_command(ifcmd, True)
@@ -161,23 +168,27 @@ class brctl(NetworkPlugin):
         uri = 'networks/{}'.format(net_uuid)
         self.__update_actual_store(uri, info)
 
-        self.agent.logger.info('createVirtualNetwork()', 'Created {} Network'.format(net_uuid))
+        self.agent.logger.info('createVirtualNetwork()',
+                               'Created {} Network'.format(net_uuid))
 
         return network_name, net_uuid
 
     def allocate_bandwidth(self, intf_uuid, bandwidth):
-        raise NotImplemented
+        raise NotImplementedError
 
     def assign_interface_to_network(self, network_uuid, intf_uuid):
         # brctl addif virbr0 vnet0
         intf = self.interfaces_map.get(intf_uuid, None)
         if intf is None:
-            raise InterfaceNotExistingException('{} interface not exists'.format(intf_uuid))
+            raise InterfaceNotExistingException(
+                '{} interface not exists'.format(intf_uuid))
         net = self.netmap.get(network_uuid, None)
         if net is None:
-            raise BridgeAssociatedToNetworkException('{} network not exists'.format(network_uuid))
+            raise BridgeAssociatedToNetworkException(
+                '{} network not exists'.format(network_uuid))
 
-        br_cmd = 'sudo brctl addif {}-net {}'.format(net.get('network_name'), intf)
+        br_cmd = 'sudo brctl addif {}-net {}'.format(
+            net.get('network_name'), intf)
         self.agent.get_os_plugin().execute_command(br_cmd)
 
         return True
@@ -186,7 +197,8 @@ class brctl(NetworkPlugin):
         # ip link delete dev ${interface name}
         intf = self.interfaces_map.get(intf_uuid, None)
         if intf is None:
-            raise InterfaceNotExistingException('{} interface not exists'.format(intf_uuid))
+            raise InterfaceNotExistingException(
+                '{} interface not exists'.format(intf_uuid))
         rm_cmd = 'sudo ip link delete dev {}'.format(intf)
         self.agent.get_os_plugin().execute_command(rm_cmd)
         self.interfaces_map.pop(intf_uuid)
@@ -196,10 +208,12 @@ class brctl(NetworkPlugin):
 
         net = self.netmap.get(br_uuid, None)
         if net is not None:
-            raise BridgeAssociatedToNetworkException('{} associated to a network'.format(br_uuid))
+            raise BridgeAssociatedToNetworkException(
+                '{} associated to a network'.format(br_uuid))
         br = self.brmap.get(br_uuid, None)
         if br is None:
-            raise BridgeNotExistingException('{} bridge not exists'.format(br_uuid))
+            raise BridgeNotExistingException(
+                '{} bridge not exists'.format(br_uuid))
 
         rm_cmd = 'sudo brcrl delbr {}'.format(br)
         self.agent.get_os_plugin().execute_command(rm_cmd)
@@ -209,12 +223,15 @@ class brctl(NetworkPlugin):
     def remove_interface_from_network(self, network_uuid, intf_uuid):
         net = self.netmap.get(network_uuid, None)
         if net is None:
-            raise BridgeAssociatedToNetworkException('{} network not exists'.format(network_uuid))
+            raise BridgeAssociatedToNetworkException(
+                '{} network not exists'.format(network_uuid))
         intf = self.brmap.get(intf_uuid, None)
         if intf is None:
-            raise InterfaceNotExistingException('{} interface not exists'.format(intf_uuid))
+            raise InterfaceNotExistingException(
+                '{} interface not exists'.format(intf_uuid))
         if intf not in net.get('intf'):
-            raise InterfaceNotInNetworkException('{} interface not in this networks'.format(intf_uuid))
+            raise InterfaceNotInNetworkException(
+                '{} interface not in this networks'.format(intf_uuid))
 
         net.get('intf').remove(intf)
         return True
@@ -222,16 +239,21 @@ class brctl(NetworkPlugin):
     def delete_virtual_network(self, network_uuid):
         net = self.netmap.get(network_uuid, None)
         if net is None:
-            raise BridgeAssociatedToNetworkException('{} network not exists'.format(network_uuid))
+            raise BridgeAssociatedToNetworkException(
+                '{} network not exists'.format(network_uuid))
         if len(net.get('interfaces')) > 0:
-            raise NetworkHasPendingInterfacesException('{} has pending interfaces'.format(network_uuid))
+            raise NetworkHasPendingInterfacesException(
+                '{} has pending interfaces'.format(network_uuid))
 
         shutdown_file = self.__generate_vxlan_shutdown_script(network_uuid)
         shutdown_file = os.path.join(self.BASE_DIR, shutdown_file)
-        start_file = os.path.join(self.BASE_DIR, '{}.sh'.format(network_uuid.split('-')[0]))
-        dnsmasq_file = os.path.join(self.BASE_DIR, self.DHCP_DIR, 'br-{}_dnsmasq.sh'.format(network_uuid.split('-')[0]))
+        start_file = os.path.join(
+            self.BASE_DIR, '{}.sh'.format(network_uuid.split('-')[0]))
+        dnsmasq_file = os.path.join(
+            self.BASE_DIR, self.DHCP_DIR, 'br-{}_dnsmasq.sh'.format(network_uuid.split('-')[0]))
 
-        self.agent.get_os_plugin().execute_command('sudo {}'.format(shutdown_file), True)
+        self.agent.get_os_plugin().execute_command(
+            'sudo {}'.format(shutdown_file), True)
         self.agent.get_os_plugin().remove_file(shutdown_file)
         self.agent.get_os_plugin().remove_file(start_file)
         self.agent.get_os_plugin().remove_file(dnsmasq_file)
@@ -239,7 +261,8 @@ class brctl(NetworkPlugin):
         uri = 'networks/{}'.format(network_uuid)
         self.__pop_actual_store(uri)
 
-        self.agent.logger.info('deleteVirtualNetwork()', 'Deleted {}'.format(network_uuid))
+        self.agent.logger.info('deleteVirtualNetwork()',
+                               'Deleted {}'.format(network_uuid))
 
         return True
 
@@ -273,7 +296,8 @@ class brctl(NetworkPlugin):
         (ip, cidr) = cird.split('/')
         cidr = int(cidr)
         host_bits = 32 - cidr
-        netmask = socket.inet_ntoa(struct.pack('!I', (1 << 32) - (1 << host_bits)))
+        netmask = socket.inet_ntoa(struct.pack(
+            '!I', (1 << 32) - (1 << host_bits)))
         i = struct.unpack('>I', socket.inet_aton(ip))[0]
         start = (i >> host_bits) << host_bits
         end = i | ((1 << host_bits) - 1)
@@ -301,7 +325,8 @@ class brctl(NetworkPlugin):
         return '.'.join(net_start) + '/' + self.__get_net_size(mask)
 
     def __react_to_cache_networks(self, key, value, v):
-        self.agent.logger.info('__react_to_cache_networks()', ' BRCTL Plugin - React to to URI: {} Value: {} Version: {}'.format(key, value, v))
+        self.agent.logger.info('__react_to_cache_networks()',
+                               ' BRCTL Plugin - React to to URI: {} Value: {} Version: {}'.format(key, value, v))
         uuid = key.split('/')[-1]
         value = json.loads(value)
         action = value.get('status')
@@ -318,7 +343,8 @@ class brctl(NetworkPlugin):
         has_dhcp = kwargs.get('has_dhcp')
         gw = kwargs.get('gateway')
         manifest = kwargs
-        self.create_virtual_network(name, net_uuid, ip_range, has_dhcp, gw, manifest)
+        self.create_virtual_network(
+            name, net_uuid, ip_range, has_dhcp, gw, manifest)
 
     def __parse_manifest_for_remove(self, **kwargs):
         net_uuid = kwargs.get('uuid')
@@ -334,25 +360,30 @@ class brctl(NetworkPlugin):
 
     def __generate_vxlan_shutdown_script(self, net_uuid):
 
-        template_sh = self.agent.get_os_plugin().read_file(os.path.join(self.DIR, 'templates', 'vxlan_destroy.sh'))
+        template_sh = self.agent.get_os_plugin().read_file(
+            os.path.join(self.DIR, 'templates', 'vxlan_destroy.sh'))
         br_name = 'br-{}'.format(net_uuid.split('-')[0])
         vxlan_name = 'vxl-{}'.format(net_uuid.split('-')[0])
         file_name = '{}_dnsmasq.pid'.format(br_name)
         pid_file_path = os.path.join(self.BASE_DIR, self.DHCP_DIR, file_name)
         net_sh = Environment().from_string(template_sh)
-        net_sh = net_sh.render(bridge=br_name, vxlan_intf_name=vxlan_name, dnsmasq_pid_file=pid_file_path)
+        net_sh = net_sh.render(
+            bridge=br_name, vxlan_intf_name=vxlan_name, dnsmasq_pid_file=pid_file_path)
 
         file_name = '{}_stop.sh'.format(br_name)
         self.agent.get_os_plugin().store_file(net_sh, self.BASE_DIR, file_name)
-        chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, file_name))
+        chmod_cmd = 'chmod +x {}'.format(
+            os.path.join(self.BASE_DIR, file_name))
         self.agent.get_os_plugin().execute_command(chmod_cmd, True)
 
         return file_name
 
     def __generate_dnsmaq_script(self, br_name, start_addr, end_addr, listen_addr, pid_file):
-        template_sh = self.agent.get_os_plugin().read_file(os.path.join(self.DIR, 'templates', 'dnsmasq.sh'))
+        template_sh = self.agent.get_os_plugin().read_file(
+            os.path.join(self.DIR, 'templates', 'dnsmasq.sh'))
         dnsmasq_sh = Environment().from_string(template_sh)
-        dnsmasq_sh = dnsmasq_sh.render(bridge_name=br_name, dhcp_start=start_addr, dhcp_end=end_addr, listen_addr=listen_addr, pid_path=pid_file)
+        dnsmasq_sh = dnsmasq_sh.render(bridge_name=br_name, dhcp_start=start_addr,
+                                       dhcp_end=end_addr, listen_addr=listen_addr, pid_path=pid_file)
         file_name = '{}_dnsmasq.sh'.format(br_name)
         path = os.path.join(self.BASE_DIR, self.DHCP_DIR)
         self.agent.get_os_plugin().store_file(dnsmasq_sh, path, file_name)
@@ -363,9 +394,11 @@ class brctl(NetworkPlugin):
 
     def __generate_vxlan_script(self, net_uuid, manifest=None):
         if not self.overlay_interface:
-            template_sh = self.agent.get_os_plugin().read_file(os.path.join(self.DIR, 'templates', 'vxlan_creation.sh'))
+            template_sh = self.agent.get_os_plugin().read_file(
+                os.path.join(self.DIR, 'templates', 'vxlan_creation.sh'))
         else:
-            template_sh = self.agent.get_os_plugin().read_file(os.path.join(self.DIR, 'templates', 'vxlan_creation_intf.sh'))
+            template_sh = self.agent.get_os_plugin().read_file(
+                os.path.join(self.DIR, 'templates', 'vxlan_creation_intf.sh'))
         net_sh = Environment().from_string(template_sh)
         br_name = 'br-{}'.format(net_uuid.split('-')[0])
         vxlan_name = 'vxl-{}'.format(net_uuid.split('-')[0])
@@ -375,8 +408,9 @@ class brctl(NetworkPlugin):
                 vxlan_id = manifest.get('overlay_info').get('vxlan_id')
             else:
                 vxlan_id = len(self.netmap) + 1
-            if manifest.get('overlay_info') is not None and  manifest.get('overlay_info').get('multicast_address') is not None:
-                mcast_addr = manifest.get('overlay_info').get('multicast_address')
+            if manifest.get('overlay_info') is not None and manifest.get('overlay_info').get('multicast_address') is not None:
+                mcast_addr = manifest.get(
+                    'overlay_info').get('multicast_address')
             else:
                 mcast_addr = '239.0.0.{}'.format(vxlan_id)
         else:
@@ -385,8 +419,10 @@ class brctl(NetworkPlugin):
 
         net_sh = net_sh.render(bridge_name=br_name, vxlan_intf_name=vxlan_name,
                                group_id=vxlan_id, mcast_group_address=mcast_addr, wan=self.overlay_interface)
-        self.agent.get_os_plugin().store_file(net_sh, self.BASE_DIR, '{}.sh'.format(net_uuid.split('-')[0]))
-        chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, '{}.sh'.format(net_uuid.split('-')[0])))
+        self.agent.get_os_plugin().store_file(net_sh, self.BASE_DIR,
+                                              '{}.sh'.format(net_uuid.split('-')[0]))
+        chmod_cmd = 'chmod +x {}'.format(os.path.join(
+            self.BASE_DIR, '{}.sh'.format(net_uuid.split('-')[0])))
         # TODO chmod should be also executed by OSPlugin
         self.agent.get_os_plugin().execute_command(chmod_cmd, True)
         return '{}.sh'.format(net_uuid.split('-')[0]), vxlan_name, vxlan_id, mcast_addr

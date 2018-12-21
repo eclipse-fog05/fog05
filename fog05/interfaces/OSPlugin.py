@@ -1,8 +1,8 @@
 # Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
-# 
+#
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
-# 
+#
 # This program and the accompanying materials are made available under the
 # terms of the Eclipse Public License 2.0 which is available at
 # http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
@@ -28,17 +28,16 @@ class OSPlugin(Plugin):
         self.requirements = []
 
     def get_base_path(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     def execute_command(self, command, blocking, external):
-
         '''
         Execute a command to cli of underlying os, IDK should return bool or the command output?
 
         :command: String
         :return: String or bool?
         '''
-        
+
         raise NotImplementedError('This is and interface!')
 
     def install_package(self, packages):
@@ -52,9 +51,8 @@ class OSPlugin(Plugin):
         '''
 
         raise NotImplementedError('This is and interface!')
-    
-    def store_file(self, content, file_path, filename):
 
+    def store_file(self, content, file_path, filename):
         '''
         Store a file in local disk, maybe can convert from windows dir separator to unix dir separator
 
@@ -71,27 +69,26 @@ class OSPlugin(Plugin):
         raise NotImplementedError
 
     def dir_exists(self, path):
-        raise NotImplemented
+        raise NotImplementedError
 
     def create_dir(self, path):
-        raise NotImplemented
+        raise NotImplementedError
 
     def create_file(self, path):
-        raise NotImplemented
+        raise NotImplementedError
 
     def remove_dir(self, path):
-        raise NotImplemented
+        raise NotImplementedError
 
     def remove_file(self, path):
-        raise NotImplemented
+        raise NotImplementedError
 
-    def read_file(self, file_path, root = False):
-
+    def read_file(self, file_path, root=False):
         '''
         Read the content from a file in the local disk, maybe can convert from windows dir separator to unix dir separator
         return the file content
         throw an exception if file not exits
-        
+
         :file_path: String
         :return: byte
 
@@ -100,10 +97,10 @@ class OSPlugin(Plugin):
         raise NotImplementedError('This is and interface!')
 
     def read_binary_file(self, file_path):
-        raise NotImplemented
+        raise NotImplementedError
 
     def download_file(self, url, file_path):
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_CPUID(self):
         '''
@@ -136,7 +133,6 @@ class OSPlugin(Plugin):
         raise NotImplementedError('This is and interface!')
 
     def get_network_level(self):
-
         '''
         Return the current network usage level
         :return: float
@@ -144,7 +140,6 @@ class OSPlugin(Plugin):
         raise NotImplementedError('This is and interface!')
 
     def remove_package(self, packages):
-
         '''
         Remove all packages passed within the parameter, return a bool
         to know the retult of operation
@@ -160,7 +155,6 @@ class OSPlugin(Plugin):
         raise NotImplementedError('This is and interface!')
 
     def send_signal(self, signal, pid):
-
         '''
         Send a signal to the process identified by pid
         throw an exception if pid not exits
@@ -182,7 +176,6 @@ class OSPlugin(Plugin):
         raise NotImplementedError('This is and interface!')
 
     def send_sig_int(self, pid):
-
         '''
         Send a SigKill (Ctrl+C) to the process identified by pid
         throw an exception if pid not exits
@@ -193,7 +186,6 @@ class OSPlugin(Plugin):
         raise NotImplementedError('This is and interface!')
 
     def send_sig_kill(self, pid):
-
         '''
         Send a SigKill (kill the process) to the process identified by pid
         throw an exception if pid not exits
@@ -207,69 +199,66 @@ class OSPlugin(Plugin):
         return uuid.uuid4()
 
     def get_processor_information(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_memory_information(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_disks_information(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_io_informations(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_accelerators_informations(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_network_informations(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_position_information(self):
-        raise NotImplemented
+        raise NotImplementedError
 
     def add_know_host(self, hostname, ip):
-        raise NotImplemented
+        raise NotImplementedError
 
     def remove_know_host(self, hostname):
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_intf_type(self, name):
-        raise NotImplemented
+        raise NotImplementedError
 
     def set_io_unaviable(self, io_name):
-       raise NotImplemented
+        raise NotImplementedError
 
     def set_io_available(self, io_name):
-        raise NotImplemented
+        raise NotImplementedError
 
     def set_accelerator_unaviable(self, acc_name):
-        raise NotImplemented
+        raise NotImplementedError
 
     def set_accelerator_available(self, acc_name):
-        raise NotImplemented
+        raise NotImplementedError
 
     def set_interface_unaviable(self, intf_name):
-        raise NotImplemented
+        raise NotImplementedError
 
     def set_interface_available(self, intf_name):
-        raise NotImplemented
-
-    def get_intf_type(self, name):
-        raise NotImplemented
+        raise NotImplementedError
 
     def get_hostname(self):
-        raise NotImplemented
+        raise NotImplementedError
 
 
 class ProcessNotExistingException(Exception):
-    def __init__(self, message, errors):
+    def __init__(self, message, errors=0):
 
         super(ProcessNotExistingException, self).__init__(message)
         self.errors = errors
 
 
 class FileNotExistingException(Exception):
-    def __init__(self, message, errors):
+    def __init__(self, message, errors=0):
 
         super(FileNotExistingException, self).__init__(message)
         self.errors = errors
