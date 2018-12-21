@@ -1035,8 +1035,8 @@ class API(object):
             data = self.store.actual.getAll(uri)
             images = {}
             for i in data:
-                nodeid = i[0].split('/')[4]
-                pluginid = i[0].split('/')[6]
+                nodeid = i[0].split('/')[3]
+                pluginid = i[0].split('/')[5]
                 img_data = json.loads(i[1])
                 imgs = images.get(nodeid, None)
                 if imgs is None:
