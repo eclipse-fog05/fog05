@@ -121,6 +121,11 @@ class Store(object):
             callback(key, value, 0)
         subid = self.workspace.subscribe(Selector(k), adapter_callback)
         self.subscriptions.append(subid)
+        return subid
+
+    def overlook(self, subid):
+        self.workspace.unsubscribe(subid)
+        self.subscriptions.remove(subid)
 
     def close(self):
         for subid in self.subscriptions:

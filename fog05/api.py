@@ -1,8 +1,8 @@
 # Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
-# 
+#
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
-# 
+#
 # This program and the accompanying materials are made available under the
 # terms of the Eclipse Public License 2.0 which is available at
 # http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
@@ -14,7 +14,7 @@
 
 from jsonschema import validate, ValidationError
 from fog05 import Schemas
-#from dstore import Store
+# from dstore import Store
 from enum import Enum
 import re
 import uuid
@@ -24,6 +24,34 @@ import time
 from yaks.api import YAKS
 from fog05.store import Store, FOSStore
 from fog05.interfaces.Constants import *
+from threading import Condition, Lock
+
+
+class MVar(object):
+
+    def __init__(self):
+        self.__lock = Lock()
+        self.__condition = Condition(lock=self.__lock)
+        self.__value = None
+
+    def get(self):
+        self.__lock.acquire()
+        if self.__value is None:
+            self.__condition.wait()
+        v = self.__value
+        self.__value = None
+        self.__condition.notify()
+        self.__lock.release()
+        return v
+
+    def put(self, value):
+        self.__lock.acquire()
+        if self.__value is not None:
+            self.__condition.wait()
+        self.__value = value
+        self.__condition.notify()
+        self.__lock.release()
+
 
 class API(object):
     '''
@@ -33,10 +61,11 @@ class API(object):
 
     def __init__(self, sysid=0, store_id="python-api", endpoint='127.0.0.1'):
 
-        self.a_root = append_to_path(aroot,sysid)
-        self.d_root = append_to_path(droot,sysid)
-        self.s_root = append_to_path(sroot,sysid)
-        self.store = FOSStore(endpoint, self.a_root, self.d_root, self.s_root, store_id)
+        self.a_root = append_to_path(aroot, sysid)
+        self.d_root = append_to_path(droot, sysid)
+        self.s_root = append_to_path(sroot, sysid)
+        self.store = FOSStore(endpoint, self.a_root,
+                              self.d_root, self.s_root, store_id)
         self.endpoint = endpoint
         self.manifest = self.Manifest(self.store)
         self.node = self.Node(self.store)
@@ -57,7 +86,8 @@ class API(object):
 
         for n in nodes:
             u = n[0]
-            uri = "{}/{}/onboard/{}".format(self.d_root, u, manifest.get('uuid'))
+            uri = "{}/{}/onboard/{}".format(self.d_root,
+                                            u, manifest.get('uuid'))
             value = json.dumps(manifest)
             self.store.desired.put(uri, value)
 
@@ -77,36 +107,45 @@ class API(object):
                 for node in nodes:
                     res = self.network.add(manifest=n, node_uuid=node[0])
                     if not res:
-                        raise Exception('Error on define network {} -> {} on {}  (RES={})'.format(n.get('uuid'), manifest.get('uuid'), node[0], res))
+                        raise Exception('Error on define network {} -> {} on {}  (RES={})'.format(
+                            n.get('uuid'), manifest.get('uuid'), node[0], res))
             else:
                 net_nodes = n.get('nodes')
                 print('I will create network on {}'.format(net_nodes))
                 for netn in net_nodes:
                     res = self.network.add(manifest=n, node_uuid=netn)
                     if not res:
-                        raise Exception('Error on define network {} -> {} on {}  (RES={})'.format(n.get('uuid'), manifest.get('uuid'), netn, res))
+                        raise Exception('Error on define network {} -> {} on {}  (RES={})'.format(
+                            n.get('uuid'), manifest.get('uuid'), netn, res))
 
             networks_uuid.append(n.get('uuid'))
         c_list = self.resolve_dependencies(manifest.get('components'))
         for c in c_list:
-            search = [x for x in manifest.get("components") if x.get('name') == c]
+            search = [x for x in manifest.get(
+                "components") if x.get('name') == c]
             if len(search) > 0:
                 component = search[0]
                 # print('Onboarding: {}'.format(component))
                 mf = component.get('manifest')
-                res = self.entity.define(manifest=mf, node_uuid=component.get('node'), wait=True)
+                res = self.entity.define(
+                    manifest=mf, node_uuid=component.get('node'), wait=True)
                 # print(res)
                 if not res:
-                    raise Exception('Error on define entity {} -> {} on {}   (RES={})'.format(manifest.get('uuid'), mf.get('uuid'), component.get('node'), res))
+                    raise Exception('Error on define entity {} -> {} on {}   (RES={})'.format(
+                        manifest.get('uuid'), mf.get('uuid'), component.get('node'), res))
                 c_i_uuid = '{}'.format(uuid.uuid4())
-                res = self.entity.configure(mf.get('uuid'), component.get('node'), instance_uuid=c_i_uuid, wait=True)
+                res = self.entity.configure(mf.get('uuid'), component.get(
+                    'node'), instance_uuid=c_i_uuid, wait=True)
                 # print(res)
                 if not res:
-                    raise Exception('Error on define entity {} -> {} on {}   (RES={})'.format(manifest.get('uuid'), mf.get('uuid'), component.get('node'), res))
-                res = self.entity.run(mf.get('uuid'), component.get('node'), instance_uuid=c_i_uuid, wait=True)
+                    raise Exception('Error on define entity {} -> {} on {}   (RES={})'.format(
+                        manifest.get('uuid'), mf.get('uuid'), component.get('node'), res))
+                res = self.entity.run(mf.get('uuid'), component.get(
+                    'node'), instance_uuid=c_i_uuid, wait=True)
                 # print(res)
                 if not res:
-                    raise Exception('Error on define entity {} -> {} on {}   (RES={})'.format(manifest.get('uuid'), mf.get('uuid'), component.get('node'), res))
+                    raise Exception('Error on define entity {} -> {} on {}   (RES={})'.format(
+                        manifest.get('uuid'), mf.get('uuid'), component.get('node'), res))
                 instances_uuids.update({mf.get('uuid'): c_i_uuid})
 
         return {'entity': {manifest.get('uuid'): instances_uuids}, 'networks': networks_uuid}
@@ -116,7 +155,8 @@ class API(object):
         if len(nodes) > 0:
             uri = "{}/*/onboard/{}".format(self.a_root, entity_uuid)
             data = self.store.actual.resolve(uri)
-            entities = self.entity.list()  # {node uuid: {entity uuid: [instance list]} list}
+            # {node uuid: {entity uuid: [instance list]} list}
+            entities = self.entity.list()
             # print('entities {}'.format(entities))
             if data is not None and len(data) > 0:
                 data = json.loads(data)
@@ -143,7 +183,8 @@ class API(object):
                         self.network.remove(net_id, nid)
                 for n in nodes:
                     u = n[0]
-                    uri = "{}/{}/onboard/{}".format(self.d_root, u, entity_uuid)
+                    uri = "{}/{}/onboard/{}".format(self.d_root,
+                                                    u, entity_uuid)
                     # print('I should remove {}'.format(uri))
                     self.store.desired.remove(uri)
 
@@ -160,12 +201,14 @@ class API(object):
         c = list(components)
         no_dependable_components = []
         for i in range(0, len(components)):
-            no_dependable_components.append([x for x in c if len(x.get('need')) == 0])
+            no_dependable_components.append(
+                [x for x in c if len(x.get('need')) == 0])
             # print (no_dependable_components)
             c = [x for x in c if x not in no_dependable_components[i]]
             for y in c:
                 n = y.get('need')
-                n = [x for x in n if x not in [z.get('name') for z in no_dependable_components[i]]]
+                n = [x for x in n if x not in [
+                    z.get('name') for z in no_dependable_components[i]]]
                 y.update({"need": n})
 
         order = []
@@ -199,13 +242,17 @@ class API(object):
                 t = manifest.get('type')
                 try:
                     if t == 'vm':
-                        validate(manifest.get('entity_data'), Schemas.vm_schema)
+                        validate(manifest.get('entity_data'),
+                                 Schemas.vm_schema)
                     elif t == 'container':
-                        validate(manifest.get('entity_data'), Schemas.container_schema)
+                        validate(manifest.get('entity_data'),
+                                 Schemas.container_schema)
                     elif t == 'native':
-                        validate(manifest.get('entity_data'), Schemas.native_schema)
+                        validate(manifest.get('entity_data'),
+                                 Schemas.native_schema)
                     elif t == 'ros2':
-                        validate(manifest.get('entity_data'), Schemas.ros2_schema)
+                        validate(manifest.get('entity_data'),
+                                 Schemas.ros2_schema)
                     elif t == 'usvc':
                         return False
                     else:
@@ -428,9 +475,11 @@ class API(object):
                     print('No network plugin loaded on node, aborting')
                     return False
                 brctl = nws[0].get('uuid')  # will use the first plugin
-                uri = '{}/{}/network/{}/networks/{}'.format(self.store.droot, node_uuid, brctl, manifest.get('uuid'))
+                uri = '{}/{}/network/{}/networks/{}'.format(
+                    self.store.droot, node_uuid, brctl, manifest.get('uuid'))
             else:
-                uri = '{}/*/network/*/networks/{}'.format(self.store.droot, manifest.get('uuid'))
+                uri = '{}/*/network/*/networks/{}'.format(
+                    self.store.droot, manifest.get('uuid'))
 
             res = self.store.desired.put(uri, json_data)
             if res >= 0:
@@ -458,9 +507,11 @@ class API(object):
                     print('No network plugin loaded on node, aborting')
                     return False
                 brctl = nws[0]  # will use the first plugin
-                uri = '{}/{}/network/{}/networks/{}#status=undefine'.format(self.store.droot, node_uuid, brctl.get('uuid'), net_uuid)
+                uri = '{}/{}/network/{}/networks/{}#status=undefine'.format(
+                    self.store.droot, node_uuid, brctl.get('uuid'), net_uuid)
             else:
-                uri = '{}/*/network/*/networks/{}#status=undefine'.format(self.store.droot, net_uuid)
+                uri = '{}/*/network/*/networks/{}#status=undefine'.format(
+                    self.store.droot, net_uuid)
 
             res = self.store.desired.dput(uri)
             if res:
@@ -479,7 +530,8 @@ class API(object):
 
             if node_uuid is not None:
                 n_list = []
-                uri = '{}/{}/network/*/networks/**'.format(self.store.aroot, node_uuid)
+                uri = '{}/{}/network/*/networks/**'.format(
+                    self.store.aroot, node_uuid)
                 response = self.store.actual.resolveAll(uri)
                 for i in response:
                     n_list.append(json.loads(i[1]))
@@ -533,14 +585,16 @@ class API(object):
                 print('Cannot get plugin')
                 return None
             all_plugins = json.loads(all_plugins).get('plugins')
-            search = [x for x in all_plugins if name.upper() in x.get('name').upper()]
+            search = [x for x in all_plugins if name.upper()
+                                                           in x.get('name').upper()]
             if len(search) == 0:
                 return None
             else:
                 return search[0]
 
         def __get_entity_handler_by_uuid(self, node_uuid, entity_uuid):
-            uri = '{}/{}/runtime/*/entity/{}'.format(self.store.aroot, node_uuid, entity_uuid)
+            uri = '{}/{}/runtime/*/entity/{}'.format(
+                self.store.aroot, node_uuid, entity_uuid)
             all = self.store.actual.resolveAll(uri)
             for i in all:
                 k = i[0]
@@ -554,24 +608,71 @@ class API(object):
             return handler
 
         def __wait_atomic_entity_state_change(self, node_uuid, handler_uuid, entity_uuid, state):
-            while True:
-                time.sleep(0.5)
-                uri = '{}/{}/runtime/{}/entity/{}'.format(self.store.aroot, node_uuid, handler_uuid, entity_uuid)
-                data = self.store.actual.get(uri)
-                if data is not None:
-                    entity_info = json.loads(data)
-                    if entity_info is not None and entity_info.get('status') == state:
-                        return
+            '''
+            
+            Function used to wait if an entity changest state (eg. undefined -> defined) or goes to error state
+
+            :param node_uuid
+            :param handler_uuid uuid of the plugin that manage the instance
+            :param entity_uuid
+            :param state the new expected state
+            
+            :return dict {'status':<new status>, 'entity_uuid':entity_uuid}
+
+            '''
+            uri = '{}/{}/runtime/{}/entity/{}'.format(
+                self.store.aroot, node_uuid, handler_uuid, entity_uuid)
+            local_var = MVar()
+
+            def cb(key, value, v):
+                local_var.put(value)
+            subid = self.store.actual.observe(uri, cb)
+
+            entity_info = json.loads(local_var.get())
+            es = entity_info.get('status')
+            while es not in [state,'error']:
+                    entity_info = json.loads(local_var.get())
+                    es = entity_info.get('status')
+            self.store.actual.overlook(subid)
+            res = {
+                    'entity_uuid':entity_uuid,
+                    'status':es
+                }
+            return res
 
         def __wait_atomic_entity_instance_state_change(self, node_uuid, handler_uuid, entity_uuid, instance_uuid, state):
-            while True:
-                time.sleep(0.5)
-                uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.store.aroot, node_uuid, handler_uuid, entity_uuid, instance_uuid)
-                data = self.store.actual.get(uri)
-                if data is not None:
-                    entity_info = json.loads(data)
-                    if entity_info is not None and entity_info.get('status') == state:
-                        return
+            '''
+            
+            Function used to wait if an instance changest state (eg. configured -> run) or goes to error state
+
+            :param node_uuid
+            :param handler_uuid uuid of the plugin that manage the instance
+            :param entity_uuid
+            :param instance_uuid
+            :param state the new expected state
+            
+            :return dict {'status':<new status>, 'entity_uuid':entity_uuid, 'instance_uuid': instance_uuid}
+
+            '''
+            uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.store.aroot, node_uuid, handler_uuid, entity_uuid, instance_uuid)
+            local_var = MVar()
+            def cb(key, value, v):
+                local_var.put(value)
+            subid = self.store.actual.observe(uri, cb)
+
+            entity_info = json.loads(local_var.get())
+            es = entity_info.get('status')
+            while es not in [state,'error']:
+                    entity_info = json.loads(local_var.get())
+                    es = entity_info.get('status')
+            self.store.actual.overlook(subid)
+            res = {
+                    'entity_uuid':entity_uuid,
+                    'instance_uuid' : instance_uuid,
+                    'status':es
+                }
+            return res
+
 
         def define(self, manifest, node_uuid, wait=False):
             '''
@@ -711,18 +812,24 @@ class API(object):
             # print('RES is {}'.format(res))
             if res >= 0:
                 if wait:
-                    state = "run"
-                    while True:
-                        uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.store.aroot, node_uuid, handler, entity_uuid, instance_uuid)
-                        data = self.store.actual.get(uri)
-                        if data is not None:
-                            entity_info = json.loads(data)
-                            if entity_info is not None:
-                                if entity_info.get('status') == state:
-                                    break
+                    self.__wait_atomic_entity_instance_state_change(node_uuid, handler, entity_uuid, instance_uuid, 'run')
                 return True
             else:
-                return False
+                return None
+            # if res >= 0:
+            #     if wait:
+            #         state = "run"
+            #         while True:
+            #             uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.store.aroot, node_uuid, handler, entity_uuid, instance_uuid)
+            #             data = self.store.actual.get(uri)
+            #             if data is not None:
+            #                 entity_info = json.loads(data)
+            #                 if entity_info is not None:
+            #                     if entity_info.get('status') == state:
+            #                         break
+            #     return True
+            # else:
+            #     return False
 
         def stop(self, entity_uuid, node_uuid, instance_uuid, wait=False):
             '''
