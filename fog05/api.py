@@ -25,33 +25,7 @@ from yaks.api import YAKS
 from fog05.store import Store, FOSStore
 from fog05.interfaces.Constants import *
 from threading import Condition, Lock
-
-
-class MVar(object):
-
-    def __init__(self):
-        self.__lock = Lock()
-        self.__condition = Condition(lock=self.__lock)
-        self.__value = None
-
-    def get(self):
-        self.__lock.acquire()
-        if self.__value is None:
-            self.__condition.wait()
-        v = self.__value
-        self.__value = None
-        self.__condition.notify()
-        self.__lock.release()
-        return v
-
-    def put(self, value):
-        self.__lock.acquire()
-        if self.__value is not None:
-            self.__condition.wait()
-        self.__value = value
-        self.__condition.notify()
-        self.__lock.release()
-
+from fog05 import MVar
 
 class API(object):
     '''
@@ -816,20 +790,6 @@ class API(object):
                 return True
             else:
                 return None
-            # if res >= 0:
-            #     if wait:
-            #         state = "run"
-            #         while True:
-            #             uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.store.aroot, node_uuid, handler, entity_uuid, instance_uuid)
-            #             data = self.store.actual.get(uri)
-            #             if data is not None:
-            #                 entity_info = json.loads(data)
-            #                 if entity_info is not None:
-            #                     if entity_info.get('status') == state:
-            #                         break
-            #     return True
-            # else:
-            #     return False
 
         def stop(self, entity_uuid, node_uuid, instance_uuid, wait=False):
             '''
