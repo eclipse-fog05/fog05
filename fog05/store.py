@@ -1,4 +1,52 @@
 import json
+from yaks import YAKS
+from yaks import Path
+from yaks import Selector
+from yaks import Value
+
+
+class FOSStore(object):
+    """
+    Helper class to interact with the Store
+    """
+
+    def __init__(self, server, aroot, droot, sroot, home):
+        '''
+
+        Initialize the Store with root and home
+
+        :param server: the address of the YAKS server
+        :param aroot: actual store root
+        :param droot: desired store root
+        :param home: store home also used to generate store id
+        '''
+
+        self.y = YAKS()
+        self.y.login(server)
+
+        self.aroot = aroot  # '/dfos/{}'
+        self.ahome = '{}/{}'.format(aroot, home)
+
+        self.droot = droot  # '/dfos/{}'
+        self.dhome = '{}/{}'.format(droot, home)
+
+        self.sroot = sroot
+        self.shome = '{}/{}'.format(sroot, home)
+
+        self.actual = Store(self.y, self.aroot, self.ahome, 1024)
+        self.desired = Store(self.y, self.droot, self.dhome, 1024)
+        self.system = Store(self.y,  self.sroot, self.shome, 1024)
+
+    def close(self):
+        '''
+        Close the store
+
+        :return: None
+        '''
+        self.actual.close()
+        self.desired.close()
+        self.system.close()
+        self.y.logout()
 
 
 class Store(object):
@@ -8,22 +56,22 @@ class Store(object):
         self.root = root_path
         self.home = home_path
         self.cachesize = cachesize
-        self.access = self.yaks.create_access(root_path, cachesize)
+        self.workspace = self.yaks.workspace(Path(root_path))
         self.subscriptions = []
 
     def get(self, k):
-        r = self.access.get(k)
+        r = self.workspace.get(Selector(k))
         if r is not None and len(r) > 0:
-            v = r[0].get('value')
+            v = r[0].get('value').get_value()
             return v
         return None
 
     def getAll(self, k):
-        r = self.access.get(k)
+        r = self.workspace.get(Selector(k))
         if r is not None and len(r) > 0:
             res = []
             for e in r:
-                k, v = e.get('key'), e.get('value')
+                k, v = str(e.get('key')), e.get('value').get_value()
                 res.append((k, v, 0))
             return res
         return []
@@ -35,7 +83,7 @@ class Store(object):
         return self.getAll(k)
 
     def put(self, k, v):
-        return self.access.put(k, v)
+        return self.workspace.put(Path(k), Value(v))
 
     def dput(self, uri, value=None):
         data = self.get(uri)
@@ -61,22 +109,23 @@ class Store(object):
             data = self.data_merge(data, jvalues)
         value = json.dumps(data)
 
-        return self.access.put(uri, value)
+        return self.workspace.put(Path(uri), Value(value))
 
     def remove(self, k):
-        return self.access.remove(k)
+        return self.workspace.remove(Path(k))
 
     def observe(self, k, callback):
         def adapter_callback(values):
-            key, value = values[0].get('key'), values[0].get('value')
+            key, value = str(values[0].get('key')), \
+                values[0].get('value').get_value()
             callback(key, value, 0)
-        subid = self.access.subscribe(k, adapter_callback)
+        subid = self.workspace.subscribe(Selector(k), adapter_callback)
         self.subscriptions.append(subid)
 
     def close(self):
         for subid in self.subscriptions:
-            self.access.unsubscribe(subid)
-        self.access.dispose()
+            self.workspace.unsubscribe(subid)
+        self.workspace.dispose()
 
     def dot2dict(self, dot_notation, value=None):
         ld = []
@@ -110,7 +159,8 @@ class Store(object):
             if isinstance(updates, dict):
                 for k in updates.keys():
                     if k in base.keys():
-                        base.update({k: self.data_merge(base.get(k), updates.get(k))})
+                        base.update(
+                            {k: self.data_merge(base.get(k), updates.get(k))})
                     else:
                         base.update({k: updates.get(k)})
         return base

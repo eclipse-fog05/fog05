@@ -337,7 +337,7 @@ class LXD(RuntimePlugin):
                     if instance.devices:
                         for d in instance.devices:
                             dev.update(d)
-
+                    self.agent.logger.info('__generate_custom_profile_devices_configuration()', 'LXD Plugin - Devices {}'.format(dev))
                     custom_profile_for_instance.config = conf
                     custom_profile_for_instance.devices = dev
                     custom_profile_for_instance.save()
@@ -409,10 +409,11 @@ class LXD(RuntimePlugin):
 
                         time.sleep(2)
                         profile = self.conn.profiles.get(instance_uuid)
-
+                        profile.sync()
                         while True:
                             if len(profile.used_by) == 0:
                                 break
+                            profile.sync()
                             time.sleep(1)
                         profile.delete()
 
@@ -473,7 +474,11 @@ class LXD(RuntimePlugin):
                 c = self.conn.containers.get(instance.name)
                 c.start()
                 while c.status != 'Running':
-                    c.sync()
+                    try:
+                        c.sync()
+                    except Exception as e:
+                        self.agent.logger.info('run_entity()', '[ ERR ] LXD Plugin - {}'.format(e))
+                        pass
 
                 fm = c.FilesManager(self.conn, c)
                 envs = 'export FOSUUID={} \n' \
@@ -1048,7 +1053,11 @@ class LXD(RuntimePlugin):
                     n.update({'intf_name': 'eth{}'.format(i)})
                 # nw_k = template_key % n.get('intf_name'))
                 nw_k = template_key2.format(i)
-                nw_v = json.loads(str(template_value_bridge % (n.get('intf_name'), n.get('br_name'))))
+                if n.get('mac') is not None:
+                    nw_v = json.loads(str(template_value_bridge_mac % (n.get('intf_name'), n.get('br_name'), n.get('mac'))))
+                else:
+                    nw_v = json.loads(str(template_value_bridge % (n.get('intf_name'), n.get('br_name'))))
+                
 
             devices.update({nw_k: nw_v})
 
@@ -1068,11 +1077,13 @@ class LXD(RuntimePlugin):
         # devices = devices.render(networks=entity.networks)
         mid = {'machine-id': {'path': 'etc/machine-id', 'source': '/etc/machine-id', 'type': 'disk'}}
         devices.update(mid)
+       
         return devices
 
     def __generate_container_dict(self, instance):
         conf = {'name': instance.name, 'profiles': instance.profiles,
                 'source': {'type': 'image', 'alias': instance.image.get('uuid')}}
+        self.agent.logger.info('__generate_container_dict()', 'LXD Plugin - Container Configuration {}'.format(conf))
         return conf
 
     def __update_actual_store(self, uri, value):
@@ -1143,8 +1154,8 @@ class LXD(RuntimePlugin):
                 if c.status == 'Stopped':
                     self.agent.logger.info('__monitor_instance()', '[ INFO ] LXD Plugin - Stopping monitoring of Container uuid {}'.format(instance_id))
                     return
-            except pylxd.exceptions.NotFound:
-                self.agent.logger.info('__monitor_instance()', '[ INFO ] LXD Plugin - Stopping monitoring of Container uuid {}'.format(instance_id))
+            except Exception as e:
+                self.agent.logger.error('__monitor_instance()', '[ ERROR ] LXD Plugin - Stopping monitoring of Container uuid {} Error {}'.format(instance_id, e))
                 return
                     
 
