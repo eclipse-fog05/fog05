@@ -21,9 +21,7 @@ class FOSStore(object):
         :param home: store home also used to generate store id
         '''
 
-        self.y = YAKS()
-        self.y.login(server)
-
+        self.y = YAKS.login(server)
         self.aroot = aroot  # '/dfos/{}'
         self.ahome = '{}/{}'.format(aroot, home)
 
