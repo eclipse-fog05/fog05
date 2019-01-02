@@ -21,9 +21,7 @@ class FOSStore(object):
         :param home: store home also used to generate store id
         '''
 
-        self.y = YAKS()
-        self.y.login(server)
-
+        self.y = YAKS.login(server)
         self.aroot = aroot  # '/dfos/{}'
         self.ahome = '{}/{}'.format(aroot, home)
 
@@ -114,6 +112,9 @@ class Store(object):
     def remove(self, k):
         return self.workspace.remove(Path(k))
 
+    def eval(self, k, callback):
+        self.workspace.eval(k, callback)
+
     def observe(self, k, callback):
         def adapter_callback(values):
             key, value = str(values[0].get('key')), \
@@ -121,6 +122,11 @@ class Store(object):
             callback(key, value, 0)
         subid = self.workspace.subscribe(Selector(k), adapter_callback)
         self.subscriptions.append(subid)
+        return subid
+
+    def overlook(self, subid):
+        self.workspace.unsubscribe(subid)
+        self.subscriptions.remove(subid)
 
     def close(self):
         for subid in self.subscriptions:

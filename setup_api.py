@@ -18,10 +18,10 @@ from setuptools import setup
 
 setup(
     name='fog05',
-    version='0.1.6',
+    version='0.1.7',
     python_requires='>=3',
     author='ADLINK',
     packages=['fog05', 'fog05/interfaces'],
-    install_requires=['jsonschema', 'yaks==0.1.0'],
+    install_requires=['jsonschema', 'yaks==0.1.1', 'mvar'],
     include_package_data=True
 )
