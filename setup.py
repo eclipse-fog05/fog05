@@ -22,8 +22,8 @@ setup(
     python_requires='>=3',
     author='ADLINK',
     packages=['fog05', 'fog05/interfaces'],
-    install_requires=['yaks==0.1.0', 'jsonschema',
-                      'netifaces', 'psutil', 'jinja2'],
+    install_requires=['yaks==0.1.1', 'jsonschema',
+                      'netifaces', 'psutil', 'jinja2', 'mvar'],
     scripts=['bin/fos', 'bin/fos-agent', 'bin/fos-agent.bat', 'bin/fos.bat'],
     include_package_data=True
 )

@@ -29,7 +29,7 @@ import re
 from pylxd import Client
 from pylxd.exceptions import LXDAPIException
 import threading
-
+from fog05.mvar import MVar
 
 # TODO Plugins should not be aware of the Agent - The Agent is in OCaml no way to access his store, his logger and the OS plugin
 
@@ -784,6 +784,11 @@ class LXD(RuntimePlugin):
         else:
             self.agent.logger.info('before_migrate_entity_actions()', ' LXD Plugin - Before Migration Source: get information about destination node')
 
+            local_var = MVar()
+            def cb(key, value, v):
+                local_var.put(value)
+
+
             entity = self.current_entities.get(entity_uuid, None)
             instance = entity.get_instance(instance_uuid)
 
@@ -829,25 +834,46 @@ class LXD(RuntimePlugin):
                 uri_entity = '{}/{}/runtime/{}/entity/{}'.format(self.agent.droot, destination_node_uuid, lxd_uuid, entity_uuid)
                 self.agent.dstore.put(uri_entity, json.dumps(entity_info))
                 self.agent.logger.info('before_migrate_entity_actions()', 'LXD Plugin - Waiting entity in destination')
-                while True:
-                    uri_entity = '{}/{}/runtime/{}/entity/{}'.format(self.agent.aroot, destination_node_uuid, lxd_uuid, entity_uuid)
-                    jdata = self.agent.astore.get(uri_entity)
-                    # print('{}'.format(jdata))
-                    if jdata is not None:
-                        self.agent.logger.info('before_migrate_entity_actions()', 'LXD Plugin - Entity in destination!')
-                        entity_info = json.loads(jdata)
-                        if entity_info is not None and entity_info.get('status') == 'defined':
-                            break
+                
+                
+                uri_entity = '{}/{}/runtime/{}/entity/{}'.format(self.agent.aroot, destination_node_uuid, lxd_uuid, entity_uuid)
+                subid = self.agent.astore.observe(uri_entity, cb)
+                entity_info = json.loads(local_var.get())
+                es = entity_info.get('status')
+                while es not in ['defined','error']:
+                    entity_info = json.loads(local_var.get())
+                    es = entity_info.get('status')
+                self.agent.astore.overlook(subid)
+                self.agent.logger.info('before_migrate_entity_actions()', 'LXD Plugin - Entity in destination!')
+                
+                # while True:
+                #     uri_entity = '{}/{}/runtime/{}/entity/{}'.format(self.agent.aroot, destination_node_uuid, lxd_uuid, entity_uuid)
+                #     jdata = self.agent.astore.get(uri_entity)
+                #     # print('{}'.format(jdata))
+                #     if jdata is not None:
+                #         self.agent.logger.info('before_migrate_entity_actions()', 'LXD Plugin - Entity in destination!')
+                #         entity_info = json.loads(jdata)
+                #         if entity_info is not None and entity_info.get('status') == 'defined':
+                #             break
 
             self.agent.logger.info('before_migrate_entity_actions()', ' LXD Plugin - Before Migration Source: Waiting destination to be ready')
-            while True:
-                # self.agent.logger.info('before_migrate_entity_actions()', ' LXD Plugin - Before Migration Source: Waiting destination to be ready')
-                uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.agent.aroot, destination_node_uuid, lxd_uuid, entity_uuid, instance_uuid)
-                lxc_info = self.agent.astore.get(uri)
-                if lxc_info is not None:
-                    lxc_info = json.loads(lxc_info)
-                    if lxc_info is not None and lxc_info.get('status') == 'landing':
-                        break
+            uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.agent.aroot, destination_node_uuid, lxd_uuid, entity_uuid, instance_uuid)
+            subid = self.agent.astore.observe(uri, cb)
+            self.agent.logger.info('before_migrate_entity_actions()', 'KVM Plugin - Entity in destination!')
+            entity_info = json.loads(local_var.get())
+            es = entity_info.get('status')
+            while es not in ['landing','error']:
+                entity_info = json.loads(local_var.get())
+                es = entity_info.get('status')
+            self.agent.astore.overlook(subid)
+            # while True:
+            #     # self.agent.logger.info('before_migrate_entity_actions()', ' LXD Plugin - Before Migration Source: Waiting destination to be ready')
+            #     uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.agent.aroot, destination_node_uuid, lxd_uuid, entity_uuid, instance_uuid)
+            #     lxc_info = self.agent.astore.get(uri)
+            #     if lxc_info is not None:
+            #         lxc_info = json.loads(lxc_info)
+            #         if lxc_info is not None and lxc_info.get('status') == 'landing':
+            #             break
             self.agent.logger.info('before_migrate_entity_actions()', ' LXD Plugin - Before Migration Source: Destination is ready!')
 
             instance.state = State.TAKING_OFF
