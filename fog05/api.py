@@ -25,7 +25,7 @@ from yaks.api import YAKS
 from fog05.store import Store, FOSStore
 from fog05.interfaces.Constants import *
 from threading import Condition, Lock
-from fog05 import MVar
+from mvar import MVar
 
 class API(object):
     '''
