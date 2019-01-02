@@ -114,6 +114,9 @@ class Store(object):
     def remove(self, k):
         return self.workspace.remove(Path(k))
 
+    def eval(self, k, callback):
+        self.workspace.eval(k, callback)
+
     def observe(self, k, callback):
         def adapter_callback(values):
             key, value = str(values[0].get('key')), \
