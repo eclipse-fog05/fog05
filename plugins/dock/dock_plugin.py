@@ -340,7 +340,7 @@ class Dock(RuntimePlugin):
 
                 image_name = instance.image.get('docker_name')
                 pm = {}
-                if instance.port_bindings is not None:
+                if instance.ports_mappings is not None:
                     for k in instance.ports_mappings:
                         v = instance.ports_mappings.get(k)
                         pm.update({int(k): v})
