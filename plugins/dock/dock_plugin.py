@@ -161,22 +161,27 @@ class Dock(RuntimePlugin):
             img_data = self.agent.get_os_plugin().read_binary_file(image_name)
             img = self.conn.images.load(img_data)[0]
             self.agent.logger.info('defineEntity()', '[ DONE ] Docker Plugin - Created image with tags {}'.format(img.tags[0]))
+            img_info = {}
+            img_info.update({'uuid': entity_uuid})
+            img_info.update({'name': '{}_img'.format(entity.name)})
+            img_info.update({'base_image': image_name})
+            img_info.update({'type': 'Docker'})
+            img_info.update({'docker_name':img.tags[0]})
+            img_info.update({'format': '.'.join(image_name.split('.')[-2:])})
 
         elif entity.image_url.startswith('http'):
             self.agent.logger.Error(
                  'defineEntity()', 'Error image can be local file or name!')
         else:
             img = self.conn.images.get(entity.image_url)
+            img_info = {}
+            img_info.update({'uuid': entity_uuid})
+            img_info.update({'name': '{}_img'.format(entity.name)})
+            img_info.update({'base_image': entity.image_url})
+            img_info.update({'type': 'Docker'})
+            img_info.update({'docker_name':img.tags[0]})
+            img_info.update({'format': 'docker'})
             
-
-        
-        img_info = {}
-        img_info.update({'uuid': entity_uuid})
-        img_info.update({'name': '{}_img'.format(entity.name)})
-        img_info.update({'base_image': image_name})
-        img_info.update({'type': 'Docker'})
-        img_info.update({'docker_name':img.tags[0]})
-        img_info.update({'format': '.'.join(image_name.split('.')[-2:])})
         entity.image = img_info
         self.images.update({entity_uuid: img_info})
         uri = '{}/{}'.format(self.HOME_IMAGE, entity_uuid)
@@ -216,7 +221,7 @@ class Dock(RuntimePlugin):
             for i in list(entity.instances.keys()):
                 self.__force_entity_instance_termination(entity_uuid, i)
             
-            if entity.image.get('format') != '':
+            if entity.image.get('format') != 'docker':
                 img = entity.image.get('docker_name')
                 self.conn.images.remove(img)
             self.current_entities.pop(entity_uuid, None)
