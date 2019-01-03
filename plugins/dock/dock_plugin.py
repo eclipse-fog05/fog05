@@ -148,8 +148,7 @@ class Dock(RuntimePlugin):
                 'base_image'), kwargs.get('port-mappings'))
         else:
             return None
-         self.agent.logger.info(
-            'defineEntity()', ' Docker Plugin - Atomic Entity UUID: {}'.format(entity_uuid))
+         self.agent.logger.info('defineEntity()', ' Docker Plugin - Atomic Entity UUID: {}'.format(entity_uuid))
         if entity.image_url.startswith('file://'):
             image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image_url.split('/')[-1])
             cmd = 'cp {} {}'.format(
