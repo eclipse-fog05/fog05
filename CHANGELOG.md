@@ -2,6 +2,13 @@
 All notable changes to this project will be documented in this file.
 
 
+## [Unreleased] - 2019-01-xx
+
+### Changed
+- **Docker** plugin, support for already present docker images
+- **offload** remove atomic entities in the correct order
+- Bugfixes
+- Updated to YAKS API 0.1.1
 
 ## [Unreleased] - 2018-12-20
 ### Added
