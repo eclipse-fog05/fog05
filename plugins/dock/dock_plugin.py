@@ -150,10 +150,7 @@ class Dock(RuntimePlugin):
             return None
 
         if entity.image_url.startswith('file://'):
-            image_name = os.path.join(
-                self.BASE_DIR, self.IMAGE_DIR, entity.image_url.split('/')[-1])
-            if self.agent.get_os_plugin().file_exist(image_name):
-
+            image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image_url.split('/')[-1])
             cmd = 'cp {} {}'.format(
                 entity.image_url[len('file://'):], image_name)
             self.agent.get_os_plugin().execute_command(cmd, True)
