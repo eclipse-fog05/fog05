@@ -108,70 +108,70 @@ class FosAgent(Agent):
             self.logger.info('__init__()', '[ INIT ] Plugins to autoload: {} (empty means all plugin in the directory)'.format(' '.join(self.__autoload_list)))
             self.logger.info('__init__()', '[ INIT ] #############################')
             
-            self.sroot = append_to_path(sroot, self.sys_id)
-            self.shome = '{}/{}'.format(self.sroot, 'info')
-            self.logger.info('__init__()', '[ INIT ] Creating System Info Store ROOT: {} HOME: {}'.format(self.sroot, self.shome))
-            self.sstore = Store(self.yaks, self.sroot, self.shome, 1024)
-            self.logger.info('__init__()', '[ INIT ] fog05 System Information loading')
+            # self.sroot = append_to_path(sroot, self.sys_id)
+            # self.shome = '{}/{}'.format(self.sroot, 'info')
+            # self.logger.info('__init__()', '[ INIT ] Creating System Info Store ROOT: {} HOME: {}'.format(self.sroot, self.shome))
+            # self.sstore = Store(self.yaks, self.sroot, self.shome, 1024)
+            # self.logger.info('__init__()', '[ INIT ] fog05 System Information loading')
 
-            self.users = []
-            self.networks = []
-            self.entities = []
+            # self.users = []
+            # self.networks = []
+            # self.entities = []
 
-            uri = '{}/tenants'.format(self.shome)
-            i = self.sstore.get(uri)
-            if i is not None:
-                ti = json.loads(i)
-                for t in ti:
-                    if t.get('uuid') == 0:
-                        n = t.get('nodes')
-                        n.append(sid)
-                        # t.update({'nodes': n})
+            # uri = '{}/tenants'.format(self.shome)
+            # i = self.sstore.get(uri)
+            # if i is not None:
+            #     ti = json.loads(i)
+            #     for t in ti:
+            #         if t.get('uuid') == 0:
+            #             n = t.get('nodes')
+            #             n.append(sid)
+            #             # t.update({'nodes': n})
 
-                self.sstore.put(uri, json.dumps(ti))
-                self.tenants = ti
-            else:
-                quotas = {
-                    'max_vcpu': -1,
-                    'current_vcpu': 0,
-                    'max_vdisk': -1,
-                    'current_vdisk': 0,
-                    'max_vnetwork': -1,
-                    'current_vnetwork': 0,
-                    'max_instances': -1,
-                    'current_instances': 0
-                }
-                ti = [{
-                    'uuid': 0,
-                    'quotas': quotas,
-                    'users': [],
-                    'nodes': [sid],
-                    'name': 'default'
-                }]
-                self.sstore.put(uri, json.dumps(ti))
-                self.tenants = ti
+            #     self.sstore.put(uri, json.dumps(ti))
+            #     self.tenants = ti
+            # else:
+            #     quotas = {
+            #         'max_vcpu': -1,
+            #         'current_vcpu': 0,
+            #         'max_vdisk': -1,
+            #         'current_vdisk': 0,
+            #         'max_vnetwork': -1,
+            #         'current_vnetwork': 0,
+            #         'max_instances': -1,
+            #         'current_instances': 0
+            #     }
+            #     ti = [{
+            #         'uuid': 0,
+            #         'quotas': quotas,
+            #         'users': [],
+            #         'nodes': [sid],
+            #         'name': 'default'
+            #     }]
+            #     self.sstore.put(uri, json.dumps(ti))
+            #     self.tenants = ti
 
-            uri = '{}/users'.format(self.shome)
-            i = self.sstore.get(uri)
-            if i is not None:
-                self.users = json.loads(i)
+            # uri = '{}/users'.format(self.shome)
+            # i = self.sstore.get(uri)
+            # if i is not None:
+            #     self.users = json.loads(i)
                 
-            uri = '{}/entities'.format(self.shome)
-            i = self.sstore.get(uri)
-            if i is not None:
-                self.entities = json.loads(i)
+            # uri = '{}/entities'.format(self.shome)
+            # i = self.sstore.get(uri)
+            # if i is not None:
+            #     self.entities = json.loads(i)
 
-            uri = '{}/networks'.format(self.shome)
-            i = self.sstore.get(uri)
-            if i is not None:
-                self.networks = json.loads(i)
+            # uri = '{}/networks'.format(self.shome)
+            # i = self.sstore.get(uri)
+            # if i is not None:
+            #     self.networks = json.loads(i)
 
-            self.logger.info('__init__()', '[ INIT ] #############################')
-            self.logger.info('__init__()', '[ INIT ] fog05 System Information are:')
-            self.logger.info('__init__()', '[ INIT ] Tenants: {}'.format(json.dumps(self.tenants)))
-            self.logger.info('__init__()', '[ INIT ] Users: {}'.format(json.dumps(self.users)))
-            self.logger.info('__init__()', '[ INIT ] Networks: {}'.format(json.dumps(self.networks)))
-            self.logger.info('__init__()', '[ INIT ] #############################')
+            # self.logger.info('__init__()', '[ INIT ] #############################')
+            # self.logger.info('__init__()', '[ INIT ] fog05 System Information are:')
+            # self.logger.info('__init__()', '[ INIT ] Tenants: {}'.format(json.dumps(self.tenants)))
+            # self.logger.info('__init__()', '[ INIT ] Users: {}'.format(json.dumps(self.users)))
+            # self.logger.info('__init__()', '[ INIT ] Networks: {}'.format(json.dumps(self.networks)))
+            # self.logger.info('__init__()', '[ INIT ] #############################')
             
             # Desired Store. containing the desired state
             self.droot = append_to_path(droot, self.sys_id)
