@@ -134,8 +134,10 @@ class API(object):
             # print('entities {}'.format(entities))
             if data is not None and len(data) > 0:
                 data = json.loads(data)
+                c_list = self.resolve_dependencies(data.get('components'))
+                c_list.reverse()
                 # print('Data {}'.format(data))
-                for c in data.get('components'):
+                for c in c_list:
                     # print('C {}'.format(c))
                     eid = c.get('manifest').get('uuid')
                     # print('eid {}'.format(eid))
