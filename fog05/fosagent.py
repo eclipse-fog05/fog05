@@ -109,7 +109,7 @@ class FosAgent(Agent):
             self.logger.info('__init__()', '[ INIT ] #############################')
             
             self.sroot = append_to_path(sroot, self.sys_id)
-            self.shome = '{}{}'.format(self.sroot, 'info')
+            self.shome = '{}/{}'.format(self.sroot, 'info')
             self.logger.info('__init__()', '[ INIT ] Creating System Info Store ROOT: {} HOME: {}'.format(self.sroot, self.shome))
             self.sstore = Store(self.yaks, self.sroot, self.shome, 1024)
             self.logger.info('__init__()', '[ INIT ] fog05 System Information loading')
