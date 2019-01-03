@@ -152,6 +152,8 @@ class Dock(RuntimePlugin):
         if entity.image_url.startswith('file://'):
             image_name = os.path.join(
                 self.BASE_DIR, self.IMAGE_DIR, entity.image_url.split('/')[-1])
+            if self.agent.get_os_plugin().file_exist(image_name):
+
             cmd = 'cp {} {}'.format(
                 entity.image_url[len('file://'):], image_name)
             self.agent.get_os_plugin().execute_command(cmd, True)
@@ -159,15 +161,18 @@ class Dock(RuntimePlugin):
                 os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name)))
             image_name = os.path.join(
                 self.BASE_DIR, self.IMAGE_DIR, image_name)
+            img_data = self.agent.get_os_plugin().read_binary_file(image_name)
+            img = self.conn.images.load(img_data)[0]
+            self.agent.logger.info('defineEntity()', '[ DONE ] Docker Plugin - Created image with tags {}'.format(img.tags[0]))
 
-        else:
+        elif entity.image_url.startswith('http'):
             self.agent.logger.Error(
-                 'defineEntity()', 'Error image can only be a local file!!')
-            return None
+                 'defineEntity()', 'Error image can be local file or name!')
+        else:
+            img = self.conn.images.get(entity.image_url)
+            
 
-        img_data = self.agent.get_os_plugin().read_binary_file(image_name)
-        img = self.conn.images.load(img_data)[0]
-        self.agent.logger.info('defineEntity()', '[ DONE ] Docker Plugin - Created image with tags {}'.format(img.tags[0]))
+        
         img_info = {}
         img_info.update({'uuid': entity_uuid})
         img_info.update({'name': '{}_img'.format(entity.name)})
@@ -338,10 +343,10 @@ class Dock(RuntimePlugin):
 
                 image_name = instance.image.get('docker_name')
                 pm = {}
-                for k in instance.ports_mappings:
-                    v = instance.ports_mappings.get(k)
-                    pm.update({int(k): v})
-                print(pm)
+                if instance.port_bindings is not None:
+                    for k in instance.ports_mappings:
+                        v = instance.ports_mappings.get(k)
+                        pm.update({int(k): v})
                 # ports = list(pm.keys())
                 # hc = self.conn.create_host_config(port_bindings=pm)
                 self.agent.logger.info('run_entity()', '[ INFO ] IMAGE: {}'.format(image_name))
