@@ -29,7 +29,9 @@ import re
 from pylxd import Client
 from pylxd.exceptions import LXDAPIException
 import threading
-from fog05.mvar import MVar
+
+from mvar import MVar
+
 
 # TODO Plugins should not be aware of the Agent - The Agent is in OCaml no way to access his store, his logger and the OS plugin
 
