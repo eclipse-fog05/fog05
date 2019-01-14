@@ -23,6 +23,8 @@ import socket
 
 
 # TODO Plugins should not be aware of the Agent - The Agent is in OCaml no way to access his store, his logger and the OS plugin
+from plugins.LXD.utils import get_bridge_names_from_output_string
+
 
 class brctl(NetworkPlugin):
 
@@ -88,11 +90,22 @@ class brctl(NetworkPlugin):
 
         return name, intf_uuid
 
+    def get_virtual_bridges_in_node(self):
+        cmd = 'sudo brctl show'
+        output = self.agent.get_os_plugin().execute_command(cmd)
+        return get_bridge_names_from_output_string(output)
+
+    def create_bridges_if_not_exist(self, expected_bridges):
+        current_bridges = self.get_virtual_bridges_in_node()
+        for bridge in expected_bridges:
+            if bridge not in current_bridges:
+                self.create_virtual_bridge(bridge, '{}'.format(uuid.uuid4()))
+
     def create_virtual_bridge(self, name, uuid):
         cmd = 'sudo brctl addbr {}'.format(name)
         self.agent.get_os_plugin().execute_command(cmd)
         br_uuid = uuid
-        self.brmap.update({br_uuid, name})
+        self.brmap.update({br_uuid: name})
         return br_uuid, name
 
     def create_virtual_network(self, network_name, net_uuid, ip_range=None, has_dhcp=False, gateway=None, manifest=None):
