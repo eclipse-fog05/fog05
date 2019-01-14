@@ -1,4 +1,3 @@
-
 # Copyright (c) 2014,2018 ADLINK Technology Inc.
 # 
 # See the NOTICE file(s) distributed with this work for additional
@@ -25,8 +24,8 @@ import shutil
 import socket
 import os
 import sys
-# platform.linux_distribution()
 
+# platform.linux_distribution()
 
 
 '''
@@ -37,6 +36,7 @@ import sys
         Ubuntu: test fot /etc/lsb-release, check contents
 
 '''
+
 
 # TODO OS Plugin should not be aware of the Agent - The Agent is in OCaml no way to access his store and his logger
 
@@ -78,6 +78,7 @@ class Linux(OSPlugin):
                 p.wait()
         # for line in p.stdout:
         #     self.agent.logger.debug('executeCommand()', str(line))
+        return p.communicate()[0].decode('utf-8')
 
     def add_know_host(self, hostname, ip):
         self.agent.logger.info('addKnowHost()', ' OS Plugin add to hosts file')
@@ -109,7 +110,8 @@ class Linux(OSPlugin):
         try:
             return os.remove(path)
         except FileNotFoundError as e:
-            self.agent.logger.error('removeFile()', 'OS Plugin File Not Found {} so don\'t need to remove'.format(e.strerror))
+            self.agent.logger.error('removeFile()',
+                                    'OS Plugin File Not Found {} so don\'t need to remove'.format(e.strerror))
             return
 
     def file_exists(self, file_path):
@@ -165,7 +167,7 @@ class Linux(OSPlugin):
     def send_signal(self, signal, pid):
         if self.check_if_pid_exists(pid) is False:
             self.agent.logger.error('sendSignal()', 'OS Plugin Process not exists {}'.format(pid))
-            #raise ProcessNotExistingException('Process %d not exists' % pid)
+            # raise ProcessNotExistingException('Process %d not exists' % pid)
         else:
             psutil.Process(pid).send_signal(signal)
         return True
@@ -173,7 +175,7 @@ class Linux(OSPlugin):
     def send_sig_int(self, pid):
         if self.check_if_pid_exists(pid) is False:
             self.agent.logger.error('sendSigInt()', 'OS Plugin Process not exists {}'.format(pid))
-            #raise ProcessNotExistingException('Process %d not exists' % pid)
+            # raise ProcessNotExistingException('Process %d not exists' % pid)
         else:
             psutil.Process(pid).send_signal(2)
         return True
@@ -181,7 +183,7 @@ class Linux(OSPlugin):
     def send_sig_kill(self, pid):
         if self.check_if_pid_exists(pid) is False:
             self.agent.logger.error('sendSigInt()', 'OS Plugin Process not exists {}'.format(pid))
-            #raise ProcessNotExistingException('Process %d not exists' % pid)
+            # raise ProcessNotExistingException('Process %d not exists' % pid)
         else:
             psutil.Process(pid).send_signal(9)
         return True
@@ -261,16 +263,13 @@ class Linux(OSPlugin):
         :return:
         '''
 
-
-        #p = psutil.Popen('sudo cat /sys/class/dmi/id/product_uuid'.split(), stdout=PIPE)
+        # p = psutil.Popen('sudo cat /sys/class/dmi/id/product_uuid'.split(), stdout=PIPE)
         p = psutil.Popen('sudo cat /etc/machine-id'.split(), stdout=PIPE)
         # p = psutil.Popen('sudo cat '.split(), stdout=PIPE)
         res = ''
         for line in p.stdout:
             res = res + '{}'.format(line.decode('utf-8'))
         return res.lower().strip()
-
-
 
     def get_hostname(self):
         res = ''
@@ -302,7 +301,7 @@ class Linux(OSPlugin):
             itype = 'loopback'
         elif name[:2] in ['et', 'en']:
             itype = 'ethernet'
-        elif name[:4] in ['veth' , 'vtap']:
+        elif name[:4] in ['veth', 'vtap']:
             itype = 'virtual'
         else:
             itype = 'unknown'
@@ -329,10 +328,10 @@ class Linux(OSPlugin):
 
     def __get_io_devices(self):
         dev = []
-        gpio_path = '/sys/class/gpio' #gpiochip0
+        gpio_path = '/sys/class/gpio'  # gpiochip0
         gpio_devices = [f for f in os.listdir(gpio_path) if f not in ['export', 'unexport']]
         for d in gpio_devices:
-            dev.append({'name': d, 'io_type': 'gpio', 'io_file': gpio_path+os.path.sep+d, 'available': True})
+            dev.append({'name': d, 'io_type': 'gpio', 'io_file': gpio_path + os.path.sep + d, 'available': True})
 
         return dev
 
@@ -395,11 +394,12 @@ class Linux(OSPlugin):
                     mac = ''
 
                 speed = psutil.net_if_stats().get(k)[2]
-                inft_conf = {'ipv4_address': ipv4, 'ipv4_netmask': ipv4mask, 'ipv4_gateway': ipv4gateway, 'ipv6_address':
-                    ipv6, 'ipv6_netmask': ipv6mask}
+                inft_conf = {'ipv4_address': ipv4, 'ipv4_netmask': ipv4mask, 'ipv4_gateway': ipv4gateway,
+                             'ipv6_address':
+                                 ipv6, 'ipv6_netmask': ipv6mask}
 
                 iface_info = {'intf_name': k, 'inft_configuration': inft_conf, 'intf_mac_address': mac, 'intf_speed':
-                              speed, 'type': self.get_intf_type(k), 'available': True, 'default_gw': False}
+                    speed, 'type': self.get_intf_type(k), 'available': True, 'default_gw': False}
                 if k == default_gw:
                     iface_info.update({'available': False})
                     iface_info.update({'default_gw': True})

@@ -32,8 +32,10 @@ import threading
 
 from mvar import MVar
 
-
 # TODO Plugins should not be aware of the Agent - The Agent is in OCaml no way to access his store, his logger and the OS plugin
+from plugins.LXD.utils import get_bridge_names_from_instance_networks
+from plugins.brctl import brctl_plugin
+import plugins.brctl.brctl_plugin
 
 
 class LXD(RuntimePlugin):
@@ -201,7 +203,7 @@ class LXD(RuntimePlugin):
                 except LXDAPIException as e:
                     if '{}'.format(e) == 'Image with same fingerprint already exists':
                         self.agent.logger.info(
-                    'defineEntity()', '[ INFO ] LXD Plugin - Image with same fingerprint already exists')
+                            'defineEntity()', '[ INFO ] LXD Plugin - Image with same fingerprint already exists')
                         pass
 
                 self.agent.logger.info(
@@ -220,7 +222,7 @@ class LXD(RuntimePlugin):
             except LXDAPIException as e:
                 self.agent.logger.error('define_entity()', 'Error {}'.format(e))
                 self.current_entities.update({entity_uuid: entity})
-                uri = '{}/{}/{}'.format(self.agent.dhome,self.HOME, entity_uuid)
+                uri = '{}/{}/{}'.format(self.agent.dhome, self.HOME, entity_uuid)
                 lxd_info = json.loads(self.agent.dstore.get(uri))
                 lxd_info.update({'status': 'error'})
                 lxd_info.update({'error': '{}'.format(e)})
@@ -273,7 +275,8 @@ class LXD(RuntimePlugin):
             self.current_entities.pop(entity_uuid, None)
             # self.agent.get_os_plugin().remove_file(os.path.join(self.BASE_DIR, self.IMAGE_DIR, entity.image.get('base_image')))
             self.__pop_actual_store(entity_uuid)
-            self.agent.logger.info('undefineEntity()', '[ DONE ] LXD Plugin - Undefine a Container uuid {}'.format(entity_uuid))
+            self.agent.logger.info('undefineEntity()',
+                                   '[ DONE ] LXD Plugin - Undefine a Container uuid {}'.format(entity_uuid))
             return True
 
     def configure_entity(self, entity_uuid, instance_uuid=None):
@@ -287,7 +290,8 @@ class LXD(RuntimePlugin):
             raise EntityNotExistingException('Enitity not existing',
                                              'Entity {} not in runtime {}'.format(entity_uuid, self.uuid))
         elif entity.get_state() != State.DEFINED:
-            self.agent.logger.error('configureEntity()', 'LXD Plugin - Entity state is wrong, or transition not allowed')
+            self.agent.logger.error('configureEntity()',
+                                    'LXD Plugin - Entity state is wrong, or transition not allowed')
             raise StateTransitionNotAllowedException('Entity is not in DEFINED state',
                                                      'Entity {} is not in DEFINED state'.format(entity_uuid))
         else:
@@ -339,7 +343,8 @@ class LXD(RuntimePlugin):
                     if instance.devices:
                         for d in instance.devices:
                             dev.update(d)
-                    self.agent.logger.info('__generate_custom_profile_devices_configuration()', 'LXD Plugin - Devices {}'.format(dev))
+                    self.agent.logger.info('__generate_custom_profile_devices_configuration()',
+                                           'LXD Plugin - Devices {}'.format(dev))
                     custom_profile_for_instance.config = conf
                     custom_profile_for_instance.devices = dev
                     custom_profile_for_instance.save()
@@ -353,9 +358,11 @@ class LXD(RuntimePlugin):
 
                 instance.profiles.append(instance_uuid)
 
-                self.agent.logger.info('configureEntity()', '[ INFO ] LXD Plugin - Generating container configuration...')
+                self.agent.logger.info('configureEntity()',
+                                       '[ INFO ] LXD Plugin - Generating container configuration...')
                 config = self.__generate_container_dict(instance)
-                self.agent.logger.info('configureEntity()', '[ DONE ] LXD Plugin - Generating container configuration...')
+                self.agent.logger.info('configureEntity()',
+                                       '[ DONE ] LXD Plugin - Generating container configuration...')
 
                 self.agent.logger.info('configureEntity()', '[ INFO ] LXD Plugin - Creating Container...')
                 self.conn.containers.create(config, wait=True)
@@ -375,7 +382,8 @@ class LXD(RuntimePlugin):
                 container_info.update({'entity_data': e_data})
 
                 self.__update_actual_store_instance(entity_uuid, instance_uuid, container_info)
-                self.agent.logger.info('configureEntity()', '[ DONE ] LXD Plugin - Configure a Container uuid {}'.format(instance_uuid))
+                self.agent.logger.info('configureEntity()',
+                                       '[ DONE ] LXD Plugin - Configure a Container uuid {}'.format(instance_uuid))
                 return True
 
     def clean_entity(self, entity_uuid, instance_uuid=None):
@@ -401,7 +409,8 @@ class LXD(RuntimePlugin):
                     self.agent.logger.error('clean_entity()',
                                             'LXD Plugin - Instance state is wrong, or transition not allowed')
                     raise StateTransitionNotAllowedException('Instance is not in CONFIGURED state',
-                                                             'Instance {} is not in CONFIGURED state'.format(instance_uuid))
+                                                             'Instance {} is not in CONFIGURED state'.format(
+                                                                 instance_uuid))
                 else:
 
                     try:
@@ -420,7 +429,8 @@ class LXD(RuntimePlugin):
                         profile.delete()
 
                     except Exception as e:
-                        self.agent.logger.info('clean_entity()', '[ ERRO ] LXD Plugin - Clean a Container Exception raised {}'.format(e))
+                        self.agent.logger.info('clean_entity()',
+                                               '[ ERRO ] LXD Plugin - Clean a Container Exception raised {}'.format(e))
 
                         '''
                         {'wan': {'nictype': 'physical', 'name': 'wan', 'type': 'nic', 'parent': 'veth-af90f'}, 
@@ -438,7 +448,8 @@ class LXD(RuntimePlugin):
                     # container_info.update({'status': 'cleaned'})
                     # self.__update_actual_store(entity_uuid, container_info)
                     self.__pop_actual_store_instance(entity_uuid, instance_uuid)
-                    self.agent.logger.info('clean_entity()', '[ DONE ] LXD Plugin - Clean a Container uuid {} '.format(instance_uuid))
+                    self.agent.logger.info('clean_entity()',
+                                           '[ DONE ] LXD Plugin - Clean a Container uuid {} '.format(instance_uuid))
 
             return True
 
@@ -474,6 +485,11 @@ class LXD(RuntimePlugin):
                 self.current_entities.update({entity_uuid: entity})
 
                 c = self.conn.containers.get(instance.name)
+
+                network_plugin = list(self.agent.get_network_plugin(None).values()).pop()
+                # TODO: check network_plugin is of brctl_plugin.brctl instance
+                expected_bridges = get_bridge_names_from_instance_networks(instance.networks)
+                network_plugin.create_bridges_if_not_exist(expected_bridges)
                 c.start()
                 while c.status != 'Running':
                     try:
@@ -485,7 +501,7 @@ class LXD(RuntimePlugin):
                 fm = c.FilesManager(self.conn, c)
                 envs = 'export FOSUUID={} \n' \
                        'export FOSENTITYUUID={}\n' \
-                       'export FOSNODEUUID={}'\
+                       'export FOSNODEUUID={}' \
                     .format(instance_uuid, entity_uuid, self.agent.get_os_plugin().get_uuid())
                 fm.put('/etc/profile.d/99-fos', envs, mode="0644")
                 instance.on_start()
@@ -494,12 +510,15 @@ class LXD(RuntimePlugin):
                 container_info.update({'status': 'run'})
                 self.__update_actual_store_instance(entity_uuid, instance_uuid, container_info)
                 self.current_entities.update({entity_uuid: entity})
-                self.agent.logger.info('run_entity()', '[ DONE ] LXD Plugin - Starting a Container uuid {}'.format(instance_uuid))
+                self.agent.logger.info('run_entity()',
+                                       '[ DONE ] LXD Plugin - Starting a Container uuid {}'.format(instance_uuid))
 
-                mt = threading.Thread(target=self.__monitor_instance, args=(entity_uuid, instance_uuid, instance.name),daemon=True)
+                mt = threading.Thread(target=self.__monitor_instance, args=(entity_uuid, instance_uuid, instance.name),
+                                      daemon=True)
                 mt.start()
-                self.mon_th.update({instance_uuid:mt}) 
-                self.agent.logger.info('run_entity()', '[ DONE ] LXD Plugin - Starting a Monitoring of {}'.format(instance_uuid))
+                self.mon_th.update({instance_uuid: mt})
+                self.agent.logger.info('run_entity()',
+                                       '[ DONE ] LXD Plugin - Starting a Monitoring of {}'.format(instance_uuid))
             return True
 
     def stop_entity(self, entity_uuid, instance_uuid=None):
@@ -532,8 +551,6 @@ class LXD(RuntimePlugin):
                 while c.status != 'Stopped':
                     c.sync()
 
-
-
                 instance.on_stop()
                 self.current_entities.update({entity_uuid: entity})
 
@@ -541,7 +558,8 @@ class LXD(RuntimePlugin):
                 container_info = json.loads(self.agent.astore.get(uri))
                 container_info.update({'status': 'stop'})
                 self.__update_actual_store_instance(entity_uuid, instance_uuid, container_info)
-                self.agent.logger.info('stop_entity()', '[ DONE ] LXD Plugin - Stop a Container uuid {}'.format(entity_uuid))
+                self.agent.logger.info('stop_entity()',
+                                       '[ DONE ] LXD Plugin - Stop a Container uuid {}'.format(entity_uuid))
 
             return True
 
@@ -568,18 +586,21 @@ class LXD(RuntimePlugin):
                                             'LXD Plugin - Instance state is wrong, or transition not allowed')
                     raise StateTransitionNotAllowedException('Instance is not in RUNNING state',
 
-                                                             'Instance {} is not in RUNNING state'.format(instance_uuid))
+                                                             'Instance {} is not in RUNNING state'.format(
+                                                                 instance_uuid))
                 else:
                     c = self.conn.containers.get(instance.name)
                     c.freeze()
 
                     instance.on_pause()
                     self.current_entities.update({entity_uuid: entity})
-                    uri = '{}/{}/{}/{}/{}'.format(self.agent.ahome, self.HOME, entity_uuid, self.INSTANCE, instance_uuid)
+                    uri = '{}/{}/{}/{}/{}'.format(self.agent.ahome, self.HOME, entity_uuid, self.INSTANCE,
+                                                  instance_uuid)
                     container_info = json.loads(self.agent.astore.get(uri))
                     container_info.update({'status': 'pause'})
                     self.__update_actual_store_instance(entity_uuid, instance_uuid, container_info)
-                    self.agent.logger.info('pause_entity()', '[ DONE ] LXD Plugin - Pause a Container uuid {}'.format(instance_uuid))
+                    self.agent.logger.info('pause_entity()',
+                                           '[ DONE ] LXD Plugin - Pause a Container uuid {}'.format(instance_uuid))
                     return True
 
     def resume_entity(self, entity_uuid, instance_uuid=None):
@@ -612,11 +633,13 @@ class LXD(RuntimePlugin):
                     instance.on_resume()
                     self.current_entities.update({entity_uuid: entity})
 
-                    uri = '{}/{}/{}/{}/{}'.format(self.agent.ahome, self.HOME, entity_uuid, self.INSTANCE, instance_uuid)
+                    uri = '{}/{}/{}/{}/{}'.format(self.agent.ahome, self.HOME, entity_uuid, self.INSTANCE,
+                                                  instance_uuid)
                     container_info = json.loads(self.agent.astore.get(uri))
                     container_info.update({'status': 'run'})
                     self.__update_actual_store_instance(entity_uuid, instance_uuid, container_info)
-                    self.agent.logger.info('resume_entity()', '[ DONE ] LXD Plugin - Resume a Container uuid {}'.format(instance_uuid))
+                    self.agent.logger.info('resume_entity()',
+                                           '[ DONE ] LXD Plugin - Resume a Container uuid {}'.format(instance_uuid))
             return True
 
     def migrate_entity(self, entity_uuid, dst=False, instance_uuid=None):
@@ -629,7 +652,8 @@ class LXD(RuntimePlugin):
                 self.agent.logger.info('migrate_entity()', ' LXD Plugin - I\'m the Destination Node')
                 self.before_migrate_entity_actions(entity_uuid, True, instance_uuid)
 
-                uri_instance = '{}/{}/{}/{}/{}'.format(self.agent.dhome, self.HOME_ENTITY, entity_uuid, self.INSTANCE, instance_uuid)
+                uri_instance = '{}/{}/{}/{}/{}'.format(self.agent.dhome, self.HOME_ENTITY, entity_uuid, self.INSTANCE,
+                                                       instance_uuid)
                 instance_info = json.loads(self.agent.dstore.get(uri_instance))
 
                 while True:
@@ -638,13 +662,15 @@ class LXD(RuntimePlugin):
                         if c.status.upper() == 'running'.upper():
                             break
                         else:
-                            self.agent.logger.info('migrate_entity()', ' LXD Plugin - Container in this host but not running')
+                            self.agent.logger.info('migrate_entity()',
+                                                   ' LXD Plugin - Container in this host but not running')
                     except Exception as e:
                         self.agent.logger.info('migrate_entity()', ' LXD Plugin - Container not already in this host')
                     time.sleep(2)
 
                 self.after_migrate_entity_actions(entity_uuid, True, instance_uuid)
-                self.agent.logger.info('migrate_entity()', '[ DONE ] LXD Plugin - Migrate a Container uuid {}'.format(entity_uuid))
+                self.agent.logger.info('migrate_entity()',
+                                       '[ DONE ] LXD Plugin - Migrate a Container uuid {}'.format(entity_uuid))
                 return True
 
             else:
@@ -659,20 +685,24 @@ class LXD(RuntimePlugin):
 
             instance = entity.get_instance(instance_uuid)
             if instance.get_state() not in [State.RUNNING, State.TAKING_OFF]:
-                self.agent.logger.error('clean_entity()', 'LXD Plugin - Instance state is wrong, or transition not allowed')
+                self.agent.logger.error('clean_entity()',
+                                        'LXD Plugin - Instance state is wrong, or transition not allowed')
                 # self.__write_error_instance(entity_uuid, instance_uuid, 'Entity Instance not exist')
-                raise StateTransitionNotAllowedException('Instance is not in RUNNING state', 'Instance {} is not in RUNNING state'.format(entity_uuid))
+                raise StateTransitionNotAllowedException('Instance is not in RUNNING state',
+                                                         'Instance {} is not in RUNNING state'.format(entity_uuid))
 
             self.agent.logger.info('migrate_entity()', ' LXD Plugin - I\'m the Source Node')
             res = self.before_migrate_entity_actions(entity_uuid, instance_uuid=instance_uuid)
             if not res:
-                self.agent.logger.error('migrate_entity()', ' LXD Plugin - Error source node before migration, aborting')
+                self.agent.logger.error('migrate_entity()',
+                                        ' LXD Plugin - Error source node before migration, aborting')
                 # self.__write_error_instance(entity_uuid, instance_uuid, 'Entity Instance migration error on source')
                 return
 
             self.before_migrate_entity_actions(entity_uuid, False, instance_uuid)
 
-            uri_instance = '{}/{}/{}/{}/{}'.format(self.agent.dhome, self.HOME_ENTITY, entity_uuid, self.INSTANCE, instance_uuid)
+            uri_instance = '{}/{}/{}/{}/{}'.format(self.agent.dhome, self.HOME_ENTITY, entity_uuid, self.INSTANCE,
+                                                   instance_uuid)
             instance_info = json.loads(self.agent.dstore.get(uri_instance))
             name = instance_info.get('entity_data').get('name')
             # destination node uuid
@@ -784,12 +814,13 @@ class LXD(RuntimePlugin):
             return True
 
         else:
-            self.agent.logger.info('before_migrate_entity_actions()', ' LXD Plugin - Before Migration Source: get information about destination node')
+            self.agent.logger.info('before_migrate_entity_actions()',
+                                   ' LXD Plugin - Before Migration Source: get information about destination node')
 
             local_var = MVar()
+
             def cb(key, value, v):
                 local_var.put(value)
-
 
             entity = self.current_entities.get(entity_uuid, None)
             instance = entity.get_instance(instance_uuid)
@@ -799,7 +830,8 @@ class LXD(RuntimePlugin):
             entity_info.update({'status': 'define'})
 
             # reading instance info
-            uri_instance = '{}/{}/{}/{}/{}'.format(self.agent.dhome, self.HOME_ENTITY, entity_uuid, self.INSTANCE, instance_uuid)
+            uri_instance = '{}/{}/{}/{}/{}'.format(self.agent.dhome, self.HOME_ENTITY, entity_uuid, self.INSTANCE,
+                                                   instance_uuid)
             instance_info = json.loads(self.agent.dstore.get(uri_instance))
             lxc_info = instance_info.get('entity_data')
             # destination node uuid
@@ -816,7 +848,8 @@ class LXD(RuntimePlugin):
             runtimes = [x for x in all_plugins if x.get('type') == 'runtime']
             search = [x for x in runtimes if 'LXD' in x.get('name')]
             if len(search) == 0:
-                self.agent.logger.error('before_migrate_entity_actions()', 'LXD Plugin - Before Migration Source: No LXD Plugin, Aborting!!!')
+                self.agent.logger.error('before_migrate_entity_actions()',
+                                        'LXD Plugin - Before Migration Source: No LXD Plugin, Aborting!!!')
                 # self.__write_error_instance(entity_uuid, instance_uuid, 'Entity Instance Migration error')
                 return False
             else:
@@ -829,25 +862,28 @@ class LXD(RuntimePlugin):
             #     uri_img = '{}/{}/runtime/{}/image/{}'.format(self.agent.droot, destination_node_uuid, lxd_uuid, img_info)
             #     self.agent.dstore.put(uri_img, json.dumps(img_info))
 
-            self.agent.logger.info('before_migrate_entity_actions()', 'LXD Plugin - check if entity is present on destination')
-            uri_entity = '{}/{}/runtime/{}/entity/{}'.format(self.agent.aroot, destination_node_uuid, lxd_uuid, entity_uuid)
+            self.agent.logger.info('before_migrate_entity_actions()',
+                                   'LXD Plugin - check if entity is present on destination')
+            uri_entity = '{}/{}/runtime/{}/entity/{}'.format(self.agent.aroot, destination_node_uuid, lxd_uuid,
+                                                             entity_uuid)
             if self.agent.astore.get(uri_entity) is None:
                 self.agent.logger.info('before_migrate_entity_actions()', 'LXD Plugin - sending entity to destination')
-                uri_entity = '{}/{}/runtime/{}/entity/{}'.format(self.agent.droot, destination_node_uuid, lxd_uuid, entity_uuid)
+                uri_entity = '{}/{}/runtime/{}/entity/{}'.format(self.agent.droot, destination_node_uuid, lxd_uuid,
+                                                                 entity_uuid)
                 self.agent.dstore.put(uri_entity, json.dumps(entity_info))
                 self.agent.logger.info('before_migrate_entity_actions()', 'LXD Plugin - Waiting entity in destination')
-                
-                
-                uri_entity = '{}/{}/runtime/{}/entity/{}'.format(self.agent.aroot, destination_node_uuid, lxd_uuid, entity_uuid)
+
+                uri_entity = '{}/{}/runtime/{}/entity/{}'.format(self.agent.aroot, destination_node_uuid, lxd_uuid,
+                                                                 entity_uuid)
                 subid = self.agent.astore.observe(uri_entity, cb)
                 entity_info = json.loads(local_var.get())
                 es = entity_info.get('status')
-                while es not in ['defined','error']:
+                while es not in ['defined', 'error']:
                     entity_info = json.loads(local_var.get())
                     es = entity_info.get('status')
                 self.agent.astore.overlook(subid)
                 self.agent.logger.info('before_migrate_entity_actions()', 'LXD Plugin - Entity in destination!')
-                
+
                 # while True:
                 #     uri_entity = '{}/{}/runtime/{}/entity/{}'.format(self.agent.aroot, destination_node_uuid, lxd_uuid, entity_uuid)
                 #     jdata = self.agent.astore.get(uri_entity)
@@ -858,13 +894,15 @@ class LXD(RuntimePlugin):
                 #         if entity_info is not None and entity_info.get('status') == 'defined':
                 #             break
 
-            self.agent.logger.info('before_migrate_entity_actions()', ' LXD Plugin - Before Migration Source: Waiting destination to be ready')
-            uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.agent.aroot, destination_node_uuid, lxd_uuid, entity_uuid, instance_uuid)
+            self.agent.logger.info('before_migrate_entity_actions()',
+                                   ' LXD Plugin - Before Migration Source: Waiting destination to be ready')
+            uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.agent.aroot, destination_node_uuid, lxd_uuid,
+                                                                  entity_uuid, instance_uuid)
             subid = self.agent.astore.observe(uri, cb)
             self.agent.logger.info('before_migrate_entity_actions()', 'KVM Plugin - Entity in destination!')
             entity_info = json.loads(local_var.get())
             es = entity_info.get('status')
-            while es not in ['landing','error']:
+            while es not in ['landing', 'error']:
                 entity_info = json.loads(local_var.get())
                 es = entity_info.get('status')
             self.agent.astore.overlook(subid)
@@ -876,7 +914,8 @@ class LXD(RuntimePlugin):
             #         lxc_info = json.loads(lxc_info)
             #         if lxc_info is not None and lxc_info.get('status') == 'landing':
             #             break
-            self.agent.logger.info('before_migrate_entity_actions()', ' LXD Plugin - Before Migration Source: Destination is ready!')
+            self.agent.logger.info('before_migrate_entity_actions()',
+                                   ' LXD Plugin - Before Migration Source: Destination is ready!')
 
             instance.state = State.TAKING_OFF
             instance_info.update({'status': 'taking_off'})
@@ -893,7 +932,8 @@ class LXD(RuntimePlugin):
             raise EntityNotExistingException('Enitity not existing',
                                              'Entity {} not in runtime {}'.format(entity_uuid, self.uuid))
         elif entity.get_state() != State.DEFINED:
-            self.agent.logger.error('after_migrate_entity_actions()', 'LXD Plugin - Entity state is wrong, or transition not allowed')
+            self.agent.logger.error('after_migrate_entity_actions()',
+                                    'LXD Plugin - Entity state is wrong, or transition not allowed')
             raise StateTransitionNotAllowedException('Entity is not in correct state',
                                                      'Entity {} is not in correct state'.format(entity.get_state()))
         else:
@@ -905,11 +945,13 @@ class LXD(RuntimePlugin):
                 '''
                 Here the plugin also update to the current status, and remove unused keys
                 '''
-                self.agent.logger.info('after_migrate_entity_actions()', ' LXD Plugin - After Migration Destination: Updating state')
+                self.agent.logger.info('after_migrate_entity_actions()',
+                                       ' LXD Plugin - After Migration Destination: Updating state')
                 instance.on_start()
                 self.current_entities.update({entity_uuid: entity})
 
-                uri = '{}/{}/{}/{}/{}'.format(self.agent.dhome, self.HOME_ENTITY, entity_uuid, self.INSTANCE, instance_uuid)
+                uri = '{}/{}/{}/{}/{}'.format(self.agent.dhome, self.HOME_ENTITY, entity_uuid, self.INSTANCE,
+                                              instance_uuid)
                 lxc_info = json.loads(self.agent.dstore.get(uri))
                 lxc_info.pop('dst')
                 lxc_info.update({'status': 'run'})
@@ -922,12 +964,14 @@ class LXD(RuntimePlugin):
                 '''
                 Source node destroys all information about vm
                 '''
-                self.agent.logger.info('afterMigrateEntityActions()', ' LXD Plugin - After Migration Source: Updating state, destroy container')
+                self.agent.logger.info('afterMigrateEntityActions()',
+                                       ' LXD Plugin - After Migration Source: Updating state, destroy container')
                 self.__force_entity_instance_termination(entity_uuid, instance_uuid)
                 return True
 
     def __react_to_cache_entity(self, uri, value, v):
-        self.agent.logger.info('__react_to_cache()', ' LXD Plugin - React to to URI: {} Value: {} Version: {}'.format(uri, value, v))
+        self.agent.logger.info('__react_to_cache()',
+                               ' LXD Plugin - React to to URI: {} Value: {} Version: {}'.format(uri, value, v))
         if uri.split('/')[-2] == 'entity':
             uuid = uri.split('/')[-1]
             value = json.loads(value)
@@ -1056,7 +1100,8 @@ class LXD(RuntimePlugin):
                 # nw_k = template_key % n.get('intf_name'))
                 nw_k = template_key2.format(i)
                 if n.get('mac') is not None:
-                    nw_v = json.loads(str(template_value_bridge_mac % (n.get('intf_name'), n.get('br_name'), n.get('mac'))))
+                    nw_v = json.loads(
+                        str(template_value_bridge_mac % (n.get('intf_name'), n.get('br_name'), n.get('mac'))))
                 else:
                     nw_v = json.loads(str(template_value_bridge % (n.get('intf_name'), n.get('br_name'))))
 
@@ -1082,10 +1127,10 @@ class LXD(RuntimePlugin):
                 # nw_k = template_key % n.get('intf_name'))
                 nw_k = template_key2.format(i)
                 if n.get('mac') is not None:
-                    nw_v = json.loads(str(template_value_bridge_mac % (n.get('intf_name'), n.get('br_name'), n.get('mac'))))
+                    nw_v = json.loads(
+                        str(template_value_bridge_mac % (n.get('intf_name'), n.get('br_name'), n.get('mac'))))
                 else:
                     nw_v = json.loads(str(template_value_bridge % (n.get('intf_name'), n.get('br_name'))))
-                
 
             devices.update({nw_k: nw_v})
 
@@ -1105,7 +1150,7 @@ class LXD(RuntimePlugin):
         # devices = devices.render(networks=entity.networks)
         mid = {'machine-id': {'path': 'etc/machine-id', 'source': '/etc/machine-id', 'type': 'disk'}}
         devices.update(mid)
-       
+
         return devices
 
     def __generate_container_dict(self, instance):
@@ -1160,7 +1205,8 @@ class LXD(RuntimePlugin):
                 #    self.undefine_entity(k)
 
     def __monitor_instance(self, entity_id, instance_id, instance_name):
-        self.agent.logger.info('__monitor_instance()', '[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(instance_id))
+        self.agent.logger.info('__monitor_instance()',
+                               '[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(instance_id))
         time.sleep(2)
         while True:
             time.sleep(2)
@@ -1170,22 +1216,25 @@ class LXD(RuntimePlugin):
                 c = self.conn.containers.get(instance_name)
                 cs = c.state()
                 detailed_state = {}
-                detailed_state.update({'network':cs.network})
-                detailed_state.update({'cpu':cs.cpu})
-                detailed_state.update({'memory':cs.memory})
-                detailed_state.update({'disk':cs.disk})
-                detailed_state.update({'processes':cs.processes})
-                detailed_state.update({'pid':cs.pid})
+                detailed_state.update({'network': cs.network})
+                detailed_state.update({'cpu': cs.cpu})
+                detailed_state.update({'memory': cs.memory})
+                detailed_state.update({'disk': cs.disk})
+                detailed_state.update({'processes': cs.processes})
+                detailed_state.update({'pid': cs.pid})
                 container_info.update({'detailed_state': detailed_state})
                 self.__update_actual_store_instance(entity_id, instance_id, container_info)
-                
+
                 if c.status == 'Stopped':
-                    self.agent.logger.info('__monitor_instance()', '[ INFO ] LXD Plugin - Stopping monitoring of Container uuid {}'.format(instance_id))
+                    self.agent.logger.info('__monitor_instance()',
+                                           '[ INFO ] LXD Plugin - Stopping monitoring of Container uuid {}'.format(
+                                               instance_id))
                     return
             except Exception as e:
-                self.agent.logger.error('__monitor_instance()', '[ ERROR ] LXD Plugin - Stopping monitoring of Container uuid {} Error {}'.format(instance_id, e))
+                self.agent.logger.error('__monitor_instance()',
+                                        '[ ERROR ] LXD Plugin - Stopping monitoring of Container uuid {} Error {}'.format(
+                                            instance_id, e))
                 return
-                    
 
     def __add_image(self, manifest):
         url = manifest.get('base_image')
@@ -1198,9 +1247,12 @@ class LXD(RuntimePlugin):
             cmd = 'cp {} {}'.format(url[len('file://'):], image_name)
             self.agent.get_os_plugin().execute_command(cmd, True)
 
-        self.agent.logger.info('__add_image()', '[ INFO ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, url)))
-        image_data = self.agent.get_os_plugin().read_binary_file(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name))
-        self.agent.logger.info('__add_image()', '[ DONE ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, url)))
+        self.agent.logger.info('__add_image()', '[ INFO ] LXD Plugin - Loading image data from: {}'.format(
+            os.path.join(self.BASE_DIR, self.IMAGE_DIR, url)))
+        image_data = self.agent.get_os_plugin().read_binary_file(
+            os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name))
+        self.agent.logger.info('__add_image()', '[ DONE ] LXD Plugin - Loading image data from: {}'.format(
+            os.path.join(self.BASE_DIR, self.IMAGE_DIR, url)))
         img_info = {'url': url, 'path': image_name, 'uuid': uuid}
 
         self.agent.logger.info('__add_image()', '[ INFO ] LXD Plugin - Creating image with alias {}'.format(uuid))
@@ -1231,7 +1283,7 @@ class LXD(RuntimePlugin):
         self.flavors.pop(flavor_uuid)
         uri = '{}/{}'.format(self.HOME_FLAVOR, flavor_uuid)
         self.__pop_actual_store(uri)
-    
+
     def __write_error_entity(self, entity_uuid, error):
         uri = '{}/{}/{}'.format(self.agent.dhome, self.HOME_ENTITY, entity_uuid)
         jdata = self.agent.dstore.get(uri)
@@ -1245,22 +1297,26 @@ class LXD(RuntimePlugin):
         self.__update_actual_store(entity_uuid, vm_info)
 
     def __react_to_cache_image(self, uri, value, v):
-        self.agent.logger.info('__react_to_cache_image()', 'LXD Plugin - React to to URI: {} Value: {} Version: {}'.format(uri, value, v))
+        self.agent.logger.info('__react_to_cache_image()',
+                               'LXD Plugin - React to to URI: {} Value: {} Version: {}'.format(uri, value, v))
         if uri.split('/')[-2] == 'image':
             image_uuid = uri.split('/')[-1]
             if value is None and v is None:
-                self.agent.logger.info('__react_to_cache_image()', 'LXD Plugin - This is a remove for URI: {}'.format(uri))
+                self.agent.logger.info('__react_to_cache_image()',
+                                       'LXD Plugin - This is a remove for URI: {}'.format(uri))
                 self.__remove_image(image_uuid)
             else:
                 value = json.loads(value)
                 self.__add_image(value)
 
     def __react_to_cache_flavor(self, uri, value, v):
-        self.agent.logger.info('__react_to_cache_flavor()', 'LXD Plugin - React to to URI: {} Value: {} Version: {}'.format(uri, value, v))
+        self.agent.logger.info('__react_to_cache_flavor()',
+                               'LXD Plugin - React to to URI: {} Value: {} Version: {}'.format(uri, value, v))
         if uri.split('/')[-2] == 'flavor':
             flavor_uuid = uri.split('/')[-1]
             if value is None and v is None:
-                self.agent.logger.info('__react_to_cache_flavor()', 'LXD Plugin - This is a remove for URI: {}'.format(uri))
+                self.agent.logger.info('__react_to_cache_flavor()',
+                                       'LXD Plugin - This is a remove for URI: {}'.format(uri))
                 self.__remove_flavor(flavor_uuid)
             else:
                 value = json.loads(value)
