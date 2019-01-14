@@ -1,6 +1,6 @@
 import json
-from yaks import YAKS
-from yaks import Path
+from yaks import Yaks
+from yaks import Encoding
 from yaks import Selector
 from yaks import Value
 
@@ -21,7 +21,7 @@ class FOSStore(object):
         :param home: store home also used to generate store id
         '''
 
-        self.y = YAKS.login(server)
+        self.y = Yaks.login(server)
         self.aroot = aroot  # '/dfos/{}'
         self.ahome = '{}/{}'.format(aroot, home)
 
@@ -54,18 +54,18 @@ class Store(object):
         self.root = root_path
         self.home = home_path
         self.cachesize = cachesize
-        self.workspace = self.yaks.workspace(Path(root_path))
+        self.workspace = self.yaks.workspace(root_path)
         self.subscriptions = []
 
     def get(self, k):
-        r = self.workspace.get(Selector(k))
+        r = self.workspace.get(k)
         if r is not None and len(r) > 0:
             v = r[0].get('value').get_value()
             return v
         return None
 
     def getAll(self, k):
-        r = self.workspace.get(Selector(k))
+        r = self.workspace.get(k)
         if r is not None and len(r) > 0:
             res = []
             for e in r:
@@ -81,7 +81,7 @@ class Store(object):
         return self.getAll(k)
 
     def put(self, k, v):
-        return self.workspace.put(Path(k), Value(v))
+        return self.workspace.put(k, Value(v, encoding=Encoding.STRING))
 
     def dput(self, uri, value=None):
         data = self.get(uri)
@@ -107,20 +107,23 @@ class Store(object):
             data = self.data_merge(data, jvalues)
         value = json.dumps(data)
 
-        return self.workspace.put(Path(uri), Value(value))
+        return self.workspace.put(uri, Value(value, encoding=Encoding.STRING))
 
     def remove(self, k):
-        return self.workspace.remove(Path(k))
+        return self.workspace.remove(k)
 
     def eval(self, k, callback):
-        self.workspace.eval(k, callback)
+        def adapter_eval_callback(p, params):
+            v = callback(**params)
+            return Value(v, encoding=Encoding.STRING)
+        self.workspace.register_eval(k, adapter_eval_callback)
 
     def observe(self, k, callback):
         def adapter_callback(values):
             key, value = str(values[0].get('key')), \
                 values[0].get('value').get_value()
             callback(key, value, 0)
-        subid = self.workspace.subscribe(Selector(k), adapter_callback)
+        subid = self.workspace.subscribe(k, adapter_callback)
         self.subscriptions.append(subid)
         return subid
 
@@ -131,7 +134,7 @@ class Store(object):
     def close(self):
         for subid in self.subscriptions:
             self.workspace.unsubscribe(subid)
-        self.workspace.dispose()
+        # self.workspace.dispose()
 
     def dot2dict(self, dot_notation, value=None):
         ld = []

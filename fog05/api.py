@@ -21,7 +21,7 @@ import uuid
 import json
 import fnmatch
 import time
-from yaks.api import YAKS
+from yaks import Yaks
 from fog05.store import Store, FOSStore
 from fog05.interfaces.Constants import *
 from threading import Condition, Lock
@@ -587,14 +587,14 @@ class API(object):
 
         def __wait_atomic_entity_state_change(self, node_uuid, handler_uuid, entity_uuid, state):
             '''
-            
+
             Function used to wait if an entity changest state (eg. undefined -> defined) or goes to error state
 
             :param node_uuid
             :param handler_uuid uuid of the plugin that manage the instance
             :param entity_uuid
             :param state the new expected state
-            
+
             :return dict {'status':<new status>, 'entity_uuid':entity_uuid}
 
             '''
@@ -620,7 +620,7 @@ class API(object):
 
         def __wait_atomic_entity_instance_state_change(self, node_uuid, handler_uuid, entity_uuid, instance_uuid, state):
             '''
-            
+
             Function used to wait if an instance changest state (eg. configured -> run) or goes to error state
 
             :param node_uuid
@@ -628,7 +628,7 @@ class API(object):
             :param entity_uuid
             :param instance_uuid
             :param state the new expected state
-            
+
             :return dict {'status':<new status>, 'entity_uuid':entity_uuid, 'instance_uuid': instance_uuid}
 
             '''
@@ -1031,8 +1031,8 @@ class API(object):
             if handler is None:
                 print('type not yet supported')
             return handler
-        
-        
+
+
         def add(self, manifest, node_uuid=None):
             '''
 
@@ -1237,7 +1237,7 @@ class API(object):
         - list
     - images
         - add
-        - remove 
+        - remove
         - search
         - list
     - flavor
