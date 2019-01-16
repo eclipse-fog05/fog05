@@ -65,6 +65,12 @@ class GAD(object):
                                       'nodes', nodeid, 'plugins',
                                       pluginid, 'info'])
 
+    def get_node_plugin_eval_path(self, sysid, tenantid, nodeid, pluginid,
+                                  func_name):
+        return Constants.create_path([self.prefix, sysid, 'tenants', tenantid,
+                                      'nodes', nodeid, 'plugins',
+                                      pluginid, 'exec', func_name])
+
     def get_all_entities_selector(self, sysid, tenantid):
         return Constants.create_path(
             [self.prefix, 'tenants', tenantid, 'entities', '*'])
@@ -216,6 +222,18 @@ class GAD(object):
         self.listeners.append(subid)
         return subid
 
+    def add_plugin_eval(self, sysid, tenantid, nodeid, pluginid,
+                        func_name, func):
+        p = self.get_node_plugin_eval_path(
+            sysid, tenantid, nodeid, pluginid, func_name)
+
+        def cb(path, props):
+            v = Value(json.dumps(func(**props)), encoding=Encoding.STRING)
+            return v
+        r = self.ws.register_eval(p, cb)
+        self.evals.append(p)
+        return r
+
 
 class LAD(object):
     def __init__(self, workspace, prefix):
@@ -291,6 +309,30 @@ class LAD(object):
     def get_node_os_exec_path(self, nodeid, func_name):
         return Constants.create_path(
             [self.prefix, nodeid, 'os', 'exec', func_name])
+
+    def get_node_plugin_eval_path(self, nodeid, pluginid, func_name):
+        return Constants.create_path(
+            [self.prefix, nodeid, 'plugins', pluginid, 'exec', func_name])
+
+    def add_os_eval(self, nodeid, func_name, func):
+        p = self.get_node_os_exec_path(nodeid, func_name)
+
+        def cb(path, props):
+            v = Value(json.dumps(func(**props)), encoding=Encoding.STRING)
+            return v
+        r = self.ws.register_eval(p, cb)
+        self.evals.append(p)
+        return r
+
+    def add_plugin_eval(self, nodeid, pluginid, func_name, func):
+        p = self.get_node_plugin_eval_path(nodeid, pluginid, func_name)
+
+        def cb(path, props):
+            v = Value(json.dumps(func(**props)), encoding=Encoding.STRING)
+            return v
+        r = self.ws.register_eval(p, cb)
+        self.evals.append(p)
+        return r
 
     def add_node_plugin(self, nodeid, pluginid, plugininfo):
         p = self.get_node_plugin_info_path(nodeid, pluginid)
