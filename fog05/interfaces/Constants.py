@@ -14,7 +14,7 @@ default_tenant_id = '0'
 
 
 def create_path(tokens):
-    '/'.join(tokens)
+    return '/'.join(tokens)
 
 
 def append_to_path(base, extention):

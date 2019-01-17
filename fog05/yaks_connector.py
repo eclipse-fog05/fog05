@@ -248,6 +248,19 @@ class LAD(object):
         for ep in self.evals:
             self.ws.unregister_eval(ep)
 
+    # TODO: this should be in the YAKS api in the creation of a selector
+    def dict2args(self, d):
+        i = 0
+        b = ''
+        for k in d:
+            v = d.get(k)
+            if i == 0:
+                b = b + '{}={}'.format(k, v)
+            else:
+                b = b + ';{}={}'.format(k, v)
+            i = i + 1
+        return '('+b+')'
+
     def get_node_info_path(self, nodeid):
         return Constants.create_path([self.prefix, nodeid, 'info'])
 
@@ -274,6 +287,10 @@ class LAD(object):
     def get_node_runtime_fdus_selector(self, nodeid, pluginid):
         return Constants.create_path(
             [self.prefix, nodeid, 'runtimes', pluginid, 'fdu', '*'])
+
+    def get_node_runtime_fdus_subscriber_selector(self, nodeid, pluginid):
+        return Constants.create_path(
+            [self.prefix, nodeid, 'runtimes', pluginid, 'fdu', '**'])
 
     def get_node_netwoks_selector(self, nodeid, pluginid):
         return Constants.create_path(
@@ -310,19 +327,53 @@ class LAD(object):
         return Constants.create_path(
             [self.prefix, nodeid, 'os', 'exec', func_name])
 
+    def get_node_os_exec_path_with_params(self, nodeid, func_name, params):
+        p = self.dict2args(params)
+        return Constants.create_path(
+            [self.prefix, nodeid, 'os', 'exec', func_name, '?', p])
+
+    def get_node_os_info_path(self, nodeid):
+        return Constants.create_path(
+            [self.prefix, nodeid, 'os', 'info'])
+
     def get_node_plugin_eval_path(self, nodeid, pluginid, func_name):
         return Constants.create_path(
             [self.prefix, nodeid, 'plugins', pluginid, 'exec', func_name])
 
+    def get_node_plugin_eval_path_with_params(self, nodeid, pluginid,
+                                              func_name, params):
+        p = self.dict2args(params)
+        return Constants.create_path(
+            [self.prefix, nodeid, 'plugins', pluginid,
+             'exec', func_name, '?', p])
+
     def add_os_eval(self, nodeid, func_name, func):
         p = self.get_node_os_exec_path(nodeid, func_name)
 
-        def cb(path, props):
+        def cb(path, **props):
             v = Value(json.dumps(func(**props)), encoding=Encoding.STRING)
             return v
         r = self.ws.register_eval(p, cb)
         self.evals.append(p)
         return r
+
+    def exec_os_eval(self, nodeid, func_name, parameters):
+        s = self.get_node_os_exec_path_with_params(
+            nodeid, func_name, parameters)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError("Empty data on exec_os_eval")
+        else:
+            return json.loads(res[0][1].value)
+
+    def exec_plugin_eval(self, nodeid, pluginid, func_name, parameters):
+        s = self.get_node_plugin_eval_path_with_params(
+            nodeid, pluginid, func_name, parameters)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError("Empty data on exec_os_eval")
+        else:
+            return json.loads(res[0][1].value)
 
     def add_plugin_eval(self, nodeid, pluginid, func_name, func):
         p = self.get_node_plugin_eval_path(nodeid, pluginid, func_name)
@@ -339,6 +390,19 @@ class LAD(object):
         v = Value(json.dumps(plugininfo), encoding=Encoding.STRING)
         return self.ws.put(p, v)
 
+    def add_node_information(self, nodeid, nodeinfo):
+        p = self.get_node_info_path(nodeid)
+        v = Value(json.dumps(nodeinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def get_node_configuration(self, nodeid):
+        s = self.get_node_configuration_path(nodeid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            raise ValueError("Empty data on get_node_configuration")
+        else:
+            return json.loads(res[0][1].value)
+
     def observe_node_plugins(self, nodeid, callback):
         s = self.get_node_plugins_subscriber_selector(nodeid)
 
@@ -351,6 +415,49 @@ class LAD(object):
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
+
+    def observe_node_runtime_fdus(self, nodeid, pluginid, callback):
+        s = self.get_node_runtime_fdus_subscriber_selector(nodeid, pluginid)
+
+        def cb(kvs):
+            if len(kvs) == 0:
+                raise ValueError('Listener received empty datas')
+            else:
+                v = json.loads(kvs[0][1])
+                callback(v)
+        subid = self.ws.subscribe(s, cb)
+        self.listeners.append(subid)
+        return subid
+
+    def get_node_os_info(self, nodeid):
+        s = self.get_node_os_info_path(nodeid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            raise ValueError("Empty data on get_node_os_info")
+        else:
+            return json.loads(res[0][1].value)
+
+    def add_node_os_info(self, nodeid, osinfo):
+        p = self.get_node_os_info_path(nodeid)
+        v = Value(json.dumps(osinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def add_node_fdu(self, nodeid, pluginid, fduid, fduinfo):
+        p = self.get_node_fdu_info_path(nodeid, pluginid, fduid)
+        v = Value(json.dumps(fduinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def get_node_fdu(self, nodeid, pluginid, fduid):
+        s = self.get_node_fdu_info_path(nodeid, pluginid, fduid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            raise ValueError("Empty data on get_node_fdu")
+        else:
+            return json.loads(res[0][1].value)
+
+    def remove_node_fdu(self, nodeid, pluginid, fduid):
+        p = self.get_node_fdu_info_path(nodeid, pluginid, fduid)
+        return self.ws.remove(p)
 
 
 class Global(object):

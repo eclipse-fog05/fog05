@@ -19,10 +19,19 @@ class Plugin(object):
 
     def __init__(self, version, plugin_uuid=None):
         self.version = version
+        self.connector = None
+        self.node = None
         if uuid is None:
             self.uuid = uuid.uuid4()
         else:
             self.uuid = plugin_uuid
+
+    def call_os_plugin_function(self, fname, fparameters):
+        res = self.connector.loc.actual.exec_os_eval(
+            self.node, fname, fparameters)
+        if res.get('error'):
+            raise ValueError('OS Eval returned {}'.format(res.get('error')))
+        return res.get('result')
 
     def get_version(self):
         return self.version

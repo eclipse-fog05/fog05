@@ -1,8 +1,8 @@
 # Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
-# 
+#
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
-# 
+#
 # This program and the accompanying materials are made available under the
 # terms of the Eclipse Public License 2.0 which is available at
 # http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
@@ -24,7 +24,7 @@ from fog05.DLogger import DLogger
 from .store import Store
 from fog05.PluginLoader import PluginLoader
 from fog05.interfaces.Agent import Agent
-from yaks.api import YAKS
+from yaks import Yaks
 from fog05.interfaces.Constants import *
 
 class FosAgent(Agent):
@@ -106,7 +106,7 @@ class FosAgent(Agent):
             self.logger.info('__init__()', '[ INIT ] AUTOLOAD Plugins: {}'.format(self.__PLUGIN_AUTOLOAD))
             self.logger.info('__init__()', '[ INIT ] Plugins to autoload: {} (empty means all plugin in the directory)'.format(' '.join(self.__autoload_list)))
             self.logger.info('__init__()', '[ INIT ] #############################')
-            
+
             # self.sroot = append_to_path(sroot, self.sys_id)
             # self.shome = '{}/{}'.format(self.sroot, 'info')
             # self.logger.info('__init__()', '[ INIT ] Creating System Info Store ROOT: {} HOME: {}'.format(self.sroot, self.shome))
@@ -154,7 +154,7 @@ class FosAgent(Agent):
             # i = self.sstore.get(uri)
             # if i is not None:
             #     self.users = json.loads(i)
-                
+
             # uri = '{}/entities'.format(self.shome)
             # i = self.sstore.get(uri)
             # if i is not None:
@@ -171,7 +171,7 @@ class FosAgent(Agent):
             # self.logger.info('__init__()', '[ INIT ] Users: {}'.format(json.dumps(self.users)))
             # self.logger.info('__init__()', '[ INIT ] Networks: {}'.format(json.dumps(self.networks)))
             # self.logger.info('__init__()', '[ INIT ] #############################')
-            
+
             # Desired Store. containing the desired state
             self.droot = append_to_path(droot, self.sys_id)
             self.dhome = '{}/{}'.format(self.droot, sid)
@@ -408,17 +408,17 @@ class FosAgent(Agent):
             man = self.pl.load_plugin(man)
             man = man.run(agent=self, uuid=plugin_uuid, configuration=configuration)
             self.__manPlugins.update({man.uuid: man})
-        
+
             val = {'version': man.version, 'description': 'manager {}'.format(man.name), 'plugin': ''}
             uri = '{}/plugins/{}/{}'.format(self.ahome, man.name, man.uuid)
             self.astore.put(uri, json.dumps(val))
-        
+
             val = {'plugins': [{'name': man.name, 'version': man.version, 'uuid': str(man.uuid),
                                 'type': 'manager', 'status': 'loaded'}]}
             uri = '{}/plugins'.format(self.ahome)
             self.astore.dput(uri, json.dumps(val))
             self.logger.info('__load_manager_plugin()', '[ DONE ] Loading a Manager plugin: {}'.format(plugin_name))
-        
+
             return man
         else:
             self.logger.warning('__load_manager_plugin()', '[ WARN ] Manager: {} plugin not found!'.format(plugin_name))
