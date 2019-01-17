@@ -42,7 +42,7 @@ class GAD(object):
 
     def get_all_nodes_selector(self, sysid, tenantid):
         return Constants.create_path(
-            [self.prefix, sysid, 'tenants', tenantid, 'nodes', '*'])
+            [self.prefix, sysid, 'tenants', tenantid, 'nodes', '*', 'info'])
 
     def get_node_info_path(self, sysid, tenantid, nodeid):
         return Constants.create_path([self.prefix, sysid, 'tenants', tenantid,
@@ -54,7 +54,7 @@ class GAD(object):
 
     def get_node_plugins_selector(self, sysid, tenantid, nodeid):
         return Constants.create_path([self.prefix, sysid, 'tenants', tenantid,
-                                      'nodes', nodeid, 'plugins', '*'])
+                                      'nodes', nodeid, 'plugins', '*', 'info'])
 
     def get_node_plugins_subscriber_selector(self, sysid, tenantid, nodeid):
         return Constants.create_path([self.prefix, sysid, 'tenants', tenantid,
@@ -147,7 +147,7 @@ class GAD(object):
             raise ValueError('Empty message list on get_all_users_ids')
         else:
             xs = map(lambda x: self.extract_userid_from_path(x[0]), res)
-            return xs
+            return list(xs)
 
     def get_all_tenants_ids(self, sysid):
         s = self.get_all_tenants_selector(sysid)
@@ -156,7 +156,7 @@ class GAD(object):
             raise ValueError('Empty message list on get_all_tenants_ids')
         else:
             xs = map(lambda x: self.extract_tenantid_from_path(x[0]), res)
-            return xs
+            return list(xs)
 
     def get_all_nodes(self, sysid, tenantid):
         s = self.get_all_nodes_selector(sysid, tenantid)
@@ -165,7 +165,7 @@ class GAD(object):
             raise ValueError('Empty message list on get_all_nodes')
         else:
             xs = map(lambda x: self.extract_nodeid_from_path(x[0]), res)
-            return xs
+            return list(xs)
 
     def get_node_info(self, sysid, tenantid, nodeid):
         s = self.get_node_info_path(sysid, tenantid, nodeid)
@@ -183,7 +183,7 @@ class GAD(object):
             raise ValueError('Empty message list on get_all_tenants_ids')
         else:
             xs = map(lambda x: self.extract_plugin_from_path(x[0]), res)
-            return xs
+            return list(xs)
 
     def get_plugin_info(self, sysid, tenantid, nodeid, pluginid):
         s = self.get_node_plugin_info_path(sysid, tenantid, nodeid, pluginid)
