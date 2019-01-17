@@ -71,6 +71,16 @@ class GAD(object):
                                       'nodes', nodeid, 'plugins',
                                       pluginid, 'exec', func_name])
 
+    def get_node_fdu_info_path(self, sysid, tenantid, nodeid, fduid):
+        return Constants.create_path([self.prefix, sysid, 'tenants', tenantid,
+                                      'nodes', nodeid, 'fdu',
+                                      fduid, 'info'])
+
+    def get_node_fdu_selector(self, sysid, tenantid, nodeid):
+        return Constants.create_path([self.prefix, sysid, 'tenants', tenantid,
+                                      'nodes', nodeid, 'fdu',
+                                      '*', 'info'])
+
     def get_all_entities_selector(self, sysid, tenantid):
         return Constants.create_path(
             [self.prefix, 'tenants', tenantid, 'entities', '*'])
@@ -216,7 +226,7 @@ class GAD(object):
             if len(kvs) == 0:
                 raise ValueError('Listener received empty datas')
             else:
-                v = json.loads(kvs[0][1])
+                v = json.loads(kvs[0][1].value)
                 callback(v)
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
@@ -233,6 +243,11 @@ class GAD(object):
         r = self.ws.register_eval(p, cb)
         self.evals.append(p)
         return r
+
+    def add_node_fdu(self, sysid, tenantid, nodeid, fduid, fduinfo):
+        p = self.get_node_fdu_info_path(sysid, tenantid, nodeid, fduid)
+        v = Value(json.dumps(fduinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
 
 
 class LAD(object):
@@ -286,7 +301,7 @@ class LAD(object):
 
     def get_node_runtime_fdus_selector(self, nodeid, pluginid):
         return Constants.create_path(
-            [self.prefix, nodeid, 'runtimes', pluginid, 'fdu', '*'])
+            [self.prefix, nodeid, 'runtimes', pluginid, 'fdu', '*', 'info'])
 
     def get_node_runtime_fdus_subscriber_selector(self, nodeid, pluginid):
         return Constants.create_path(
@@ -410,7 +425,7 @@ class LAD(object):
             if len(kvs) == 0:
                 raise ValueError('Listener received empty datas')
             else:
-                v = json.loads(kvs[0][1])
+                v = json.loads(kvs[0][1].value)
                 callback(v)
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
@@ -423,7 +438,7 @@ class LAD(object):
             if len(kvs) == 0:
                 raise ValueError('Listener received empty datas')
             else:
-                v = json.loads(kvs[0][1])
+                v = json.loads(kvs[0][1].value)
                 callback(v)
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)

@@ -40,9 +40,9 @@ class FIMAPIv2(object):
         self.tenantid = tenantid
         self.manifest = self.Manifest()
         self.node = self.Node(self.connector, self.sysid, self.tenantid)
-        # self.plugin = self.Plugin(self.store)
+        self.plugin = self.Plugin(self.connector, self.sysid, self.tenantid)
         # self.network = self.Network(self.store)
-        # self.entity = self.Entity(self.store)
+        self.fdu = self.FDU(self.connector, self.sysid, self.tenantid)
         # self.image = self.Image(self.store)
         # self.flavor = self.Flavor(self.store)
 
@@ -228,29 +228,16 @@ class FIMAPIv2(object):
         def info(self, node_uuid, pluginid):
             '''
 
-            Same as API.Node.Plugins but can work for all node un the system, return a dictionary with key node uuid and value the plugin list
+            Same as API.Node.Plugins but can work for all node un the system,
+            \return a dictionary with key node uuid and value the plugin list
 
             :param node_uuid: can be none
             :return: dictionary {node_uuid, plugin list }
             '''
-            # if node_uuid is not None:
-
-            #     uri = '{}/{}/plugins'.format(self.store.aroot, node_uuid)
-            #     response = self.store.actual.get(uri)
-            #     if response is not None:
-            #         return {node_uuid: json.loads(response).get('plugins')}
-            #     else:
-            #         return None
-
-            # plugins = {}
-            # uri = '{}/*/plugins'.format(self.store.aroot)
-            # response = self.store.actual.resolveAll(uri)
-            # for i in response:
-            #     id = i[0].split('/')[3]
-            #     pl = json.loads(i[1]).get('plugins')
-            #     plugins.update({id: pl})
-            # return plugins
-            pass
+            if node_uuid is not None:
+                return self.connector.glob.actual.get_plugin_info(
+                    self.sysid, self.tenantid, node_uuid, pluginid)
+            return None
 
         def search(self, search_dict, node_uuid=None):
             '''
@@ -532,6 +519,10 @@ class FIMAPIv2(object):
             :param wait: if wait that the definition is complete before returning
             :return: boolean
             '''
+            manifest.update({'status': 'define'})
+            fduid = manifest.get('uuid')
+            return self.connector.glob.desired.add_node_fdu(
+                self.sysid, self.tenantid, node_uuid, fduid, manifest)
 
             # manifest.update({'status': 'define'})
             # handler = None
