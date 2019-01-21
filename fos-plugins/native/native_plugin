@@ -302,7 +302,7 @@ class Native(RuntimePluginFDU):
                 process = self.__execute_command(cmd, fdu.outfile)
                 fdu.on_start(process.pid, process)
 
-            self.current_entities.update({fdu_uuid: fdu})
+            self.current_fdus.update({fdu_uuid: fdu})
 
             na_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
             na_info.update({'status': 'run'})
@@ -477,7 +477,7 @@ class Native(RuntimePluginFDU):
             if fdu.get_state() == State.CONFIGURED:
                 self.clean_fdu(fdu_uuid)
                 self.undefine_fdu(fdu_uuid)
-            if instance.get_state() == State.DEFINED:
+            if fdu.get_state() == State.DEFINED:
                 self.undefine_fdu(fdu_uuid)
 
 

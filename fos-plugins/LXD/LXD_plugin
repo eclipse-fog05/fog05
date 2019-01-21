@@ -167,7 +167,7 @@ class LXD(RuntimePluginFDU):
             if img_info is None:
                 self.logger.error(
                     'define_fdu()', '[ ERRO ] LXD Plugin - Cannot find image {}'.format(fdu.image_url))
-                self.__write_error_entity(fdu_uuid, 'Image not found!')
+                # self.__write_error_entity(fdu_uuid, 'Image not found!')
 
         else:
             if fdu.image_url.startswith('http'):
@@ -215,7 +215,7 @@ class LXD(RuntimePluginFDU):
             except LXDAPIException as e:
                 self.logger.error('define_fdu()', 'Error {}'.format(e))
                 self.current_fdus.update({fdu_uuid: fdu})
-                lxd_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
+                lxd_info = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid)
                 lxd_info.update({'status': 'error'})
                 lxd_info.update({'error': '{}'.format(e)})
                 self.current_fdus.update({fdu_uuid: fdu})
@@ -229,7 +229,7 @@ class LXD(RuntimePluginFDU):
             fdu.devices = json.loads(fdudata.get('devices'))
         self.current_fdus.update({fdu_uuid: fdu})
 
-        lxd_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
+        lxd_info = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid)
         e_data = lxd_info.get('entity_data')
         e_data.update({'base_image': img_info.get('uuid')})
         lxd_info.update({'status': 'defined'})
@@ -402,7 +402,7 @@ class LXD(RuntimePluginFDU):
             fm = c.FilesManager(self.conn, c)
             envs = 'export FOSUUID={} \n' \
                    'export FOSNODEUUID={}'\
-                .format(instance_uuid, fdu_uuid, self.node)
+                .format(fdu_uuid, self.node)
             fm.put('/etc/profile.d/99-fos', envs, mode="0644")
             fdu.on_start()
 
@@ -938,7 +938,7 @@ class LXD(RuntimePluginFDU):
                 else:
                     nw_v = json.loads(str(template_value_bridge % (n.get('intf_name'), n.get('br_name'))))
 
-            elif self.agent.get_os_plugin().get_intf_type(n.get('br_name')) in ['ethernet']:
+            elif self.call_os_plugin_function('get_intf_type', {'name': n.get('br_name')}) in ['ethernet']:
                 # if n.get('')
                 # cmd = "sudo ip link add name {} link {} type macvlan"
                 # veth_name = 'veth-{}' % entity.uuid[:5])
@@ -949,11 +949,12 @@ class LXD(RuntimePluginFDU):
                 # nw_k = template_key % n.get('intf_name'))
                 nw_k = template_key2.format(i)
                 # self.agent.getOSPlugin().set_interface_unaviable(n.get('br_name'))
-            elif self.agent.get_os_plugin().get_intf_type(n.get('br_name')) in ['wireless']:
+            elif self.call_os_plugin_function('get_intf_type', {'name': n.get('br_name')}) in ['wireless']:
                 nw_v = json.loads(str(template_value_phy % (n.get('intf_name'), n.get('br_name'))))
                 # nw_k = template_key % n.get('intf_name'))
                 nw_k = template_key2.format(i)
-                self.agent.get_os_plugin().set_interface_unaviable(n.get('br_name'))
+                self.call_os_plugin_function('set_interface_unaviable', {'intf_name': n.get('br_name')})
+                #self.agent.get_os_plugin().set_interface_unaviable(n.get('br_name'))
             else:
                 if n.get('intf_name') is None:
                     n.update({'intf_name': 'eth{}'.format(i)})
@@ -1002,18 +1003,18 @@ class LXD(RuntimePluginFDU):
                 self.resume_entity(fdu_uuid)
                 self.stop_fdu(fdu_uuid)
                 self.clean_fdu(fdu_uuid)
-                self.undefine_fdu(k)
+                self.undefine_fdu(fdu_uuid)
             if fdu.get_state() == State.RUNNING:
                 self.stop_fdu(fdu_uuid)
                 self.clean_fdu(fdu_uuid)
-                self.undefine_fdu(k)
+                self.undefine_fdu(fdu_uuid)
             if fdu.get_state() == State.CONFIGURED:
                 self.clean_fdu(fdu_uuid)
-                self.undefine_fdu(k)
+                self.undefine_fdu(fdu_uuid)
             if fdu.get_state() == State.DEFINED:
-                self.undefine_fdu(k)
+                self.undefine_fdu(fdu_uuid)
 
-    def __monitor_instance(self, fdu_id, name):
+    def __monitor_instance(self, fdu_uuid, name):
         self.logger.info('__monitor_instance()', '[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(fdu_id))
         time.sleep(2)
         while True:

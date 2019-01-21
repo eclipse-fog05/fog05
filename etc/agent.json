@@ -6,10 +6,10 @@
         "path": "/opt/fos"
     },
     "plugins": {
-        "plugin_path": "fog05/fos-plugins",
+        "plugin_path": "/home/ubuntu/fog05/fos-plugins",
         "autoload": true,
         "auto": [
-            "native"
+            "LXD"
         ]
     }
 }

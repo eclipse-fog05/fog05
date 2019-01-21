@@ -110,7 +110,9 @@ class Linux(OSPlugin):
             'file_exists': self.file_exists,
             'send_sig_int': self.send_sig_int,
             'check_if_pid_exists': self.check_if_pid_exists,
-            'send_sig_kill': self.send_sig_kill
+            'send_sig_kill': self.send_sig_kill,
+            'get_intf_type': self.get_intf_type,
+            'set_interface_unaviable': self.set_interface_unaviable
          }
 
         for k in d:
@@ -587,7 +589,7 @@ class Linux(OSPlugin):
         else:
             itype = 'unknown'
 
-        return itype
+        return {'result':itype}
 
     def __get_processor_name(self):
         command = 'cat /proc/cpuinfo'.split()
