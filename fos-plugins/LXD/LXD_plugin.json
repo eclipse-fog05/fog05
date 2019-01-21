@@ -1,0 +1,13 @@
+{
+      "name": "LXD",
+      "version": 1,
+      "uuid": "892ae9fe-9d1b-4dc6-87a3-66f5695a9971",
+      "type": "runtime",
+      "requirements": [
+            "pylxd",
+            "jinja2",
+            "packaging"
+      ],
+      "description": "lxd fdu plugin",
+      "configuration": {}
+}

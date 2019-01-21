@@ -96,7 +96,7 @@ class Native(RuntimePluginFDU):
 
         self.manifest.update({'pid': self.pid})
         self.manifest.update({'status': 'running'})
-        self.connector.loc.actual.add_node_plugin(nodeid, self.uuid, manifest)
+        self.connector.loc.actual.add_node_plugin(self.node, self.uuid, self.manifest)
 
         self.logger.info('start_runtime()', ' Native Plugin - Started...')
 
@@ -446,44 +446,6 @@ class Native(RuntimePluginFDU):
             self.logger.info('__fdu_observer()', ' Native Plugin - Action not recognized : {}'.format(action))
 
 
-
-
-
-    # def __react_to_cache(self, uri, value, v):
-    #     self.logger.info('__react_to_cache()', ' Native Plugin - React to to URI: {} Value: {} Version: {}'.format(uri, value, v))
-    #     if uri.split('/')[-2] == 'entity':
-    #         uuid = uri.split('/')[-1]
-    #         value = json.loads(value)
-    #         action = value.get('status')
-    #         entity_data = value.get('entity_data')
-    #         react_func = self.__react(action)
-    #         if action == 'undefine':
-    #             self.logger.info('__react_to_cache()', ' Native Plugin - This is a remove for URI: {}'.format(uri))
-    #             self.undefine_entity(uuid)
-    #         elif react_func is not None and entity_data is None:
-    #             react_func(uuid)
-    #         elif react_func is not None:
-    #             entity_data.update({'entity_uuid': uuid})
-    #             if action == 'define':
-    #                 react_func(**entity_data)
-    #             else:
-    #                 react_func(entity_data)
-    #     elif uri.split('/')[-2] == 'instance':
-    #         instance_uuid = uri.split('/')[-1]
-    #         entity_uuid = uri.split('/')[-3]
-    #         value = json.loads(value)
-    #         action = value.get('status')
-    #         entity_data = value.get('entity_data')
-    #         # print(type(entity_data))
-    #         react_func = self.__react(action)
-    #         if action == 'clean':
-    #             self.logger.info('__react_to_cache()', ' Native Plugin - This is a remove for URI: {}'.format(uri))
-    #             self.__force_entity_instance_termination(entity_uuid, instance_uuid)
-    #         elif react_func is not None and entity_data is None:
-    #             react_func(entity_uuid, instance_uuid)
-    #         elif react_func is not None:
-    #             entity_data.update({'entity_uuid': entity_uuid})
-
     def __react(self, action):
         r = {
             'configure': self.configure_fdu,
@@ -494,35 +456,6 @@ class Native(RuntimePluginFDU):
         }
 
         return r.get(action, None)
-
-    # def __force_entity_instance_termination(self, entity_uuid, instance_uuid):
-    #     if type(entity_uuid) == dict:
-    #         entity_uuid = entity_uuid.get('entity_uuid')
-    #     self.logger.info('__force_entity_instance_termination()', ' Native Plugin - Stop a container uuid {} '.format(entity_uuid))
-    #     entity = self.current_entities.get(entity_uuid, None)
-    #     if entity is None:
-    #         self.logger.error('__force_entity_instance_termination()', 'LXD Plugin - Entity not exists')
-    #         raise EntityNotExistingException('Native not existing',
-    #                                          'Entity {} not in runtime {}'.format(entity_uuid, self.uuid))
-    #     else:
-    #         if instance_uuid is None or not entity.has_instance(instance_uuid):
-    #             self.logger.error('__force_entity_instance_termination()', 'LXD Plugin - Instance not found!!')
-    #         else:
-    #             instance = entity.get_instance(instance_uuid)
-    #             if instance.get_state() == State.PAUSED:
-    #                 self.resume_entity(entity_uuid, instance_uuid)
-    #                 self.stop_entity(entity_uuid, instance_uuid)
-    #                 self.clean_entity(entity_uuid, instance_uuid)
-    #             #    self.undefine_entity(k)
-    #             if instance.get_state() == State.RUNNING:
-    #                 self.stop_entity(entity_uuid, instance_uuid)
-    #                 self.clean_entity(entity_uuid, instance_uuid)
-    #             #    self.undefine_entity(k)
-    #             if instance.get_state() == State.CONFIGURED:
-    #                 self.clean_entity(entity_uuid, instance_uuid)
-    #             #    self.undefine_entity(k)
-    #             # if instance.get_state() == State.DEFINED:
-    #             #    self.undefine_entity(k)
 
     def __force_fdu_termination(self, fdu_uuid):
         self.logger.info('__force_fdu_termination()', ' Native Plugin - Stop a FDU uuid {} '.format(fdu_uuid))
@@ -536,11 +469,16 @@ class Native(RuntimePluginFDU):
                 self.resume_fdu(fdu_uuid)
                 self.stop_fdu(fdu_uuid)
                 self.clean_fdu(fdu_uuid)
+                self.undefine_fdu(fdu_uuid)
             if fdu.get_state() == State.RUNNING:
                 self.stop_fdu(fdu_uuid)
                 self.clean_fdu(fdu_uuid)
+                self.undefine_fdu(fdu_uuid)
             if fdu.get_state() == State.CONFIGURED:
                 self.clean_fdu(fdu_uuid)
+                self.undefine_fdu(fdu_uuid)
+            if instance.get_state() == State.DEFINED:
+                self.undefine_fdu(fdu_uuid)
 
 
 def read_file(file_path):

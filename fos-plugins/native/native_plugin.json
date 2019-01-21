@@ -7,6 +7,6 @@
             "psutil",
             "jinja2"
       ],
-      "description": "native entity plugin",
+      "description": "native fdy=u plugin",
       "configuration": {}
 }

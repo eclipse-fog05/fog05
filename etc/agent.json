@@ -1,0 +1,15 @@
+{
+    "agent": {
+        "system": "0",
+        "expose": true,
+        "yaks": "tcp/127.0.0.1:7887",
+        "path": "/opt/fos"
+    },
+    "plugins": {
+        "plugin_path": "fog05/fos-plugins",
+        "autoload": true,
+        "auto": [
+            "native"
+        ]
+    }
+}

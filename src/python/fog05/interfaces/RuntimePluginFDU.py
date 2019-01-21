@@ -25,7 +25,6 @@ class RuntimePluginFDU(Plugin):
         self.pid = -1
         self.name = ''
         self.current_fdus = {}
-        self.current_entities = {}
 
     def start_runtime(self):
         '''
@@ -40,7 +39,7 @@ class RuntimePluginFDU(Plugin):
         '''
         raise NotImplementedError('This is and interface!')
 
-    def get_entities(self):
+    def get_fdus(self):
         raise NotImplementedError('This is and interface!')
 
     def define_fdu(self, fdu_manifest):

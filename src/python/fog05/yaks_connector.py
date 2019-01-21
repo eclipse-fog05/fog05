@@ -365,6 +365,16 @@ class LAD(object):
         return Constants.create_path(
             [self.prefix, nodeid, 'runtimes', pluginid, 'fdu', fduid, 'info'])
 
+    def get_node_image_info_path(self, nodeid, pluginid, imgid):
+        return Constants.create_path(
+            [self.prefix, nodeid, 'runtimes', pluginid,
+             'images', imgid, 'info'])
+
+    def get_node_flavor_info_path(self, nodeid, pluginid, flvid):
+        return Constants.create_path(
+            [self.prefix, nodeid, 'runtimes', pluginid,
+             'flavors', flvid, 'info'])
+
     def get_node_fdu_atomic_entity_info(self, nodeid, pluginid, fduid,
                                         atomicid):
         return Constants.create_path(
@@ -518,6 +528,40 @@ class LAD(object):
 
     def remove_node_fdu(self, nodeid, pluginid, fduid):
         p = self.get_node_fdu_info_path(nodeid, pluginid, fduid)
+        return self.ws.remove(p)
+
+    def add_node_image(self, nodeid, pluginid, imgid, imginfo):
+        p = self.get_node_image_info_path(nodeid, pluginid, imgid)
+        v = Value(json.dumps(imginfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def get_node_image(self, nodeid, pluginid, imgid):
+        s = self.get_node_image_info_path(nodeid, pluginid, imgid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            raise ValueError("Empty data on get_node_fdu")
+        else:
+            return json.loads(res[0][1].value)
+
+    def remove_node_image(self, nodeid, pluginid, imgid):
+        p = self.get_node_image_info_path(nodeid, pluginid, imgid)
+        return self.ws.remove(p)
+
+    def add_node_flavor(self, nodeid, pluginid, flvid, flvinfo):
+        p = self.get_node_flavor_info_path(nodeid, pluginid, flvid)
+        v = Value(json.dumps(flvinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def get_node_flavor(self, nodeid, pluginid, flvid):
+        s = self.get_node_flavor_info_path(nodeid, pluginid, flvid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            raise ValueError("Empty data on get_node_fdu")
+        else:
+            return json.loads(res[0][1].value)
+
+    def remove_node_flavor(self, nodeid, pluginid, flvid):
+        p = self.get_node_flavor_info_path(nodeid, pluginid, flvid)
         return self.ws.remove(p)
 
 
