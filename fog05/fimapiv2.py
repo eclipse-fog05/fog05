@@ -409,105 +409,40 @@ class FIMAPIv2(object):
             self.sysid = sysid
             self.tenantid = tenantid
 
-        def __search_plugin_by_name(self, name, node_uuid):
-            # uri = '{}/{}/plugins'.format(self.store.aroot, node_uuid)
-            # all_plugins = self.store.actual.resolve(uri)
-            # if all_plugins is None or all_plugins == '':
-            #     print('Cannot get plugin')
-            #     return None
-            # all_plugins = json.loads(all_plugins).get('plugins')
-            # search = [x for x in all_plugins if name.upper()
-            #                                                in x.get('name').upper()]
-            # if len(search) == 0:
-            #     return None
-            # else:
-            #     return search[0]
-            pass
-
-        def __get_entity_handler_by_uuid(self, node_uuid, entity_uuid):
-            # uri = '{}/{}/runtime/*/entity/{}'.format(
-            #     self.store.aroot, node_uuid, entity_uuid)
-            # all = self.store.actual.resolveAll(uri)
-            # for i in all:
-            #     k = i[0]
-            #     return k.split('/')[5]
-            pass
-
-        def __get_entity_handler_by_type(self, node_uuid, t):
-            # handler = None
-            # handler = self.__search_plugin_by_name(t, node_uuid)
-            # if handler is None:
-            #     print('type not yet supported')
-            # return handler
-            pass
-
-        def __wait_atomic_entity_state_change(self, node_uuid, handler_uuid, entity_uuid, state):
+        def __wait_fdu_state_change(self, node_uuid, fdu_uuid, state):
             '''
 
-            Function used to wait if an entity changest state (eg. undefined -> defined) or goes to error state
+            Function used to wait if an instance changest state
+             (eg. configured -> run) or goes to error state
 
             :param node_uuid
-            :param handler_uuid uuid of the plugin that manage the instance
-            :param entity_uuid
+            :param fdu_uuid
             :param state the new expected state
 
-            :return dict {'status':<new status>, 'entity_uuid':entity_uuid}
+            :return dict {'status':<new status>,
+                            'fdu_uuid':fdu_uuid}
 
             '''
-            # uri = '{}/{}/runtime/{}/entity/{}'.format(
-            #     self.store.aroot, node_uuid, handler_uuid, entity_uuid)
-            # local_var = MVar()
 
-            # def cb(key, value, v):
-            #     local_var.put(value)
-            # subid = self.store.actual.observe(uri, cb)
+            local_var = MVar()
 
-            # entity_info = json.loads(local_var.get())
-            # es = entity_info.get('status')
-            # while es not in [state,'error']:
-            #         entity_info = json.loads(local_var.get())
-            #         es = entity_info.get('status')
-            # self.store.actual.overlook(subid)
-            # res = {
-            #         'entity_uuid':entity_uuid,
-            #         'status':es
-            #     }
-            # return res
-            pass
+            def cb(fdu_info):
+                local_var.put(fdu_info)
 
-        def __wait_atomic_entity_instance_state_change(self, node_uuid, handler_uuid, entity_uuid, instance_uuid, state):
-            '''
+            subid = self.connector.glob.actual.observe_node_fdu(
+                self.sysid, self.tenantid, node_uuid, fdu_uuid, cb)
 
-            Function used to wait if an instance changest state (eg. configured -> run) or goes to error state
-
-            :param node_uuid
-            :param handler_uuid uuid of the plugin that manage the instance
-            :param entity_uuid
-            :param instance_uuid
-            :param state the new expected state
-
-            :return dict {'status':<new status>, 'entity_uuid':entity_uuid, 'instance_uuid': instance_uuid}
-
-            '''
-            # uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.store.aroot, node_uuid, handler_uuid, entity_uuid, instance_uuid)
-            # local_var = MVar()
-            # def cb(key, value, v):
-            #     local_var.put(value)
-            # subid = self.store.actual.observe(uri, cb)
-
-            # entity_info = json.loads(local_var.get())
-            # es = entity_info.get('status')
-            # while es not in [state,'error']:
-            #         entity_info = json.loads(local_var.get())
-            #         es = entity_info.get('status')
-            # self.store.actual.overlook(subid)
-            # res = {
-            #         'entity_uuid':entity_uuid,
-            #         'instance_uuid' : instance_uuid,
-            #         'status':es
-            #     }
-            # return res
-            pass
+            fdu_info = local_var.get()
+            es = fdu_info.get('status')
+            while es not in [state, 'error']:
+                fdu_info = local_var.get()
+                es = fdu_info.get('status')
+            self.connector.glob.actual.unsubscribe(subid)
+            res = {
+                'fdu_uuid': fdu_uuid,
+                'status': es
+            }
+            return res
 
         def define(self, manifest, node_uuid, wait=False):
             '''
@@ -521,57 +456,13 @@ class FIMAPIv2(object):
             '''
             manifest.update({'status': 'define'})
             fduid = manifest.get('uuid')
-            return self.connector.glob.desired.add_node_fdu(
+            res = self.connector.glob.desired.add_node_fdu(
                 self.sysid, self.tenantid, node_uuid, fduid, manifest)
+            if wait:
+                self.__wait_fdu_state_change(node_uuid, fduid, 'defined')
+            return res
 
-            # manifest.update({'status': 'define'})
-            # handler = None
-            # t = manifest.get('type')
-            # try:
-            #     if t in ['kvm', 'xen']:
-            #         handler = self.__search_plugin_by_name(t, node_uuid)
-            #         validate(manifest.get('entity_data'), Schemas.vm_schema)
-            #     elif t in ['container', 'lxd','docker']:
-            #         handler = self.__search_plugin_by_name(t, node_uuid)
-            #         validate(manifest.get('entity_data'), Schemas.container_schema)
-            #     elif t == 'native':
-            #         handler = self.__search_plugin_by_name('native', node_uuid)
-            #         validate(manifest.get('entity_data'), Schemas.native_schema)
-            #     elif t == 'ros2':
-            #         handler = self.__search_plugin_by_name('ros2', node_uuid)
-            #         validate(manifest.get('entity_data'), Schemas.ros2_schema)
-            #     elif t == 'usvc':
-            #         print('microservice not yet')
-            #     else:
-            #         print('type not recognized')
-
-            #     if handler is None or handler == 'None':
-            #         print('Handler not found!! (Is none)')
-            #         return False
-            # except ValidationError as ve:
-            #     print('Validation error: {}'.format(ve.message))
-            #     return False
-
-            # if handler.get('uuid') is None:
-            #     print('Handler not found!! (Cannot get handler uuid)')
-            #     return False
-
-            # entity_uuid = manifest.get('uuid')
-            # entity_definition = manifest
-            # json_data = json.dumps(entity_definition)
-            # uri = '{}/{}/runtime/{}/entity/{}'.format(self.store.droot, node_uuid, handler.get('uuid'), entity_uuid)
-
-            # res = self.store.desired.put(uri, json_data)
-            # # print('RES is {}'.format(res))
-            # if res >= 0:
-            #     if wait:
-            #         self.__wait_atomic_entity_state_change(node_uuid, handler.get('uuid'), entity_uuid, 'defined')
-            #     return True
-            # else:
-            #     return False
-            pass
-
-        def undefine(self, entity_uuid, node_uuid, wait=False):
+        def undefine(self, fdu_uuid, node_uuid, wait=False):
             '''
 
             This method undefine an atomic entity in a node
@@ -581,43 +472,39 @@ class FIMAPIv2(object):
             :param wait: if wait before returning that the entity is undefined
             :return: boolean
             '''
-            # handler = self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
-            # uri = '{}/{}/runtime/{}/entity/{}#status=undefine'.format(self.store.droot, node_uuid, handler, entity_uuid)
-            # res = self.store.desired.dput(uri)
-            # return True
-            # # if res >= 0:
-            # #     return True
-            # # else:
-            # #     return False
-            pass
 
-        def configure(self, entity_uuid, node_uuid, instance_uuid=None, wait=False):
+            manifest = self.connector.glob.actual.get_node_fdu(
+                self.sysid, self.tenantid, node_uuid, fdu_uuid
+            )
+            manifest.update({'status': 'undefine'})
+
+            fduid = manifest.get('uuid')
+            return self.connector.glob.desired.add_node_fdu(
+                self.sysid, self.tenantid, node_uuid, fduid, manifest)
+
+        def configure(self, fdu_uuid, node_uuid, wait=False):
             '''
 
             Configure an atomic entity, creation of the instance
 
-            :param entity_uuid: entity you want to configure
+            :param fdu_uuid: FDU you want to configure
             :param node_uuid: destination node
             :param instance_uuid: optional if present will use that uuid for the atomic entity instance otherwise will generate a new one
             :param wait: optional wait before returning
             :return: instance uuid or none in case of error
             '''
-            # handler = self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
-            # if instance_uuid is None:
-            #     instance_uuid = '{}'.format(uuid.uuid4())
+            manifest = self.connector.glob.actual.get_node_fdu(
+                self.sysid, self.tenantid, node_uuid, fdu_uuid
+            )
+            manifest.update({'status': 'configure'})
 
-            # uri = '{}/{}/runtime/{}/entity/{}/instance/{}#status=configure'.format(self.store.droot, node_uuid, handler, entity_uuid, instance_uuid)
-            # res = self.store.desired.dput(uri)
-            # # print('RES is {}'.format(res))
-            # if res >= 0:
-            #     if wait:
-            #         self.__wait_atomic_entity_instance_state_change(node_uuid, handler, entity_uuid, instance_uuid, 'configured')
-            #     return instance_uuid
-            # else:
-            #     return None
-            pass
+            res = self.connector.glob.desired.add_node_fdu(
+                self.sysid, self.tenantid, node_uuid, fdu_uuid, manifest)
+            if wait:
+                self.__wait_fdu_state_change(node_uuid, fdu_uuid, 'configured')
+            return res
 
-        def clean(self, entity_uuid, node_uuid, instance_uuid, wait=False):
+        def clean(self, fdu_uuid, node_uuid, wait=False):
             '''
 
             Clean an atomic entity instance, this will destroy the instance
@@ -627,7 +514,20 @@ class FIMAPIv2(object):
             :param instance_uuid: instance you want to clean
             :param wait: optional wait before returning
             :return: boolean
+
             '''
+
+            manifest = self.connector.glob.actual.get_node_fdu(
+                self.sysid, self.tenantid, node_uuid, fdu_uuid
+            )
+            manifest.update({'status': 'clean'})
+
+            res = self.connector.glob.desired.add_node_fdu(
+                self.sysid, self.tenantid, node_uuid, fdu_uuid, manifest)
+            if wait:
+                self.__wait_fdu_state_change(node_uuid, fdu_uuid, 'defined')
+            return res
+
             # handler = self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
             # uri = '{}/{}/runtime/{}/entity/{}/instance/{}#status=clean'.format(self.store.droot, node_uuid, handler, entity_uuid, instance_uuid)
             # res = self.store.desired.dput(uri)
@@ -638,17 +538,29 @@ class FIMAPIv2(object):
             # return True
             pass
 
-        def run(self, entity_uuid, node_uuid, instance_uuid, wait=False):
+        def run(self, fdu_uuid, node_uuid, wait=False):
             '''
 
             Starting and atomic entity instance
 
-            :param entity_uuid: entity for which you want to run the instance
+            :param fdu_uuid: entity for which you want to run the instance
             :param node_uuid: destination node
             :param instance_uuid: instance you want to start
             :param wait: optional wait before returning
             :return: boolean
             '''
+
+            manifest = self.connector.glob.actual.get_node_fdu(
+                self.sysid, self.tenantid, node_uuid, fdu_uuid
+            )
+            manifest.update({'status': 'run'})
+
+            res = self.connector.glob.desired.add_node_fdu(
+                self.sysid, self.tenantid, node_uuid, fdu_uuid, manifest)
+            if wait:
+                self.__wait_fdu_state_change(node_uuid, fdu_uuid, 'run')
+            return res
+
             # handler = self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
             # uri = '{}/{}/runtime/{}/entity/{}/instance/{}#status=run'.format(self.store.droot, node_uuid, handler, entity_uuid, instance_uuid)
             # res = self.store.desired.dput(uri)
@@ -661,7 +573,7 @@ class FIMAPIv2(object):
             #     return None
             pass
 
-        def stop(self, entity_uuid, node_uuid, instance_uuid, wait=False):
+        def stop(self, fdu_uuid, node_uuid, wait=False):
             '''
 
             Shutting down an atomic entity instance
@@ -672,6 +584,17 @@ class FIMAPIv2(object):
             :param wait: optional wait before returning
             :return: boolean
             '''
+
+            manifest = self.connector.glob.actual.get_node_fdu(
+                self.sysid, self.tenantid, node_uuid, fdu_uuid
+            )
+            manifest.update({'status': 'stop'})
+
+            res = self.connector.glob.desired.add_node_fdu(
+                self.sysid, self.tenantid, node_uuid, fdu_uuid, manifest)
+            if wait:
+                self.__wait_fdu_state_change(node_uuid, fdu_uuid, 'stop')
+            return res
 
             # handler = self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
             # uri = '{}/{}/runtime/{}/entity/{}/instance/{}#status=stop'.format(self.store.droot, node_uuid, handler, entity_uuid, instance_uuid)

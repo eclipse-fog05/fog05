@@ -31,6 +31,7 @@ class Plugin(object):
             self.node, fname, fparameters)
         if res.get('error'):
             raise ValueError('OS Eval returned {}'.format(res.get('error')))
+            # return None
         return res.get('result')
 
     def get_version(self):

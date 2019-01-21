@@ -10,6 +10,16 @@ class GAD(object):
         self.listeners = []
         self.evals = []
 
+    def unsubscribe(self, subid):
+        if subid in self.listeners:
+            self.ws.unsubscribe(subid)
+            self.listeners.remove(subid)
+
+    def unregister_eval(self, path):
+        if path in self.evals:
+            self.ws.unregister_eval(path)
+            self.evals.remove(path)
+
     def close(self):
         for s in self.listeners:
             self.ws.unsubscribe(s)
@@ -249,6 +259,30 @@ class GAD(object):
         v = Value(json.dumps(fduinfo), encoding=Encoding.STRING)
         return self.ws.put(p, v)
 
+    def observe_node_fdu(self, sysid, tenantid, nodeid, fduid, callback):
+        s = self.get_node_fdu_info_path(sysid, tenantid, nodeid, fduid)
+
+        def cb(kvs):
+            if len(kvs) == 0:
+                raise ValueError('Listener received empty datas')
+            else:
+                v = json.loads(kvs[0][1].value)
+                callback(v)
+        subid = self.ws.subscribe(s, cb)
+        self.listeners.append(subid)
+        return subid
+
+    def get_node_fdu(self, sysid, tenantid, nodeid, fduid):
+        p = self.get_node_fdu_info_path(sysid, tenantid, nodeid, fduid)
+        kvs = self.ws.get(p)
+        if len(kvs) == 0:
+            return None
+        return json.loads(kvs[0][1].value)
+
+    def remove_node_fdu(self, sysid, tenantid, nodeid, fduid):
+        p = self.get_node_fdu_info_path(sysid, tenantid, nodeid, fduid)
+        return self.ws.remove(p)
+
 
 class LAD(object):
     def __init__(self, workspace, prefix):
@@ -256,6 +290,16 @@ class LAD(object):
         self.prefix = prefix
         self.listeners = []
         self.evals = []
+
+    def unsubscribe(self, subid):
+        if subid in self.listeners:
+            self.ws.unsubscribe(subid)
+            self.listeners.remove(subid)
+
+    def unregister_eval(self, path):
+        if path in self.evals:
+            self.ws.unregister_eval(path)
+            self.evals.remove(path)
 
     def close(self):
         for s in self.listeners:
@@ -344,8 +388,9 @@ class LAD(object):
 
     def get_node_os_exec_path_with_params(self, nodeid, func_name, params):
         p = self.dict2args(params)
+        f = func_name + '?' + p
         return Constants.create_path(
-            [self.prefix, nodeid, 'os', 'exec', func_name, '?', p])
+            [self.prefix, nodeid, 'os', 'exec', f])
 
     def get_node_os_info_path(self, nodeid):
         return Constants.create_path(
@@ -358,9 +403,10 @@ class LAD(object):
     def get_node_plugin_eval_path_with_params(self, nodeid, pluginid,
                                               func_name, params):
         p = self.dict2args(params)
+        f = func_name + '?' + p
         return Constants.create_path(
             [self.prefix, nodeid, 'plugins', pluginid,
-             'exec', func_name, '?', p])
+             'exec', f])
 
     def add_os_eval(self, nodeid, func_name, func):
         p = self.get_node_os_exec_path(nodeid, func_name)
