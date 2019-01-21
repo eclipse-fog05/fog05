@@ -1,0 +1,567 @@
+#!/usr/bin/env python3
+
+# Copyright (c) 2014,2018 ADLINK Technology Inc.
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
+# which is available at https://www.apache.org/licenses/LICENSE-2.0.
+#
+# SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
+#
+# Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Base plugins set
+
+import sys
+import os
+import uuid
+import psutil
+import json
+import time
+import signal
+import base64
+import binascii
+from fog05.interfaces.States import State
+from fog05.interfaces.RuntimePluginFDU import *
+from fog05 import Yaks_Connector
+from NativeFDU import NativeFDU
+from jinja2 import Environment
+from fog05.DLogger import DLogger
+from mvar import MVar
+
+
+class Native(RuntimePluginFDU):
+
+    def __init__(self, name, version, plugin_uuid, yaks_locator, nodeid,
+                    manifest):
+        super(Native, self).__init__(version, plugin_uuid)
+        self.name = name
+
+        loc = yaks_locator.split('/')[1]
+        self.connector = Yaks_Connector(loc)
+        self.logger = DLogger(debug_flag=True)
+        self.node = nodeid
+        self.manifest = manifest
+        self.pid = os.getpid()
+        self.var = MVar()
+
+        osinfo = self.connector.loc.actual.get_node_os_info(nodeid)
+        self.operating_system = osinfo.get('name')
+
+        self.logger.info(
+            '__init__()', ' Hello from Native Plugin - Running on {}'.format(self.operating_system))
+        file_dir = os.path.dirname(__file__)
+        self.DIR = os.path.abspath(file_dir)
+
+        self.agent_conf = self.connector.loc.actual.get_node_configuration(self.node)
+        self.BASE_DIR = self.agent_conf.get('agent').get('path')
+        self.LOG_DIR = 'logs'
+        self.STORE_DIR = 'apps'
+        self.configuration = manifest.get('configuration',{})
+        signal.signal(signal.SIGINT, self.__catch_signal)
+
+
+
+
+
+    def __catch_signal(self, signal, _):
+        if signal == 2:
+            self.var.put(signal)
+
+    def start_runtime(self):
+
+        if self.call_os_plugin_function('dir_exists', {'dir_path': self.BASE_DIR}):
+            self.logger.info('start_runtime()', ' Native Plugin - Dir exists!')
+            if not self.call_os_plugin_function('dir_exists', {'dir_path': os.path.join(self.BASE_DIR, self.STORE_DIR)}):
+                self.call_os_plugin_function(
+                    'create_dir', {'dir_path': os.path.join(self.BASE_DIR, self.STORE_DIR)})
+            if not self.call_os_plugin_function('dir_exists', {'dir_path': os.path.join(self.BASE_DIR, self.LOG_DIR)}):
+                self.call_os_plugin_function(
+                    'create_dir', {'dir_path': os.path.join(self.BASE_DIR, self.LOG_DIR)})
+        else:
+            self.logger.info('start_runtime()',
+                             ' Native Plugin - Dir not exists!')
+            self.call_os_plugin_function(
+                'create_dir', {'dir_path': os.path.join(self.BASE_DIR)})
+            self.call_os_plugin_function(
+                'create_dir', {'dir_path': os.path.join(self.BASE_DIR, self.STORE_DIR)})
+            self.call_os_plugin_function(
+                'create_dir', {'dir_path': os.path.join(self.BASE_DIR, self.LOG_DIR)})
+
+
+        self.connector.loc.desired.observe_node_runtime_fdus(self.node, self.uuid, self.__fdu_observer)
+
+
+        self.manifest.update({'pid': self.pid})
+        self.manifest.update({'status': 'running'})
+        self.connector.loc.actual.add_node_plugin(nodeid, self.uuid, manifest)
+
+        self.logger.info('start_runtime()', ' Native Plugin - Started...')
+
+        r = self.var.get()
+        self.stop_runtime()
+        self.connector.close()
+        exit(r)
+
+    def stop_runtime(self):
+        self.logger.info('stopRuntime()', ' Native Plugin - Destroy running BE')
+        for k in list(self.current_fdus.keys()):
+            fdu = self.current_fdus.get(k)
+            self.__force_fdu_termination(k)
+            if fdu.get_state() == State.DEFINED:
+                self.undefine_fdu(k)
+        self.logger.info('stopRuntime()', '[ DONE ] Native Plugin - Bye')
+        return True
+
+    def define_fdu(self, fdu_manifest):
+
+        fdu_uuid = fdu_manifest.get('uuid')
+        out_file = 'native_{}.log'.format(fdu_uuid)
+        edata = fdu_manifest.get('entity_data')
+        fdu = NativeFDU(fdu_uuid, fdu_manifest.get('name'), edata.get('command'), edata.get('source'),
+                                  edata.get('args'), out_file)
+
+        self.logger.info('define_fdu()', ' Native Plugin - Define BE FDU')
+        self.logger.info('define_fdu()', ' Native Plugin - FDU is {}'.format(fdu))
+
+        if fdu.source_url is not None and fdu.source_url.startswith('http'):
+            zip_name = fdu.source_url.split('/')[-1]
+            zip_file = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, zip_name)
+            dest = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid)
+            # entity.source = os.path.join(dest,entity.command)
+
+            if self.operating_system.lower() == 'linux':
+                if zip_name.endswith('.tar.gz'):
+                    unzip_cmd = 'tar -zxvf {} -C {}'.format(zip_file, dest)
+                else:
+                    unzip_cmd = 'unzip {} -d {}'.format(zip_file, dest)
+            elif self.operating_system.lower() == 'windows':
+                unzip_cmd = 'Expand-Archive -Path {} -DestinationPath {}'.format(zip_file, dest)
+            else:
+                unzip_cmd = ''
+
+            self.call_os_plugin_function('create_dir',{'dir_path':os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid)})
+            self.call_os_plugin_function('download_file',{'url':fdu.source_url,'file_path':os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, zip_name)})
+            self.call_os_plugin_function('execute_command',{'command':unzip_cmd,'blocking':True, 'external':True})
+            fdu.source = dest
+        else:
+            fdu.source = None
+
+        fdu.set_state(State.DEFINED)
+        self.current_fdus.update({fdu_uuid: fdu})
+        na_info = fdu_manifest
+        na_info.update({'status': 'defined'})
+        self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, na_info)
+        self.logger.info('define_fdu()', ' Native Plugin - Defined BE FDU uuid {}'.format(fdu_uuid))
+        return fdu_uuid
+
+    def undefine_fdu(self, fdu_uuid):
+        self.logger.info('undefine_fdu()', ' Native Plugin - Undefine BE FDU uuid {}'.format(fdu_uuid))
+        fdu = self.current_fdus.get(fdu_uuid, None)
+        if fdu is None:
+            self.logger.error('undefine_fdu()', 'Native Plugin - FDU not exists')
+            raise FDUNotExistingException('FDU not existing',
+                                             'FDU {} not in runtime {}'.format(fdu_uuid, self.uuid))
+        elif fdu.get_state() != State.DEFINED:
+            self.logger.error('undefine_fdu()', 'Native Plugin - FDU state is wrong, or transition not allowed')
+            raise StateTransitionNotAllowedException('FDU is not in DEFINED state',
+                                                     'FDU {} is not in DEFINED state'.format(fdu_uuid))
+        else:
+            self.call_os_plugin_function('remove_dir',{'dir_path':os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid)})
+            self.current_fdus.pop(fdu_uuid, None)
+            self.connector.loc.actual.remove_node_fdu(self.node, self.uuid, fdu_uuid)
+            self.logger.info('undefine_fdu()', '[ DONE ] Native Plugin - Undefine BE FDU uuid {}'.format(fdu_uuid))
+            return True
+
+    def configure_fdu(self, fdu_uuid):
+
+        self.logger.info('configure_fdu()', ' Native Plugin - Configure BE FDU uuid {}'.format(fdu_uuid))
+        fdu = self.current_fdus.get(fdu_uuid, None)
+        if fdu is None:
+            self.logger.error('configure_fdu()', 'Native Plugin - FDU not exists')
+            raise FDUNotExistingException('FDU not existing',
+                                             'FDU {} not in runtime {}'.format(fdu_uuid, self.uuid))
+        elif fdu.get_state() != State.DEFINED:
+            self.logger.error('configure_fdu()', 'FDU Plugin - Entity state is wrong, or transition not allowed')
+            raise StateTransitionNotAllowedException('FDU is not in DEFINED state',
+                                                     'FDU {} is not in DEFINED state'.format(fdu_uuid))
+        else:
+            out_file = 'native_{}.log'.format(fdu_uuid)
+            out_file = os.path.join(self.BASE_DIR, self.LOG_DIR, out_file)
+            fdu.outfile = out_file
+            native_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name)
+            self.call_os_plugin_function('create_dir',{'dir_path':native_dir})
+            self.call_os_plugin_function('create_file',{'file_path':fdu.outfile})
+            fdu.on_configured()
+
+            self.logger.info('configure_fdu()', ' Native Plugin - FDU is {}'.format(fdu))
+
+            self.current_fdus.update({fdu_uuid: fdu})
+            na_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
+            na_info.update({'status': 'configured'})
+            # TODO: this should be an update when YAKS will implement update
+            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, na_info)
+            self.logger.info('configure_fdu()', '[ DONE ] Native Plugin - Configure BE FDU uuid {}'.format(fdu_uuid))
+            return True
+
+    def clean_fdu(self, fdu_uuid):
+        self.logger.info('clean_fdu()', ' FDU Plugin - Clean BE uuid {}'.format(fdu_uuid))
+        fdu = self.current_fdus.get(fdu_uuid, None)
+        if fdu is None:
+            self.logger.error('clean_fdu()', 'Native Plugin - FDU not exists')
+            raise FDUNotExistingException('FDU not existing',
+                                             'FDU {} not in runtime {}'.format(fdu_uuid, self.uuid))
+        elif fdu.get_state() != State.CONFIGURED:
+            self.logger.error('clean_fdu()', 'Native Plugin - FDU state is wrong, or transition not allowed')
+            raise StateTransitionNotAllowedException('FDU is not in CONFIGURED state',
+                                                     'FDU {} is not in CONFIGURED state'.format(fdu_uuid))
+        else:
+
+            self.call_os_plugin_function('remove_file',{'file_path':fdu.outfile})
+            native_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name)
+            self.call_os_plugin_function('remove_dir',{'dir_path':native_dir})
+
+            fdu.on_clean()
+            self.current_fdus.update({fdu_uuid: fdu})
+            na_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
+            na_info.update({'status': 'defined'})
+            # TODO: this should be an update when YAKS will implement update
+            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, na_info)
+            self.logger.info('clean_fdu()', '[ DONE ] Native Plugin - Clean BE uuid {}'.format(fdu_uuid))
+            return True
+
+    def run_fdu(self, fdu_uuid):
+        self.logger.info('run_fdu()', ' Native Plugin - Starting BE uuid {}'.format(fdu_uuid))
+        fdu = self.current_fdus.get(fdu_uuid, None)
+        if fdu is None:
+            self.logger.error('run_fdu()', 'Native Plugin - FDU not exists')
+            raise FDUNotExistingException('FDU not existing',
+                                             'FDU {} not in runtime {}'.format(fdu_uuid, self.uuid))
+        elif fdu.get_state() != State.CONFIGURED:
+            self.logger.error('run_fdu()', 'Native Plugin - FDU state is wrong, or transition not allowed')
+            raise StateTransitionNotAllowedException('FDU is not in CONFIGURED state',
+                                                     'FDU {} is not in CONFIGURED state'.format(fdu_uuid))
+        else:
+            self.logger.info('run_fdu()', 'Native Plugin - FDU is {}'.format(fdu))
+            if fdu.source is not None:
+                native_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name)
+                source_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid)
+                pid_file = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name, fdu_uuid)
+                run_script = self.__generate_run_script(fdu.command, fdu.args, source_dir, pid_file)
+                run_script = binascii.hexlify(base64.b64encode(bytes(run_script, 'utf-8'))).decode()
+                if self.operating_system.lower() == 'linux':
+                    self.call_os_plugin_function('store_file',{'content':run_script, 'file_path':native_dir, 'filename':'{}_run.sh'.format(fdu_uuid)})
+                    chmod_cmd = 'chmod +x {}'.format(os.path.join(native_dir, '{}_run.sh'.format(fdu_uuid)))
+                    self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+                    cmd = '{}'.format(os.path.join(native_dir, '{}_run.sh'.format(fdu_uuid)))
+                elif self.operating_system.lower() == 'windows':
+                    self.call_os_plugin_function('store_file',{'content':run_script, 'file_path':native_dir, 'filename':'{}_run.ps1'.format(fdu_uuid)})
+                    cmd = '{}'.format(os.path.join(native_dir, '{}_run.ps1'.format(fdu_uuid)))
+                else:
+                    cmd = ''
+                process = self.__execute_command(cmd, fdu.outfile)
+                time.sleep(1)
+                # pid_file = '{}.pid'.format(fdu_uuid)
+                # pid_file = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name, pid_file)
+                pid = int(self.call_os_plugin_function('read_file',{'file_path':pid_file, 'root':False}))
+                fdu.on_start(pid, process)
+            else:
+                # try to inject the pid file if script use {{pid_file}}
+                '''
+                This make possible to add on the launch file of you native application that fog05 can inject the pid output file
+                in this way is possible to fog05 to correct send signal to your application, in the case the {{pid_file}} is not defined the script
+                will not be modified
+                '''
+                if self.operating_system.lower() == 'linux':
+                        native_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name)
+                        f_name = '{}_run.sh'.format(fdu_uuid)
+                        pid_file = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name, fdu_uuid)
+                        template_xml = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'run_native_unix2.sh'), 'root':False})
+                        na_script = Environment().from_string(template_xml)
+                        cmd = '{} {}'.format(fdu.command, ' '.join(fdu.args))
+                        na_script = na_script.render(command=cmd, outfile=pid_file)
+                        na_script = binascii.hexlify(base64.b64encode(bytes(na_script, 'utf-8'))).decode()
+                        self.logger.info('run_fdu()', '[ INFO ] Lenght of runscript is {}'.format(len(na_script)))
+                        self.call_os_plugin_function('store_file',{'content':na_script, 'file_path':native_dir, 'filename':f_name})
+                        chmod_cmd = 'chmod +x {}'.format(os.path.join(native_dir, f_name))
+                        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+                        cmd = '{}'.format(os.path.join(native_dir, f_name))
+
+                elif self.operating_system.lower() == 'windows':
+                    native_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name)
+                    pid_file = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name, fdu_uuid)
+                    run_script = self.__generate_run_script(fdu.command, fdu.args, None, pid_file)
+                    run_script = binascii.hexlify(base64.b64encode(bytes(run_script, 'utf-8'))).decode()
+                    self.logger.info('run_fdu()', '[ INFO ] PowerShell script is {}'.format(run_script))
+                    self.call_os_plugin_function('store_file',{'content':run_script, 'file_path':native_dir, 'filename':'{}_run.ps1'.format(fdu_uuid)})
+                    cmd = '{}'.format(os.path.join(native_dir, '{}_run.ps1'.format(fdu_uuid)))
+
+                self.logger.info('run_fdu()', 'Command is {}'.format(cmd))
+                process = self.__execute_command(cmd, fdu.outfile)
+                fdu.on_start(process.pid, process)
+
+            self.current_entities.update({fdu_uuid: fdu})
+
+            na_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
+            na_info.update({'status': 'run'})
+            # TODO: this should be an update when YAKS will implement update
+            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, na_info)
+            self.logger.info('run_fdu()', '[ DONE ] Native Plugin - Running BE uuid {}'.format(fdu_uuid))
+            return True
+
+    def stop_fdu(self, fdu_uuid):
+        self.logger.info('stop_fdu()', ' Native Plugin - Stop BE uuid {}'.format(fdu_uuid))
+        fdu = self.current_fdus.get(fdu_uuid, None)
+        if fdu is None:
+            self.logger.error('stop_fdu()', 'Native Plugin - FDU not exists')
+            raise FDUNotExistingException('FDU not existing',
+                                             'FDU {} not in runtime {}'.format(fdu_uuid, self.uuid))
+        elif fdu.get_state() != State.RUNNING:
+            self.logger.error('stop_fdu()', 'Native Plugin - FDU state is wrong, or transition not allowed')
+            raise StateTransitionNotAllowedException('FDU is not in RUNNING state',
+                                                     'FDU {} is not in RUNNING state'.format(fdu_uuid))
+        else:
+
+            if fdu.source is None:
+
+                pid = fdu.pid
+                self.logger.info('stop_fdu()', 'FDU source is none')
+                self.logger.info('stop_fdu()', 'Native Plugin - PID {}'.format(pid))
+                self.call_os_plugin_function('send_sig_int',{'pid':pid})
+                f_name = '{}.pid'.format(fdu_uuid)
+                f_path = os.path.join(self.BASE_DIR, self.STORE_DIR)
+                pid_file = os.path.join(f_path, f_name)
+                self.logger.info('stop_fdu()', 'Check if PID file exists {}'.format(pid_file))
+                if self.call_os_plugin_function('file_exists',{'file_path':pid_file}):
+                    pid = int(self.call_os_plugin_function('read_file',{'file_path':pid_file, 'root':False}))
+                    self.logger.info('stop_fdu()', 'Native Plugin - PID {}'.format(pid))
+                    self.call_os_plugin_function('execute_command',{'command':'sudo pkill -9 -P {}'.format(pid),'blocking':True, 'external':False})
+                    if self.call_os_plugin_function('check_if_pid_exists',{'pid':pid}):
+                        self.call_os_plugin_function('send_sig_int',{'pid':pid})
+                        time.sleep(3)
+                    if  self.call_os_plugin_function('check_if_pid_exists',{'pid':pid}):
+                        self.call_os_plugin_function('send_sig_kill',{'pid':pid})
+                pid_file = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name, '{}.pid'.format(fdu_uuid))
+                self.logger.info('stop_fdu()', 'Check if PID file exists {}'.format(pid_file))
+                if self.call_os_plugin_function('file_exists',{'file_path':pid_file}):
+                    pid = int(self.call_os_plugin_function('read_file',{'file_path':pid_file, 'root':False}))
+                    self.logger.info('stop_fdu()', 'Native Plugin - PID {}'.format(pid))
+                    self.call_os_plugin_function('execute_command',{'command':'sudo pkill -9 -P {}'.format(pid),'blocking':True, 'external':False})
+                    if self.call_os_plugin_function('check_if_pid_exists',{'pid':pid}):
+                        self.call_os_plugin_function('send_sig_int',{'pid':pid})
+                        time.sleep(3)
+                    if self.call_os_plugin_function('check_if_pid_exists',{'pid':pid}):
+                        self.call_os_plugin_function('send_sig_kill',{'pid':pid})
+            else:
+
+                self.logger.info('stop_fdu()', 'Instance source is not none')
+                pid_file = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name, '{}.pid'.format(fdu_uuid))
+                pid = int(self.call_os_plugin_function('read_file',{'file_path':pid_file, 'root':False}))
+                if self.operating_system.lower == 'linux':
+                    self.logger.info('stop_fdu()', 'Native Plugin - PID {}'.format(pid))
+                    self.call_os_plugin_function('execute_command',{'command':'sudo pkill -9 -P {}'.format(pid),'blocking':True, 'external':False})
+                if self.call_os_plugin_function('check_if_pid_exists',{'pid':pid}):
+                    self.call_os_plugin_function('send_sig_int',{'pid':pid})
+                    time.sleep(3)
+                if self.call_os_plugin_function('check_if_pid_exists',{'pid':pid}):
+                    self.call_os_plugin_function('send_sig_kill',{'pid':pid})
+            fdu.on_stop()
+            self.current_fdus.update({fdu_uuid: fdu})
+            na_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
+            na_info.update({'status': 'stop'})
+            # TODO: this should be an update when YAKS will implement update
+            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, na_info)
+            self.logger.info('stop_fdu()', '[ DONE ] Native Plugin - Stopped BE uuid {}'.format(fdu_uuid))
+            return True
+
+    def pause_fdu(self, fdu_uuid):
+        self.logger.warning('pause_fdu()', 'Native Plugin - Cannot pause a BE')
+        return False
+
+    def resume_fdu(self, fdu_uuid):
+        self.logger.warning('pause_fdu()', 'Native Plugin - Cannot resume a BE')
+        return False
+
+
+    def __execute_command(self, command, out_file):
+        f = open(out_file, 'w')
+        if self.operating_system.lower() == 'windows':
+            p = psutil.Popen(['PowerShell', '-File', command], shell=True, stdout=f, stderr=f)
+        else:
+            # cmd = 'sh -c {}'.format(command)
+            cmd_splitted = command.split()
+            self.logger.info('__execute_command()', 'CMD SPLIT = {}'.format(cmd_splitted))
+            p = psutil.Popen(cmd_splitted, shell=False, stdout=f, stderr=f)
+        self.logger.info('__execute_command()', 'PID = {}'.format(p.pid))
+        return p
+
+    def __generate_run_script(self, cmd, args, directory, outfile):
+        if self.operating_system.lower() == 'windows':
+            if len(args) == 0:
+                self.logger.info('__generate_run_script()', ' Native Plugin - Generating run script for Windows')
+                template_script = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'run_native_windows.ps1')})
+                na_script = Environment().from_string(template_script)
+                if directory:
+                    cmd = os.path.join(directory,cmd)
+                na_script = na_script.render(command=cmd, outfile=outfile)
+            else:
+                args = json.dumps(args)[1:-1]
+                template_script = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'run_native_windows_args.ps1')})
+                na_script = Environment().from_string(template_script)
+                if directory:
+                    cmd = os.path.join(directory, cmd)
+                na_script = na_script.render(command=cmd,args_list=args, outfile=outfile)
+
+        else:
+            self.logger.info('__generate_run_script()', ' Native Plugin - Generating run script for Linux')
+            if directory is None:
+                template_script = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'run_native_unix2.sh')})
+            else:
+                template_script = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'run_native_unix.sh')})
+            na_script = Environment().from_string(template_script)
+            if directory:
+                cmd = os.path.join(directory, cmd)
+            if len(args)>0:
+                cmd = cmd + ' {}'.format(' '.join(args))
+            na_script = na_script.render(command=cmd, outfile=outfile)
+        return na_script
+
+
+    def __fdu_observer(self, fdu_info):
+        self.logger.info('__fdu_observer()', ' Native Plugin - New Action of a FDU - FDU Info: {}'.format(fdu_info))
+        action = fdu_info.get('status')
+        fdu_uuid = fdu_info.get('uuid')
+        react_func = self.__react(action)
+        if action == 'undefine':
+            self.logger.info('__fdu_observer()', ' Native Plugin - This is a remove for : {}'.format(fdu_info))
+            self.undefine_fdu(fdu_uuid)
+        elif action == 'define':
+            self.logger.info('__fdu_observer()', ' Native Plugin - This is a define for : {}'.format(fdu_info))
+            self.define_fdu(fdu_info)
+        elif react_func is not None:
+            react_func(fdu_uuid)
+        else:
+            self.logger.info('__fdu_observer()', ' Native Plugin - Action not recognized : {}'.format(action))
+
+
+
+
+
+    # def __react_to_cache(self, uri, value, v):
+    #     self.logger.info('__react_to_cache()', ' Native Plugin - React to to URI: {} Value: {} Version: {}'.format(uri, value, v))
+    #     if uri.split('/')[-2] == 'entity':
+    #         uuid = uri.split('/')[-1]
+    #         value = json.loads(value)
+    #         action = value.get('status')
+    #         entity_data = value.get('entity_data')
+    #         react_func = self.__react(action)
+    #         if action == 'undefine':
+    #             self.logger.info('__react_to_cache()', ' Native Plugin - This is a remove for URI: {}'.format(uri))
+    #             self.undefine_entity(uuid)
+    #         elif react_func is not None and entity_data is None:
+    #             react_func(uuid)
+    #         elif react_func is not None:
+    #             entity_data.update({'entity_uuid': uuid})
+    #             if action == 'define':
+    #                 react_func(**entity_data)
+    #             else:
+    #                 react_func(entity_data)
+    #     elif uri.split('/')[-2] == 'instance':
+    #         instance_uuid = uri.split('/')[-1]
+    #         entity_uuid = uri.split('/')[-3]
+    #         value = json.loads(value)
+    #         action = value.get('status')
+    #         entity_data = value.get('entity_data')
+    #         # print(type(entity_data))
+    #         react_func = self.__react(action)
+    #         if action == 'clean':
+    #             self.logger.info('__react_to_cache()', ' Native Plugin - This is a remove for URI: {}'.format(uri))
+    #             self.__force_entity_instance_termination(entity_uuid, instance_uuid)
+    #         elif react_func is not None and entity_data is None:
+    #             react_func(entity_uuid, instance_uuid)
+    #         elif react_func is not None:
+    #             entity_data.update({'entity_uuid': entity_uuid})
+
+    def __react(self, action):
+        r = {
+            'configure': self.configure_fdu,
+            'stop': self.stop_fdu,
+            'resume': self.resume_fdu,
+            'run': self.run_fdu,
+            'clean': self.clean_fdu
+        }
+
+        return r.get(action, None)
+
+    # def __force_entity_instance_termination(self, entity_uuid, instance_uuid):
+    #     if type(entity_uuid) == dict:
+    #         entity_uuid = entity_uuid.get('entity_uuid')
+    #     self.logger.info('__force_entity_instance_termination()', ' Native Plugin - Stop a container uuid {} '.format(entity_uuid))
+    #     entity = self.current_entities.get(entity_uuid, None)
+    #     if entity is None:
+    #         self.logger.error('__force_entity_instance_termination()', 'LXD Plugin - Entity not exists')
+    #         raise EntityNotExistingException('Native not existing',
+    #                                          'Entity {} not in runtime {}'.format(entity_uuid, self.uuid))
+    #     else:
+    #         if instance_uuid is None or not entity.has_instance(instance_uuid):
+    #             self.logger.error('__force_entity_instance_termination()', 'LXD Plugin - Instance not found!!')
+    #         else:
+    #             instance = entity.get_instance(instance_uuid)
+    #             if instance.get_state() == State.PAUSED:
+    #                 self.resume_entity(entity_uuid, instance_uuid)
+    #                 self.stop_entity(entity_uuid, instance_uuid)
+    #                 self.clean_entity(entity_uuid, instance_uuid)
+    #             #    self.undefine_entity(k)
+    #             if instance.get_state() == State.RUNNING:
+    #                 self.stop_entity(entity_uuid, instance_uuid)
+    #                 self.clean_entity(entity_uuid, instance_uuid)
+    #             #    self.undefine_entity(k)
+    #             if instance.get_state() == State.CONFIGURED:
+    #                 self.clean_entity(entity_uuid, instance_uuid)
+    #             #    self.undefine_entity(k)
+    #             # if instance.get_state() == State.DEFINED:
+    #             #    self.undefine_entity(k)
+
+    def __force_fdu_termination(self, fdu_uuid):
+        self.logger.info('__force_fdu_termination()', ' Native Plugin - Stop a FDU uuid {} '.format(fdu_uuid))
+        fdu = self.current_fdus.get(fdu_uuid, None)
+        if fdu is None:
+            self.logger.error('__force_fdu_termination()', 'Native Plugin - FDU not exists')
+            raise FDUNotExistingException('Native not existing',
+                                             'FDU {} not in runtime {}'.format(fdu_uuid, self.uuid))
+        else:
+            if fdu.get_state() == State.PAUSED:
+                self.resume_fdu(fdu_uuid)
+                self.stop_fdu(fdu_uuid)
+                self.clean_fdu(fdu_uuid)
+            if fdu.get_state() == State.RUNNING:
+                self.stop_fdu(fdu_uuid)
+                self.clean_fdu(fdu_uuid)
+            if fdu.get_state() == State.CONFIGURED:
+                self.clean_fdu(fdu_uuid)
+
+
+def read_file(file_path):
+    data = ''
+    with open(file_path, 'r') as f:
+        data = f.read()
+    return data
+
+
+if __name__ == '__main__':
+    if len(sys.argv) < 3:
+        exit(-1)
+    yaksip = sys.argv[1]
+    nodeid = sys.argv[2]
+    print('ARGS {}'.format(sys.argv))
+    file_dir = os.path.dirname(__file__)
+    manifest = json.loads(
+        read_file(os.path.join(file_dir, 'native_plugin.json')))
+    na = Native(manifest.get('name'), manifest.get('version'), manifest.get(
+        'uuid'), yaksip, nodeid, manifest)
+    na.start_runtime()
+
+
+

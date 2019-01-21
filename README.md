@@ -16,14 +16,14 @@ The version on master does not use Cyclone DDS for communication between nodes
 You need to install YAKS API from pip
 
 ```
-pip3 install yaks==0.1.1
+pip3 install yaks==0.2.1
 ```
 
 You need a running YAKS server to use it.
 
 YAKS can be found [here](https://www.dropbox.com/s/1tmbubzahzy4eex/yaksd.tar.gz)
 
-#### 0.1.3 
+#### 0.1.3
 
 
 For the version that uses Cyclone DDS go to branch [0.1.3](https://github.com/eclipse/fog05/tree/0.1.3)
