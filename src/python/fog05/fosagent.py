@@ -95,7 +95,7 @@ class FosAgent(Agent):
                     self.__autoload_list = json.loads(self.config['plugins']['auto'])
             sid = str(self.uuid)
 
-            self.yaks = YAKS.login(self.yaks_server)
+            self.yaks = Yaks.login(self.yaks_server)
 
             self.logger.info('__init__()', '[ INIT ] #############################')
             self.logger.info('__init__()', '[ INIT ] fog05 Agent configuration is:')
