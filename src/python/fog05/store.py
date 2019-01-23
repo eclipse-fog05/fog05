@@ -60,7 +60,7 @@ class Store(object):
     def get(self, k):
         r = self.workspace.get(k)
         if r is not None and len(r) > 0:
-            v = r[0].get('value').get_value()
+            v = r[0][1].get_value()
             return v
         return None
 
@@ -69,7 +69,7 @@ class Store(object):
         if r is not None and len(r) > 0:
             res = []
             for e in r:
-                k, v = str(e.get('key')), e.get('value').get_value()
+                k, v = str(e[0], e[1].get_value()
                 res.append((k, v, 0))
             return res
         return []
@@ -84,28 +84,28 @@ class Store(object):
         return self.workspace.put(k, Value(v, encoding=Encoding.STRING))
 
     def dput(self, uri, value=None):
-        data = self.get(uri)
-        uri_values = ''
+        data=self.get(uri)
+        uri_values=''
         if value is None:
-            uri = uri.split('#')
-            uri_values = uri[-1]
-            uri = uri[0]
+            uri=uri.split('#')
+            uri_values=uri[-1]
+            uri=uri[0]
         if data is None or data == '':
-            data = {}
+            data={}
         else:
-            data = json.loads(data)
+            data=json.loads(data)
 
         if value is None:
-            uri_values = uri_values.split('&')
+            uri_values=uri_values.split('&')
             for tokens in uri_values:
-                v = tokens.split('=')[-1]
-                k = tokens.split('=')[0]
-                d = self.dot2dict(k, v)
-                data = self.data_merge(data, d)
+                v=tokens.split('=')[-1]
+                k=tokens.split('=')[0]
+                d=self.dot2dict(k, v)
+                data=self.data_merge(data, d)
         else:
-            jvalues = json.loads(value)
-            data = self.data_merge(data, jvalues)
-        value = json.dumps(data)
+            jvalues=json.loads(value)
+            data=self.data_merge(data, jvalues)
+        value=json.dumps(data)
 
         return self.workspace.put(uri, Value(value, encoding=Encoding.STRING))
 
@@ -114,16 +114,16 @@ class Store(object):
 
     def eval(self, k, callback):
         def adapter_eval_callback(p, params):
-            v = callback(**params)
+            v=callback(**params)
             return Value(v, encoding=Encoding.STRING)
         self.workspace.register_eval(k, adapter_eval_callback)
 
     def observe(self, k, callback):
         def adapter_callback(values):
-            key, value = str(values[0].get('key')), \
-                values[0].get('value').get_value()
+            key, value=str(values[0][1]),
+                values[0][1].get_value()
             callback(key, value, 0)
-        subid = self.workspace.subscribe(k, adapter_callback)
+        subid=self.workspace.subscribe(k, adapter_callback)
         self.subscriptions.append(subid)
         return subid
 
@@ -137,10 +137,10 @@ class Store(object):
         # self.workspace.dispose()
 
     def dot2dict(self, dot_notation, value=None):
-        ld = []
+        ld=[]
 
-        tokens = dot_notation.split('.')
-        n_tokens = len(tokens)
+        tokens=dot_notation.split('.')
+        n_tokens=len(tokens)
         for i in range(n_tokens, 0, -1):
             if i == n_tokens and value is not None:
                 ld.append({tokens[i - 1]: value})
@@ -151,7 +151,7 @@ class Store(object):
 
     def data_merge(self, base, updates):
         if base is None or isinstance(base, int) or isinstance(base, str) or isinstance(base, float):
-            base = updates
+            base=updates
         elif isinstance(base, list):
             if isinstance(updates, list):
                 if all(isinstance(x, dict) for x in updates) and len(
