@@ -195,7 +195,7 @@ class KVM(RuntimePluginFDU):
                 return
 
         # (uuid, name, disk, cdrom, networks, user_file, ssh_key, flavor_id, image_id):
-        fdu = KVMFDU(fdu_uuid, name, '','',edata.get('user-data'),edata.get('ssh-key'),edata.get('networks'), img.get('uuid'), flavor.get('uuid'))
+        fdu = KVMFDU(fdu_uuid, name, '','',edata.get('networks'),edata.get('user-data'),edata.get('ssh-key'), img.get('uuid'), flavor.get('uuid'))
 
         fdu.on_defined()
         vm_info = fdu_manifest
@@ -230,8 +230,6 @@ class KVM(RuntimePluginFDU):
 
             self.connector.loc.actual.remove_node_fdu(self.node, self.uuid, fdu_uuid)
             self.logger.info('undefine_fdu()', '[ DONE ] KVM Plugin - Undefine a VM uuid {} '.format(fdu_uuid))
-
-            return True
 
     def configure_fdu(self, fdu_uuid):
         '''
@@ -297,7 +295,7 @@ class KVM(RuntimePluginFDU):
             vm_xml = self.__generate_dom_xml(fdu, flavor, img)
 
             vendor_conf = self.__generate_vendor_data(fdu_uuid, self.node)
-            vendor_filename = 'vendor_{}.yaml'.format(fdu)
+            vendor_filename = 'vendor_{}.yaml'.format(fdu_uuid)
             vendor_conf = binascii.hexlify(base64.b64encode(bytes(vendor_conf, 'utf-8'))).decode()
             self.call_os_plugin_function('store_file',{'content':vendor_conf, 'file_path':self.BASE_DIR, 'filename':vendor_filename})
             vendor_filename = os.path.join(self.BASE_DIR, vendor_filename)
