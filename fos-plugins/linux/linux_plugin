@@ -186,7 +186,7 @@ class Linux(OSPlugin):
                     p.wait()
                 for line in p.stdout:
                     r = r + str(line)
-                    self.logger.debug('executeCommand()', str(line))
+                    self.logger.debug('execute_command()', str(line))
             res = {'result': r}
         except TypeError as e:
             self.logger.error('execute_command()', 'Error: {}'.format(e))

@@ -194,13 +194,13 @@ class KVM(RuntimePluginFDU):
                 self.lock.release()
                 return
 
-        entity = KVMFDU(fdu_uuid, name, img.get('uuid'), flavor.get('uuid'))
-        entity.set_user_file(edata.get('user-data'))
-        entity.set_ssh_key(edata.get('ssh-key'))
-        entity.set_networks(edata.get('networks'))
+        fdu = KVMFDU(fdu_uuid, name, img.get('uuid'), flavor.get('uuid'))
+        fdu.set_user_file(edata.get('user-data'))
+        fdu.set_ssh_key(edata.get('ssh-key'))
+        fdu.set_networks(edata.get('networks'))
 
 
-        entity.on_defined()
+        fdu.on_defined()
         vm_info = fdu_manifest
         vm_info.update({'status': 'defined'})
         data = vm_info.get('entity_data')
@@ -212,7 +212,7 @@ class KVM(RuntimePluginFDU):
         data.update({'base_image': img.get('uuid')})
 
         vm_info.update({'entity_data': data})
-        self.current_fdus.update({fdu_uuid: vm_info})
+        self.current_fdus.update({fdu_uuid: fdu})
         self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, vm_info)
         self.logger.info('define_fdu()', '[ DONE ] KVM Plugin - VM Defined uuid: {}'.format(fdu_uuid))
 
