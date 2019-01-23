@@ -1,0 +1,10 @@
+{
+      "name": "linux",
+      "version": 1,
+      "uuid": "49c652d1-f8bc-4220-ae20-53526e4fef09",
+      "type": "os",
+      "description": "linux os plugin",
+      "configuration": {
+            "expose": true
+      }
+}

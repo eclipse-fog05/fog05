@@ -1,0 +1,12 @@
+{
+      "name": "native",
+      "version": 1,
+      "uuid": "809839f2-b511-489d-a8cf-8c80d714893e",
+      "type": "runtime",
+      "requirements": [
+            "psutil",
+            "jinja2"
+      ],
+      "description": "native fdy=u plugin",
+      "configuration": {}
+}

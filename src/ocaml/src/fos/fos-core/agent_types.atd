@@ -1,0 +1,144 @@
+(*********************************************************************************
+ * Copyright (c) 2018 ADLINK Technology Inc. 
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0, or the Apache Software License 2.0
+ * which is available at https://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
+ * Contributors: 1
+ *   Gabriele Baldoni (gabriele (dot) baldoni (at) adlinktech (dot) com ) - OCaml implementation
+ *********************************************************************************)
+
+type json <ocaml module="Abs_json"> = abstract
+
+
+
+(* type role <ocaml module="Abs_json"> = abstract *)
+
+
+
+type agent_config = {
+  ?system : string option;
+  ?uuid : string option;
+  expose : bool;
+  ?user : string option;
+  ?passwd : string option;
+  yaks : string;
+  path : string;
+}
+
+type plugins_conf = {
+  plugin_path : string;
+  autoload : bool;
+  ?auto : string list option;
+}
+
+
+type configuration = {
+  agent : agent_config;
+  plugins : plugins_conf;
+}
+
+
+type plugin_loader_item = {
+  name : string;
+  info : string;
+}
+
+type plugin_type = {
+  name : string;
+  version : int;
+  uuid : string;
+  description : string;
+  ?url : string option;
+  ?configuration : json option;
+  ?requirements : string list option;
+  ?status : string option;
+  pl_type <json name="type"> : string;
+}
+
+
+type plugins_type = {
+  plugins : plugin_type list;
+}
+
+type plugin_pid = {
+  pid : int
+}
+
+type node_info = {
+  uuid : string;
+  name : string;
+  os : string;
+  cpu : json;
+  ram : json;
+  disks : json;
+  network : json;
+  io : json;
+  accelerator : json;
+}
+
+type quota_type = {
+  max_vcpu : int;
+  current_vcpu : int;
+  max_vdisk : int;
+  current_vdisk : int;
+  max_vnetwork : int;
+  current_vnetwork: int;
+  max_instances : int;
+  current_instances: int;
+}
+
+type network_type = {
+  uuid : string;
+  nodes : string list;
+  manifest : json;
+}
+
+type entities = { entities : string list}
+
+type networks = { networks : network_type list }
+
+
+type tenant_info = {
+  name : string;
+  uuid : string;
+}
+
+type tenant_config = {
+  quotas : quota_type;
+  users : string list;
+}
+
+type tenant_type = {
+  info : tenant_info;
+  configuration : tenant_config;
+  entities : string list;
+  nodes : string list;
+  networks : string list;
+}
+
+
+type tenants = {
+  tenants:tenant_type list;
+}
+
+type user_type = {
+  uuid : string;
+  name : string;
+  access : string;
+  role : string;
+}
+
+type users = { users : user_type list }
+
+type system_info = {
+  name: string;
+  uuid: string;
+}
+
+type system_config = {
+  config : string;
+}

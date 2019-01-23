@@ -1,0 +1,119 @@
+
+<!-- 
+# Copyright (c) 2014,2018 ADLINK Technology Inc.
+# 
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+# 
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
+# which is available at https://www.apache.org/licenses/LICENSE-2.0.
+#
+# SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
+#
+# Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Base plugins set
+ -->
+
+<domain type="kvm">
+    <name>{{ name }}</name>
+    <!-- <cpu>
+        <topology cores="4" sockets="1" threads="4" />
+    </cpu> -->
+    <uuid>{{ uuid }}</uuid>
+    <memory unit="MB">{{ memory }}</memory>
+    <currentMemory unit="MB">{{ memory }}</currentMemory>
+    <vcpu placement="static">{{ cpu }}</vcpu>
+    <os>
+        <type>hvm</type>
+        <boot dev="hd"/>
+    </os>
+    <features>
+        <acpi/>
+        <apic/>
+        <pae/>
+    </features>
+    <clock offset="utc"/>
+    <on_poweroff>destroy</on_poweroff>
+    <on_reboot>restart</on_reboot>
+    <on_crash>restart</on_crash>
+    <devices>
+        <emulator>/usr/bin/qemu-system-x86_64</emulator>
+        <disk device="disk" type="file">
+            <driver name="qemu" type="{{ format }}"/>
+            <source file="{{ disk_image }}"/>
+            <target dev="hda"/>
+            <address bus="0" controller="0" target="0" type="drive" unit="0"/>
+        </disk>
+
+        {% if iso_image is defined %}
+        <disk device="cdrom" type="file">
+            <source file="{{ iso_image }}"/>
+            <driver name="qemu" type="raw"/>
+            <target bus="ide" dev="hdc"/>
+            <readyonly/>
+            <address bus="1" controller="0" target="0" type="drive" unit="0"/>
+        </disk>
+        {% endif %}
+
+        {% for disk in disks %}
+
+        <disk device="disk" type="file">
+            <driver name="qemu" type="qcow2"/>
+            <source file="{{ disk.path }}"/>
+            <target dev="hd{{loop.index}}"/>
+        </disk>
+        {% endfor %}
+
+        {% if networks %}
+        {% for net in networks %}
+         {% if net.type is defined %}
+        <devices>
+            <interface type='direct' trustGuestRxFilters='no'>
+                <source dev='{{ net.direct_intf }}' mode='vepa'/>
+            </interface>
+        </devices>
+            {% else %}
+        <interface type='bridge'>
+            {% if net.mac is defined %}
+            <mac address='{{ net.mac }}'/>
+            {% endif %}
+            <source network='default' bridge='{{ net.br_name }}'/>
+            <target dev='{{ net.intf_name }}'/>
+            <model type='virtio'/>
+            <alias name='net{{loop.index}}'/>
+            <!-- <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/> -->
+        </interface>
+         {% endif %}
+        {% endfor %}
+        {% endif %}
+        <serial type='file'>
+            <source path='/opt/fos/kvm/logs/{{ uuid }}_log.log'/>
+            <target port='0'/>
+        </serial>
+        <console type='file'>
+            <source path='/opt/fos/kvm/logs/{{ uuid }}_log.log'/>
+            <target type='serial' port='0'/>
+        </console>
+
+        <!--<serial type='pty'>
+            <source path='/dev/pts/20'/>
+            <target port='0'/>
+            <alias name='serial0'/>
+        </serial>
+        <serial type='file'>
+            <source path='/opt/fos/{{ name }}_log'/>
+            <target port='1'/>
+        </serial>
+        <console type='pty' tty='/dev/pts/20'>
+            <source path='/dev/pts/20'/>
+            <target type='serial' port='0'/>
+            <alias name='serial0'/>
+        </console>
+        <console type='file'>
+            <source path='/opt/fos/{{ name }}_log'/>
+            <target type='serial' port='1'/>
+        </console> -->
+        <graphics port="-1" type="vnc"/>
+    </devices>
+</domain>
