@@ -64,7 +64,7 @@ class KVM(RuntimePluginFDU):
         self.conn = None
         self.images = {}
         self.flavors = {}
-        self.lock = threading.Lock()
+        # self.lock = threading.Lock()
         signal.signal(signal.SIGINT, self.__catch_signal)
 
     def __catch_signal(self, signal, _):
@@ -149,13 +149,13 @@ class KVM(RuntimePluginFDU):
         name = fdu_manifest.get('name')
 
         if self.is_uuid(base_image):
-            self.lock.acquire()
+
             img = self.images.get(base_image, None)
             if img is None:
                 self.logger.error('define_fdu()', '[ ERRO ] KVM Plugin - Cannot find image {}'.format(base_image))
-                self.lock.release()
+
                 return
-            self.lock.release()
+
         else:
             self.logger.warning('define_fdu()', '[ WARN ] KVM Plugin - No image id specified defining from manifest information new image id uuid:{}'.format(fdu_uuid))
             img_info = {}
@@ -187,11 +187,11 @@ class KVM(RuntimePluginFDU):
                 self.logger.error('define_fdu()', '[ ERRO ] KVM Plugin - Cannot find flavor {}'.format(fdu_uuid))
                 return
         else:
-            self.lock.acquire()
+
             flavor = self.flavors.get(edata.get('flavor_id'), None)
             if flavor is None:
                 self.logger.error('define_fdu()', '[ ERRO ] KVM Plugin - Cannot find flavor {}'.format(edata.get('flavor_id')))
-                self.lock.release()
+
                 return
 
         # (uuid, name, disk, cdrom, networks, user_file, ssh_key, flavor_id, image_id):
@@ -921,7 +921,7 @@ class KVM(RuntimePluginFDU):
 
 
     def __remove_image(self, image_uuid):
-        self.lock.acquire()
+
         image = self.images.get(image_uuid, None)
         if image is None:
             self.logger.info('__remove_image()', ' KVM Plugin - Image not found!!')
@@ -929,15 +929,15 @@ class KVM(RuntimePluginFDU):
         self.call_os_plugin_function('remove_file',{'file_path':image.get('path')})
         self.images.pop(image_uuid)
         self.connector.loc.actual.remove_node_image(self.node, self.uuid,image_uuid)
-        self.lock.release()
+
 
     def __add_flavor(self, manifest):
-        # self.lock.acquire()
+        #
         fl_uuid  = manifest.get('uuid')
         self.flavors.update({fl_uuid: manifest})
         self.connector.loc.actual.add_node_flavor(self.node, self.uuid, fl_uuid, manifest)
 
-        # self.lock.release()
+        #
 
     def __remove_flavor(self, flavor_uuid):
         self.flavors.pop(flavor_uuid)
