@@ -120,7 +120,7 @@ class Store(object):
 
     def observe(self, k, callback):
         def adapter_callback(values):
-            key, value = values[0][1], values[0][1].value
+            key, value = values[0][0], values[0][1].value
             callback(key, value, 0)
         subid = self.workspace.subscribe(k, adapter_callback)
         self.subscriptions.append(subid)
