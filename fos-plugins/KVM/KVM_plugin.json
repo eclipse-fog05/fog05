@@ -1,5 +1,5 @@
 {
-      "name": "KVMLibvirt",
+      "name": "KVM",
       "version": 1,
       "uuid": "8fb33188-846c-45f8-83df-2a25e6b78049",
       "type": "runtime",
