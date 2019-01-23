@@ -103,7 +103,7 @@ class KVM(RuntimePluginFDU):
         self.manifest.update({'status': 'running'})
         self.connector.loc.actual.add_node_plugin(self.node, self.uuid, self.manifest)
 
-        self.logger.info('start_runtime()', ' LXD Plugin - Started...')
+        self.logger.info('start_runtime()', ' KVM Plugin - Started...')
 
         r = self.var.get()
         self.stop_runtime()
@@ -185,15 +185,12 @@ class KVM(RuntimePluginFDU):
             flavor = self.flavors.get(fdu_uuid, None)
             if flavor is None:
                 self.logger.error('define_fdu()', '[ ERRO ] KVM Plugin - Cannot find flavor {}'.format(fdu_uuid))
-                self.__write_error_entity(fdu_uuid, 'Flavor not found!')
-
                 return
         else:
             self.lock.acquire()
             flavor = self.flavors.get(edata.get('flavor_id'), None)
             if flavor is None:
                 self.logger.error('define_fdu()', '[ ERRO ] KVM Plugin - Cannot find flavor {}'.format(edata.get('flavor_id')))
-                self.__write_error_entity(fdu_uuid, 'Flavor not found!')
                 self.lock.release()
                 return
 
@@ -1037,20 +1034,20 @@ class KVM(RuntimePluginFDU):
 
 
     def __fdu_observer(self, fdu_info):
-        self.logger.info('__fdu_observer()', ' Native Plugin - New Action of a FDU - FDU Info: {}'.format(fdu_info))
+        self.logger.info('__fdu_observer()', ' KVM Plugin - New Action of a FDU - FDU Info: {}'.format(fdu_info))
         action = fdu_info.get('status')
         fdu_uuid = fdu_info.get('uuid')
         react_func = self.__react(action)
         if action == 'undefine':
-            self.logger.info('__fdu_observer()', ' Native Plugin - This is a remove for : {}'.format(fdu_info))
+            self.logger.info('__fdu_observer()', ' KVM Plugin - This is a remove for : {}'.format(fdu_info))
             self.undefine_fdu(fdu_uuid)
         elif action == 'define':
-            self.logger.info('__fdu_observer()', ' Native Plugin - This is a define for : {}'.format(fdu_info))
+            self.logger.info('__fdu_observer()', ' KVM Plugin - This is a define for : {}'.format(fdu_info))
             self.define_fdu(fdu_info)
         elif react_func is not None:
             react_func(fdu_uuid)
         else:
-            self.logger.info('__fdu_observer()', ' Native Plugin - Action not recognized : {}'.format(action))
+            self.logger.info('__fdu_observer()', ' KVM Plugin - Action not recognized : {}'.format(action))
 
 
     def __react(self, action):

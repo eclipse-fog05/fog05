@@ -156,7 +156,7 @@ class Linux(OSPlugin):
 
     def __execute_command(self, command, blocking=False, external=False):
 
-        self.logger.info('executeCommand()',
+        self.logger.info('__execute_command()',
                          'OS Plugin executing command {}'.format(command))
         if external:
             os.system(command)
@@ -175,8 +175,8 @@ class Linux(OSPlugin):
         if isinstance(external, str):
             root = bool(distutils.util.strtobool(external))
         try:
-            self.logger.info(
-                'executeCommand()', 'OS Plugin executing command {}'.format(command))
+            self.logger.info('execute_command()', 'OS Plugin executing command {}'.format(command))
+            r = ''
             if external:
                 os.system(command)
             else:
@@ -184,14 +184,15 @@ class Linux(OSPlugin):
                 p = psutil.Popen(cmd_splitted, stdout=PIPE)
                 if blocking:
                     p.wait()
-                # for line in p.stdout:
-                #     self.logger.debug('executeCommand()', str(line))
-            res = {'result': p.communicate()[0].decode('utf-8')}
+                for line in p.stdout:
+                    r = r + str(line)
+                    self.logger.debug('executeCommand()', str(line))
+            res = {'result': r}
         except TypeError as e:
-            self.logger.error('executeCommand()', 'Error: {}'.format(e))
+            self.logger.error('execute_command()', 'Error: {}'.format(e))
             res = {'error': 0}
         except:
-            self.logger.error('executeCommand()', 'Exception!!')
+            self.logger.error('execute_command()', 'Exception!!')
             res = {'error': -1}
         finally:
             return res
