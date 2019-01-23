@@ -351,16 +351,6 @@ class LAD(object):
         return Constants.create_path(
             [self.prefix, nodeid, 'runtimes', pluginid, 'fdu', '**'])
 
-    def get_node_netwoks_selector(self, nodeid, pluginid):
-        return Constants.create_path(
-            [self.prefix, nodeid, 'network_managers',
-             pluginid, 'networks', '*'])
-
-    def get_node_networks_port_selector(self, nodeid, pluginid, networkid):
-        return Constants.create_path(
-            [self.prefix, nodeid, 'network_managers',
-             pluginid, 'networks', networkid, 'ports'])
-
     def get_node_fdu_info_path(self, nodeid, pluginid, fduid):
         return Constants.create_path(
             [self.prefix, nodeid, 'runtimes', pluginid, 'fdu', fduid, 'info'])
@@ -380,6 +370,21 @@ class LAD(object):
         return Constants.create_path(
             [self.prefix, nodeid, 'runtimes',
              pluginid, 'fdu', fduid, 'atomic_entity', atomicid, 'info'])
+
+    def get_node_netwoks_selector(self, nodeid, pluginid):
+        return Constants.create_path(
+            [self.prefix, nodeid, 'network_managers',
+             pluginid, 'networks', '*', 'info'])
+
+    def get_node_netwoks_find_selector(self, nodeid, netid):
+        return Constants.create_path(
+            [self.prefix, nodeid, 'network_managers',
+             '*', 'networks', netid, 'info'])
+
+    def get_node_networks_port_selector(self, nodeid, pluginid, networkid):
+        return Constants.create_path(
+            [self.prefix, nodeid, 'network_managers',
+             pluginid, 'networks', networkid, 'ports'])
 
     def get_node_network_info_path(self, nodeid, pluginid, networkid):
         return Constants.create_path(
@@ -539,7 +544,7 @@ class LAD(object):
         s = self.get_node_image_info_path(nodeid, pluginid, imgid)
         res = self.ws.get(s)
         if len(res) == 0:
-            raise ValueError("Empty data on get_node_fdu")
+            raise ValueError("Empty data on get_node_image")
         else:
             return json.loads(res[0][1].value)
 
@@ -556,12 +561,50 @@ class LAD(object):
         s = self.get_node_flavor_info_path(nodeid, pluginid, flvid)
         res = self.ws.get(s)
         if len(res) == 0:
-            raise ValueError("Empty data on get_node_fdu")
+            raise ValueError("Empty data on get_node_flavor")
         else:
             return json.loads(res[0][1].value)
 
     def remove_node_flavor(self, nodeid, pluginid, flvid):
         p = self.get_node_flavor_info_path(nodeid, pluginid, flvid)
+        return self.ws.remove(p)
+
+    def observe_node_networks(self, nodeid, pluginid, callback):
+        s = self.get_node_netwoks_selector(nodeid, pluginid)
+
+        def cb(kvs):
+            if len(kvs) == 0:
+                raise ValueError('Listener received empty datas')
+            else:
+                v = json.loads(kvs[0][1].value)
+                callback(v)
+        subid = self.ws.subscribe(s, cb)
+        self.listeners.append(subid)
+        return subid
+
+    def add_node_network(self, nodeid, pluginid, netid, netinfo):
+        p = self.get_node_network_info_path(nodeid, pluginid, netid)
+        v = Value(json.dumps(netinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def get_node_network(self, nodeid, pluginid, netid):
+        s = self.get_node_network_info_path(nodeid, pluginid, netid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            raise ValueError("Empty data on get_node_network")
+        else:
+            return json.loads(res[0][1].value)
+
+    def find_node_network(self, nodeid, netid):
+        s = self.get_node_netwoks_find_selector(nodeid, netid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            raise ValueError("Empty data on find_node_network")
+        else:
+            return json.loads(res[0][1].value)
+
+    def remove_node_network(self, nodeid, pluginid, netid):
+        p = self.get_node_network_info_path(nodeid, pluginid, netid)
         return self.ws.remove(p)
 
 

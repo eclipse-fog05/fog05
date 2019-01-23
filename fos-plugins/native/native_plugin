@@ -454,7 +454,6 @@ class Native(RuntimePluginFDU):
             'run': self.run_fdu,
             'clean': self.clean_fdu
         }
-
         return r.get(action, None)
 
     def __force_fdu_termination(self, fdu_uuid):

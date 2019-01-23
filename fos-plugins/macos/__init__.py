@@ -10,4 +10,4 @@
 #
 # SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
 #
-# Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Base plugins set
+# Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Ocaml plugins set

@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+
+
 # Copyright (c) 2014,2018 ADLINK Technology Inc.
 #
 # See the NOTICE file(s) distributed with this work for additional
@@ -10,4 +13,12 @@
 #
 # SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
 #
-# Contributors: Gabriele Baldoni, ADLINK Technology Inc. - OCaml plugins set
+# Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Base plugins set
+
+
+
+#sudo brctl addbr {{ bridge_name }}
+#WAN=$(awk '$2 == 00000000 { print $1 }' /proc/net/route)
+
+sudo ip link add {{port-id}}s type veth peer name {{port-id}}
+

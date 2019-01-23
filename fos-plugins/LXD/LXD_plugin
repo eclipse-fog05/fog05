@@ -470,15 +470,15 @@ class LXD(RuntimePluginFDU):
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, container_info)
             self.logger.info('pause_fdu()', '[ DONE ] LXD Plugin - Pause a Container uuid {}'.format(fdu_uuid))
 
-    def resume_entity(self, fdu_uuid):
-        self.logger.info('resume_entity()', ' LXD Plugin - Resume a Container uuid {}'.format(fdu_uuid))
+    def resume_fdu(self, fdu_uuid):
+        self.logger.info('resume_fdu()', ' LXD Plugin - Resume a Container uuid {}'.format(fdu_uuid))
         fdu = self.current_fdus.get(fdu_uuid, None)
         if fdu is None:
-            self.logger.error('resume_entity()', 'LXD Plugin - FDU not exists')
+            self.logger.error('resume_fdu()', 'LXD Plugin - FDU not exists')
             raise FDUNotExistingException('FDU not existing',
                                              'FDU {} not in runtime {}'.format(fdu_uuid, self.uuid))
         elif fdu.get_state() != State.PAUSED:
-            self.logger.error('resume_entity()', 'LXD Plugin - FDU state is wrong, or transition not allowed')
+            self.logger.error('resume_fdu()', 'LXD Plugin - FDU state is wrong, or transition not allowed')
             raise StateTransitionNotAllowedException('FDU is not in PAUSED state',
                                                      'FDU {} is not in PAUSED state'.format(fdu_uuid))
         else:
@@ -491,7 +491,7 @@ class LXD(RuntimePluginFDU):
             container_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
             container_info.update({'status': 'run'})
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, container_info)
-            self.logger.info('resume_entity()', '[ DONE ] LXD Plugin - Resume a Container uuid {}'.format(fdu_uuid))
+            self.logger.info('resume_fdu()', '[ DONE ] LXD Plugin - Resume a Container uuid {}'.format(fdu_uuid))
 
 
     def migrate_fdu(self, fdu_uuid, dst=False):
@@ -804,49 +804,6 @@ class LXD(RuntimePluginFDU):
         #         self.__force_entity_instance_termination(entity_uuid, instance_uuid)
         #         return True
 
-
-    def __random_mac_generator(self):
-        mac = [0x00, 0x16, 0x3e,
-               random.randint(0x00, 0x7f),
-               random.randint(0x00, 0xff),
-               random.randint(0x00, 0xff)]
-        return ':'.join(map(lambda x: '%02x' % x, mac))
-
-    def __lookup_by_uuid(self, uuid):
-        domains = self.conn.listAllDomains(0)
-        if len(domains) != 0:
-            for domain in domains:
-                if str(uuid) == domain.UUIDString():
-                    return domain
-        else:
-            return None
-
-    def __wait_boot(self, filename, configured=False):
-        time.sleep(5)
-        if configured:
-            boot_regex = r"\[.+?\].+\[.+?\]:.+Cloud-init.+?v..+running.+'modules:final'.+Up.([0-9]*\.?[0-9]+).+seconds.\n"
-        else:
-            boot_regex = r".+?login:()"
-        while True:
-            file = open(filename, 'r')
-            import os
-            # Find the size of the file and move to the end
-            st_results = os.stat(filename)
-            st_size = st_results[6]
-            file.seek(st_size)
-
-            while 1:
-                where = file.tell()
-                line = file.readline()
-                if not line:
-                    time.sleep(1)
-                    file.seek(where)
-                else:
-                    m = re.search(boot_regex, str(line))
-                    if m:
-                        found = m.group(1)
-                        return found
-
     def __generate_custom_profile_userdata_configuration(self, userdata):
         userdata = {'user.user-data': userdata}
         return userdata
@@ -884,19 +841,22 @@ class LXD(RuntimePluginFDU):
         template_key2 = 'eth{}'
         for i, n in enumerate(fdu.networks):
             if n.get('network_uuid') is not None:
-                nws = self.agent.get_network_plugin(None).get(list(self.agent.get_network_plugin(None).keys())[0])
-                # print(nws.getNetworkInfo(n.get('network_uuid')))
-                br_name = nws.get_network_info(n.get('network_uuid')).get('virtual_device')
-                # print(br_name)
-                n.update({'br_name': br_name})
-                if n.get('intf_name') is None:
-                    n.update({'intf_name': 'eth{}'.format(i)})
-                # nw_k = template_key % n.get('intf_name'))
-                nw_k = template_key2.format(i)
-                if n.get('mac') is not None:
-                    nw_v = json.loads(str(template_value_bridge_mac % (n.get('intf_name'), n.get('br_name'), n.get('mac'))))
+                net = self.connector.loc.actual.find_node_network(self.node, n.get('network_uuid'))
+                if net is None:
+                    self.logger.info('__generate_custom_profile_devices_configuration()', 'LXD Plugin - Network {} not found!!'.format(n.get('network_uuid')))
                 else:
-                    nw_v = json.loads(str(template_value_bridge % (n.get('intf_name'), n.get('br_name'))))
+                    # print(nws.getNetworkInfo(n.get('network_uuid')))
+                    br_name = net.get('virtual_device')
+                    # print(br_name)
+                    n.update({'br_name': br_name})
+                    if n.get('intf_name') is None:
+                        n.update({'intf_name': 'eth{}'.format(i)})
+                    # nw_k = template_key % n.get('intf_name'))
+                    nw_k = template_key2.format(i)
+                    if n.get('mac') is not None:
+                        nw_v = json.loads(str(template_value_bridge_mac % (n.get('intf_name'), n.get('br_name'), n.get('mac'))))
+                    else:
+                        nw_v = json.loads(str(template_value_bridge % (n.get('intf_name'), n.get('br_name'))))
 
             elif self.call_os_plugin_function('get_intf_type', {'name': n.get('br_name')}) in ['ethernet']:
                 # if n.get('')
@@ -961,7 +921,7 @@ class LXD(RuntimePluginFDU):
             self.logger.error('stop_fdu()', 'LXD Plugin - FDU not exists')
         else:
             if fdu.get_state() == State.PAUSED:
-                self.resume_entity(fdu_uuid)
+                self.resume_fdu(fdu_uuid)
                 self.stop_fdu(fdu_uuid)
                 self.clean_fdu(fdu_uuid)
                 self.undefine_fdu(fdu_uuid)
@@ -976,7 +936,7 @@ class LXD(RuntimePluginFDU):
                 self.undefine_fdu(fdu_uuid)
 
     def __monitor_instance(self, fdu_uuid, name):
-        self.logger.info('__monitor_instance()', '[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(fdu_id))
+        self.logger.info('__monitor_instance()', '[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(fdu_uuid))
         time.sleep(2)
         while True:
             time.sleep(2)
@@ -1001,6 +961,8 @@ class LXD(RuntimePluginFDU):
                 self.logger.error('__monitor_instance()', '[ ERROR ] LXD Plugin - Stopping monitoring of Container uuid {} Error {}'.format(fdu_uuid, e))
                 return
 
+    def __get_bridge_names_from_instance_networks(self, instance_networks):
+        return [network['br_name'] for network in instance_networks]
 
     # def __add_image(self, manifest):
     #     url = manifest.get('base_image')
