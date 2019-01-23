@@ -28,6 +28,8 @@ class KVMFDU(FDU):
         super(KVMFDU, self).__init__()
         self.uuid = uuid
         self.name = name
+        self.disk = disk
+        self.cdrom = cdrom
         self.networks = networks
         self.user_file = user_file
         self.ssh_key = ssh_key
