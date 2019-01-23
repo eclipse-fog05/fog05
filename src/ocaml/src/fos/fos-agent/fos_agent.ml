@@ -169,7 +169,7 @@ let agent verbose_flag configuration =
     let%lwt plugins = Yaks_connector.Local.Actual.get_node_plugins (Apero.Option.get self.configuration.agent.uuid) self.yaks in
     Lwt_list.iter_p (fun e ->
         let%lwt pl = Yaks_connector.Local.Actual.get_node_plugin (Apero.Option.get self.configuration.agent.uuid) e self.yaks in
-        if pl.name = fdu_type then
+        if String.uppercase_ascii (pl.name) = String.uppercase_ascii (fdu_type) then
           let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - PLUGIN CB-GD-FDU - Calling %s plugin" pl.name) in
           Yaks_connector.Local.Desired.add_node_fdu (Apero.Option.get self.configuration.agent.uuid) pl.uuid fdu.uuid fdu self.yaks >>= Lwt.return
         else
