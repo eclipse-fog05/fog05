@@ -60,7 +60,7 @@ class Store(object):
     def get(self, k):
         r = self.workspace.get(k)
         if r is not None and len(r) > 0:
-            v = r[0][1].get_value()
+            v = r[0][1].value
             return v
         return None
 
@@ -69,7 +69,7 @@ class Store(object):
         if r is not None and len(r) > 0:
             res = []
             for e in r:
-                k, v = str(e[0], e[1].get_value())
+                k, v = e[0], e[1].value
                 res.append((k, v, 0))
             return res
         return []
@@ -120,7 +120,7 @@ class Store(object):
 
     def observe(self, k, callback):
         def adapter_callback(values):
-            key, value = str(values[0][1]), values[0][1].get_value()
+            key, value = values[0][1], values[0][1].value
             callback(key, value, 0)
         subid = self.workspace.subscribe(k, adapter_callback)
         self.subscriptions.append(subid)
