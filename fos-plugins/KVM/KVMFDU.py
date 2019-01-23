@@ -33,8 +33,8 @@ class KVMFDU(FDU):
         self.networks = networks
         self.user_file = user_file
         self.ssh_key = ssh_key
-        self.image_uuid = image_id
-        self.flavor_uuid = flavor_id
+        self.image_id = image_id
+        self.flavor_id = flavor_id
         self.xml = None
         self.state = State.DEFINED
 
