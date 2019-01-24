@@ -106,10 +106,12 @@ class brctl(NetworkPlugin):
         self.brmap.update({br_uuid: name})
         return br_uuid, name
 
-    def create_virtual_network(self, network_name, net_uuid, ip_range=None, has_dhcp=False, gateway=None, manifest=None):
+    def create_virtual_network(self, network_name, net_uuid, ip_range=None, has_dhcp=False, gateway=None,
+                               manifest=None):
 
         self.agent.logger.info('create_virtual_network()',
-                               'Parameters network_name:{} net_uudi:{} ip_range:{} has_dhcp:{} gateway:{} manifest:{}'.format(network_name, net_uuid, ip_range, has_dhcp, gateway, manifest))
+                               'Parameters network_name:{} net_uudi:{} ip_range:{} has_dhcp:{} gateway:{} manifest:{}'.format(
+                                   network_name, net_uuid, ip_range, has_dhcp, gateway, manifest))
 
         net = self.netmap.get(net_uuid, None)
         if net is not None:
@@ -419,7 +421,8 @@ class brctl(NetworkPlugin):
                 vxlan_id = manifest.get('overlay_info').get('vxlan_id')
             else:
                 vxlan_id = len(self.netmap) + 1
-            if manifest.get('overlay_info') is not None and manifest.get('overlay_info').get('multicast_address') is not None:
+            if manifest.get('overlay_info') is not None and manifest.get('overlay_info').get(
+                    'multicast_address') is not None:
                 mcast_addr = manifest.get(
                     'overlay_info').get('multicast_address')
             else:
