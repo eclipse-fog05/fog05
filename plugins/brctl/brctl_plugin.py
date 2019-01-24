@@ -23,8 +23,6 @@ import socket
 
 
 # TODO Plugins should not be aware of the Agent - The Agent is in OCaml no way to access his store, his logger and the OS plugin
-from plugins.LXD.utils import get_bridge_names_from_output_string
-
 
 class brctl(NetworkPlugin):
 
@@ -93,7 +91,7 @@ class brctl(NetworkPlugin):
     def get_virtual_bridges_in_node(self):
         cmd = 'sudo brctl show'
         output = self.agent.get_os_plugin().execute_command(cmd)
-        return get_bridge_names_from_output_string(output)
+        return self.get_bridge_names_from_output_string(output)
 
     def create_bridges_if_not_exist(self, expected_bridges):
         current_bridges = self.get_virtual_bridges_in_node()
@@ -439,3 +437,9 @@ class brctl(NetworkPlugin):
         # TODO chmod should be also executed by OSPlugin
         self.agent.get_os_plugin().execute_command(chmod_cmd, True)
         return '{}.sh'.format(net_uuid.split('-')[0]), vxlan_name, vxlan_id, mcast_addr
+
+    def get_bridge_names_from_output_string(output):  # todo: last item is empty-> delete
+        rows = output.split('\n')
+        table = [row.split('\t') for row in rows]
+        bridges_names = [item[0] for item in table]
+        return bridges_names[1:]  # pop name of the table
