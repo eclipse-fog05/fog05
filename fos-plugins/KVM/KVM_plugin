@@ -391,13 +391,13 @@ class KVM(RuntimePluginFDU):
 
     def run_fdu(self, fdu_uuid):
 
-        self.logger.info('run_entity()', 'KVM Plugin - Starting a VM uuid {}'.format(fdu_uuid))
+        self.logger.info('run_fdu()', 'KVM Plugin - Starting a VM uuid {}'.format(fdu_uuid))
         fdu = self.current_fdus.get(fdu_uuid, None)
         if fdu is None:
-            self.logger.error('run_entity()', 'KVM Plugin - FDU not exists')
+            self.logger.error('run_fdu()', 'KVM Plugin - FDU not exists')
             raise FDUNotExistingException('FDU not existing', 'FDU {} not in runtime {}'.format(fdu_uuid, self.uuid))
         elif fdu.get_state() != State.CONFIGURED:
-            self.logger.error('run_entity()', 'KVM Plugin - FDU state is wrong, or transition not allowed')
+            self.logger.error('run_fdu()', 'KVM Plugin - FDU state is wrong, or transition not allowed')
             raise StateTransitionNotAllowedException('FDU is not in CONFIGURED state', 'FDU {} is not in CONFIGURED state'.format(fdu_uuid))
         else:
             vm_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
@@ -408,7 +408,7 @@ class KVM(RuntimePluginFDU):
             dom.create()
             while dom.state()[0] != 1:
                pass
-            self.logger.info('run_entity()', ' KVM Plugin - VM {} Started!'.format(fdu))
+            self.logger.info('run_fdu()', ' KVM Plugin - VM {} Started!'.format(fdu_uuid))
 
             fdu.on_start()
             # log_filename = '{}/{}/{}_log.log'.format(self.BASE_DIR, self.LOG_DIR, instance_uuid)
@@ -419,11 +419,11 @@ class KVM(RuntimePluginFDU):
 
             self.current_fdus.update({fdu_uuid: fdu})
 
-            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, vm_info)
-            vm_info.update({'status': 'run'})
             vm_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
+            vm_info.update({'status': 'run'})
+            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, vm_info)
 
-            self.logger.info('run_entity()', '[ DONE ] KVM Plugin - Starting a VM uuid {}'.format(fdu_uuid))
+            self.logger.info('run_fdu()', '[ DONE ] KVM Plugin - Starting a VM uuid {}'.format(fdu_uuid))
 
 
     def stop_fdu(self, fdu_uuid):
