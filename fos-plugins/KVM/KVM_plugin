@@ -375,9 +375,10 @@ class KVM(RuntimePluginFDU):
             else:
                 self.logger.error('clean_fdu()', 'KVM Plugin - Domain  not found!!')
 
+            vmlog = '{}_log.log'.format(fdu_uuid)
             self.call_os_plugin_function('remove_file',{'file_path':fdu.cdrom})
             self.call_os_plugin_function('remove_file',{'file_path':fdu.disk})
-            self.call_os_plugin_function('remove_file',{'file_path':os.path.join(self.BASE_DIR, self.LOG_DIR, fdu_uuid)})
+            self.call_os_plugin_function('remove_file',{'file_path':os.path.join(self.BASE_DIR, self.LOG_DIR, vmlog)})
 
 
             fdu.on_clean()
