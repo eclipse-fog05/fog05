@@ -58,7 +58,7 @@ class KVMFDU(FDU):
         self.state = State.RUNNING
 
     def on_clean(self):
-        pass
+        self.state = State.DEFINED
 
     def before_migrate(self):
         pass
