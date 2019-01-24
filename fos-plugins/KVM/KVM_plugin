@@ -333,6 +333,7 @@ class KVM(RuntimePluginFDU):
 
             self.call_os_plugin_function('execute_command',{'command':qemu_cmd,'blocking':True, 'external':False})
             self.call_os_plugin_function('execute_command',{'command':conf_cmd,'blocking':True, 'external':False})
+            print(dd_cmd)
             self.call_os_plugin_function('execute_command',{'command':dd_cmd,'blocking':True, 'external':False})
 
             if fdu.ssh_key is not None and fdu.ssh_key != '':
@@ -915,7 +916,6 @@ class KVM(RuntimePluginFDU):
         elif url.startswith('file://'):
             image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, url.split('/')[-1])
             cmd = 'cp {} {}'.format(url[len('file://'):], image_name)
-            print(cmd)
             self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
         manifest.update({'path': image_name})
         self.images.update({img_uuid: manifest})
