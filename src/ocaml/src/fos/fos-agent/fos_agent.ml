@@ -182,7 +182,7 @@ let agent verbose_flag debug_flag configuration =
   let%lwt _ = Yaks_connector.Local.Actual.observe_node_info uuid (cb_ni state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.observe_node_fdu uuid (cb_al_fdu state) yaks in
   match debug_flag with
-  | true ->
+  | false ->
     let spawner_path = "_build/default/src/fos/fos-spawner/spawner.exe" in
     load_spawner spawner_path state
     >>= fun (p,c) ->
