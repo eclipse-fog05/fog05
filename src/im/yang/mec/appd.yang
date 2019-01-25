@@ -31,11 +31,4 @@
           "Mobile Edge Application Desciptor (AppD).";
         uses appd-base:appd-descriptor;
     }
-   // THIS IS FOR DEMO PURPOSE ONLY
-   leaf fos-descriptor {
-        description
-          "Eclipse fog05 normal descriptor";
-        type string;
-   }
-
 }
