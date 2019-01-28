@@ -521,6 +521,7 @@ class FosAgent(Agent):
             node_info = {'neighbors': self.__osPlugin.get_neighbors()}
             uri = '{}'.format(self.ahome)
             self.astore.dput(uri, json.dumps(node_info))
+            time.sleep(interval)
 
     def __react_to_plugins(self, uri, value, v):
         self.logger.info('__react_to_plugins()', ' Received a plugin action on Desired Store URI: {} Value: {} Version: {}'.format(uri, value, v))
