@@ -294,11 +294,9 @@ class Linux(OSPlugin):
 
     def get_neighbors(self):
         res = ''
-        p = psutil.Popen('lldpcli show neighbors -f json', stdout=PIPE)
-        for line in p.stdout:
-            line = line.decode()
-            res = res + '{}'.format(line)
-        return json.loads(res)
+        cmd_split = 'lldpcli show neighbors -f json'.split()
+        p = psutil.Popen(cmd_split, stdout=PIPE)
+        return json.loads(p.stdout.read().decode())
 
     def get_position_information(self):
         raise NotImplementedError
