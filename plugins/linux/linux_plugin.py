@@ -1,8 +1,8 @@
 # Copyright (c) 2014,2018 ADLINK Technology Inc.
-# 
+#
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
-# 
+#
 # This program and the accompanying materials are made available under the
 # terms of the Eclipse Public License 2.0 which is available at
 # http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
@@ -24,7 +24,7 @@ import shutil
 import socket
 import os
 import sys
-
+import json
 # platform.linux_distribution()
 
 
@@ -54,11 +54,14 @@ class Linux(OSPlugin):
         self.nw_devices = []
         self.accelerator_devices = []
         if self.distro == '':
-            self.agent.logger.warning('__init__()', 'Distribution not recognized, cannot install packages')
+            self.agent.logger.warning(
+                '__init__()', 'Distribution not recognized, cannot install packages')
         else:
-            self.agent.logger.info('__init__()', ' Running on {}'.format(self.distro))
+            self.agent.logger.info(
+                '__init__()', ' Running on {}'.format(self.distro))
             self.pm = self.__get_package_manager(self.distro)
-            self.agent.logger.info('__init__()', ' Package manger {} loaded! '.format(self.pm.name))
+            self.agent.logger.info(
+                '__init__()', ' Package manger {} loaded! '.format(self.pm.name))
 
         self.io_devices = self.__get_io_devices()
         self.nw_devices = self.__get_nw_devices()
@@ -68,7 +71,8 @@ class Linux(OSPlugin):
         return '/opt/fos'
 
     def execute_command(self, command, blocking=False, external=False):
-        self.agent.logger.info('executeCommand()', 'OS Plugin executing command {}'.format(command))
+        self.agent.logger.info(
+            'executeCommand()', 'OS Plugin executing command {}'.format(command))
         if external:
             os.system(command)
         else:
@@ -82,12 +86,15 @@ class Linux(OSPlugin):
 
     def add_know_host(self, hostname, ip):
         self.agent.logger.info('addKnowHost()', ' OS Plugin add to hosts file')
-        add_cmd = 'sudo {} -a {} {}'.format(os.path.join(self.DIR, 'scripts', 'manage_hosts.sh'), hostname, ip)
+        add_cmd = 'sudo {} -a {} {}'.format(os.path.join(
+            self.DIR, 'scripts', 'manage_hosts.sh'), hostname, ip)
         self.execute_command(add_cmd, True)
 
     def remove_know_host(self, hostname):
-        self.agent.logger.info('removeKnowHost()', ' OS Plugin remove from hosts file')
-        del_cmd = 'sudo {} -d {}'.format(os.path.join(self.DIR, 'scripts', 'manage_hosts.sh'), hostname)
+        self.agent.logger.info(
+            'removeKnowHost()', ' OS Plugin remove from hosts file')
+        del_cmd = 'sudo {} -d {}'.format(os.path.join(self.DIR,
+                                                      'scripts', 'manage_hosts.sh'), hostname)
         self.execute_command(del_cmd, True)
 
     def dir_exists(self, path):
@@ -128,7 +135,8 @@ class Linux(OSPlugin):
         data = ''
         if root:
             file_path = 'sudo cat {}'.format(file_path)
-            process = subprocess.Popen(file_path.split(), stdout=subprocess.PIPE)
+            process = subprocess.Popen(
+                file_path.split(), stdout=subprocess.PIPE)
             # read one line at a time, as it becomes available
             for line in iter(process.stdout.readline, ''):
                 data = data + '{}'.format(line)
@@ -166,7 +174,8 @@ class Linux(OSPlugin):
 
     def send_signal(self, signal, pid):
         if self.check_if_pid_exists(pid) is False:
-            self.agent.logger.error('sendSignal()', 'OS Plugin Process not exists {}'.format(pid))
+            self.agent.logger.error(
+                'sendSignal()', 'OS Plugin Process not exists {}'.format(pid))
             # raise ProcessNotExistingException('Process %d not exists' % pid)
         else:
             psutil.Process(pid).send_signal(signal)
@@ -174,7 +183,8 @@ class Linux(OSPlugin):
 
     def send_sig_int(self, pid):
         if self.check_if_pid_exists(pid) is False:
-            self.agent.logger.error('sendSigInt()', 'OS Plugin Process not exists {}'.format(pid))
+            self.agent.logger.error(
+                'sendSigInt()', 'OS Plugin Process not exists {}'.format(pid))
             # raise ProcessNotExistingException('Process %d not exists' % pid)
         else:
             psutil.Process(pid).send_signal(2)
@@ -182,7 +192,8 @@ class Linux(OSPlugin):
 
     def send_sig_kill(self, pid):
         if self.check_if_pid_exists(pid) is False:
-            self.agent.logger.error('sendSigInt()', 'OS Plugin Process not exists {}'.format(pid))
+            self.agent.logger.error(
+                'sendSigInt()', 'OS Plugin Process not exists {}'.format(pid))
             # raise ProcessNotExistingException('Process %d not exists' % pid)
         else:
             psutil.Process(pid).send_signal(9)
@@ -231,9 +242,11 @@ class Linux(OSPlugin):
         for d in psutil.disk_partitions():
             dev = d[0]
             mount = d[1]
-            dim = psutil.disk_usage(mount)[0] / 1024 / 1024 / 1024  # conversion to gb
+            dim = psutil.disk_usage(
+                mount)[0] / 1024 / 1024 / 1024  # conversion to gb
             fs = d[2]
-            disks.append({'local_address': dev, 'dimension': dim, 'mount_point': mount, 'filesystem': fs})
+            disks.append({'local_address': dev, 'dimension': dim,
+                          'mount_point': mount, 'filesystem': fs})
         return disks
 
     def get_io_informations(self):
@@ -278,6 +291,14 @@ class Linux(OSPlugin):
             line = line.decode()
             res = res + '{}'.format(line)
         return res.strip()
+
+    def get_neighbors(self):
+        res = ''
+        p = psutil.Popen('lldpcli show neighbors -f json', stdout=PIPE)
+        for line in p.stdout:
+            line = line.decode()
+            res = res + '{}'.format(line)
+        return json.loads(res)
 
     def get_position_information(self):
         raise NotImplementedError
@@ -329,14 +350,17 @@ class Linux(OSPlugin):
     def __get_io_devices(self):
         dev = []
         gpio_path = '/sys/class/gpio'  # gpiochip0
-        gpio_devices = [f for f in os.listdir(gpio_path) if f not in ['export', 'unexport']]
+        gpio_devices = [f for f in os.listdir(gpio_path) if f not in [
+            'export', 'unexport']]
         for d in gpio_devices:
-            dev.append({'name': d, 'io_type': 'gpio', 'io_file': gpio_path + os.path.sep + d, 'available': True})
+            dev.append({'name': d, 'io_type': 'gpio',
+                        'io_file': gpio_path + os.path.sep + d, 'available': True})
 
         return dev
 
     def __get_default_gw(self):
-        cmd = 'sudo {}'.format(os.path.join(self.DIR, 'scripts', 'default_gw.sh'))
+        cmd = 'sudo {}'.format(os.path.join(
+            self.DIR, 'scripts', 'default_gw.sh'))
         p = psutil.Popen(cmd.split(), stdout=PIPE)
         p.wait()
         iface = ''
@@ -356,13 +380,17 @@ class Linux(OSPlugin):
 
         default_gw = self.__get_default_gw()
         if default_gw == '':
-            self.agent.logger.warning('__get_nw_devices()', 'Default gw not found!!')
+            self.agent.logger.warning(
+                '__get_nw_devices()', 'Default gw not found!!')
         for k in intfs:
             intf_info = psutil.net_if_addrs().get(k)
             if intf_info is not None:
-                ipv4_info = [x for x in intf_info if x[0] == socket.AddressFamily.AF_INET]
-                ipv6_info = [x for x in intf_info if x[0] == socket.AddressFamily.AF_INET6]
-                l2_info = [x for x in intf_info if x[0] == socket.AddressFamily.AF_PACKET]
+                ipv4_info = [x for x in intf_info if x[0]
+                             == socket.AddressFamily.AF_INET]
+                ipv6_info = [x for x in intf_info if x[0]
+                             == socket.AddressFamily.AF_INET6]
+                l2_info = [x for x in intf_info if x[0]
+                           == socket.AddressFamily.AF_PACKET]
 
                 if len(ipv4_info) > 0:
                     ipv4_info = ipv4_info[0]
@@ -399,7 +427,7 @@ class Linux(OSPlugin):
                                  ipv6, 'ipv6_netmask': ipv6mask}
 
                 iface_info = {'intf_name': k, 'inft_configuration': inft_conf, 'intf_mac_address': mac, 'intf_speed':
-                    speed, 'type': self.get_intf_type(k), 'available': True, 'default_gw': False}
+                              speed, 'type': self.get_intf_type(k), 'available': True, 'default_gw': False}
                 if k == default_gw:
                     iface_info.update({'available': False})
                     iface_info.update({'default_gw': True})
@@ -417,7 +445,8 @@ class Linux(OSPlugin):
         return None, None
 
     def set_interface_unaviable(self, intf_name):
-        i, interface_info = self.__find_interface_by_name(intf_name, self.nw_devices)
+        i, interface_info = self.__find_interface_by_name(
+            intf_name, self.nw_devices)
         if i is not None and interface_info is not None:
             interface_info.update({'available': False})
             self.nw_devices[i] = interface_info
@@ -425,7 +454,8 @@ class Linux(OSPlugin):
         return False
 
     def set_interface_available(self, intf_name):
-        i, interface_info = self.__find_interface_by_name(intf_name, self.nw_devices)
+        i, interface_info = self.__find_interface_by_name(
+            intf_name, self.nw_devices)
         if i is not None and interface_info is not None:
             interface_info.update({'available': True})
             self.nw_devices[i] = interface_info
@@ -455,7 +485,8 @@ class Linux(OSPlugin):
         return False
 
     def set_accelerator_unaviable(self, acc_name):
-        i, acc_info = self.__find_interface_by_name(acc_name, self.accelerator_devices)
+        i, acc_info = self.__find_interface_by_name(
+            acc_name, self.accelerator_devices)
         if i is not None and acc_info is not None:
             acc_info.update({'available': False})
             self.accelerator_devices[i] = acc_info
@@ -463,7 +494,8 @@ class Linux(OSPlugin):
         return False
 
     def set_accelerator_available(self, acc_name):
-        i, acc_info = self.__find_interface_by_name(acc_name, self.accelerator_devices)
+        i, acc_info = self.__find_interface_by_name(
+            acc_name, self.accelerator_devices)
         if i is not None and acc_info is not None:
             acc_info.update({'available': True})
             self.accelerator_devices[i] = acc_info

@@ -286,6 +286,9 @@ class Windows(OSPlugin):
     def get_position_information(self):
         raise NotImplementedError
 
+    def get_neighbors(self):
+        return {}
+
     def get_intf_type(self, name):
         if name[:-1] in ["ppp", "wvdial"]:
             itype = "ppp"

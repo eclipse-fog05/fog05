@@ -101,6 +101,9 @@ class OSPlugin(Plugin):
 
         raise NotImplementedError('This is and interface!')
 
+    def get_neighbors(self):
+        raise NotImplementedError('This is and interface!')
+
     def read_binary_file(self, file_path):
         raise NotImplementedError
 
