@@ -514,8 +514,10 @@ class FosAgent(Agent):
         self.astore.put(uri, json.dumps(node_info))
 
     def __update_neighbors(self, interval):
+        self.logger.info('__update_neighbors()', 'Sleeping: {}s'.format(interval))
         time.sleep(interval)
         while True:
+            self.logger.info('__update_neighbors()', 'Updating')
             node_info = {'neighbors': self.__osPlugin.get_neighbors()}
             uri = '{}'.format(self.ahome)
             self.astore.dput(uri, json.dumps(node_info))
