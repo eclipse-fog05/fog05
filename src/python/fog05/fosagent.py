@@ -509,7 +509,7 @@ class FosAgent(Agent):
         node_info.update(
             {'accelerator': self.__osPlugin.get_accelerators_informations()})
 
-
+        self.logger.info('__populate_node_information()', 'Node info size is: {}s'.format(len(json.dumps(node_info))))
         uri = '{}'.format(self.ahome)
         self.astore.put(uri, json.dumps(node_info))
 
