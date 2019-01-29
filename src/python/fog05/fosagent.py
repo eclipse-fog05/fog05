@@ -508,19 +508,22 @@ class FosAgent(Agent):
         node_info.update({'io': self.__osPlugin.get_io_informations()})
         node_info.update(
             {'accelerator': self.__osPlugin.get_accelerators_informations()})
-        node_info.update({'neighbors': self.__osPlugin.get_neighbors()})
+
 
         uri = '{}'.format(self.ahome)
         self.astore.put(uri, json.dumps(node_info))
 
+        n_info = {'neighbors': self.__osPlugin.get_neighbors()}
+        uri = '{}/neighbors'.format(self.ahome)
+        self.astore.put(uri, json.dumps(n_info))
+
     def __update_neighbors(self, interval):
-        self.logger.info('__update_neighbors()', 'Sleeping: {}s'.format(interval))
+        self.logger.info('__update_neighbors()', 'With interval: {}s'.format(interval))
         time.sleep(interval)
         while True:
-            self.logger.info('__update_neighbors()', 'Updating')
-            node_info = {'neighbors': self.__osPlugin.get_neighbors()}
-            uri = '{}'.format(self.ahome)
-            self.astore.dput(uri, json.dumps(node_info))
+            n_info = {'neighbors': self.__osPlugin.get_neighbors()}
+            uri = '{}/neighbors'.format(self.ahome)
+            self.astore.put(uri, json.dumps(n_info))
             time.sleep(interval)
 
     def __react_to_plugins(self, uri, value, v):

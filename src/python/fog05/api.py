@@ -301,6 +301,22 @@ class API(object):
                 return None
             return json.loads(infos)
 
+
+        def neighbors(self, node_uuid):
+            """
+            Provide neighbors information about a specific node
+
+            :param node_uuid: the uuid of the node you want neighbors info
+            :return: a dictionary with neighbors information about the node
+            """
+            if node_uuid is None:
+                return None
+            uri = '{}/{}/neighbors'.format(self.store.aroot, node_uuid)
+            infos = self.store.actual.resolve(uri)
+            if infos is None:
+                return None
+            return json.loads(infos)
+
         def plugins(self, node_uuid):
             '''
 
