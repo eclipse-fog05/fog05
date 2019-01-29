@@ -1,3 +1,6 @@
+# -*-Makefile-*-
+#!/usr/bin/env bash
+
 # Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
 #
 # See the NOTICE file(s) distributed with this work for additional
@@ -10,21 +13,7 @@
 #
 # SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
 #
-# Contributors: Gabriele Baldoni, ADLINK Technology Inc.
-# OCaml implementation and API
+# Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Initial implementation and API
 
-#!/usr/bin/env python3
 
-from setuptools import setup
-
-setup(
-    name='fog05',
-    version='0.2.0.a1',
-    python_requires='>=3',
-    author='ADLINK',
-    packages=['fog05', 'fog05/interfaces'],
-    install_requires=['yaks==0.2.2', 'jsonschema',
-                      'netifaces', 'psutil', 'jinja2', 'mvar'],
-    scripts=['bin/fos', 'bin/fos-agent', 'bin/fos-agent.bat', 'bin/fos.bat'],
-    include_package_data=True
-)
+sudo pip3 install pyang pyangbind

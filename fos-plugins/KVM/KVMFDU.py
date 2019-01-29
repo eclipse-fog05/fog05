@@ -23,17 +23,48 @@ from fog05.interfaces.FDU import FDU
 class KVMFDU(FDU):
 
     # , cpu, ram, disk_size, networks, image, user_file, ssh_key):
-    def __init__(self, uuid, name, image_id, flavor_id):
+    def __init__(self, uuid, name, disk, cdrom, networks, user_file, ssh_key, flavor_id, image_id):
 
         super(KVMFDU, self).__init__()
         self.uuid = uuid
         self.name = name
+        self.disk = disk
+        self.cdrom = cdrom
+        self.networks = networks
+        self.user_file = user_file
+        self.ssh_key = ssh_key
         self.image_id = image_id
         self.flavor_id = flavor_id
+        self.xml = None
+        self.state = State.DEFINED
 
-        self.user_file = None
-        self.ssh_key = None
-        self.networks = []
+    def on_define(self):
+        self.state = State.DEFINED
+
+    def on_configured(self, configuration):
+        self.xml = configuration
+        self.state = State.CONFIGURED
+
+    def on_start(self):
+        self.state = State.RUNNING
+
+    def on_stop(self):
+        self.state = State.CONFIGURED
+
+    def on_pause(self):
+        self.state = State.PAUSED
+
+    def on_resume(self):
+        self.state = State.RUNNING
+
+    def on_clean(self):
+        self.state = State.DEFINED
+
+    def before_migrate(self):
+        pass
+
+    def after_migrate(self):
+        pass
 
     def set_user_file(self, user_file):
         self.user_file = user_file

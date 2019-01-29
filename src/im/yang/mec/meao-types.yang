@@ -1,0 +1,492 @@
+/*
+ *
+ *   Copyright 2018 ADLINK Technology Inc.
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
+ * which is available at https://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
+ *
+ * Contributors: Gabriele Baldoni, ADLINK Technology Inc. - MEAO Information Model
+ *
+ */
+
+ module meao-types {
+    namespace "urn:fog05:params:xml:mec:yang:meao:meao-types";
+    prefix "meaotypes";
+
+    typedef serializer-types {
+        type enumeration {
+            enum JSON;
+            enum XML;
+            enum PROTOBUF3;
+        }
+    }
+
+    typedef transport-types {
+        type enumeration {
+            enum REST_HTTP;
+            enum MB_TOPIC_BASED;
+            enum MB_ROUTING;
+            enum MB_PUBSUB;
+            enum RPC;
+            enum RPC_STREAMING;
+            enum WEBSOCKET;
+        }
+    }
+
+    grouping tunnel-info {
+        leaf tunnel-type {
+            description
+              "Type of the tunnel GTP-U, GRE, ...";
+            type enumeration {
+                enum GTP-U;
+                enum GRE;
+            }
+        }
+
+        leaf tunnel-dst-address {
+            description
+              "Destination address of the tunnel";
+            type string;
+        }
+
+        leaf tunnel-src-address {
+            description
+              "Source address of the tunnel";
+            type string;
+        }
+    /* tunnel-specific-data type is not specified */
+    }
+
+    grouping interface-descriptor {
+        leaf interface-type {
+            description
+              "The type of the interface";
+            type enumeration {
+                enum MAC;
+                enum TUNNEL;
+                enum IP;
+            }
+        }
+
+        container tunnel-info {
+            description
+              "Included only if the destination address type is tunnel";
+            uses tunnel-info;
+        }
+
+        leaf src-mac-address {
+            description
+              "If the interface type is MAC, the source address
+               identifies the MAC address of the interface";
+            type string;
+        }
+
+        leaf dst-mac-address {
+            description
+              "If the interface is MAC, the destination address
+                 identifies the MEC address of the destination,
+               used only for dst interface";
+            type string;
+        }
+
+        leaf dst-ip-address {
+            description
+              "If the interface type is IP, the destination
+               address identifies the IP address of the 
+               destination. Only used for dst interface";
+            type string;
+        }
+    }
+
+    grouping traffic-filter {
+        leaf-list src-address {
+            description
+              "An IP address or a range of IP addresses
+               For IPv4, the IP address can be and IP address plus mask.
+               or an individual IP address, or a range of IP addresses
+               For IPv6 the IP address could be an IP prefix, or a range of IP prefixes";
+            type string;
+        }
+
+        leaf-list dst-address {
+            description
+              "An IP address or a range of IP addresses
+               For IPv4, the IP address can be and IP address plus mask.
+               or an individual IP address, or a range of IP addresses
+               For IPv6 the IP address could be an IP prefix, or a range of IP prefixes";
+            type string;
+        }
+
+        leaf-list src-port {
+            description
+              "A port or a range of ports";
+            type string;
+        }
+
+        leaf-list dst-port {
+            description
+              "A port or a range of ports";
+            type string;
+        }
+
+        leaf-list protocol {
+            description
+              "Specify the protocol of the traffic filter";
+            type string;
+        }
+
+        leaf-list token {
+            description
+              "Used for token based traffic rule";
+            type string;
+        }
+
+        leaf-list src-tunnel-address {
+            description
+              "Used for GTP tunnel based traffic rule";
+            type string;
+        }
+
+        leaf-list tgt-tunnel-address {
+            description
+              "Used for GTP tunnel based traffic rule";
+            type string;
+        }
+
+        leaf-list src-tunnel-port {
+            description
+              "Used for GTP tunnell based traffic rule";
+            type string;
+        }
+
+        leaf-list dst-tunnel-port {
+            description
+              "Used for GTP tunnell based traffic rule";
+            type string;
+        }
+
+        leaf qci {
+            description
+              "Used to match all packets that have the same QCI";
+            type int64;
+        }
+
+        leaf dscp {
+            description
+              "Used to match all IPv4 packets that have the same DSCP";
+            type int64;
+        }
+
+        leaf tc {
+            description
+              "Used to match all IPv6 packets that have the same TC";
+            type int64;
+        }
+    }
+    grouping security-info {
+        leaf oauth2_info {
+            description
+              "Parameter related to OAuth 2.0 IETF RFC 6749";
+            type string;
+        /* Should be structure for oauth info */
+        }
+
+        leaf-list grant-types {
+            description
+              "List of supported OAuth 2.0 grant types";
+            type enumeration {
+                enum OAUTH2_AUTORIZATION_CODE;
+                enum OAUTH2_IMPLICIT_GRANT;
+                enum OAUTH2_RESOURCE_OWNER;
+                enum OAUTH2_CLIENT_CREDENTIALS;
+            }
+            min-elements 1;
+            max-elements 4;
+        }
+
+        leaf token-endpoint {
+            description
+              "The token enpoint";
+            type string;
+        /* Should be URI */
+        }
+    }
+
+    /* eventual exentions */
+    grouping transport-descriptor {
+        leaf type {
+            description
+              "Type of the transport";
+            type transport-types;
+        }
+
+        leaf protocol {
+            description
+              "The name of the protocol used, eg. HTTP for REST type";
+            type string;
+        }
+
+        leaf version {
+            description
+              "The version of the protocol used";
+            type string;
+        }
+
+        container security {
+            description
+              "Information about the security used by the transport";
+            uses security-info;
+        }
+    }
+
+    grouping transport-dependency {
+
+        leaf-list labels {
+            description
+              "Set of labels that allow to define groups of transport
+               bindings";
+            type string;
+            min-elements 1;
+        }
+
+        leaf-list serializers {
+            description
+              "Information about the serializers in this transport binding";
+            type serializer-types;
+        }
+
+        container transport {
+            description
+              "Information about the transport in this transport binding";
+            uses transport-descriptor;
+        }
+    }
+
+    grouping category-ref {
+        leaf href {
+            description
+              "Reference if the catalogue";
+            type string;
+        }
+
+        leaf id {
+            description
+              "Unique indentifier of the category";
+            type string;
+        }
+
+        leaf name {
+            description
+              "Name of the category";
+            type string;
+        }
+
+        leaf version {
+            description
+              "Category version";
+            type string;
+        }
+    }
+
+    grouping service-dependency {
+
+        leaf ser-name {
+            description
+              "The name of the service eg. RINS, LocationService...";
+            type string;
+        }
+
+        list ser-category {
+            description
+              "A category reference for the service";
+            key "id";
+            uses category-ref;
+        }
+
+        list ser-transport-dependencies {
+            description
+              "Indicates the transport and serialization format";
+            key "id";
+            leaf id {
+                type string;
+            }
+            uses transport-dependency;
+        }
+    }
+
+    grouping service-descriptor {
+
+        leaf ser-name {
+            description
+              "The name of the service eg. RINS, Location Service, ....";
+            type string;
+        }
+
+        container ser-category {
+            description
+              "A category reference for the defined service";
+            uses category-ref;
+        }
+
+        leaf version {
+            description
+              "The version of the service";
+            type string;
+        }
+
+        list transport-supported {
+            description
+              "Indicates the transport and serialization supported by the service";
+            key "id";
+            leaf id {
+                type string;
+            }
+
+            container transport {
+                description
+                  "Information about the transport in this binding";
+                uses transport-descriptor;
+            }
+            leaf-list serializers {
+                description
+                  "Information about the serializers in this transport binding";
+                type serializer-types;
+            }
+        }
+    }
+
+    grouping feature-dependency {
+        leaf feature-name {
+            description
+              "The name of the feature eg. UserApps, UEIndentity...";
+            type string;
+        }
+
+        leaf version {
+            description
+              "Version of the feature";
+            type string;
+        }
+    }
+
+    grouping traffic-rule-descriptor {
+        leaf traffic-rule-id {
+            description
+              "Identifies the traffic rule";
+            type string;
+        }
+
+        leaf filter-type {
+            description
+              "Definition of the filter type: FLOW, the filter matches UE->EPC packets,
+               and the reverse packets are handled by the same contex";
+            type enumeration {
+                enum FLOW;
+                enum PACKET;
+            }
+        }
+
+        leaf priority {
+            description
+              "Priority of the traffic rule. If rule conflicts, the one with
+               higher priority take precedence.";
+            type int64;
+        }
+
+        list traffic-filter {
+            description
+              "The filder used to idenfity specific flow/packets that need to be handled by the MEC host";
+            key "id";
+            leaf id {
+                type string;
+            }
+            uses traffic-filter;
+        }
+
+        leaf action {
+            description
+              "Identifies tha action of the ME host data plane, when a packet matches the traffic filter,
+               the actions include: DROP, FORWARD_DECAPSULATED, FORWARD_AS_IS, PASSTHROUGH, 
+               DUPLICATE_DECAPSULATED, DUPLICATE_AS_IS";
+            type enumeration {
+                enum DROP;
+                enum FORWARD_DECAPSULATED;
+                enum FORWARD_AS_IS;
+                enum PASSTHROUGH;
+                enum DUPLICATE_DECAPSULATED;
+                enum DUPLICATE_AS_IS;
+            }
+        }
+
+        list dst-interface {
+            description
+              "Describes the destination interface information, if the action if FORWARD.
+               Some applications require two interfaces, where the first is to the UE side
+               and the second one is on the EPC side";
+            key "id";
+            leaf id {
+                type string;
+            }
+            uses interface-descriptor;
+            max-elements 2;
+        }
+    }
+
+    grouping dsn-rule-descriptor {
+
+        leaf dns-rule-id {
+            description
+              "Identifies the DNS rule";
+            type string;
+        }
+
+        leaf domain-name {
+            description
+              "FQDN of the DNS rule";
+            type string;
+        }
+
+        leaf ip-address-type {
+            description
+              "Indentifies the IP address type";
+            type enumeration {
+                enum IP_V4;
+                enum IP_V6;
+            }
+        }
+
+        leaf ip-address {
+            description
+              "IP address given by the DNS rule";
+            type string;
+        }
+
+        leaf ttl {
+            description
+              "Time-to-live value";
+            type int64;
+        }
+    }
+
+    grouping latency-descriptor {
+        // the meaning of the latency is not yet specified, expected to be specified in stage 3 specification 
+        leaf time-unit {
+            description
+              "Time unit, eg ms.";
+            type int32;
+        }
+
+        leaf latency {
+            description
+              "The value of the latency";
+            type string;
+        }
+    }
+}

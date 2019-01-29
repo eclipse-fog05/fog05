@@ -1,4 +1,6 @@
-# Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+#!/usr/bin/env python3
+
+# Copyright (c) 2014,2018 ADLINK Technology Inc.
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -10,21 +12,20 @@
 #
 # SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
 #
-# Contributors: Gabriele Baldoni, ADLINK Technology Inc.
-# OCaml implementation and API
+# Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Base plugins set
+#
+# This API is part of EU H2020 5GCity Project Platform
+#
 
-#!/usr/bin/env python3
 
 from setuptools import setup
 
 setup(
-    name='fog05',
-    version='0.2.0.a1',
+    name='mec_im',
+    version='0.0.1',
     python_requires='>=3',
     author='ADLINK',
-    packages=['fog05', 'fog05/interfaces'],
-    install_requires=['yaks==0.2.2', 'jsonschema',
-                      'netifaces', 'psutil', 'jinja2', 'mvar'],
-    scripts=['bin/fos', 'bin/fos-agent', 'bin/fos-agent.bat', 'bin/fos.bat'],
+    packages=['mec_im'],
+    install_requires=['jsonschema'],
     include_package_data=True
 )

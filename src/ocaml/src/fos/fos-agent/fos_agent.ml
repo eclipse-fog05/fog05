@@ -94,7 +94,7 @@ let main_loop state promise =
 
 
 
-let agent verbose_flag configuration =
+let agent verbose_flag debug_flag configuration =
   let level, reporter = (match verbose_flag with
       | true -> Apero.Result.get @@ Logs.level_of_string "debug" ,  (Logs_fmt.reporter ())
       | false -> Apero.Result.get @@ Logs.level_of_string "error",  (Fos_core.get_unix_syslog_reporter ())
@@ -169,7 +169,7 @@ let agent verbose_flag configuration =
     let%lwt plugins = Yaks_connector.Local.Actual.get_node_plugins (Apero.Option.get self.configuration.agent.uuid) self.yaks in
     Lwt_list.iter_p (fun e ->
         let%lwt pl = Yaks_connector.Local.Actual.get_node_plugin (Apero.Option.get self.configuration.agent.uuid) e self.yaks in
-        if pl.name = fdu_type then
+        if String.uppercase_ascii (pl.name) = String.uppercase_ascii (fdu_type) then
           let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - PLUGIN CB-GD-FDU - Calling %s plugin" pl.name) in
           Yaks_connector.Local.Desired.add_node_fdu (Apero.Option.get self.configuration.agent.uuid) pl.uuid fdu.uuid fdu self.yaks >>= Lwt.return
         else
@@ -181,16 +181,20 @@ let agent verbose_flag configuration =
   let%lwt _ = Yaks_connector.Local.Actual.observe_node_plugins uuid (cb_la state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.observe_node_info uuid (cb_ni state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.observe_node_fdu uuid (cb_al_fdu state) yaks in
-  (* let spawner_path = "_build/default/src/fos/fos-spawner/spawner.exe" in
-     load_spawner spawner_path state
-     >>= fun (p,c) ->
-     let _ = check_spawner_pid p c state 0 in
-     let _ = print_spawner_output p in *)
-  main_loop state prom
+  match debug_flag with
+  | false ->
+    let spawner_path = "_build/default/src/fos/fos-spawner/spawner.exe" in
+    load_spawner spawner_path state
+    >>= fun (p,c) ->
+    let _ = check_spawner_pid p c state 0 in
+    print_spawner_output p
+  | _ -> Lwt.return_unit
+    >>= fun _ ->
+    main_loop state prom
 
 (* AGENT CMD  *)
 
-let start verbose_flag daemon_flag configuration_path =
+let start verbose_flag daemon_flag debug_flag configuration_path =
   (* ignore verbose_flag; ignore daemon_flag; ignore configuration_path; *)
   match daemon_flag with
   | true ->
@@ -209,10 +213,10 @@ let start verbose_flag daemon_flag configuration_path =
         let file_err = open_out agent_err_file in
         ignore @@ Unix.dup2 (Unix.descr_of_out_channel file_out) Unix.stdout;
         ignore @@ Unix.dup2 (Unix.descr_of_out_channel file_err) Unix.stderr;
-        Lwt_main.run @@ agent verbose_flag configuration_path
+        Lwt_main.run @@ agent verbose_flag debug_flag configuration_path
       end
     else exit 0
-  | false -> Lwt_main.run @@ agent verbose_flag configuration_path
+  | false -> Lwt_main.run @@ agent verbose_flag debug_flag configuration_path
 
 let verbose =
   let doc = "Set verbose output." in
@@ -222,12 +226,16 @@ let daemon =
   let doc = "Set daemon" in
   Cmdliner.Arg.(value & flag & info ["d";"daemon"] ~doc)
 
+let debug =
+  let doc = "Set debug (not load spawner)" in
+  Cmdliner.Arg.(value & flag & info ["b";"debug"] ~doc)
+
 let config =
   let doc = "Configuration file path" in
   Cmdliner.Arg.(value & opt string "/usr/local/share/fog05/agent.ini" & info ["c";"conf"] ~doc)
 
 
-let agent_t = Cmdliner.Term.(const start $ verbose $ daemon  $ config)
+let agent_t = Cmdliner.Term.(const start $ verbose $ daemon $ debug $ config)
 
 let info =
   let doc = "fog05 | The Fog-Computing IaaS" in

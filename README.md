@@ -13,21 +13,10 @@ Inside [plugins](./plugins) there are some plugins for entity
 ### master
 
 The version on master does not use Cyclone DDS for communication between nodes
-You need to install YAKS API from pip
-
-```
-pip3 install yaks==0.2.1
-```
 
 You need a running YAKS server to use it.
 
-YAKS can be found [here](https://www.dropbox.com/s/1tmbubzahzy4eex/yaksd.tar.gz)
-
-#### 0.1.3
-
-
-For the version that uses Cyclone DDS go to branch [0.1.3](https://github.com/eclipse/fog05/tree/0.1.3)
-See [Installation](https://github.com/eclipse/fog05/wiki/Installation) for installation instructions
+YAKS can be found [here](https://www.dropbox.com/s/ix28wgn4kqqonaa/yaksd.tar.gz)
 
 ### Interact with the nodes
 
