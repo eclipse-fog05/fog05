@@ -298,7 +298,7 @@ class Linux(OSPlugin):
         p = psutil.Popen(cmd_split, stdout=PIPE)
         jcont = json.loads(p.stdout.read().decode())
 
-        faces = jcont.get('lldp').get('interface')
+        faces = jcont.get('lldp').get('interface', [])
         res = []
         for curr in faces:
             k = list(curr.keys())[0]
