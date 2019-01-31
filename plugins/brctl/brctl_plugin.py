@@ -22,7 +22,6 @@ from jinja2 import Environment
 import socket
 
 
-
 class brctl(NetworkPlugin):
 
     def __init__(self, name, version, agent, plugin_uuid, configuration={}):
@@ -63,11 +62,11 @@ class brctl(NetworkPlugin):
 
         '''
         should listen on:
-        
+
         - //dfos/<sys-id>/<node-id>/network/<myuuid>/networks/**
         - //dfos/<sys-id>/<node-id>/network/<myuuid>/bridges/**
         - //dfos/<sys-id>/<node-id>/network/<myuuid>/interfaces/**
-        
+
         '''
 
         uri = '{}/{}/networks/**'.format(self.agent.dhome, self.HOME)
@@ -437,8 +436,10 @@ class brctl(NetworkPlugin):
         self.agent.get_os_plugin().execute_command(chmod_cmd, True)
         return '{}.sh'.format(net_uuid.split('-')[0]), vxlan_name, vxlan_id, mcast_addr
 
-    def get_bridge_names_from_command_output_string(output):  # todo: last item is empty-> delete
+    # todo: last item is empty-> delete
+    def get_bridge_names_from_command_output_string(self, output):
         rows = output.split('\n')
         table = [row.split('\t') for row in rows]
         bridges_names = [item[0] for item in table]
         return bridges_names[1:]  # pop name of the table
+
