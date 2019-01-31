@@ -442,3 +442,4 @@ class brctl(NetworkPlugin):
         table = [row.split('\t') for row in rows]
         bridges_names = [item[0] for item in table]
         return bridges_names[1:]  # pop name of the table
+
