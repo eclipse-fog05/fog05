@@ -284,7 +284,7 @@ class FosAgent(Agent):
                             self.logger.warning(
                                 '__react_to_plugins()', '[ WARN ] Plugins of type {} are not yet supported...'.format(manifest.get('type')))
 
-            mt = threading.Thread(target=self.__update_neighbors, args=(5,),
+            mt = threading.Thread(target=self.__update_neighbors, args=(10,),
                                       daemon=True)
             mt.start()
 
@@ -521,7 +521,7 @@ class FosAgent(Agent):
         self.logger.info('__update_neighbors()', 'With interval: {}s'.format(interval))
         time.sleep(interval)
         while True:
-            n_info = {'neighbors': self.__osPlugin.get_neighbors()}
+            n_info = self.__osPlugin.get_neighbors()
             uri = '{}/neighbors'.format(self.ahome)
             self.astore.put(uri, json.dumps(n_info))
             time.sleep(interval)
