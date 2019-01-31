@@ -33,9 +33,6 @@ import threading
 from mvar import MVar
 
 # TODO Plugins should not be aware of the Agent - The Agent is in OCaml no way to access his store, his logger and the OS plugin
-from plugins.LXD.utils import get_bridge_names_from_instance_networks
-from plugins.brctl import brctl_plugin
-import plugins.brctl.brctl_plugin
 
 
 class LXD(RuntimePlugin):
@@ -296,7 +293,7 @@ class LXD(RuntimePlugin):
                                                      'Entity {} is not in DEFINED state'.format(entity_uuid))
         else:
 
-            ''' 
+            '''
                 See if is possible to:
                 - Put rootfs and images inside a custom path
             '''
@@ -322,7 +319,7 @@ class LXD(RuntimePlugin):
                     # img.add_alias(entity_uuid, description=entity.name)
 
                     '''
-                    Should explore how to setup correctly the networking, seems that you can't decide the interface you 
+                    Should explore how to setup correctly the networking, seems that you can't decide the interface you
                     want to attach to the container
                     Below there is a try using a profile customized for network
                     '''
@@ -433,8 +430,8 @@ class LXD(RuntimePlugin):
                                                '[ ERRO ] LXD Plugin - Clean a Container Exception raised {}'.format(e))
 
                         '''
-                        {'wan': {'nictype': 'physical', 'name': 'wan', 'type': 'nic', 'parent': 'veth-af90f'}, 
-                        'root': {'type': 'disk', 'pool': 'default', 'path': '/'}, 
+                        {'wan': {'nictype': 'physical', 'name': 'wan', 'type': 'nic', 'parent': 'veth-af90f'},
+                        'root': {'type': 'disk', 'pool': 'default', 'path': '/'},
                         'mgmt': {'nictype': 'bridged', 'name': 'mgmt', 'type': 'nic', 'parent': 'br-45873fb0'}}
 
                         '''
@@ -488,7 +485,7 @@ class LXD(RuntimePlugin):
 
                 network_plugin = list(self.agent.get_network_plugin(None).values()).pop()
                 # TODO: check network_plugin is of brctl_plugin.brctl instance
-                expected_bridges = get_bridge_names_from_instance_networks(instance.networks)
+                expected_bridges = self.get_bridge_names_from_instance_networks(instance.networks)
                 network_plugin.create_bridges_if_not_exist(expected_bridges)
                 c.start()
                 while c.status != 'Running':
@@ -1152,6 +1149,10 @@ class LXD(RuntimePlugin):
         devices.update(mid)
 
         return devices
+
+    def get_bridge_names_from_instance_networks(self, instance_networks):
+        return [network['br_name'] for network in instance_networks]
+
 
     def __generate_container_dict(self, instance):
         conf = {'name': instance.name, 'profiles': instance.profiles,
