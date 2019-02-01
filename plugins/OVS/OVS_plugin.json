@@ -1,7 +1,7 @@
 {
   "name": "OVS",
   "version": 1,
-  "uuid": "e6019cfe-fcb8-4ce9-a3bf-901c6b391cbc"
+  "uuid": "e6019cfe-fcb8-4ce9-a3bf-901c6b391cbc",
   "type": "network",
   "configuration":{
 
