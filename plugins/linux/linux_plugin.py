@@ -296,7 +296,37 @@ class Linux(OSPlugin):
         res = ''
         cmd_split = 'lldpcli show neighbors -f json'.split()
         p = psutil.Popen(cmd_split, stdout=PIPE)
-        return json.loads(p.stdout.read().decode())
+        jcont = json.loads(p.stdout.read().decode())
+
+        faces = jcont.get('lldp').get('interface', [])
+        res = []
+        for curr in faces:
+            k = list(curr.keys())[0]
+            hs = list(curr[k]['chassis'].keys())[0]
+            r = {
+                'src': {
+                    'node': {
+                        'name': self.get_hostname(),
+                        'id': self.get_uuid()
+                    },
+                    'port': {
+                        'name': k,
+                        'id': [x['intf_mac_address'] for x in self.nw_devices if x['intf_name'] == k][0]
+                    }
+                },
+                'dst': {
+                    'node': {
+                        'name': hs,
+                        'id': curr[k]['chassis'][hs]['id']['value']
+                    },
+                    'port': {
+                        'id': curr[k]['port']['id']['value'],
+                        'name': curr[k]['port']['descr']
+                    }
+                }
+            }
+            res.append(r)
+        return res
 
     def get_position_information(self):
         raise NotImplementedError

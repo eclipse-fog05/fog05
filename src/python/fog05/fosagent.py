@@ -78,6 +78,7 @@ class FosAgent(Agent):
             self.__autoload_list = []
             self.yaks_server = '127.0.0.1'
             self.export = True
+            self.use_lldpd = True
 
             # Configuration Parsing
 
@@ -90,6 +91,8 @@ class FosAgent(Agent):
                     self.yaks_server = self.config['agent']['YAKS']
                 if 'EXPORT' in self.config['agent']:
                     self.export = self.config['agent'].getboolean('EXPORT')
+                if 'ENABLE_LLDP' in self.config['agent']:
+                    self.use_lldpd = self.config['agent'].getboolean('ENABLE_LLDP')
             if 'plugins' in self.config:
                 if 'autoload' in self.config['plugins']:
                     self.__PLUGIN_AUTOLOAD = self.config['plugins'].getboolean(
@@ -284,9 +287,10 @@ class FosAgent(Agent):
                             self.logger.warning(
                                 '__react_to_plugins()', '[ WARN ] Plugins of type {} are not yet supported...'.format(manifest.get('type')))
 
-            mt = threading.Thread(target=self.__update_neighbors, args=(5,),
-                                      daemon=True)
-            mt.start()
+            if (self.use_lldpd):
+                mt = threading.Thread(target=self.__update_neighbors,
+                                        args=(10,),daemon=True)
+                mt.start()
 
         except FileNotFoundError as fne:
             self.logger.error(
@@ -513,15 +517,17 @@ class FosAgent(Agent):
         uri = '{}'.format(self.ahome)
         self.astore.put(uri, json.dumps(node_info))
 
-        n_info = {'neighbors': self.__osPlugin.get_neighbors()}
-        uri = '{}/neighbors'.format(self.ahome)
-        self.astore.put(uri, json.dumps(n_info))
+
+        if self.use_lldpd:
+            n_info = {'neighbors': self.__osPlugin.get_neighbors()}
+            uri = '{}/neighbors'.format(self.ahome)
+            self.astore.put(uri, json.dumps(n_info))
 
     def __update_neighbors(self, interval):
         self.logger.info('__update_neighbors()', 'With interval: {}s'.format(interval))
         time.sleep(interval)
         while True:
-            n_info = {'neighbors': self.__osPlugin.get_neighbors()}
+            n_info = self.__osPlugin.get_neighbors()
             uri = '{}/neighbors'.format(self.ahome)
             self.astore.put(uri, json.dumps(n_info))
             time.sleep(interval)
