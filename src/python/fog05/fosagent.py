@@ -517,9 +517,11 @@ class FosAgent(Agent):
         uri = '{}'.format(self.ahome)
         self.astore.put(uri, json.dumps(node_info))
 
-        n_info = {'neighbors': self.__osPlugin.get_neighbors()}
-        uri = '{}/neighbors'.format(self.ahome)
-        self.astore.put(uri, json.dumps(n_info))
+
+        if self.use_lldpd:
+            n_info = {'neighbors': self.__osPlugin.get_neighbors()}
+            uri = '{}/neighbors'.format(self.ahome)
+            self.astore.put(uri, json.dumps(n_info))
 
     def __update_neighbors(self, interval):
         self.logger.info('__update_neighbors()', 'With interval: {}s'.format(interval))
