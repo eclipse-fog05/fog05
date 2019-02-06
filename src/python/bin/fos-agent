@@ -38,7 +38,7 @@ class FOSAgentCli(object):
         signal.signal(signal.SIGINT, self.__catch_signal)
         signal.signal(signal.SIGTERM, self.__catch_signal)
         if sys.platform in ['windows', 'Windows', 'win32']:
-            signal.signal(signal.CTRL_BREAK_EVENT, self.__catch_signal)
+            # signal.signal(signal.CTRL_BREAK_EVENT, self.__catch_signal)
             signal.signal(signal.CTRL_C_EVENT, self.__catch_signal)
         self.agent = FosAgent(
             debug=debug, plugins_path=plugin_path, configuration=config)
