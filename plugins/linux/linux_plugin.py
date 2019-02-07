@@ -299,6 +299,8 @@ class Linux(OSPlugin):
         jcont = json.loads(p.stdout.read().decode())
 
         faces = jcont.get('lldp').get('interface', [])
+        if isinstance(faces, dict):
+            faces = [faces]
         res = []
         for curr in faces:
             k = list(curr.keys())[0]

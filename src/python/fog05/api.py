@@ -616,18 +616,25 @@ class API(object):
             '''
             uri = '{}/{}/runtime/{}/entity/{}'.format(
                 self.store.aroot, node_uuid, handler_uuid, entity_uuid)
-            local_var = MVar()
+            #local_var = MVar()
 
-            def cb(key, value, v):
-                local_var.put(value)
-            subid = self.store.actual.observe(uri, cb)
+            # def cb(key, value, v):
+            #     local_var.put(value)
+            # subid = self.store.actual.observe(uri, cb)
 
-            entity_info = json.loads(local_var.get())
+
+
+            v = self.store.actual.get(uri)
+            while v is None:
+                v = self.store.actual.get(uri)
+            entity_info = json.loads(v)
             es = entity_info.get('status')
             while es not in [state,'error']:
-                    entity_info = json.loads(local_var.get())
+                    v = self.store.actual.get(uri)
+                    entity_info = json.loads(v)
+                    # entity_info = json.loads(local_var.get())
                     es = entity_info.get('status')
-            self.store.actual.overlook(subid)
+            # self.store.actual.overlook(subid)
             res = {
                     'entity_uuid':entity_uuid,
                     'status':es
@@ -649,17 +656,29 @@ class API(object):
 
             '''
             uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.store.aroot, node_uuid, handler_uuid, entity_uuid, instance_uuid)
-            local_var = MVar()
-            def cb(key, value, v):
-                local_var.put(value)
-            subid = self.store.actual.observe(uri, cb)
+            #local_var = MVar()
+            #def cb(key, value, v):
+            #    local_var.put(value)
+            #subid = self.store.actual.observe(uri, cb)
 
-            entity_info = json.loads(local_var.get())
+            #entity_info = json.loads(local_var.get())
+            #es = entity_info.get('status')
+            #while es not in [state,'error']:
+            #        entity_info = json.loads(local_var.get())
+            #        es = entity_info.get('status')
+            #self.store.actual.overlook(subid)
+            v = self.store.actual.get(uri)
+            while v is None:
+                v = self.store.actual.get(uri)
+            entity_info = json.loads(v)
             es = entity_info.get('status')
             while es not in [state,'error']:
-                    entity_info = json.loads(local_var.get())
+                    v = self.store.actual.get(uri)
+                    entity_info = json.loads(v)
+                    # entity_info = json.loads(local_var.get())
                     es = entity_info.get('status')
-            self.store.actual.overlook(subid)
+            # self.store.actual.overlook(subid)
+
             res = {
                     'entity_uuid':entity_uuid,
                     'instance_uuid' : instance_uuid,
