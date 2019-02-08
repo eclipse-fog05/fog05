@@ -3,7 +3,8 @@
         "system": "0",
         "expose": true,
         "yaks": "tcp/127.0.0.1:7887",
-        "path": "/opt/fos"
+        "path": "/opt/fos",
+        "enable_lldp": false
     },
     "plugins": {
         "plugin_path": "/home/ubuntu/fog05/fos-plugins",
