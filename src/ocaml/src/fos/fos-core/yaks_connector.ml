@@ -42,6 +42,16 @@ let get_connector (config:Fos_core.configuration)=
                                      ; listeners = []
                                      ; evals = []
                                      }
+let get_connector_of_locator loc =
+  let%lwt yclient = Yaks.login loc Apero.Properties.empty in
+  let%lwt admin = Yaks.admin yclient in
+  let%lwt ws = Yaks.workspace (create_path [global_actual_prefix; ""]) yclient in
+  Lwt.return @@ Fos_core.MVar.create {  ws = ws
+                                     ; yaks_client = yclient
+                                     ; yaks_admin = admin
+                                     ; listeners = []
+                                     ; evals = []
+                                     }
 
 let close_connector y =
   Fos_core.MVar.guarded y @@ fun state ->
@@ -158,6 +168,10 @@ module MakeGAD(P: sig val prefix: string end) = struct
     List.nth (String.split_on_char '/' ps) 6
 
   let extract_pluginid_from_path path =
+    let ps = Yaks.Path.to_string path in
+    List.nth (String.split_on_char '/' ps) 8
+
+  let extract_fduid_from_path path =
     let ps = Yaks.Path.to_string path in
     List.nth (String.split_on_char '/' ps) 8
 
@@ -327,6 +341,27 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let p = get_node_fdu_info_path sysid tenantid nodeid fduid in
     let value = Yaks.Value.StringValue (Types_j.string_of_atomic_entity fduinfo) in
     Yaks.Workspace.put p value connector.ws
+
+  let get_node_fdu sysid tenantid nodeid connector =
+    Fos_core.MVar.read connector >>= fun connector ->
+    let s = get_node_fdu_selector sysid tenantid nodeid in
+    Yaks.Workspace.get s connector.ws
+    >>=
+    Lwt_list.map_p (fun (k,v) -> Lwt.return (
+        extract_nodeid_from_path k,
+        extract_fduid_from_path k,
+        Yaks.Value.to_string v ))
+
+  let get_node_fdu_info sysid tenantid nodeid fduid connector =
+    Fos_core.MVar.read connector >>= fun connector ->
+    let s = Yaks.Selector.of_path @@ get_node_fdu_info_path sysid tenantid nodeid fduid in
+    Yaks.Workspace.get s connector.ws
+    >>= fun kvs ->
+    match kvs with
+    | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("get_node_fdu_info received empty data!!") ))
+    | _ ->
+      let _,v = List.hd kvs in
+      Lwt.return @@ Types_j.atomic_entity_of_string (Yaks.Value.to_string v)
 end
 
 

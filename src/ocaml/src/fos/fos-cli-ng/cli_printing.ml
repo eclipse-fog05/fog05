@@ -24,10 +24,10 @@ let print_network_info (net_info :Types_t.network) node_id =
   let _ = printf "| Node: %s \n" node_id in
   printf "+-------------------------------------------------------+\n"
 
-let print_node_plugin (plugins : Types_t.plugin list) =
+let print_node_plugin (plugins : FAgentTypes.plugin_type list) =
   Lwt_list.iter_p (
-    fun (p:FTypes.plugin) ->
-      let _ = printf "| Name: %s \t| UUID: %s\t | Type: %s\n" p.name p.uuid p.plugin_type in 
+    fun (p:FAgentTypes.plugin_type) ->
+      let _ = printf "| Name: %s \t| UUID: %s\t | Type: %s\n" p.name p.uuid p.pl_type in 
       printf "+-------------------------------------------------------+\n";
   ) plugins
 
@@ -77,7 +77,7 @@ let print_node_info (node_info: Types_t.node_info) =
       printf "+-------------------------------------------------------+\n";
   ) ios
 
-let print_networks netlist = 
+let print_networks netlist =
   let _ = printf "+-------------------------------------------------------+\n" in
   Lwt_list.iter_p (
     fun (nid, nodes, (manifest:FTypes.network) ) ->
@@ -87,7 +87,7 @@ let print_networks netlist =
       printf "\n+-------------------------------------------------------+\n";
   ) netlist
 
-let print_atomic_entities aelist = 
+let print_atomic_entities aelist =
   let _ = printf "+-------------------------------------------------------+\n" in
   Lwt_list.iter_p (
     fun (aeid, nid, (manifest:FTypes.atomic_entity), instance_list ) ->
@@ -99,7 +99,7 @@ let print_atomic_entities aelist =
   ) aelist
 
 
-let print_entities elist = 
+let print_entities elist =
   let _ = printf "+-------------------------------------------------------+\n" in
   Lwt_list.iter_p (
     fun (eid, (manifest:FTypes.entity), nets, atomics ) ->
@@ -111,7 +111,7 @@ let print_entities elist =
             let _ = printf "| <-> Nodes: " in
             let _ = Lwt_list.iter_p (fun e -> printf " %s " e ) nodes in
             printf "\n";
-        ) nets 
+        ) nets
       in
       let _ = printf "|- Components:\n" in
       let _ = Lwt_list.iter_p (
