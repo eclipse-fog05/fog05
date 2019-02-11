@@ -2,7 +2,7 @@ import json
 import os
 import uuid
 
-from src.python.fog05.interfaces.NetworkPlugin import NetworkPlugin, BridgeNotExistingException, \
+from fog05.interfaces.NetworkPlugin import NetworkPlugin, BridgeNotExistingException, \
     InterfaceNotExistingException
 
 
