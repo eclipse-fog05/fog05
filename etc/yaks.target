@@ -1,0 +1,4 @@
+[unit]
+Description = YAKS Daemon
+Requires=yaks.service
+After=network.target

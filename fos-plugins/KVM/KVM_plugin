@@ -77,6 +77,7 @@ class KVM(RuntimePluginFDU):
         self.logger.info('startRuntime()', '[ DONE ] KVM Plugin - Connecting to KVM')
 
         '''check if dirs exists if not exists create'''
+        # TODO change the implementation of call_os_plugin_function to mask the name of parameters
         if self.call_os_plugin_function('dir_exists', {'dir_path': self.BASE_DIR}):
             if not self.call_os_plugin_function('dir_exists', {'dir_path': os.path.join(self.BASE_DIR, self.DISK_DIR)}):
                 self.call_os_plugin_function(

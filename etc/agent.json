@@ -1,13 +1,15 @@
 {
     "agent": {
         "system": "0",
+        "pid_file": "/var/fos/agent.pid",
         "expose": true,
         "yaks": "tcp/127.0.0.1:7887",
-        "path": "/opt/fos",
-        "enable_lldp": false
+        "path": "/var/fos",
+        "enable_lldp": false,
+        "enable_spawner": false
     },
     "plugins": {
-        "plugin_path": "/home/ubuntu/fog05/fos-plugins",
+        "plugin_path": "/etc/fos/plugins",
         "autoload": true,
         "auto": [
             "LXD"

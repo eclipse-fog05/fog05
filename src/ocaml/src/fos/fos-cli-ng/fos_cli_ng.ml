@@ -36,16 +36,16 @@ let plugin_list nodeid yconnector =
     fun d -> Cli_printing.print_node_plugin d
   | None -> Lwt_io.printf "Node uuid parameter missing!!\n"
 
-let plugin_add nodeid manifest _ =
+let plugin_add nodeid descriptor _ =
   match nodeid with
   | Some _ ->
-    (match manifest with
+    (match descriptor with
      | Some path ->
        let cont = read_file path in
-       let res = Cli_helper.check_manifest cont Types_j.plugin_of_string Types_v.validate_plugin  in
+       let res = Cli_helper.check_descriptor cont Types_j.plugin_of_string Types_v.validate_plugin  in
        (match res with
         | Ok _ -> Lwt.return_unit
-        (* let plugin = {(Cli_helper.load_manifest cont Types_j.plugin_of_string) with status = Some "add"} in
+        (* let plugin = {(Cli_helper.load_descriptor cont Types_j.plugin_of_string) with status = Some "add"} in
            let%lwt s = FStore.create (Printf.sprintf "d%s" Cli_helper.home) Cli_helper.droot Cli_helper.dhome yserver in
            let v = (Types_j.string_of_plugins_info_type {plugins = [plugin]}) in
            Store.dput s (Printf.sprintf "%s/%s/plugins" Cli_helper.droot node_uuid) v >>= fun _ ->
@@ -55,10 +55,10 @@ let plugin_add nodeid manifest _ =
   | None ->  Lwt_io.printf "Node uuid parameter missing!!\n"
 
 
-let plugin_cmd action nodeid _ manifest =
+let plugin_cmd action nodeid _ descriptor =
   match action with
   | "list" -> (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= plugin_list nodeid
-  | "add" -> (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= plugin_add nodeid manifest
+  | "add" -> (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= plugin_add nodeid descriptor
   | "remove" -> Lwt_io.printf "Not implemented"
   (* Missing parameter is pluginid *)
   | _ -> Lwt_io.printf "%s action not recognized!!" action
@@ -70,23 +70,19 @@ let node_list () =
   let _ = Lwt_io.printf "+---------------------------------------------+\n" in
   (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= Cli_helper.get_all_nodes >>=
   Lwt_list.iter_p (
-    fun (_,n) ->
-      let node_info = FTypesJson.node_info_of_string n in
-      Lwt_io.printf "UUID: %s \t Name: %s\n" node_info.uuid node_info.name
+    fun (nid,name) ->
+      Lwt_io.printf "UUID: %s \t Name: %s\n" nid name
   ) >>= fun _ ->
   Lwt_io.printf "+---------------------------------------------+\n"
 
 let node_info nodeid =
   match nodeid with
-  | Some _ ->
-    Lwt.return_unit
-  (* let _ = Lwt_io.printf "Node info\n" in
-     let%lwt s = Store.create (Printf.sprintf "a%s" Cli_helper.home) Cli_helper.aroot Cli_helper.ahome (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) in
-     Store.get s (Printf.sprintf "%s/%s" Cli_helper.aroot node_uuid) >>= fun res ->
-     (match res with
-     | _,v -> let node_info = Types_j.node_info_of_string v in
-     Cli_printing.print_node_info node_info
-     ) *)
+  | Some nid ->
+    let _ = Lwt_io.printf "Node info\n" in
+    (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>=
+    Cli_helper.get_node_info nid
+    >>=
+    Cli_printing.print_node_info
   | None -> Lwt_io.printf "Node uuid parameter missing!!\n"
 
 let node_cmd action nodeid =
@@ -98,18 +94,18 @@ let node_cmd action nodeid =
 
 (* Network commands *)
 
-let network_add nodeid manifest =
+let network_add nodeid descriptor =
   match nodeid with
   | Some _ ->
-    (match manifest with
+    (match descriptor with
      | Some path ->
        let cont = read_file path in
-       let res = Cli_helper.check_manifest cont Types_j.network_of_string Types_v.validate_network  in
+       let res = Cli_helper.check_descriptor cont Types_j.network_of_string Types_v.validate_network  in
        (match res with
         | Ok _ ->
           Lwt.return_unit
-        (* let manifest = Cli_helper.load_manifest cont Types_j.network_of_string in
-           (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= Cli_helper.send_add_network_node manifest id  >>= fun _ ->
+        (* let descriptor = Cli_helper.load_descriptor cont Types_j.network_of_string in
+           (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= Cli_helper.send_add_network_node descriptor id  >>= fun _ ->
            Lwt_io.printf "Atomic Entity Defined\n"; *)
         | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
      |None  -> Lwt_io.printf "Manifest parameter missing!!\n")
@@ -132,95 +128,82 @@ let network_list () =
 (*
   (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= Cli_helper.get_all_networks  >>= Cli_printing.print_networks *)
 
-let network_cmd action manifest netid nodeid =
+let network_cmd action descriptor netid nodeid =
   match action with
-  | "add" -> network_add nodeid manifest
+  | "add" -> network_add nodeid descriptor
   | "list" -> network_list ()
   | "remove" -> network_remove nodeid netid
   | _ -> Lwt_io.printf "%s action not recognized!!" action
 
 (* Manifest commands *)
 
-let manifest_image manifest =
-  match manifest with
+let descriptor_image descriptor =
+  match descriptor with
   | Some path ->
-    let _ = Lwt_io.printf "Check manifest %s\n" path in
+    let _ = Lwt_io.printf "Check descriptor %s\n" path in
     let cont = read_file path in
-    let res = Cli_helper.check_manifest cont Types_j.image_of_string Types_v.validate_image  in
+    let res = Cli_helper.check_descriptor cont Types_j.image_of_string Types_v.validate_image  in
     (match res with
      | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
      | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
   | None -> Lwt_io.printf "Manifest parameter is missing!!\n"
 
-let manifest_flavor manifest =
-  match manifest with
+let descriptor_flavor descriptor =
+  match descriptor with
   | Some path ->
-    let _ = Lwt_io.printf "Check manifest %s\n" path in
+    let _ = Lwt_io.printf "Check descriptor %s\n" path in
     let cont = read_file path in
-    let res = Cli_helper.check_manifest cont Types_j.flavor_of_string Types_v.validate_flavor  in
+    let res = Cli_helper.check_descriptor cont Types_j.flavor_of_string Types_v.validate_flavor  in
     (match res with
      | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
      | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
   | None -> Lwt_io.printf "Manifest parameter is missing!!\n"
 
-let manifest_plugin manifest =
-  match manifest with
+let descriptor_plugin descriptor =
+  match descriptor with
   | Some path ->
-    let _ = Lwt_io.printf "Check manifest %s\n" path in
+    let _ = Lwt_io.printf "Check descriptor %s\n" path in
     let cont = read_file path in
-    let res = Cli_helper.check_manifest cont Types_j.plugin_of_string Types_v.validate_plugin  in
+    let res = Cli_helper.check_descriptor cont Types_j.plugin_of_string Types_v.validate_plugin  in
     (match res with
      | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
      | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
   | None -> Lwt_io.printf"Manifest parameter is missing!!\n"
 
-let manifest_entity manifest =
-  match manifest with
+let descriptor_fdu descriptor =
+  match descriptor with
   | Some path ->
-    let _ = Lwt_io.printf "Check manifest %s\n" path in
+    let _ = Lwt_io.printf "Check descriptor %s\n" path in
     let cont = read_file path in
-    let res = Cli_helper.check_manifest cont Types_j.entity_of_string Types_v.validate_entity  in
+    let res = Cli_helper.check_descriptor cont Fos_im.FTypesJson.fdu_of_string Fos_im.FTypesValidator.validate_fdu  in
     (match res with
      | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
      | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
   | None -> Lwt_io.printf "Manifest parameter is missing!!\n"
 
-let manifest_atomic_entity manifest =
-  match manifest with
+let descriptor_network descriptor =
+  match descriptor with
   | Some path ->
-    let _ = Lwt_io.printf "Check manifest %s\n" path in
+    let _ = Lwt_io.printf "Check descriptor %s\n" path in
     let cont = read_file path in
-    let res = Cli_helper.check_manifest cont Types_j.atomic_entity_of_string Types_v.validate_atomic_entity  in
+    let res = Cli_helper.check_descriptor cont Types_j.network_of_string Types_v.validate_network  in
     (match res with
      | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
      | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
   | None -> Lwt_io.printf "Manifest parameter is missing!!\n"
 
-let manifest_network manifest =
-  match manifest with
-  | Some path ->
-    let _ = Lwt_io.printf "Check manifest %s\n" path in
-    let cont = read_file path in
-    let res = Cli_helper.check_manifest cont Types_j.network_of_string Types_v.validate_network  in
-    (match res with
-     | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
-     | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
-  | None -> Lwt_io.printf "Manifest parameter is missing!!\n"
-
-let manifest_cmd action manifest =
+let descriptor_cmd action descriptor =
   match action with
-  | "network" -> manifest_network manifest
-  | "aentity" -> manifest_atomic_entity manifest
-  | "entity" -> manifest_entity manifest
-  | "plugin" -> manifest_plugin manifest
-  | "flavor" -> manifest_flavor manifest
-  | "image" -> manifest_image manifest
-  | _ -> Lwt_io.printf "%s is not a valid type of manifest\n" action
+  | "fdu" -> descriptor_fdu descriptor
+  | "network" -> descriptor_network descriptor
+  | "flavor" -> descriptor_flavor descriptor
+  | "image" -> descriptor_image descriptor
+  | _ -> Lwt_io.printf "%s is not a valid type of descriptor\n" action
 
-(* ENTITY COMMANDS *)
+(* FDU COMMANDS *)
 
-let add_entity manifest =
-  match manifest with
+let add_entity descriptor =
+  match descriptor with
   | Some _ ->
     Lwt.return_unit
   (* (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= Cli_helper.onboard path *)
@@ -233,18 +216,18 @@ let remove_entity entityid =
   (* (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= Cli_helper.offload id *)
   | None -> Lwt_io.printf "Entity uuid parameter missing!!\n"
 
-let atomic_entity_define nodeid manifest =
+let atomic_entity_define nodeid descriptor =
   match nodeid with
   | Some _ ->
-    (match manifest with
+    (match descriptor with
      | Some path ->
        let cont = read_file path in
-       let res = Cli_helper.check_manifest cont Types_j.atomic_entity_of_string Types_v.validate_atomic_entity  in
+       let res = Cli_helper.check_descriptor cont Types_j.atomic_entity_of_string Types_v.validate_atomic_entity  in
        (match res with
         | Ok _ ->
           Lwt.return_unit
-        (* let manifest = Cli_helper.load_manifest cont Types_j.atomic_entity_of_string in
-           Cli_helper.send_atomic_entity_define manifest id (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= fun _ ->
+        (* let descriptor = Cli_helper.load_descriptor cont Types_j.atomic_entity_of_string in
+           Cli_helper.send_atomic_entity_define descriptor id (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= fun _ ->
            Lwt_io.printf "Atomic Entity Defined\n"; *)
         | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
      |None  -> Lwt_io.printf "Manifest parameter missing!!\n")
@@ -309,26 +292,28 @@ let atomic_entity_migrate nodeid entityid instanceid destinationid  =
      | None -> Lwt_io.printf "Atomic Entity uuid parameter missing!!\n")
   | None ->  Lwt_io.printf "Node uuid parameter missing!!\n"
 
-let atomic_entity_list () =
-  Lwt.return_unit
-(* Cli_helper.get_all_atomic_entities (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= Cli_printing.print_atomic_entities *)
 
-let entity_list () =
-  Lwt.return_unit
-(* Cli_helper.get_all_entities (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= Cli_printing.print_entities *)
 
-let entity_cmd action nodeid entityid instanceid destid manifest =
+let fdu_list nodeid =
+  (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver)  >>=
+  fun connector ->
+  (match nodeid with
+   | Some nid ->
+     Cli_helper.get_all_node_fdus nid connector
+   | None ->
+     Cli_helper.get_all_node_fdus "*" connector)
+  >>= fun _ -> Lwt.return_unit
+
+let fdu_cmd action nodeid entityid instanceid destid descriptor =
   match action with
   | "list" ->
-    entity_list ()
-  | "atomic-list" ->
-    atomic_entity_list ()
+    fdu_list nodeid
   | "add" | "onboard" ->
-    add_entity manifest
+    add_entity descriptor
   | "remove" | "offload" ->
     remove_entity entityid
   | "define" ->
-    atomic_entity_define nodeid manifest
+    atomic_entity_define nodeid descriptor
   | "configure" ->
     atomic_entity_change_state nodeid entityid instanceid action "configured"
   | "run" ->
@@ -349,42 +334,46 @@ let entity_cmd action nodeid entityid instanceid destid manifest =
     let _ = Lwt_io.printf "%s action not recognized!!" action in
     let _ = Lwt_io.printf "action: %s parameters  %s %s %s %s %s %s\n"
         action   (Apero.Option.get_or_default nodeid "") (Apero.Option.get_or_default entityid "")
-        (Apero.Option.get_or_default instanceid "") (Apero.Option.get_or_default destid "") (Apero.Option.get_or_default manifest "")
+        (Apero.Option.get_or_default instanceid "") (Apero.Option.get_or_default destid "") (Apero.Option.get_or_default descriptor "")
     in Lwt.return_unit
 
 
 
-let parser cmd action netid nodeid entityid instanceid destid manifest =
-  match cmd with
-  | "fdu" ->
-    Lwt_main.run @@ entity_cmd action nodeid entityid instanceid destid manifest
-  | "network" ->
-    Lwt_main.run @@ network_cmd action manifest netid nodeid
-  | "plugin" ->
-    Lwt_main.run @@ plugin_cmd action nodeid None manifest
-  | "manifest" ->
-    Lwt_main.run @@ manifest_cmd action manifest
-  | "node" ->
-    Lwt_main.run @@ node_cmd action nodeid
-  | _ -> Printf.printf "%s Is not a command\n" cmd
+let parser component cmd action netid nodeid entityid instanceid destid descriptor =
+  match String.lowercase_ascii component with
+  | "fim" ->
+    (match cmd with
+     | "fdu" ->
+       Lwt_main.run @@ fdu_cmd action nodeid entityid instanceid destid descriptor
+     | "network" ->
+       Lwt_main.run @@ network_cmd action descriptor netid nodeid
+     | "plugin" ->
+       Lwt_main.run @@ plugin_cmd action nodeid None descriptor
+     | "descriptor" ->
+       Lwt_main.run @@ descriptor_cmd action descriptor
+     | "node" ->
+       Lwt_main.run @@ node_cmd action nodeid
+     | _ -> Printf.printf "%s Is not a command\n" cmd)
+  | _ -> Printf.printf "%s not implemented" component
 
 
-let usage = "usage: " ^ Sys.argv.(0) ^ " [node|network|manifest|entity] "
+let usage = "usage: " ^ Sys.argv.(0) ^ " [node|network|descriptor|entity] "
 
 let node_uuid_par = Arg.(value & opt (some string) None & info ["nu"] ~docv:"node uuid")
 let entity_uuid_par = Arg.(value & opt (some string) None & info ["eu"] ~docv:"entity uuid")
 let instance_uuid_par = Arg.(value & opt (some string) None & info ["iu"] ~docv:"instance uuid")
 let dest_node_uuid_par = Arg.(value & opt (some string) None & info ["du"] ~docv:"destination uuid")
 let net_uuid_par = Arg.(value & opt (some string) None & info ["net"] ~docv:"network uuid")
-let manifest_par = Arg.(value & opt (some string) None & info ["m";"manifest"] ~docv:"manifest file")
+let descriptor_par = Arg.(value & opt (some string) None & info ["d";"descriptor"] ~docv:"descriptor file")
 
-let act_t = Arg.(required & pos 1 (some string) None & info [] ~docv:"action")
-let cmd_t = Arg.(required & pos 0 (some string) None & info [] ~docv:"type")
+let act_t = Arg.(required & pos 2 (some string) None & info [] ~docv:"action")
+let cmd_t = Arg.(required & pos 1 (some string) None & info [] ~docv:"type")
+let component_t = Arg.(required & pos 0 (some string) None & info [] ~docv:"component [fim|faem|feo]")
 
 let fos_t =
   Term.(
-    const parser $ cmd_t $ act_t $ net_uuid_par
-    $ node_uuid_par $ entity_uuid_par $ instance_uuid_par $ dest_node_uuid_par $ manifest_par)
+    const parser $ component_t $ cmd_t $ act_t $ net_uuid_par
+    $ node_uuid_par $ entity_uuid_par $ instance_uuid_par $ dest_node_uuid_par $ descriptor_par)
 
 
 let () =

@@ -11,6 +11,7 @@
  *********************************************************************************)
 
 open Fos_core
+open Fos_im
 open Lwt.Infix
 
 module PluginMap = Map.Make(String)

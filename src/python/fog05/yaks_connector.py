@@ -142,6 +142,9 @@ class GAD(object):
     def extract_plugin_from_path(self, path):
         return path.split('/')[8]
 
+    def extract_fduid_from_path(self, path):
+        return path.split('/')[8]
+
     def get_sys_info(self, sysid):
         s = self.get_sys_info_path(sysid)
         res = self.ws.get(s)
@@ -327,7 +330,8 @@ class LAD(object):
         return Constants.create_path([self.prefix, nodeid, 'configuration'])
 
     def get_node_plugins_selector(self, nodeid):
-        return Constants.create_path([self.prefix, nodeid, 'plugins', '*'])
+        return Constants.create_path([self.prefix, nodeid,
+                                      'plugins', '*', 'info'])
 
     def get_node_plugins_subscriber_selector(self, nodeid):
         return Constants.create_path([self.prefix, nodeid, 'plugins', '**'])

@@ -1,6 +1,8 @@
 open Yaks_ocaml
 open Lwt.Infix
 open Fos_errors
+open Fos_core
+open Fos_im
 
 
 
@@ -62,24 +64,7 @@ let close_connector y =
   Yaks.logout state.yaks_client
   >>=  fun _ ->
   Fos_core.MVar.return () state
-(*
-  module F = sig
 
-  .
-  .
-  .
-  .
-  end
-
-module Make (sig prefix: string end):F
-
-----
-
-module Make(sig prefix:string end) = struct
-  implementation
-end
-
- *)
 
 module MakeGAD(P: sig val prefix: string end) = struct
 
@@ -247,7 +232,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     | _ ->
       let _,v = (List.hd res) in
       try
-        Lwt.return @@ Agent_types_j.node_info_of_string (Yaks.Value.to_string v)
+        Lwt.return @@ Fos_im.FTypesJson.node_info_of_string (Yaks.Value.to_string v)
       with
       | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _ ->
         Lwt.fail @@ FException (`InternalError (`Msg ("Value is not well formatted in get_node_info") ))
@@ -273,7 +258,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     | _ ->
       let _,v = (List.hd res) in
       try
-        Lwt.return @@ Agent_types_j.plugin_type_of_string (Yaks.Value.to_string v)
+        Lwt.return @@ FTypesJson.plugin_of_string (Yaks.Value.to_string v)
       with
       | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _ ->
         Lwt.fail @@ FException (`InternalError (`Msg ("Value is not well formatted in get_plugin_info") ))
@@ -282,7 +267,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
   let add_node_info sysid tenantid nodeid nodeinfo connector =
     Fos_core.MVar.read connector >>= fun connector ->
     let p = get_node_info_path sysid tenantid nodeid in
-    let value = Yaks.Value.StringValue (Types_j.string_of_node_info nodeinfo )in
+    let value = Yaks.Value.StringValue (FTypesJson.string_of_node_info nodeinfo )in
     Yaks.Workspace.put p value connector.ws
 
   let add_node_configuration sysid tenantid nodeid nodeconf connector =
@@ -294,7 +279,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
   let add_node_plugin sysid tenantid nodeid (plugininfo:Types_t.plugin) connector =
     Fos_core.MVar.read connector >>= fun connector ->
     let p = get_node_plugin_info_path sysid tenantid nodeid plugininfo.uuid  in
-    let value = Yaks.Value.StringValue (Types_j.string_of_plugin plugininfo) in
+    let value = Yaks.Value.StringValue (FTypesJson.string_of_plugin plugininfo) in
     Yaks.Workspace.put p value connector.ws
 
   let observe_node_plugins sysid tenantid nodeid callback connector =
@@ -305,11 +290,23 @@ module MakeGAD(P: sig val prefix: string end) = struct
       | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("Listener received empty data!!") ))
       | _ ->
         let _,v = List.hd data in
-        callback @@ Types_j.plugin_of_string (Yaks.Value.to_string v)
+        callback @@ FTypesJson.plugin_of_string (Yaks.Value.to_string v)
     in
     let%lwt subid = Yaks.Workspace.subscribe ~listener:cb s connector.ws in
     let ls = List.append connector.listeners [subid] in
     Fos_core.MVar.return subid {connector with listeners = ls}
+
+  let get_node_plugins sysid tenantid nodeid connector =
+    MVar.read connector >>= fun connector ->
+    let s = get_node_plugins_selector sysid tenantid nodeid in
+    Yaks.Workspace.get s connector.ws >>=
+    fun kvs ->
+    match kvs with
+    | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("get_node_plguins received empty data!!") ))
+    | _ ->
+      Lwt_list.map_p (fun (_,v) ->
+          Lwt.return @@ FTypesJson.plugin_of_string (Yaks.Value.to_string v))
+        kvs
 
 
   let add_plugin_eval sysid tenantid nodeid pluginid func_name func connector =
@@ -330,7 +327,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
       | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("Listener received empty data!!") ))
       | _ ->
         let _,v = List.hd data in
-        callback @@ Types_j.atomic_entity_of_string (Yaks.Value.to_string v)
+        callback @@ Fos_im.FTypesJson.fdu_of_string (Yaks.Value.to_string v)
     in
     let%lwt subid = Yaks.Workspace.subscribe ~listener:cb s connector.ws in
     let ls = List.append connector.listeners [subid] in
@@ -339,18 +336,26 @@ module MakeGAD(P: sig val prefix: string end) = struct
   let add_node_fdu sysid tenantid nodeid fduid fduinfo connector =
     Fos_core.MVar.read connector >>= fun connector ->
     let p = get_node_fdu_info_path sysid tenantid nodeid fduid in
-    let value = Yaks.Value.StringValue (Types_j.string_of_atomic_entity fduinfo) in
+    let value = Yaks.Value.StringValue (Fos_im.FTypesJson.string_of_fdu fduinfo) in
     Yaks.Workspace.put p value connector.ws
 
-  let get_node_fdu sysid tenantid nodeid connector =
+  let get_node_fdus sysid tenantid nodeid connector =
     Fos_core.MVar.read connector >>= fun connector ->
     let s = get_node_fdu_selector sysid tenantid nodeid in
     Yaks.Workspace.get s connector.ws
-    >>=
-    Lwt_list.map_p (fun (k,v) -> Lwt.return (
-        extract_nodeid_from_path k,
-        extract_fduid_from_path k,
-        Yaks.Value.to_string v ))
+    >>= fun kvs ->
+    match kvs with
+    | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("get_node_fdu_info received empty data!!") ))
+    | _ ->
+      Lwt_list.map_p (fun (k,v) -> Lwt.return (
+          extract_nodeid_from_path k,
+          extract_fduid_from_path k,
+          Fos_im.FTypesJson.fdu_of_string (Yaks.Value.to_string v) )) kvs
+
+  let remove_node_fdu sysid tenantid nodeid fduid connector =
+    Fos_core.MVar.read connector >>= fun connector ->
+    let p = get_node_fdu_info_path sysid tenantid nodeid fduid in
+    Yaks.Workspace.remove p connector.ws
 
   let get_node_fdu_info sysid tenantid nodeid fduid connector =
     Fos_core.MVar.read connector >>= fun connector ->
@@ -361,7 +366,39 @@ module MakeGAD(P: sig val prefix: string end) = struct
     | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("get_node_fdu_info received empty data!!") ))
     | _ ->
       let _,v = List.hd kvs in
-      Lwt.return @@ Types_j.atomic_entity_of_string (Yaks.Value.to_string v)
+      Lwt.return @@ Fos_im.FTypesJson.fdu_of_string (Yaks.Value.to_string v)
+
+  let add_network sysid tenantid netid net_info connector =
+    let p = get_network_info_path sysid tenantid netid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.put p (Yaks.Value.StringValue (FTypesJson.string_of_network net_info)) connector.ws
+
+  let get_network sysid tenantid netid connector =
+    let s = Yaks.Selector.of_path @@ get_network_info_path sysid tenantid netid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.get s connector.ws
+    >>= fun kvs ->
+    match kvs with
+    | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("get_network received empty data!!") ))
+    | _ -> let _,v = List.hd kvs in
+      Lwt.return @@ FTypesJson.network_of_string (Yaks.Value.to_string v)
+
+  let remove_network sysid tenantid netid connector =
+    let p = get_network_info_path sysid tenantid netid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.remove p connector.ws
+
+  let get_all_networks sysid tenantid connector =
+    let s = get_all_networks_selector sysid tenantid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.get s connector.ws
+    >>= fun kvs ->
+    match kvs with
+    | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("get_network received empty data!!") ))
+    | _ ->
+      Lwt_list.map_p (
+        fun (_,v )-> Lwt.return  @@ FTypesJson.network_of_string (Yaks.Value.to_string v)) kvs
+
 end
 
 
@@ -393,20 +430,33 @@ module MakeLAD(P: sig val prefix: string end) = struct
   let get_node_fdus_selector nodeid =
     create_selector [P.prefix; nodeid; "runtimes"; "*"; "fdu"; "*"; "info"]
 
+  let get_node_fdus_subscriber_selector nodeid pluginid =
+    create_selector [P.prefix; nodeid; "runtimes"; pluginid; "fdu"; "**"]
+
   let get_node_runtime_fdu_atomic_entitiy_selector nodeid pluginid fduid =
     create_selector [P.prefix; nodeid; "runtimes"; pluginid; "fdu"; fduid; "atomic_entity"; "*"]
-
-  let get_node_networks_selector nodeid pluginid =
-    create_selector [P.prefix; nodeid; "network_managers"; pluginid; "networks"; "*"]
-
-  let get_node_network_ports_selector nodeid pluginid networkid =
-    create_selector [P.prefix; nodeid; "network_managers"; pluginid; "networks"; networkid; "ports"; "*"]
 
   let get_node_fdu_info_path nodeid pluginid fduid=
     create_path [P.prefix; nodeid; "runtimes"; pluginid; "fdu"; fduid; "info"]
 
+  let get_node_image_info_path nodeid pluginid imgid =
+    create_path [P.prefix; nodeid; "runtimes"; pluginid; "images"; imgid; "info"]
+
+  let get_node_flavor_info_path nodeid pluginid flvid =
+    create_path [P.prefix; nodeid; "runtimes"; pluginid; "flavors"; flvid; "info"]
+
   let get_node_fdu_atomic_entity_info_path nodeid pluginid fduid atomicid =
     create_path [P.prefix; nodeid; "runtimes"; pluginid; "fdu"; fduid; "atomic_entity"; atomicid; "info"]
+
+  let get_node_networks_selector nodeid pluginid =
+    create_selector [P.prefix; nodeid; "network_managers"; pluginid; "networks"; "*"]
+
+  let get_node_networks_find_selector nodeid netid =
+    create_path [P.prefix; nodeid; "network_managers"; "*"; "networks"; netid; "info"]
+
+  let get_node_network_ports_selector nodeid pluginid networkid =
+    create_selector [P.prefix; nodeid; "network_managers"; pluginid; "networks"; networkid; "ports"; "*"]
+
 
   let get_node_network_info_path nodeid pluginid networkid =
     create_path [P.prefix; nodeid; "network_managers"; pluginid;"networks"; networkid; "info"]
@@ -454,7 +504,7 @@ module MakeLAD(P: sig val prefix: string end) = struct
       | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("Listener received empty data!!") ))
       | _ ->
         let _,v = List.hd data in
-        callback @@ Types_j.plugin_of_string (Yaks.Value.to_string v)
+        callback @@ FTypesJson.plugin_of_string (Yaks.Value.to_string v)
     in
     let%lwt subid = Yaks.Workspace.subscribe ~listener:cb s connector.ws in
     let ls = List.append connector.listeners [subid] in
@@ -469,7 +519,7 @@ module MakeLAD(P: sig val prefix: string end) = struct
       | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("Listener received empty data!!") ))
       | _ ->
         let _,v = List.hd data in
-        callback @@ Types_j.plugin_of_string (Yaks.Value.to_string v)
+        callback @@ FTypesJson.plugin_of_string (Yaks.Value.to_string v)
     in
     let%lwt subid = Yaks.Workspace.subscribe ~listener:cb s connector.ws in
     let ls = List.append connector.listeners [subid] in
@@ -483,7 +533,7 @@ module MakeLAD(P: sig val prefix: string end) = struct
       | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("Listener received empty data!!") ))
       | _ ->
         let _,v = List.hd data in
-        callback @@ Types_j.node_info_of_string (Yaks.Value.to_string v)
+        callback @@ FTypesJson.node_info_of_string (Yaks.Value.to_string v)
     in
     let%lwt subid = Yaks.Workspace.subscribe ~listener:cb s connector.ws in
     let ls = List.append connector.listeners [subid] in
@@ -492,7 +542,7 @@ module MakeLAD(P: sig val prefix: string end) = struct
   let add_node_plugin nodeid (plugininfo:Types_t.plugin) connector =
     Fos_core.MVar.read connector >>= fun connector ->
     let p = get_node_plugin_info_path nodeid plugininfo.uuid in
-    let value = Yaks.Value.StringValue (Types_j.string_of_plugin plugininfo) in
+    let value = Yaks.Value.StringValue (FTypesJson.string_of_plugin plugininfo) in
     Yaks.Workspace.put p value connector.ws
 
   let get_node_plugin nodeid pluginid connector =
@@ -503,7 +553,7 @@ module MakeLAD(P: sig val prefix: string end) = struct
     | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("get_node_plugin received empty data!!") ))
     | _ ->
       let _,v = List.hd data in
-      Lwt.return @@ Types_j.plugin_of_string (Yaks.Value.to_string v)
+      Lwt.return @@ FTypesJson.plugin_of_string (Yaks.Value.to_string v)
 
   let get_node_plugins nodeid connector =
     Fos_core.MVar.read connector >>= fun connector ->
@@ -521,7 +571,7 @@ module MakeLAD(P: sig val prefix: string end) = struct
   let add_node_info nodeid nodeinfo connector =
     Fos_core.MVar.read connector >>= fun connector ->
     let p = get_node_info_path  nodeid in
-    let value = Yaks.Value.StringValue (Agent_types_j.string_of_node_info nodeinfo )in
+    let value = Yaks.Value.StringValue (FTypesJson.string_of_node_info nodeinfo )in
     Yaks.Workspace.put p value connector.ws
 
   let add_node_configuration nodeid nodeconf connector =
@@ -538,7 +588,7 @@ module MakeLAD(P: sig val prefix: string end) = struct
       | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("Listener received empty data!!") ))
       | _ ->
         let _,v = List.hd data in
-        callback @@ Types_j.atomic_entity_of_string (Yaks.Value.to_string v)
+        callback @@ Fos_im.FTypesJson.fdu_of_string(Yaks.Value.to_string v)
     in
     let%lwt subid = Yaks.Workspace.subscribe ~listener:cb s connector.ws in
     let ls = List.append connector.listeners [subid] in
@@ -552,7 +602,7 @@ module MakeLAD(P: sig val prefix: string end) = struct
       | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("Listener received empty data!!") ))
       | _ ->
         let _,v = List.hd data in
-        callback @@ Types_j.atomic_entity_of_string (Yaks.Value.to_string v)
+        callback @@ Fos_im.FTypesJson.fdu_of_string(Yaks.Value.to_string v)
     in
     let%lwt subid = Yaks.Workspace.subscribe ~listener:cb s connector.ws in
     let ls = List.append connector.listeners [subid] in
@@ -561,7 +611,7 @@ module MakeLAD(P: sig val prefix: string end) = struct
   let add_node_fdu nodeid pluginid fduid fduinfo connector =
     Fos_core.MVar.read connector >>= fun connector ->
     let p = get_node_fdu_info_path nodeid pluginid fduid in
-    let value = Yaks.Value.StringValue (Types_j.string_of_atomic_entity fduinfo) in
+    let value = Yaks.Value.StringValue (Fos_im.FTypesJson.string_of_fdu fduinfo) in
     Yaks.Workspace.put p value connector.ws
 end
 

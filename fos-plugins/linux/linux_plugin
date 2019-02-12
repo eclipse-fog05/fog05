@@ -48,15 +48,14 @@ from subprocess import PIPE
 
 
 class Linux(OSPlugin):
-    def __init__(self, name, version, plugin_uuid, yaks_locator, nodeid,
-                    manifest):
+    def __init__(self, name, version, plugin_uuid,manifest):
         super(Linux, self).__init__(version, plugin_uuid)
         self.name = name
         self.pm = None
-        self.node_id = nodeid
+        self.node_id = manifest.get('configuration').get('nodeid')
         self.logger = DLogger(debug_flag=True)
         self.logger.info('__init__()', ' Hello from GNU\Linux Plugin')
-        loc = yaks_locator.split('/')[1]
+        loc = manifest.get('configuration').get('ylocator').split('/')[1]
         self.connector = Yaks_Connector(loc)
         file_dir = os.path.dirname(__file__)
         self.DIR = os.path.abspath(file_dir)
@@ -115,7 +114,6 @@ class Linux(OSPlugin):
             'set_interface_unaviable': self.set_interface_unaviable,
             'set_interface_available': self.set_interface_available,
             'get_network_informations':self.get_network_informations,
-            'get_intf_type': self.get_intf_type
          }
 
         for k in d:
@@ -126,9 +124,9 @@ class Linux(OSPlugin):
 
         manifest.update({'pid': self.pid})
         manifest.update({'status': 'running'})
-        self.connector.loc.actual.add_node_plugin(nodeid, self.uuid, manifest)
+        self.connector.loc.actual.add_node_plugin(self.node_id, self.uuid, manifest)
 
-        self.connector.loc.actual.add_node_os_info(nodeid, manifest)
+        self.connector.loc.actual.add_node_os_info(self.node_id, manifest)
         print('OS Plugin - Running...')
 
         r = self.var.get()
@@ -143,7 +141,7 @@ class Linux(OSPlugin):
         node_info.update({'cpu': self.get_processor_information()})
         node_info.update({'ram': self.get_memory_information()})
         node_info.update({'disks': self.get_disks_information()})
-        node_info.update({'network': self.get_network_informations()})
+        node_info.update({'network': self.get_network_informations().get('result')})
         node_info.update({'io': self.get_io_informations()})
         node_info.update({'accelerator': self.get_accelerators_informations()})
 
@@ -731,7 +729,7 @@ class Linux(OSPlugin):
                              ipv6, 'ipv6_netmask': ipv6mask}
 
                 iface_info = {'intf_name': k, 'inft_configuration': inft_conf, 'intf_mac_address': mac, 'intf_speed':
-                              speed, 'type': self.get_intf_type(k), 'available': True, 'default_gw': False}
+                              speed, 'type': self.get_intf_type(k).get('result'), 'available': True, 'default_gw': False}
                 if k == default_gw:
                     iface_info.update({'available': False})
                     iface_info.update({'default_gw': True})
@@ -914,13 +912,10 @@ def read_file(file_path):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 2:
         exit(-1)
-    yaksip = sys.argv[1]
-    nodeid = sys.argv[2]
     print('ARGS {}'.format(sys.argv))
     file_dir = os.path.dirname(__file__)
-    manifest = json.loads(
-        read_file(os.path.join(file_dir, 'linux_plugin.json')))
+    manifest = json.loads(read_file(sys.argv[1]))
     Linux(manifest.get('name'), manifest.get('version'), manifest.get(
-        'uuid'), yaksip, nodeid, manifest)
+        'uuid'), manifest)

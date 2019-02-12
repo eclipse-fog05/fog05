@@ -12,6 +12,7 @@
  *********************************************************************************)
 
 open Fos_core
+open Fos_im
 open Lwt.Infix
 
 let yaksserver = Apero.Option.get @@ Apero_net.Locator.of_string @@ Apero.Option.get_or_default (Sys.getenv_opt "FOS_YAKS_ENDPOINT") "tcp/127.0.0.1:7887"
@@ -20,18 +21,18 @@ let ytenant = Apero.Option.get_or_default (Sys.getenv_opt "FOS_TENANT_ID") "0"
 
 
 
-let check_manifest manifest parser validator =
+let check_descriptor descriptor parser validator =
   let res =
     try
-      let n = parser manifest in
+      let n = parser descriptor in
       ignore @@ validator [] n;
       Ok true
     with
     | e -> Error e
   in res
 
-let load_manifest manifest parser =
-  parser manifest
+let load_descriptor descriptor parser =
+  parser descriptor
 
 let get_all_nodes_uuid yconnector =
   Yaks_connector.Global.Actual.get_all_nodes ysystem ytenant yconnector
@@ -40,24 +41,26 @@ let get_all_nodes yconnector =
   get_all_nodes_uuid yconnector >>=
   Lwt_list.map_p (fun e -> Yaks_connector.Global.Actual.get_node_info ysystem ytenant e yconnector)
   >>=
-  Lwt_list.map_p (fun (e:FAgentTypes.node_info) -> Lwt.return (e.uuid, e.name))
+  Lwt_list.map_p (fun (e:FTypes.node_info) -> Lwt.return (e.uuid, e.name))
+
+let get_node_info nodeid yconnector =
+  Yaks_connector.Global.Actual.get_node_info ysystem ytenant nodeid yconnector
+
 
 let get_all_node_plugin node_uuid yconnector =
   Yaks_connector.Global.Actual.get_all_plugins_ids ysystem ytenant node_uuid yconnector
   >>= Lwt_list.map_p (fun e -> Yaks_connector.Global.Actual.get_plugin_info ysystem ytenant node_uuid e yconnector)
 
-
-
-let get_plugins_by_type (all_plugins : Fos_core.FTypesJson.plugin list) (plugin_type : string) =
+let get_plugins_by_type (all_plugins : FTypesJson.plugin list) (plugin_type : string) =
   List.filter (fun (e:FTypes.plugin) -> e.plugin_type = plugin_type) all_plugins
 
-let  get_plugins_by_name (all_plugins : Fos_core.FTypesJson.plugin list) (pl_name : string) =
-  List.filter (fun (e:Fos_core.FTypesJson.plugin) ->
+let  get_plugins_by_name (all_plugins : FTypesJson.plugin list) (pl_name : string) =
+  List.filter (fun (e: FTypesJson.plugin) ->
       contains  (String.uppercase_ascii e.name) (String.uppercase_ascii pl_name)
     ) all_plugins
 
-let get_all_node_fdu node_uuid yconnector =
-  Yaks_connector.Global.Actual.get_node_fdu ysystem ytenant node_uuid yconnector
+let get_all_node_fdus node_uuid yconnector =
+  Yaks_connector.Global.Actual.get_node_fdus ysystem ytenant node_uuid yconnector
 
 (*
 let get_all_networks yserver =
@@ -80,9 +83,9 @@ let get_all_networks yserver =
    ) data
    >>= fun netmap ->
    Lwt_list.map_p (
-   fun (nid, manifest) ->
+   fun (nid, descriptor) ->
     let%lwt nodes = Lwt_list.map_p (fun (nodeid,_) -> Lwt.return nodeid) @@ List.find_all  (fun (_, netid) -> ((String.compare netid nid )==0)) netnode_map in
-    Lwt.return (nid, nodes, manifest)
+    Lwt.return (nid, nodes, descriptor)
    ) netmap
    >>= fun nets ->
    let comp e1 e2 =
@@ -114,9 +117,9 @@ let get_network_info netid yserver =
    ) data
    >>= fun netmap ->
    Lwt_list.map_p (
-   fun (nid, manifest) ->
+   fun (nid, descriptor) ->
     let%lwt nodes = Lwt_list.map_p (fun (nodeid,_) -> Lwt.return nodeid) @@ List.find_all  (fun (_, netid) -> ((String.compare netid nid )==0)) netnode_map in
-    Lwt.return (nid, nodes, manifest)
+    Lwt.return (nid, nodes, descriptor)
    ) netmap
    >>= fun nets ->
    let comp e1 e2 =
@@ -138,9 +141,9 @@ let get_network_node networkid nodeid yserver =
    Lwt.return @@ Fos_core.FTypesJson.network_of_string v
    >>= fun data -> let _ = FStore.destroy s in Lwt.return data *)
 
-let send_add_network_node (manifest : Fos_core.FTypesJson.network) node_uuid  yserver =
+let send_add_network_node (descriptor : Fos_core.FTypesJson.network) node_uuid  yserver =
   Lwt.return_unit
-(* let network = { manifest with status = Some "add"} in
+(* let network = { descriptor with status = Some "add"} in
    let%lwt s = FStore.create (Printf.sprintf "a%s" home) aroot ahome yserver in
    let%lwt all = get_all_node_plugin node_uuid yserver in
    let plugin = List.hd (get_plugins_by_type all "network") in
@@ -158,38 +161,38 @@ let send_remove_network_node net_uuid node_uuid yserver =
    FStore.put s (Printf.sprintf "%s/%s/network/%s/networks/%s" droot node_uuid plugin.uuid net_uuid) (FTypesJson.string_of_network net)
    >>= fun _ -> FStore.destroy s *)
 
-let send_add_network (manifest :Fos_core.FTypesJson.network) yserver =
+let send_add_network (descriptor :Fos_core.FTypesJson.network) yserver =
   Lwt.return_unit
-(* let manifest = {manifest with status = Some "add"} in
+(* let descriptor = {descriptor with status = Some "add"} in
    let%lwt s = FStore.create (Printf.sprintf "d%s" home) droot dhome yserver in
-   (match manifest.nodes with
+   (match descriptor.nodes with
    | Some ns ->
    Lwt_list.iter_p (fun n ->
        let%lwt all = get_all_node_plugin n yserver in
        let plugin = List.hd (get_plugins_by_type all "network") in
-       let uri = Printf.sprintf "%s/%s/network/%s/networks/%s" droot n plugin.uuid manifest.uuid in
-       FStore.put s uri (Fos_core.FTypesJson.string_of_network manifest))
+       let uri = Printf.sprintf "%s/%s/network/%s/networks/%s" droot n plugin.uuid descriptor.uuid in
+       FStore.put s uri (Fos_core.FTypesJson.string_of_network descriptor))
      ns
    | None ->
-   let uri = Printf.sprintf "%s/*/network/*/networks/%s" dhome manifest.uuid in
-   FStore.put s uri (Fos_core.FTypesJson.string_of_network manifest))
+   let uri = Printf.sprintf "%s/*/network/*/networks/%s" dhome descriptor.uuid in
+   FStore.put s uri (Fos_core.FTypesJson.string_of_network descriptor))
    >>= fun _ -> FStore.destroy s *)
 
-let send_remove_network (manifest :Fos_core.FTypesJson.network) yserver =
+let send_remove_network (descriptor :Fos_core.FTypesJson.network) yserver =
   Lwt.return_unit
-(* let manifest = {manifest with status = Some "undefine"} in
+(* let descriptor = {descriptor with status = Some "undefine"} in
    let%lwt s = FStore.create (Printf.sprintf "d%s" home) droot dhome yserver in
-   (match manifest.nodes with
+   (match descriptor.nodes with
    | Some ns ->
    Lwt_list.iter_p (fun n ->
        let%lwt all = get_all_node_plugin n yserver in
        let plugin = List.hd (get_plugins_by_type all "network") in
-       let uri = Printf.sprintf "%s/%s/network/%s/networks/%s" droot n plugin.uuid manifest.uuid in
-       FStore.put s uri (Fos_core.FTypesJson.string_of_network manifest))
+       let uri = Printf.sprintf "%s/%s/network/%s/networks/%s" droot n plugin.uuid descriptor.uuid in
+       FStore.put s uri (Fos_core.FTypesJson.string_of_network descriptor))
      ns
    | None ->
-   let uri = Printf.sprintf "%s/*/network/*/networks/%s" dhome manifest.uuid in
-   FStore.put s uri (Fos_core.FTypesJson.string_of_network manifest))
+   let uri = Printf.sprintf "%s/*/network/*/networks/%s" dhome descriptor.uuid in
+   FStore.put s uri (Fos_core.FTypesJson.string_of_network descriptor))
    >>= fun _ -> FStore.destroy s *)
 
 let get_entity entity_uuid yserver =
@@ -236,9 +239,9 @@ let get_flavor_node imageid nodeid yserver =
    Lwt.return @@ Fos_core.FTypesJson.flavor_of_string v
    >>= fun data -> let _ = FStore.destroy s in Lwt.return data *)
 
-let send_add_flavor_node (manifest : Fos_core.FTypesJson.flavor) node_uuid yserver =
+let send_add_flavor_node (descriptor : Fos_core.FTypesJson.flavor) node_uuid yserver =
   Lwt.return_unit
-(* let flavor = { manifest with status = Some "add"} in
+(* let flavor = { descriptor with status = Some "add"} in
    let%lwt s = FStore.create (Printf.sprintf "d%s" home) droot dhome yserver in
    let%lwt all = get_all_node_plugin node_uuid yserver in
    let plugins =get_plugins_by_name (get_plugins_by_type all "runtime ") flavor.flv_type in
@@ -278,9 +281,9 @@ let get_image_node imageid nodeid yserver =
    >>= fun data -> let _ = FStore.destroy s in Lwt.return data *)
 
 
-let send_add_image_node (manifest : Fos_core.FTypesJson.image) node_uuid yserver =
+let send_add_image_node (descriptor : Fos_core.FTypesJson.image) node_uuid yserver =
   Lwt.return_unit
-(* let image = { manifest with status = Some "add"} in
+(* let image = { descriptor with status = Some "add"} in
    let%lwt s = FStore.create (Printf.sprintf "d%s" home) droot dhome yserver in
    let%lwt all = get_all_node_plugin node_uuid yserver in
    let plugins = (get_plugins_by_name (get_plugins_by_type all "runtime ") image.img_type) in
@@ -372,7 +375,7 @@ let get_all_entities yserver =
     in
     let%lwt atomics = Lwt_list.map_p
         (fun (c:FTypes.component_type) ->
-           get_all_atomic_entity_info c.manifest.uuid yserver
+           get_all_atomic_entity_info c.descriptor.uuid yserver
         ) m.components
     in
     Lwt.return (eid,m,nets, atomics)
@@ -427,15 +430,15 @@ let wait_atomic_entity_instance_state_change node_uuid handler_uuid atomic_uuid 
    | Some data -> if data = state then let _ = FStore.destroy s in Lwt.return @@ Ok true else wait_atomic_entity_instance_state_change node_uuid handler_uuid atomic_uuid instance_uuid state yserver
    | _ -> wait_atomic_entity_instance_state_change node_uuid handler_uuid atomic_uuid instance_uuid state yserver *)
 
-let send_atomic_entity_define (manifest :Fos_core.FTypesJson.atomic_entity) node_uuid yserver =
+let send_atomic_entity_define (descriptor :Fos_core.FTypesJson.atomic_entity) node_uuid yserver =
   Lwt.return_unit
-(* let manifest = {manifest with status = Some "define"} in
-   let%lwt handler = get_entity_handler_by_type node_uuid manifest.atomic_type yserver in
-   let uri = Printf.sprintf "%s/%s/runtime/%s/entity/%s" droot node_uuid handler.uuid manifest.uuid in
+(* let descriptor = {descriptor with status = Some "define"} in
+   let%lwt handler = get_entity_handler_by_type node_uuid descriptor.atomic_type yserver in
+   let uri = Printf.sprintf "%s/%s/runtime/%s/entity/%s" droot node_uuid handler.uuid descriptor.uuid in
    let%lwt s = FStore.create (Printf.sprintf "d%s" home) droot dhome yserver in
-   FStore.put s uri (Fos_core.FTypesJson.string_of_atomic_entity manifest)
+   FStore.put s uri (Fos_core.FTypesJson.string_of_atomic_entity descriptor)
    >>= fun _ ->
-   wait_atomic_entity_state_change node_uuid handler.uuid manifest.uuid "defined" yserver
+   wait_atomic_entity_state_change node_uuid handler.uuid descriptor.uuid "defined" yserver
    >>= fun r -> FStore.destroy s >>= fun _ -> Lwt.return r *)
 
 let send_atomic_entity_remove node_uuid entity_uuid yserver =
@@ -513,10 +516,10 @@ let resolve_entity_dependencies (components : FTypes.component_type list) =
 
 let onboard path yserver =
   let m = read_file path in
-  let res = check_manifest m FTypesJson.entity_of_string FTypesValidator.validate_entity in
+  let res = check_descriptor m FTypesJson.entity_of_string FTypesValidator.validate_entity in
   (match res with
    | Ok _ ->
-     let entity = load_manifest m FTypesJson.entity_of_string in
+     let entity = load_descriptor m FTypesJson.entity_of_string in
      let%lwt s = FStore.create (Printf.sprintf "d%s" home) droot dhome yserver in
      get_all_nodes_uuid yserver >>=
      Lwt_list.iter_p (fun e ->
@@ -536,10 +539,10 @@ let onboard path yserver =
          let m = List.find (fun (c:FTypesJson.component_type) -> c.name=e) entity.components in
          let instance_uuid = Apero.Uuid.to_string @@ Apero.Uuid.make () in
          let node = get_node m in
-         send_atomic_entity_define m.manifest node yserver >>= fun _ ->
-         send_atomic_entity_instance_action node m.manifest.uuid instance_uuid "configure" "configured" yserver >>= fun _ ->
-         send_atomic_entity_instance_action node m.manifest.uuid instance_uuid "run" "run" yserver >>= fun _ ->
-         Lwt.return (m.manifest.uuid ,instance_uuid)
+         send_atomic_entity_define m.descriptor node yserver >>= fun _ ->
+         send_atomic_entity_instance_action node m.descriptor.uuid instance_uuid "configure" "configured" yserver >>= fun _ ->
+         send_atomic_entity_instance_action node m.descriptor.uuid instance_uuid "run" "run" yserver >>= fun _ ->
+         Lwt.return (m.descriptor.uuid ,instance_uuid)
      ) deps
      >>= fun uuids ->
      let _ = Lwt_io.printf "\nOnboarded:\n" in
@@ -554,12 +557,12 @@ let offload entity_id yserver =
   let%lwt entity = get_entity entity_id yserver in
   Lwt_list.map_p (fun (c:FTypes.component_type) ->
       let nid = get_node c in
-      let%lwt handler = get_entity_handler_by_uuid nid c.manifest.uuid yserver in
-      let%lwt insts = get_atomic_entity_instances nid handler c.manifest.uuid yserver in
+      let%lwt handler = get_entity_handler_by_uuid nid c.descriptor.uuid yserver in
+      let%lwt insts = get_atomic_entity_instances nid handler c.descriptor.uuid yserver in
       Lwt_list.map_p (fun (k,_) ->
           Lwt.return @@ List.nth (Fos_core.string_split '/' k) 10) insts
       >>= fun ids ->
-      Lwt.return (c.manifest.uuid, nid, ids)
+      Lwt.return (c.descriptor.uuid, nid, ids)
     ) entity.components
   >>=
   Lwt_list.iter_s (
