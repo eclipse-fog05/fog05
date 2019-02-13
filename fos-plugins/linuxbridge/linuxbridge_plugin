@@ -63,7 +63,7 @@ class LinuxBridge(NetworkPlugin):
         signal.signal(signal.SIGTERM, self.__catch_signal)
 
     def __catch_signal(self, signal, _):
-        if signal == 2:
+        if signal in [2,15]:
             self.var.put(signal)
 
     def start_network_manager(self):
