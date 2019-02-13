@@ -72,7 +72,7 @@ class LXD(RuntimePluginFDU):
         signal.signal(signal.SIGINT, self.__catch_signal)
 
     def __catch_signal(self, signal, _):
-        if signal == 2:
+        if signal in [2,15]:
             self.var.put(signal)
 
     def read_binary_file(self, file_path):

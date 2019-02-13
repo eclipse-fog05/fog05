@@ -50,6 +50,9 @@ endif
 	sudo cp etc/yaks.service /lib/systemd/system/
 	sudo cp etc/yaks.target /lib/systemd/system/
 	sudo cp /etc/fos/plugins/linux/fos_linux.service /lib/systemd/system/
+	sudo ln -sf /etc/fos/yaksd /usr/bin/yaksd
+	sudo ln -sf /etc/fos/agent /usr/bin/fagent
+	sudo ln -sf /etc/fos/plugins/linux/linux_plugin /usr/bin/fos_linux
 
 uninstall:
 	sudo systemctl stop fos_agent
@@ -62,6 +65,9 @@ uninstall:
 	sudo rm /lib/systemd/system/yaks.target
 	sudo rm /lib/systemd/system/yaks.service
 	sudo rm /lib/systemd/system/fos_linux.service
+	sudo rm -rf /etc/fos/yaksd
+	sudo rm -rf /etc/fos/agent
+	sudo rm -rf /usr/bin/fos_linux
 	sudo userdel fos
 	sudo pip3 uninstall fog05 -y
 

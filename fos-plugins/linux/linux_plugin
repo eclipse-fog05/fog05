@@ -900,7 +900,7 @@ class Linux(OSPlugin):
             return pkgs
 
     def __catch_signal(self, signal, _):
-        if signal == 2:
+        if signal in [2,15]:
             self.var.put(signal)
 
 

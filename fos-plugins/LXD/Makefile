@@ -21,11 +21,13 @@ else
 	sudo cp fos-plugins/LXD/LXDFDU.py /etc/fos/plugins/LXD/
 	sudo cp fos-plugins/LXD/README.md /etc/fos/plugins/LXD/
 	sudo cp /etc/fos/plugins/LXD/fos_lxd.service /lib/systemd/system/
+	sudo ln -sf /etc/fos/plugins/LXD/LXD_plugin /usr/bin/fos_lxd
 endif
 
 
 uninstall:
 	sudo systemctl disable fos_lxd
-	sudo rm -rf /etc/fos
+	sudo rm -rf /etc/fos/plugins/LXD
 	sudo rm -rf /var/fos/lxd
 	sudo rm /lib/systemd/system/fos_lxd.service
+	sudo rm -rf /usr/bin/fos_lxd
