@@ -38,14 +38,13 @@ from jinja2 import Environment
 
 class KVM(RuntimePluginFDU):
 
-    def __init__(self, name, version, plugin_uuid, yaks_locator, nodeid,
-                    manifest):
+    def __init__(self, name, version, plugin_uuid, manifest):
         super(KVM, self).__init__(version, plugin_uuid)
         self.name = name
-        loc = yaks_locator.split('/')[1]
+        loc = manifest.get('configuration').get('ylocator').split('/')[1]
         self.connector = Yaks_Connector(loc)
         self.logger = DLogger(debug_flag=True)
-        self.node = nodeid
+        self.node = manifest.get('configuration').get('nodeid')
         self.manifest = manifest
         self.configuration = manifest.get('configuration',{})
         self.pid = os.getpid()
@@ -66,9 +65,10 @@ class KVM(RuntimePluginFDU):
         self.flavors = {}
         # self.lock = threading.Lock()
         signal.signal(signal.SIGINT, self.__catch_signal)
+        signal.signal(signal.SIGTERM, self.__catch_signal)
 
     def __catch_signal(self, signal, _):
-        if signal == 2:
+        if signal in [2,15]:
             self.var.put(signal)
 
     def start_runtime(self):
@@ -1071,14 +1071,11 @@ def read_file(file_path):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 2:
         exit(-1)
-    yaksip = sys.argv[1]
-    nodeid = sys.argv[2]
     print('ARGS {}'.format(sys.argv))
     file_dir = os.path.dirname(__file__)
-    manifest = json.loads(
-        read_file(os.path.join(file_dir, 'KVM_plugin.json')))
+    manifest = json.loads(read_file(sys.argv[1]))
     vm = KVM(manifest.get('name'), manifest.get('version'), manifest.get(
-        'uuid'), yaksip, nodeid, manifest)
+        'uuid'), manifest)
     vm.start_runtime()

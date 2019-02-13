@@ -8,19 +8,19 @@ FOS_CONF_FILE = /etc/fos/agent.json
 LXD_PLUGIN_DIR = /etc/fos/plugins/LXD
 LLXD_PLUGIN_CONFFILE = /etc/fos/plugins/LXD/LXD_plugin.json
 all:
-	cd src/ocaml; make
+	echo "Nothing to do..."
 
 install:
 	sudo pip3 install pylxd jinja2 packaging
-	sudo usermod -aG sudo lxd
+	sudo usermod -aG lxd fos
 ifeq "$(wildcard $(LXD_PLUGIN_DIR))" ""
-	sudo cp -r fos-plugins/LXD /etc/fos/plugins/
+	sudo cp -r ../LXD /etc/fos/plugins/
 else
-	sudo cp -r fos-plugins/LXD/templates /etc/fos/plugins/LXD/
-	sudo cp fos-plugins/LXD/__init__.py /etc/fos/plugins/LXD/
-	sudo cp fos-plugins/LXD/LXD_plugin /etc/fos/plugins/LXD/
-	sudo cp fos-plugins/LXD/LXDFDU.py /etc/fos/plugins/LXD/
-	sudo cp fos-plugins/LXD/README.md /etc/fos/plugins/LXD/
+	sudo cp -r ../LXD/templates /etc/fos/plugins/LXD/
+	sudo cp ../LXD/__init__.py /etc/fos/plugins/LXD/
+	sudo cp ../LXD/LXD_plugin /etc/fos/plugins/LXD/
+	sudo cp ../LXD/LXDFDU.py /etc/fos/plugins/LXD/
+	sudo cp ../LXD/README.md /etc/fos/plugins/LXD/
 	sudo cp /etc/fos/plugins/LXD/fos_lxd.service /lib/systemd/system/
 	sudo ln -sf /etc/fos/plugins/LXD/LXD_plugin /usr/bin/fos_lxd
 endif

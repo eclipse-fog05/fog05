@@ -34,20 +34,18 @@ from mvar import MVar
 
 class Native(RuntimePluginFDU):
 
-    def __init__(self, name, version, plugin_uuid, yaks_locator, nodeid,
-                    manifest):
+    def __init__(self, name, version, plugin_uuid, manifest):
         super(Native, self).__init__(version, plugin_uuid)
         self.name = name
-
-        loc = yaks_locator.split('/')[1]
+        loc = manifest.get('configuration').get('ylocator').split('/')[1]
         self.connector = Yaks_Connector(loc)
         self.logger = DLogger(debug_flag=True)
-        self.node = nodeid
+        self.node = manifest.get('configuration').get('nodeid')
         self.manifest = manifest
         self.pid = os.getpid()
         self.var = MVar()
 
-        osinfo = self.connector.loc.actual.get_node_os_info(nodeid)
+        osinfo = self.connector.loc.actual.get_node_os_info(self.node)
         self.operating_system = osinfo.get('name')
 
         self.logger.info(
@@ -61,9 +59,7 @@ class Native(RuntimePluginFDU):
         self.STORE_DIR = 'apps'
         self.configuration = manifest.get('configuration',{})
         signal.signal(signal.SIGINT, self.__catch_signal)
-
-
-
+        signal.signal(signal.SIGTERM, self.__catch_signal)
 
 
     def __catch_signal(self, signal, _):
@@ -488,16 +484,13 @@ def read_file(file_path):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 2:
         exit(-1)
-    yaksip = sys.argv[1]
-    nodeid = sys.argv[2]
     print('ARGS {}'.format(sys.argv))
     file_dir = os.path.dirname(__file__)
-    manifest = json.loads(
-        read_file(os.path.join(file_dir, 'native_plugin.json')))
+    manifest = json.loads(read_file(sys.argv[1]))
     na = Native(manifest.get('name'), manifest.get('version'), manifest.get(
-        'uuid'), yaksip, nodeid, manifest)
+        'uuid'), manifest)
     na.start_runtime()
 
 

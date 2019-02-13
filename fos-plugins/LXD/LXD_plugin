@@ -38,10 +38,7 @@ from LXDFDU import LXDFDU
 
 class LXD(RuntimePluginFDU):
 
-    def __init__(self, name, version, plugin_uuid,
-                    manifest):
-
-        # Start with lxd_plugin tcp/127.0.0.1:7887 16892ae12009411ab76998fdb7ccaf91
+    def __init__(self, name, version, plugin_uuid, manifest):
 
         super(LXD, self).__init__(version, plugin_uuid)
         self.name = name
