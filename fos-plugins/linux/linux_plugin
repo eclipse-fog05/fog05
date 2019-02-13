@@ -93,6 +93,7 @@ class Linux(OSPlugin):
                     '__init__()', '[ DONE ] Populating Actual Store with data from OS Plugin')
 
         signal.signal(signal.SIGINT, self.__catch_signal)
+        signal.signal(signal.SIGTERM, self.__catch_signal)
 
         # registering evals
 

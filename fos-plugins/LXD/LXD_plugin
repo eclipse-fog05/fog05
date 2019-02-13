@@ -70,6 +70,7 @@ class LXD(RuntimePluginFDU):
         self.flavors = {}
         self.mon_th = {}
         signal.signal(signal.SIGINT, self.__catch_signal)
+        signal.signal(signal.SIGTERM, self.__catch_signal)
 
     def __catch_signal(self, signal, _):
         if signal in [2,15]:

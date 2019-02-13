@@ -26,8 +26,14 @@ type t = state MVar.t
 let max_tentatives = 5
 
 let register_handlers completer () =
-  Lwt_unix.on_signal Sys.sigint (
+  let _ = Lwt_unix.on_signal Sys.sigint (
+      fun _ -> Lwt.wakeup_later completer ())
+  in
+  Lwt_unix.on_signal Sys.sigterm (
     fun _ -> Lwt.wakeup_later completer ())
+
+
+
 
 
 let rec print_spawner_output process =
