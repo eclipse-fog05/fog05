@@ -509,6 +509,14 @@ class LAD(object):
         self.listeners.append(subid)
         return subid
 
+    def get_node_info(self, nodeid):
+        s = self.get_node_info_path(nodeid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            raise ValueError("Empty data on get_node_info")
+        else:
+            return json.loads(res[0][1].value)
+
     def get_node_os_info(self, nodeid):
         s = self.get_node_os_info_path(nodeid)
         res = self.ws.get(s)

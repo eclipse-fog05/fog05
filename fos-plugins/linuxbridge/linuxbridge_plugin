@@ -83,7 +83,7 @@ class LinuxBridge(NetworkPlugin):
         if self.configuration.get('data_subnet'):
             cird = self.configuration.get('data_subnet')
 
-            data = self.connector.loc.actual.get_node_os_info(self.node)
+            data = self.connector.loc.actual.get_node_info(self.node)
             for n in data.get('network'):
                 intf_cird = self.__ip_mask_to_cird(
                     n.get('inft_configuration').get('ipv4_address'),
