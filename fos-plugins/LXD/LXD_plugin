@@ -120,7 +120,7 @@ class LXD(RuntimePluginFDU):
         r = self.var.get()
         self.stop_runtime()
         self.connector.close()
-        exit(r)
+        exit(0)
 
         return self.uuid
 

@@ -99,7 +99,7 @@ class Native(RuntimePluginFDU):
         r = self.var.get()
         self.stop_runtime()
         self.connector.close()
-        exit(r)
+        exit(0)
 
     def stop_runtime(self):
         self.logger.info('stopRuntime()', ' Native Plugin - Destroy running BE')

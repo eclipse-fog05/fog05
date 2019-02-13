@@ -104,7 +104,7 @@ class LinuxBridge(NetworkPlugin):
         r = self.var.get()
         self.stop_network_manager()
         self.connector.close()
-        exit(r)
+        exit(0)
 
     def stop_network_manager(self):
         pass

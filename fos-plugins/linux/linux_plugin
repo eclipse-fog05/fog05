@@ -132,7 +132,7 @@ class Linux(OSPlugin):
 
         r = self.var.get()
         self.connector.close()
-        exit(r)
+        exit(0)
 
     def __populate_node_information(self):
         node_info = {}
