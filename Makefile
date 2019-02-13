@@ -2,6 +2,11 @@
 
 WD := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))));
 
+ETC_FOS_DIR = /etc/fos/
+VAR_FOS_DIR = /var/fos/
+FOS_CONF_FILE = /etc/fos/agent.json
+LINUX_PLUGIN_DIR = /etc/fos/plugins/linux
+LINUX_PLUGIN_CONFFILE = /etc/fos/plugins/linux/linux_plugin.json
 all:
 
 
@@ -10,18 +15,36 @@ all:
 install:
 
 	cd src/python; sudo python3 setup.py install
-	sudo useradd -r -s /bin/false fos
-	sudo usermod -aG sudo fos
+ifeq "$(wildcard $(ETC_FOS_DIR))" ""
 	sudo mkdir -p /etc/fos/plugins
+endif
+	sudo id -u fos  >/dev/null 2>&1 ||  sudo useradd -r -s /bin/false fos
+	sudo usermod -aG sudo fos
 	curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/ix28wgn4kqqonaa/yaksd.tar.gz
 	tar -xzvf /tmp/yaks.tar.gz -C /etc/fos
 	rm -rf /tmp/yaks.tar.gz
+
+ifeq "$(wildcard $(VAR_FOS_DIR))" ""
 	sudo mkdir -p /var/fos
 	sudo chown fos:fos /var/fos
+endif
+
 	echo "fos      ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers > /dev/null
 	sudo cp src/ocaml/_build/default/src/fos/fos-agent/fos_agent.exe /etc/fos/agent
-	sudo cp -r fos-plugins/* /etc/fos/plugins
+
+ifeq "$(wildcard $(LINUX_PLUGIN_DIR))" ""
+	sudo cp -r fos-plugins/linux /etc/fos/plugins/
+else
+	sudo cp -r fos-plugins/linux/scripts /etc/fos/plugins/linux/
+	sudo cp fos-plugins/linux/__init__.py /etc/fos/plugins/linux/
+	sudo cp fos-plugins/linux/linux_plugin /etc/fos/plugins/linux/
+	sudo cp fos-plugins/linux/README.md /etc/fos/plugins/linux/
+endif
+
+
+ifeq "$(wildcard $(FOS_CONF_FILE))" ""
 	sudo cp etc/agent.json /etc/fos/agent.json
+endif
 	sudo cp etc/fos_agent.service /lib/systemd/system/
 	sudo cp etc/fos_agent.target /lib/systemd/system/
 	sudo cp etc/yaks.service /lib/systemd/system/
@@ -36,6 +59,8 @@ uninstall:
 	sudo rm -rf /var/fos
 	sudo rm /lib/systemd/system/fos_agent.service
 	sudo rm /lib/systemd/system/fos_agent.target
+	sudo rm /lib/systemd/system/yaks.target
+	sudo rm /lib/systemd/system/yaks.service
 	sudo rm /lib/systemd/system/fos_linux.service
 	sudo userdel fos
 	sudo pip3 uninstall fog05 -y

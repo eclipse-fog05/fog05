@@ -38,17 +38,17 @@ from LXDFDU import LXDFDU
 
 class LXD(RuntimePluginFDU):
 
-    def __init__(self, name, version, plugin_uuid, yaks_locator, nodeid,
+    def __init__(self, name, version, plugin_uuid,
                     manifest):
 
         # Start with lxd_plugin tcp/127.0.0.1:7887 16892ae12009411ab76998fdb7ccaf91
 
         super(LXD, self).__init__(version, plugin_uuid)
         self.name = name
-        loc = yaks_locator.split('/')[1]
+        loc = manifest.get('configuration').get('ylocator').split('/')[1]
         self.connector = Yaks_Connector(loc)
         self.logger = DLogger(debug_flag=True)
-        self.node = nodeid
+        self.node = manifest.get('configuration').get('nodeid')
         self.manifest = manifest
         self.configuration = manifest.get('configuration',{})
         self.pid = os.getpid()
@@ -1048,14 +1048,13 @@ def read_file(file_path):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 2:
         exit(-1)
     yaksip = sys.argv[1]
     nodeid = sys.argv[2]
     print('ARGS {}'.format(sys.argv))
     file_dir = os.path.dirname(__file__)
-    manifest = json.loads(
-        read_file(os.path.join(file_dir, 'LXD_plugin.json')))
+    manifest = json.loads(read_file(sys.argv[1]))
     na = LXD(manifest.get('name'), manifest.get('version'), manifest.get(
-        'uuid'), yaksip, nodeid, manifest)
+        'uuid'), manifest)
     na.start_runtime()
