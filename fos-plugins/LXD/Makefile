@@ -12,6 +12,7 @@ all:
 
 install:
 	sudo pip3 install pylxd jinja2 packaging
+	sudo usermod -aG sudo lxd
 ifeq "$(wildcard $(LXD_PLUGIN_DIR))" ""
 	sudo cp -r fos-plugins/LXD /etc/fos/plugins/
 else
@@ -27,6 +28,7 @@ endif
 
 uninstall:
 	sudo systemctl disable fos_lxd
+	gpasswd -d fos lxd
 	sudo rm -rf /etc/fos/plugins/LXD
 	sudo rm -rf /var/fos/lxd
 	sudo rm /lib/systemd/system/fos_lxd.service

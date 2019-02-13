@@ -1050,8 +1050,6 @@ def read_file(file_path):
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         exit(-1)
-    yaksip = sys.argv[1]
-    nodeid = sys.argv[2]
     print('ARGS {}'.format(sys.argv))
     file_dir = os.path.dirname(__file__)
     manifest = json.loads(read_file(sys.argv[1]))
