@@ -21,6 +21,7 @@ type json <ocaml module="Abs_json"> = abstract
 type fdu = {
   uuid : string;
   name : string;
+  ?status : string option;
   ?description : string option;
   ?base_image : image_type option;
   ?command : string option; (* Present only if hypervisor_type is BARE *)
@@ -30,6 +31,7 @@ type fdu = {
   interfaces : interface_type list;
   io_ports : io_type list;
   ?status : string option;
+  connection_points : connection_point_type list;
 }
 
 
@@ -78,11 +80,12 @@ type interface_type = {
   if_type : intf_t;
   mac_address : string;
   virtual_interface : vif_type;
+  ?cp_id : string option;
 }
 
 type vif_type = {
   intf_type : vintf_t;
-  vpic : string;
+  vpci : string;
   bandwidth : int;
 }
 
@@ -114,6 +117,27 @@ type io_type = {
   name : string;
   io_type : io_t;
   min_io_ports : int
+}
+
+
+type virtual_network = {
+  uuid : string;
+  name : string;
+  ?status: string option;
+  net_type : vn_type;
+  is_mgmt : bool
+}
+
+
+type vn_type = [
+  | ELINE
+  | ELAN
+ ]
+
+
+type connection_point_type = {
+  uuid: string;
+  vnet_id : string;
 }
 
 

@@ -1,0 +1,6 @@
+{
+    "uuid": "0987",
+    "name": "net1",
+    "net_type":<"ELAN">,
+    "is_mgmt": false
+}

@@ -1,15 +1,5 @@
-all:
-
-	atdgen -t src/fos/fos-im/agent_types.atd
-	atdgen -j src/fos/fos-im/agent_types.atd
-	atdgen -v src/fos/fos-im/agent_types.atd
-	atdgen -t src/fos/fos-im/types.atd
-	atdgen -j src/fos/fos-im/types.atd
-	atdgen -v src/fos/fos-im/types.atd
-	atdgen -t src/fos/fos-im/im.atd
-	atdgen -j src/fos/fos-im/im.atd
-	atdgen -v src/fos/fos-im/im.atd
-	dune build
+all: atd
+	 dune build
 
 atd:
 	atdgen -t src/fos/fos-im/agent_types.atd
@@ -18,6 +8,9 @@ atd:
 	atdgen -t src/fos/fos-im/types.atd
 	atdgen -j src/fos/fos-im/types.atd
 	atdgen -v src/fos/fos-im/types.atd
+	atdgen -t src/fos/fos-im/types_record.atd
+	atdgen -j src/fos/fos-im/types_record.atd
+	atdgen -v src/fos/fos-im/types_record.atd
 	atdgen -t src/fos/fos-im/im.atd
 	atdgen -j src/fos/fos-im/im.atd
 	atdgen -v src/fos/fos-im/im.atd
