@@ -12,6 +12,7 @@
  *********************************************************************************)
 open Lwt.Infix
 open Fos_core
+open Fos_im
 
 type state = {
   yaks : Yaks_connector.connector
@@ -146,7 +147,7 @@ let agent verbose_flag debug_flag configuration =
   let%lwt _ = MVar.read state >>= fun state ->
     Yaks_connector.Local.Actual.add_node_configuration uuid conf state.yaks
   in
-  let cb_gd self (pl:Types_t.plugin) =
+  let cb_gd self (pl:FTypes.plugin) =
     MVar.read self >>= fun self ->
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - PLUGIN CB-GD - ##############") in
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - PLUGIN CB-GD - Received plugin") in
@@ -154,7 +155,7 @@ let agent verbose_flag debug_flag configuration =
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - PLUGIN CB-GD -  Calling the spawner by writing this on local desired") in
     Yaks_connector.Local.Desired.add_node_plugin (Apero.Option.get self.configuration.agent.uuid) pl self.yaks >>= Lwt.return
   in
-  let cb_la self (pl:Types_t.plugin) =
+  let cb_la self (pl:FTypes.plugin) =
     MVar.read self >>= fun self ->
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - PLUGIN CB-LA - ##############") in
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - PLUGIN CB-LA - Received plugin") in
@@ -162,19 +163,19 @@ let agent verbose_flag debug_flag configuration =
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - PLUGIN CB-LA -  Plugin loaded advertising on GA") in
     Yaks_connector.Global.Actual.add_node_plugin sys_id Yaks_connector.default_tenant_id (Apero.Option.get self.configuration.agent.uuid) pl self.yaks >>= Lwt.return
   in
-  let cb_ni self (ni:Types_t.node_info) =
+  let cb_ni self (ni:FTypes.node_info) =
     MVar.read self >>= fun self ->
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - PLUGIN CB-NI - ##############") in
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - PLUGIN CB-NI - Updated node info advertising of GA") in
     Yaks_connector.Global.Actual.add_node_info sys_id Yaks_connector.default_tenant_id (Apero.Option.get self.configuration.agent.uuid) ni self.yaks >>= Lwt.return
   in
-  let cb_al_fdu self (fdu:Types_t.fdu) =
+  let cb_al_fdu self (fdu:FTypes.fdu) =
     MVar.read self >>= fun self ->
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - PLUGIN CB-AL-FDU - ##############") in
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - PLUGIN CB-AL-FDU - FDU Updated! Advertising on GA") in
     Yaks_connector.Global.Actual.add_node_fdu sys_id Yaks_connector.default_tenant_id (Apero.Option.get self.configuration.agent.uuid) fdu.uuid fdu self.yaks >>= Lwt.return
   in
-  let cb_gd_fdu self (fdu:Types_t.fdu) =
+  let cb_gd_fdu self (fdu:FTypes.fdu) =
     MVar.read self >>= fun self ->
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - PLUGIN CB-GD-FDU - ##############") in
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - PLUGIN CB-GD-FDU - FDU Updated! Agent will call the right plugin!") in

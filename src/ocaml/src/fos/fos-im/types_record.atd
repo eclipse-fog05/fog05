@@ -18,7 +18,6 @@ type json <ocaml module="Abs_json"> = abstract
 type fdur = {
   uuid : string;
   name : string;
-  status : string;
   ?description : string option;
   ?base_image : image_type option;
   ?command : string option; (* Present only if hypervisor_type is BARE *)

@@ -11,17 +11,17 @@
  *   Gabriele Baldoni (gabriele (dot) baldoni (at) adlinktech (dot) com ) - OCaml implementation
  *********************************************************************************)
 
-module IM_Types = Im_t
-module IM_Json = Im_j
+module IM_Types = Im
+module IM_Json = Im
 module IM_Validator = Im_v
 
-module FAgentTypes = Agent_types_t
-module FAgentTypesJson = Agent_types_j
+module FAgentTypes = Agent_types
+(* module FAgentTypesJson = Agent_types *)
 module FAgentTypesValidator = Agent_types_v
 
-module FTypes = Types_t
-module FTypesJson = Types_j
-module FTypesValidator = Types_v
+module FTypes = Fos_types
+(* module FTypesJson = Types *)
+module FTypesValidator = Fos_types_v
 
 
 let string_of_hv_type (hvtype:FTypes.hv_types) =

@@ -20,6 +20,6 @@
 #sudo brctl addbr {{ bridge_name }}
 #WAN=$(awk '$2 == 00000000 { print $1 }' /proc/net/route)
 
-sudo ip link set {{port-id}}s down
-sudo ip link del {{port-id}}s
+sudo ip link set {{ ext_port }} down
+sudo ip link del {{ ext_port }}
 

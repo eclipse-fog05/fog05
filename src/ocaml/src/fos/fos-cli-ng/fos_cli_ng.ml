@@ -14,11 +14,8 @@
 open Cmdliner
 open Lwt.Infix
 open Fos_core
-(* open Types_t *)
+(* open Fos_im *)
 
-(*   ignore @@ initialize (); *)
-(* >outfile 2> errfile & echo $! > pid file *)
-(* "-p"; "9876"; *)
 
 let check s =
   let n = String.length s in
@@ -41,16 +38,17 @@ let plugin_add nodeid descriptor _ =
   | Some _ ->
     (match descriptor with
      | Some path ->
-       let cont = read_file path in
-       let res = Cli_helper.check_descriptor cont Types_j.plugin_of_string Types_v.validate_plugin  in
-       (match res with
+       let _ = read_file path in
+       Lwt.return_unit
+     (* let res = Cli_helper.check_descriptor cont FTypesValidator.plugin_of_string FTypes.validate_plugin  in
+        (match res with
         | Ok _ -> Lwt.return_unit
-        (* let plugin = {(Cli_helper.load_descriptor cont Types_j.plugin_of_string) with status = Some "add"} in
-           let%lwt s = FStore.create (Printf.sprintf "d%s" Cli_helper.home) Cli_helper.droot Cli_helper.dhome yserver in
-           let v = (Types_j.string_of_plugins_info_type {plugins = [plugin]}) in
-           Store.dput s (Printf.sprintf "%s/%s/plugins" Cli_helper.droot node_uuid) v >>= fun _ ->
-           Lwt_io.printf "Plugin added\n" *)
-        | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
+        (* let plugin = {(Cli_helper.load_descriptor cont FTypes.plugin_of_string) with status = Some "add"} in
+         let%lwt s = FStore.create (Printf.sprintf "d%s" Cli_helper.home) Cli_helper.droot Cli_helper.dhome yserver in
+         let v = (FTypes.string_of_plugins_info_type {plugins = [plugin]}) in
+         Store.dput s (Printf.sprintf "%s/%s/plugins" Cli_helper.droot node_uuid) v >>= fun _ ->
+         Lwt_io.printf "Plugin added\n" *)
+        | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e)) *)
      |None  -> Lwt_io.printf "Manifest parameter missing!!\n")
   | None ->  Lwt_io.printf "Node uuid parameter missing!!\n"
 
@@ -99,15 +97,15 @@ let network_add nodeid descriptor =
   | Some _ ->
     (match descriptor with
      | Some path ->
-       let cont = read_file path in
-       let res = Cli_helper.check_descriptor cont Types_j.network_of_string Types_v.validate_network  in
-       (match res with
-        | Ok _ ->
-          Lwt.return_unit
-        (* let descriptor = Cli_helper.load_descriptor cont Types_j.network_of_string in
-           (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= Cli_helper.send_add_network_node descriptor id  >>= fun _ ->
-           Lwt_io.printf "Atomic Entity Defined\n"; *)
-        | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
+       let _ = read_file path in
+       (* let res = Cli_helper.check_descriptor cont FTypes.network_of_string Types_v.validate_network  in
+          (match res with
+          | Ok _ -> *)
+       Lwt.return_unit
+     (* let descriptor = Cli_helper.load_descriptor cont FTypes.network_of_string in
+        (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= Cli_helper.send_add_network_node descriptor id  >>= fun _ ->
+        Lwt_io.printf "Atomic Entity Defined\n"; *)
+     (* | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e)) *)
      |None  -> Lwt_io.printf "Manifest parameter missing!!\n")
   | None ->  Lwt_io.printf "Node uuid parameter missing!!\n"
 
@@ -141,55 +139,60 @@ let descriptor_image descriptor =
   match descriptor with
   | Some path ->
     let _ = Lwt_io.printf "Check descriptor %s\n" path in
-    let cont = read_file path in
-    let res = Cli_helper.check_descriptor cont Types_j.image_of_string Types_v.validate_image  in
-    (match res with
-     | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
-     | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
+    let _ = read_file path in
+    (* let res = Cli_helper.check_descriptor cont FTypes.image_of_string Types_v.validate_image  in
+       (match res with
+       | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
+       | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e)) *)
+    Lwt.return_unit
   | None -> Lwt_io.printf "Manifest parameter is missing!!\n"
 
 let descriptor_flavor descriptor =
   match descriptor with
   | Some path ->
     let _ = Lwt_io.printf "Check descriptor %s\n" path in
-    let cont = read_file path in
-    let res = Cli_helper.check_descriptor cont Types_j.flavor_of_string Types_v.validate_flavor  in
-    (match res with
-     | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
-     | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
+    (* let cont = read_file path in
+       let res = Cli_helper.check_descriptor cont FTypes.flavor_of_string Types_v.validate_flavor  in
+       (match res with
+       | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
+       | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e)) *)
+    Lwt.return_unit
   | None -> Lwt_io.printf "Manifest parameter is missing!!\n"
 
 let descriptor_plugin descriptor =
   match descriptor with
   | Some path ->
     let _ = Lwt_io.printf "Check descriptor %s\n" path in
-    let cont = read_file path in
-    let res = Cli_helper.check_descriptor cont Types_j.plugin_of_string Types_v.validate_plugin  in
-    (match res with
-     | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
-     | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
+    (* let cont = read_file path in
+       let res = Cli_helper.check_descriptor cont FTypes.plugin_of_string Types_v.validate_plugin  in
+       (match res with
+       | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
+       | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e)) *)
+    Lwt.return_unit
   | None -> Lwt_io.printf"Manifest parameter is missing!!\n"
 
 let descriptor_fdu descriptor =
   match descriptor with
   | Some path ->
     let _ = Lwt_io.printf "Check descriptor %s\n" path in
-    let cont = read_file path in
-    let res = Cli_helper.check_descriptor cont Fos_im.FTypesJson.fdu_of_string Fos_im.FTypesValidator.validate_fdu  in
-    (match res with
-     | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
-     | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
+    (* let cont = read_file path in
+       let res = Cli_helper.check_descriptor cont Fos_im.FTypes.fdu_of_string Fos_im.FTypesValidator.validate_fdu  in
+       (match res with
+       | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
+       | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e)) *)
+    Lwt.return_unit
   | None -> Lwt_io.printf "Manifest parameter is missing!!\n"
 
 let descriptor_network descriptor =
   match descriptor with
-  | Some path ->
-    let _ = Lwt_io.printf "Check descriptor %s\n" path in
-    let cont = read_file path in
-    let res = Cli_helper.check_descriptor cont Types_j.network_of_string Types_v.validate_network  in
-    (match res with
-     | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
-     | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
+  | Some _ ->
+    (* let _ = Lwt_io.printf "Check descriptor %s\n" path in
+       let cont = read_file path in
+       let res = Cli_helper.check_descriptor cont FTypes.network_of_string Types_v.validate_network  in
+       (match res with
+       | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
+       | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e)) *)
+    Lwt.return_unit
   | None -> Lwt_io.printf "Manifest parameter is missing!!\n"
 
 let descriptor_cmd action descriptor =
@@ -220,16 +223,17 @@ let atomic_entity_define nodeid descriptor =
   match nodeid with
   | Some _ ->
     (match descriptor with
-     | Some path ->
-       let cont = read_file path in
-       let res = Cli_helper.check_descriptor cont Types_j.atomic_entity_of_string Types_v.validate_atomic_entity  in
-       (match res with
-        | Ok _ ->
+     | Some _ ->
+       (* let cont = read_file path in
+          let res = Cli_helper.check_descriptor cont FTypes.atomic_entity_of_string Types_v.validate_atomic_entity  in
+          (match res with
+          | Ok _ ->
           Lwt.return_unit
-        (* let descriptor = Cli_helper.load_descriptor cont Types_j.atomic_entity_of_string in
+          (* let descriptor = Cli_helper.load_descriptor cont FTypes.atomic_entity_of_string in
            Cli_helper.send_atomic_entity_define descriptor id (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= fun _ ->
            Lwt_io.printf "Atomic Entity Defined\n"; *)
-        | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
+          | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e)) *)
+       Lwt.return_unit
      |None  -> Lwt_io.printf "Manifest parameter missing!!\n")
   | None ->  Lwt_io.printf "Node uuid parameter missing!!\n"
 

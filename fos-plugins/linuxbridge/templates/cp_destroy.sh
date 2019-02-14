@@ -1,4 +1,7 @@
-# Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+#!/usr/bin/env bash
+
+
+# Copyright (c) 2014,2018 ADLINK Technology Inc.
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -10,19 +13,15 @@
 #
 # SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
 #
-# Contributors: Gabriele Baldoni, ADLINK Technology Inc.
-# OCaml implementation and API
+# Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Base plugins set
 
-#!/usr/bin/env python3
 
-from setuptools import setup
 
-setup(
-    name='fog05',
-    version='0.2.0.a1',
-    python_requires='>=3',
-    author='ADLINK',
-    packages=['fog05', 'fog05/interfaces'],
-    install_requires=['jsonschema', 'yaks==0.2.4', 'mvar'],
-    include_package_data=True
-)
+#sudo brctl addbr {{ bridge_name }}
+#WAN=$(awk '$2 == 00000000 { print $1 }' /proc/net/route)
+
+sudo ip link set {{ ext_port }} down
+sudo ip link del {{ ext_port }}
+sudo ip link set {[ cp_name ]} down
+sudo ip link ddel {{ cp_name }}
+

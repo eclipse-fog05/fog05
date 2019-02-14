@@ -14,6 +14,13 @@
 #
 # Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Base plugins set
 
+
+
+#
+# This plugin use Full LinuxBridge implementation for
+# connection points and virtual links
+#
+
 import sys
 import os
 import uuid
@@ -58,7 +65,9 @@ class LinuxBridge(NetworkPlugin):
         self.overlay_interface = None
         self.networks = {}
         self.net_files = {}
+        self.intfs = {}
         self.ports = {}
+        self.bridges = {}
 
         signal.signal(signal.SIGINT, self.__catch_signal)
         signal.signal(signal.SIGTERM, self.__catch_signal)
@@ -108,7 +117,11 @@ class LinuxBridge(NetworkPlugin):
         exit(0)
 
     def stop_network_manager(self):
-        pass
+        for k in self.networks:
+            self.delete_virtual_network(k)
+        for k in self.bridges:
+            self.delete_virtual_bridge(k)
+
 
     # todo: last item is empty-> delete
     def get_bridge_names_from_output_string(self, output):
@@ -128,24 +141,107 @@ class LinuxBridge(NetworkPlugin):
             if bridge not in current_bridges:
                 self.create_virtual_bridge(bridge, '{}'.format(uuid.uuid4()))
 
-    def create_virtual_interface(self, name, uuid):
-        # sudo ip link add type veth
-        # sudo ip link set dev veth1 addr 00:01:02:aa:bb:cc name vnic0
-        # sudo ip link add name vnic0 type veth peer name vnic0-vm
+    # this is an eval
+    def create_virtual_interface(self,intf_id, descriptor):
+        intf_name = descriptor.get('name')
+        internal_name = 'vif-{}-int'.format(intf_id)
+        external_name = 'vif-{}-ext'.format(intf_id)
+        start_file = self.__generate_interface_create_script(internal_name, external_name, intf_name)
+        stop_file = self.__generate_interface_destroy_script(external_name, intf_name)
+        cmd_start = os.path.join(self.BASE_DIR, start_file)
+        cmd_stop = os.path.join(self.BASE_DIR, stop_file)
+        self.call_os_plugin_function('execute_command',{'command':cmd_start,'blocking':True, 'external':True})
+        descriptor.update({'intf_id':intf_id})
 
-        #cmd = '{}{}'.format(name, name)
-        #self.agent.get_os_plugin().execute_command(cmd)
-        #intf_uuid = uuid
-        #self.interfaces_map.update({uuid: name})
-        #return name, intf_uuid
-        pass
+        if descriptor.get('cp_id') is not None:
+            cpid = descriptor.get('cp_id')
 
+        intf_info = {
+            'descriptor':descriptor,
+            'int_name': internal_name,
+            'ext_name':external_name,
+            'start':cmd_start,
+            'stop':cmd_stop
+        }
+        self.intfs.update(intf_id, intf_info)
+        return intf_info
+
+    # this is an eval
+    def delete_virtual_interface(self, intf_id):
+        intf_info = self.intfs.get(intf_id)
+        if intf_info is None:
+            self.logger.error('delete_virtual_interface','{} does not exist'.format(intf_id))
+            return False
+        stop_file = intf_info.get('stop')
+        if intf_info.get('descriptor').get('cp_id') is not None:
+            cpid = intf_info.get('descriptor').get('cp_id')
+        self.call_os_plugin_function('execute_command',{'command':stop_file,'blocking':True, 'external':True})
+        self.call_os_plugin_function('remove_file',{'file_path':stop_file})
+        self.call_os_plugin_function('remove_file',{'file_path':intf_info.get('start')})
+        self.intfs.pop(intf_id)
+        return True
+
+    # this is an eval
     def create_virtual_bridge(self, name, uuid):
         cmd = 'sudo ip link add {} type bridge'.format(name)
         self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
         br_uuid = uuid
-        self.ports.update({br_uuid: name})
+        self.bridges.update({br_uuid: name})
         return br_uuid, name
+
+    # this is an eval
+    def delete_virtual_bridge(self, br_uuid):
+        self.logger.info('delete_virtual_bridge', 'Removing {}'.format(br_uuid))
+        name = self.bridges.get(br_uuid)
+        if name is None:
+            self.logger.error('delete_virtual_bridge', 'Bridge {} not existing'.format(br_uuid))
+            return
+        cmd = 'sudo ip link del {}'.format(name)
+        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
+        self.bridges.pop(br_uuid)
+        self.logger.error('delete_virtual_bridge', 'Removed {}'.format(br_uuid))
+
+    def create_port(self, descriptor):
+        cp_id = descriptor.get('uuid')
+        cp_small_id = cp_id.split('-')[0]
+        cp_name = 'br-cp-{}'.format(cp_small_id)
+        int_name = 'cp-{}-int'.format(cp_small_id)
+        ext_name = 'cp-{}-ext'.format(cp_small_id)
+        start_file = self.__generate_port_create_script(int_name, ext_name, cp_name)
+        stop_file = self.__generate_port_destroy_script(ext_name, cp_name)
+        cmd_start = os.path.join(self.BASE_DIR, start_file)
+        cmd_stop = os.path.join(self.BASE_DIR, stop_file)
+        self.call_os_plugin_function('execute_command',{'command':cmd_start,'blocking':True, 'external':True})
+        if descriptor.get("vnet_id") is not None:
+            net_id = descriptor.get("vnet_id")
+
+        cp_info = {
+            'descriptor':descriptor,
+            'int_name': int_name,
+            'ext_name':ext_name,
+            'cp_name':cp_name,
+            'start':cmd_start,
+            'stop':cmd_stop
+        }
+        self.ports.update(cp_id, cp_info)
+        self.connector.loc.actual.add_node_port(self.node, self.uuid, cp_id,descriptor)
+
+
+    def delete_port(self, cp_id):
+        port_info = self.ports.get(cp_id)
+        if port_info is None:
+            self.logger.error('delete_port','{} does not exist'.format(cp_id))
+            return False
+        stop_file = port_info.get('stop')
+        if port_info.get('descriptor').get('vnet_id') is not None:
+            vnet_id = port_info.get('descriptor').get('vnet_id')
+        self.call_os_plugin_function('execute_command',{'command':stop_file,'blocking':True, 'external':True})
+        self.call_os_plugin_function('remove_file',{'file_path':stop_file})
+        self.call_os_plugin_function('remove_file',{'file_path':port_info.get('start')})
+        self.ports.pop(cp_id)
+        self.connector.loc.actual.remove_node_port(self.node, self.uuid, cp_id)
+
+
 
     # network_name, net_uuid, ip_range=None, has_dhcp=False, gateway=None,
     def create_virtual_network(self, manifest):
@@ -224,34 +320,7 @@ class LinuxBridge(NetworkPlugin):
         # return True
         pass
 
-    def delete_virtual_interface(self, intf_uuid):
-        # # ip link delete dev ${interface name}
-        # intf = self.interfaces_map.get(intf_uuid, None)
-        # if intf is None:
-        #     raise InterfaceNotExistingException(
-        #         '{} interface not exists'.format(intf_uuid))
-        # rm_cmd = 'sudo ip link delete dev {}'.format(intf)
-        # self.agent.get_os_plugin().execute_command(rm_cmd)
-        # self.interfaces_map.pop(intf_uuid)
-        # return True
-        pass
 
-    def delete_virtual_bridge(self, br_uuid):
-
-        # net = self.networks.get(br_uuid, None)
-        # if net is not None:
-        #     raise BridgeAssociatedToNetworkException(
-        #         '{} associated to a network'.format(br_uuid))
-        # br = self.brmap.get(br_uuid, None)
-        # if br is None:
-        #     raise BridgeNotExistingException(
-        #         '{} bridge not exists'.format(br_uuid))
-
-        # rm_cmd = 'sudo brcrl delbr {}'.format(br)
-        # self.agent.get_os_plugin().execute_command(rm_cmd)
-        # self.brmap.pop(br_uuid)
-        # return True
-        pass
 
     def remove_interface_from_network(self, network_uuid, intf_uuid):
         # net = self.networks.get(network_uuid, None)
@@ -363,6 +432,51 @@ class LinuxBridge(NetworkPlugin):
         else:
             self.logger.info('__net_observer()', 'Linux Bridge Plugin - Action not recognized : {}'.format(action))
 
+
+    def __generate_interface_create_script(self, internal_name, external_name, name):
+        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vport_creation.sh'), 'root':False})
+        net_sh = Environment().from_string(template_sh)
+        net_sh = net_sh.render(int_port=internal_name, ext_port=external_name)
+        net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
+        f_name = 'create_{}.sh'.format(name)
+        self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
+        chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
+        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        return f_name
+
+    def __generate_interface_destroy_script(self, external_name, name):
+        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vport_destroy.sh'), 'root':False})
+        net_sh = Environment().from_string(template_sh)
+        net_sh = net_sh.render(ext_port=external_name)
+        net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
+        f_name = 'destroy_{}.sh'.format(name)
+        self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
+        chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
+        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        return f_name
+
+
+    def __generate_port_create_script(self, internal_name, external_name, name):
+        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'cp_creation.sh'), 'root':False})
+        net_sh = Environment().from_string(template_sh)
+        net_sh = net_sh.render(int_port=internal_name, ext_port=external_name, cp_name=name)
+        net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
+        f_name = 'create_{}.sh'.format(name)
+        self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
+        chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
+        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        return f_name
+
+    def __generate_port_destroy_script(self, external_name, name):
+        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'cp_destroy.sh'), 'root':False})
+        net_sh = Environment().from_string(template_sh)
+        net_sh = net_sh.render(ext_port=external_name, cp_name=name)
+        net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
+        f_name = 'destroy_{}.sh'.format(name)
+        self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
+        chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
+        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        return f_name
 
     def __generate_vnet_start_script(self, netid):
         template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vnet_create.sh'), 'root':False})

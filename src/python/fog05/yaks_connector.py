@@ -385,21 +385,21 @@ class LAD(object):
             [self.prefix, nodeid, 'network_managers',
              '*', 'networks', netid, 'info'])
 
-    def get_node_networks_port_selector(self, nodeid, pluginid, networkid):
+    def get_node_networks_port_selector(self, nodeid, pluginid):
         return Constants.create_path(
             [self.prefix, nodeid, 'network_managers',
-             pluginid, 'networks', networkid, 'ports'])
+             pluginid, 'ports', '**'])
 
     def get_node_network_info_path(self, nodeid, pluginid, networkid):
         return Constants.create_path(
             [self.prefix, nodeid, 'network_manages',
              pluginid, 'networks', networkid, 'info'])
 
-    def get_node_network_port_info_path(self, nodeid, pluginid, networkid,
+    def get_node_network_port_info_path(self, nodeid, pluginid,
                                         portid):
         return Constants.create_path(
             [self.prefix, nodeid, 'network_managers',
-             pluginid, 'networks', networkid, 'ports', portid, 'info'])
+             pluginid, 'ports', portid, 'info'])
 
     def get_node_os_exec_path(self, nodeid, func_name):
         return Constants.create_path(
@@ -618,6 +618,36 @@ class LAD(object):
     def remove_node_network(self, nodeid, pluginid, netid):
         p = self.get_node_network_info_path(nodeid, pluginid, netid)
         return self.ws.remove(p)
+
+    def add_node_port(self, nodeid, pluginid, portid, portinfo):
+        p = self.get_node_network_port_info_path(nodeid, pluginid, portid)
+        v = Value(json.dumps(portinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def remove_node_port(self, nodeid, pluginid, portid):
+        p = self.get_node_network_port_info_path(nodeid, pluginid, portid)
+        return self.ws.remove(p)
+
+    def get_node_port(self, nodeid, pluginid, portid):
+        s = self.get_node_network_port_info_path(nodeid, pluginid, portid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            raise ValueError("Empty data on get_node_port")
+        else:
+            return json.loads(res[0][1].value)
+
+    def observe_node_ports(self, nodeid, pluginid, callback):
+        s = self.get_node_networks_port_selector(nodeid, pluginid)
+
+        def cb(kvs):
+            if len(kvs) == 0:
+                raise ValueError('Listener received empty datas')
+            else:
+                v = json.loads(kvs[0][1].value)
+                callback(v)
+        subid = self.ws.subscribe(s, cb)
+        self.listeners.append(subid)
+        return subid
 
 
 class Global(object):

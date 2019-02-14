@@ -30,7 +30,6 @@ type fdu = {
   ?configuration : string option;
   interfaces : interface_type list;
   io_ports : io_type list;
-  ?status : string option;
   connection_points : connection_point_type list;
 }
 

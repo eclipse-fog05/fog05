@@ -8,6 +8,11 @@
         "ram_size_mb": 128,
         "storage_size_gb": 10
     },
+    "base_image": {
+        "uri": "file:///home/ubuntu/bench.qcow2",
+        "checksum": "2935701ae23b433966a5eed237de981257b8af60",
+        "format": "qcow2"
+    },
     "hypervisor_type": "KVM",
     "interfaces": [
         {

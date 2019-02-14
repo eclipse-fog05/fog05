@@ -15,7 +15,7 @@ open Lwt_io
 open Fos_im
 
 
-let print_network_info (net_info :Types_t.network) node_id =
+let print_network_info (net_info :FTypes.network) node_id =
   let _ = printf "+-------------------------------------------------------+\n" in
   let _ = printf "| UUID : %s\n" net_info.uuid  in
   let _ = printf "| Name: %s \n" net_info.name in

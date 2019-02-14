@@ -1,5 +1,5 @@
 (*********************************************************************************
- * Copyright (c) 2018 ADLINK Technology Inc. 
+ * Copyright (c) 2018 ADLINK Technology Inc.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License 2.0 which is available at
@@ -14,7 +14,7 @@ open Fos_im
 module Str = Re.Str
 module MVar = Apero.MVar_lwt
 
-type configuration  = Agent_types_t.configuration
+type configuration  = FAgentTypes.configuration
 
 type system_status = {
 
@@ -41,10 +41,10 @@ let rec read_from_ic s ic =
   | End_of_file -> s
 
 
-let string_split token data = 
+let string_split token data =
   String.split_on_char token data
 
-let read_file path = 
+let read_file path =
   let ic = Pervasives.open_in path in
   let data = read_from_ic "" ic in
   let _ = close_in ic in
@@ -61,7 +61,7 @@ let get_platform () =
   | _ -> "windows"
 
 
-let get_unix_syslog_reporter () = 
+let get_unix_syslog_reporter () =
   match String.uppercase_ascii @@ get_platform () with
   | "LINUX" ->
     (Apero.Result.get (Logs_syslog_unix.unix_reporter ()))
@@ -94,7 +94,7 @@ let getuuid () =
 
 let load_config filename =
   let cont = read_file filename in
-  let conf = Agent_types_j.configuration_of_string cont in
+  let conf = FAgentTypes.configuration_of_string cont in
   let conf =
     match conf.agent.uuid with
     | Some _ -> conf
@@ -104,4 +104,4 @@ let load_config filename =
 
 
 let config_to_json config =
-  Agent_types_j.string_of_configuration config
+  FAgentTypes.string_of_configuration config
