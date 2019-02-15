@@ -441,7 +441,7 @@ class LAD(object):
 
     def get_node_network_info_path(self, nodeid, pluginid, networkid):
         return Constants.create_path(
-            [self.prefix, nodeid, 'network_manages',
+            [self.prefix, nodeid, 'network_managers',
              pluginid, 'networks', networkid, 'info'])
 
     def get_node_network_port_info_path(self, nodeid, pluginid,
