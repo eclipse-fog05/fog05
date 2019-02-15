@@ -362,9 +362,10 @@ class LinuxBridge(NetworkPlugin):
         self.call_os_plugin_function('remove_file',{'file_path':shutdown_file})
         self.call_os_plugin_function('remove_file',{'file_path':start_file})
         #self.call_os_plugin_function('remove_file',{'file_path':dnsmasq_file})
-        self.networks.pop(network_uuid)
+        m  = self.networks.pop(network_uuid)
+        m.update({'status':'remove'})
         self.net_files.pop(network_uuid)
-        self.connector.loc.actual.remove_node_network(self.node, self.uuid, network_uuid)
+        self.connector.loc.actual.add_node_network(self.node, self.uuid, network_uuid, m)
         self.logger.info('delete_virtual_network()','Deleted {}'.format(network_uuid))
 
         return True

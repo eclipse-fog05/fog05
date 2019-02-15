@@ -173,7 +173,10 @@ let agent verbose_flag debug_flag configuration =
     MVar.read self >>= fun self ->
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - PLUGIN CB-AL-FDU - ##############") in
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - PLUGIN CB-AL-FDU - FDU Updated! Advertising on GA") in
-    Yaks_connector.Global.Actual.add_node_fdu sys_id Yaks_connector.default_tenant_id (Apero.Option.get self.configuration.agent.uuid) fdu.uuid fdu self.yaks >>= Lwt.return
+    match fdu.status with
+    | Some "remove" -> Yaks_connector.Global.Actual.remove_node_fdu sys_id Yaks_connector.default_tenant_id (Apero.Option.get self.configuration.agent.uuid) fdu.uuid self.yaks
+    | _ ->
+      Yaks_connector.Global.Actual.add_node_fdu sys_id Yaks_connector.default_tenant_id (Apero.Option.get self.configuration.agent.uuid) fdu.uuid fdu self.yaks >>= Lwt.return
   in
   let cb_gd_fdu self (fdu:FTypes.fdu) =
     MVar.read self >>= fun self ->
@@ -225,13 +228,19 @@ let agent verbose_flag debug_flag configuration =
     MVar.read self >>= fun self ->
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - PLUGIN CB-AL-NET - ##############") in
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - PLUGIN CB-ALNET - vNET Updated! Advertising on GA") in
-    Yaks_connector.Global.Actual.add_network sys_id Yaks_connector.default_tenant_id net.uuid net self.yaks >>= Lwt.return
+    match net.status with
+    | Some "remove" -> Yaks_connector.Global.Actual.remove_network sys_id Yaks_connector.default_tenant_id net.uuid self.yaks
+    | _ ->
+      Yaks_connector.Global.Actual.add_network sys_id Yaks_connector.default_tenant_id net.uuid net self.yaks >>= Lwt.return
   in
   let cb_al_cp self (cp:FTypes.connection_point_type) =
     MVar.read self >>= fun self ->
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - PLUGIN CB-AL-CP - ##############") in
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - PLUGIN CB-AL-CP - CP Updated! Advertising on GA") in
-    Yaks_connector.Global.Actual.add_port sys_id Yaks_connector.default_tenant_id cp.uuid cp self.yaks >>= Lwt.return
+    match cp.status with
+    | Some "remove" -> Yaks_connector.Global.Actual.remove_port sys_id Yaks_connector.default_tenant_id cp.uuid self.yaks
+    | _ ->
+      Yaks_connector.Global.Actual.add_port sys_id Yaks_connector.default_tenant_id cp.uuid cp self.yaks >>= Lwt.return
   in
   let%lwt _ = Yaks_connector.Global.Desired.observe_node_plugins sys_id Yaks_connector.default_tenant_id uuid (cb_gd state) yaks in
   let%lwt _ = Yaks_connector.Global.Desired.observe_node_fdu sys_id Yaks_connector.default_tenant_id uuid (cb_gd_fdu state) yaks in

@@ -137,6 +137,7 @@ type vn_type = [
 type connection_point_type = {
   uuid: string;
   vnet_id : string;
+  ?status: string option;
 }
 
 
