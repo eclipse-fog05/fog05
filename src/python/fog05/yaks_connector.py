@@ -97,7 +97,7 @@ class GAD(object):
 
     def get_all_networks_selector(self, sysid, tenantid):
         return Constants.create_path(
-            [self.prefix, sysid, 'tenants', tenantid, 'networks', '*' 'info'])
+            [self.prefix, sysid, 'tenants', tenantid, 'networks', '*', 'info'])
 
     def get_entity_all_instances_selector(self, sysid, tenantid, entityid):
         return Constants.create_path(
