@@ -332,7 +332,7 @@ class FIMAPIv2(object):
         def disconnect_cp(self, cp_uuid):
             pass
 
-        def list(self, node_uuid=None):
+        def list(self):
             '''
 
             List all network element available in the system/teneant or in a
@@ -342,34 +342,8 @@ class FIMAPIv2(object):
             :return: dictionary {network uuid:
              {network manifest dictionary, pluginid, nodes}}
             '''
-
-            # if node_uuid is not None:
-            #     n_list = []
-            #     uri = '{}/{}/network/*/networks/**'.format(
-            #         self.store.aroot, node_uuid)
-            #     response = self.store.actual.resolveAll(uri)
-            #     for i in response:
-            #         n_list.append(json.loads(i[1]))
-            #     return {node_uuid: n_list}
-
-            # nets = {}
-            # uri = '{}/*/network/*/networks/**'.format(self.store.aroot)
-            # response = self.store.actual.resolveAll(uri)
-            # for i in response:
-            #     nodeid = i[0].split('/')[4]
-            #     pluginid = i[0].split('/')[6]
-            #     netid = i[0].split('/')[-1]
-            #     net = nets.get(netid, None)
-            #     if net is None:
-            #         net = json.loads(i[1])
-            #         net.update({'plugin': pluginid,
-            #                     'nodes': [nodeid]})
-            #         nets.update({netid: net})
-            #     else:
-            #         net.get('nodes').append(nodeid)
-
-            # return nets
-            pass
+            return self.connector.glob.actual.get_all_networks(
+                self.sysid, self.tenantid)
 
         def search(self, search_dict, node_uuid=None):
             '''
