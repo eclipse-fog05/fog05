@@ -35,9 +35,9 @@ end
 
 module Network : sig
 
-  val add : FTypes.network -> api -> bool Lwt.t
+  val add : FTypes.virtual_network -> api -> bool Lwt.t
   val remove : string -> api -> bool Lwt.t
-  val list : api -> (FTypes.network list) Lwt.t
+  val list : api -> (FTypes.virtual_network list) Lwt.t
 
 end
 

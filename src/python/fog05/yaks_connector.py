@@ -93,21 +93,16 @@ class GAD(object):
 
     def get_all_entities_selector(self, sysid, tenantid):
         return Constants.create_path(
-            [self.prefix, 'tenants', tenantid, 'entities', '*'])
+            [self.prefix, sysid, 'tenants', tenantid, 'entities', '*'])
 
     def get_all_networks_selector(self, sysid, tenantid):
         return Constants.create_path(
-            [self.prefix, 'tenants', tenantid, 'networks', '*'])
+            [self.prefix, sysid, 'tenants', tenantid, 'networks', '*' 'info'])
 
     def get_entity_all_instances_selector(self, sysid, tenantid, entityid):
         return Constants.create_path(
             [self.prefix, sysid, 'tenants', tenantid,
              'entities',  entityid, 'instances', '*'])
-
-    def get_network_all_ports_selector(self, sysid, tenantid, networkid):
-        return Constants.create_path(
-            [self.prefix, sysid, 'tenants', tenantid,
-             'networks', networkid, 'ports', '*'])
 
     def get_entity_info_path(self, sysid, tenantid, entityid):
         return Constants.create_path(
@@ -125,10 +120,15 @@ class GAD(object):
             [self.prefix, sysid, 'tenants',
              tenantid, 'entities', entityid, 'instances', instanceid, 'info'])
 
-    def get_network_port_info_path(self, sysid, tenantid, networkid, portid):
+    def get_network_port_info_path(self, sysid, tenantid, portid):
         return Constants.create_path(
             [self.prefix, sysid, 'tenants',
-             tenantid, 'networks', networkid, 'ports', portid, 'info'])
+             tenantid, 'networks', 'ports', portid, 'info'])
+
+    def get_all_ports_selector(self, sysid, tenantid):
+        return Constants.create_path([
+            self.prefix,sysid ,'tenants', tenantid,'networks','ports',
+            '*', 'info'])
 
     def extract_userid_from_path(self, path):
         return path.split('/')[4]
@@ -286,6 +286,55 @@ class GAD(object):
         p = self.get_node_fdu_info_path(sysid, tenantid, nodeid, fduid)
         return self.ws.remove(p)
 
+    def get_network_port(self, sysid, tenantid, portid):
+        s = self.get_network_port_info_path(sysid, tenantid, portid)
+        kvs = self.ws.get(s)
+        if len(kvs) == 0:
+            return None
+        return json.loads(kvs[0][1].value)
+
+    def add_network_port(self, sysid, tenantid, portid, portinfo):
+        p = self.get_network_port_info_path(sysid, tenantid, portid)
+        v = Value(json.dumps(portinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def remove_network_port(self, sysid, tenantid, portid):
+        p = self.get_network_port_info_path(sysid, tenantid, portid)
+        return self.ws.remove(p)
+
+    def get_all_network_ports(self, sysid, tenantid):
+        p = self.get_all_ports_selector(sysid, tenantid)
+        kvs = self.ws.get(p)
+        d = []
+        for k in kvs:
+            d.append(json.loads(kvs[0][1].value))
+        return d
+
+    def get_network(self, sysid, tenantid, netid):
+        s = self.get_network_info_path(sysid, tenantid, netid)
+        kvs = self.ws.get(s)
+        if len(kvs) == 0:
+            return None
+        return json.loads(kvs[0][1].value)
+
+    def get_all_networks (self, sysid, tenantid):
+        p = self.get_all_networks_selector(sysid, tenantid)
+        kvs = self.ws.get(p)
+        d = []
+        for k in kvs:
+            d.append(json.loads(kvs[0][1].value))
+        return d
+
+    def add_network(self, sysid, tenantid, netid, netinfo):
+        p = self.get_network_info_path(sysid, tenantid, netid)
+        v = Value(json.dumps(netinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def remove_network(self, sysid, tenantid, portid):
+        p = self.get_network_port_info_path(sysid, tenantid, portid)
+        return self.ws.remove(p)
+
+
 
 class LAD(object):
     def __init__(self, workspace, prefix):
@@ -388,7 +437,7 @@ class LAD(object):
     def get_node_networks_port_selector(self, nodeid, pluginid):
         return Constants.create_path(
             [self.prefix, nodeid, 'network_managers',
-             pluginid, 'ports', '**'])
+             pluginid, 'ports', '*',"info"])
 
     def get_node_network_info_path(self, nodeid, pluginid, networkid):
         return Constants.create_path(

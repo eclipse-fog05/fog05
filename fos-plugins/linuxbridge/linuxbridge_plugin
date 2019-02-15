@@ -103,7 +103,8 @@ class LinuxBridge(NetworkPlugin):
                     self.overlay_interface = n.get('intf_name')
 
 
-        self.connector.loc.desired.observe_node_runtime_fdus(self.node, self.uuid, self.__net_observer)
+        self.connector.loc.desired.observe_node_networks(self.node, self.uuid, self.__net_observer)
+        self.connector.loc.desired.observe_node_ports(self.node, self.uuid, self.__port_observer)
         self.manifest.update({'pid': self.pid})
         self.manifest.update({'status': 'running'})
         self.connector.loc.actual.add_node_plugin(
@@ -429,6 +430,20 @@ class LinuxBridge(NetworkPlugin):
         elif action == 'add':
             self.logger.info('__net_observer()', 'Linux Bridge Plugin - This is a add for : {}'.format(net_info))
             self.create_virtual_network(net_info)
+        else:
+            self.logger.info('__net_observer()', 'Linux Bridge Plugin - Action not recognized : {}'.format(action))
+
+
+    def __port_observer(self, port_info):
+        self.logger.info('__net_observer()', 'Linux Bridge Plugin - New Action of a Network - Net Info: {}'.format(port_info))
+        action = port_info.get('status')
+        port_uuid = port_info.get('uuid')
+        if action == 'remove':
+            self.logger.info('__net_observer()', 'Linux Bridge Plugin - This is a remove for : {}'.format(port_info))
+            self.delete_port(port_uuid)
+        elif action == 'add':
+            self.logger.info('__net_observer()', 'Linux Bridge Plugin - This is a add for : {}'.format(port_info))
+            self.create_port(port_info)
         else:
             self.logger.info('__net_observer()', 'Linux Bridge Plugin - Action not recognized : {}'.format(action))
 

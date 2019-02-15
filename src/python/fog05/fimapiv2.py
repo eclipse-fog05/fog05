@@ -278,7 +278,7 @@ class FIMAPIv2(object):
             # else:
             #     return None
 
-        def add(self, manifest, node_uuid=None):
+        def add_network(self, manifest):
             '''
 
             Add a network element to a node o to all nodes
@@ -317,7 +317,7 @@ class FIMAPIv2(object):
             #     return False
             pass
 
-        def remove(self, net_uuid, node_uuid=None):
+        def remove_network(self, net_uuid, node_uuid=None):
             '''
 
             Remove a network element form one or all nodes
@@ -349,6 +349,18 @@ class FIMAPIv2(object):
             #     return True
             # else:
             #     return False
+            pass
+
+        def add_connection_point(self, cp_descriptor):
+            pass
+
+        def delete_connection_point(self, cp_uuid):
+            pass
+
+        def connect_cp_to_network(self, cp_uuid, net_uuid):
+            pass
+
+        def disconnect_cp(self, cp_uuid):
             pass
 
         def list(self, node_uuid=None):

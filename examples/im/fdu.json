@@ -2,7 +2,7 @@
     "uuid": "345",
     "name": "test",
     "computation_requirements": {
-        "cpu_arch": "x64",
+        "cpu_arch": "x86_64",
         "cpu_min_freq": 0.0,
         "cpu_min_count": 1,
         "ram_size_mb": 128,
