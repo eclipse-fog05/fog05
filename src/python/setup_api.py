@@ -23,6 +23,6 @@ setup(
     python_requires='>=3',
     author='ADLINK',
     packages=['fog05', 'fog05/interfaces'],
-    install_requires=['jsonschema', 'yaks==0.2.4', 'mvar'],
+    install_requires=['jsonschema', 'yaks==0.2.4.post1', 'mvar'],
     include_package_data=True
 )
