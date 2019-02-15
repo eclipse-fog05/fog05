@@ -22,6 +22,6 @@
 
 sudo ip link set {{ ext_port }} down
 sudo ip link del {{ ext_port }}
-sudo ip link set {{ cp_name } down
+sudo ip link set {{ cp_name }} down
 sudo ip link del {{ cp_name }}
 
