@@ -346,9 +346,9 @@ class LinuxBridge(NetworkPlugin):
         if net is None:
             raise BridgeAssociatedToNetworkException(
                 '{} network not exists'.format(network_uuid))
-        if len(net.get('interfaces')) > 0:
-            raise NetworkHasPendingInterfacesException(
-                '{} has pending interfaces'.format(network_uuid))
+        # if len(net.get('interfaces')) > 0:
+        #     raise NetworkHasPendingInterfacesException(
+        #         '{} has pending interfaces'.format(network_uuid))
 
 
         start_file, shutdown_file = self.net_files.get(network_uuid)
