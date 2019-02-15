@@ -508,7 +508,7 @@ module MakeLAD(P: sig val prefix: string end) = struct
     create_path [P.prefix; nodeid; "runtimes"; pluginid; "fdu"; fduid; "atomic_entity"; atomicid; "info"]
 
   let get_node_networks_selector nodeid pluginid =
-    create_selector [P.prefix; nodeid; "network_managers"; pluginid; "networks"; "*"]
+    create_selector [P.prefix; nodeid; "network_managers"; pluginid; "networks"; "*"; "info"]
 
   let get_node_networks_find_selector nodeid netid =
     create_path [P.prefix; nodeid; "network_managers"; "*"; "networks"; netid; "info"]
