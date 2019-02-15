@@ -164,7 +164,7 @@ class LinuxBridge(NetworkPlugin):
             'start':cmd_start,
             'stop':cmd_stop
         }
-        self.intfs.update(intf_id, intf_info)
+        self.intfs.update({intf_id: intf_info})
         return intf_info
 
     # this is an eval
@@ -224,7 +224,7 @@ class LinuxBridge(NetworkPlugin):
             'start':cmd_start,
             'stop':cmd_stop
         }
-        self.ports.update(cp_id, cp_info)
+        self.ports.update({cp_id: cp_info})
         self.connector.loc.actual.add_node_port(self.node, self.uuid, cp_id,descriptor)
 
 
