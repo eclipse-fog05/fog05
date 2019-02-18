@@ -9,11 +9,11 @@
         "storage_size_gb": 10
     },
     "base_image": {
-        "uri": "file:///home/ubuntu/bench.qcow2",
-        "checksum": "2935701ae23b433966a5eed237de981257b8af60",
-        "format": "qcow2"
+        "uri": "file:///home/ubuntu/alpine.tar.gz",
+        "checksum": "21f436639dda7941a26d1eb0c5427862fd19910b",
+        "format": "tar.gz"
     },
-    "hypervisor_type": "KVM",
+    "hypervisor_type": "LXD",
     "interfaces": [
         {
             "name": "eth0",

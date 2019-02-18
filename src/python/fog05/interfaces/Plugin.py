@@ -27,6 +27,14 @@ class Plugin(object):
         else:
             self.uuid = plugin_uuid
 
+    def get_nm_plugin(self):
+        pls = self.connector.loc.actual.get_all_plugins(self.node)
+        nms = [x for x in pls if pls.get('type') == 'network']
+        if len(nms) == 0:
+            raise RuntimeError('No network_manager present in the node!!')
+        nm = nms[0]
+        return nm
+
     def call_os_plugin_function(self, fname, fparameters):
         res = self.connector.loc.actual.exec_os_eval(
             self.node, fname, fparameters)

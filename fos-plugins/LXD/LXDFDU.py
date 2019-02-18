@@ -20,21 +20,47 @@ from fog05.interfaces.FDU import FDU
 
 class LXDFDU(FDU):
 
-    def __init__(self, uuid, name, networks, image, user_file,
-                 ssh_key, storage, profiles):
+    def __init__(self, uuid, name, interfaces, connection_points, image, comp_requirements,
+                 configuration, ssh_key):
 
         super(LXDFDU, self).__init__()
         self.uuid = uuid
         self.name = name
-        self.networks = networks
-        self.image_url = image
-        self.user_file = user_file
+        self.interfaces = interfaces
+        self.cps = connection_points
+        self.image = image
+        self.configuration = configuration
         self.ssh_key = ssh_key
-        self.storage = storage
-        self.profiles = profiles
+        self.comp_requirements = comp_requirements
         self.devices = None
         self.conf = None
-        self.image = ""
+
+    @staticmethod
+    def from_descriptor(desciptor):
+        fdu = LXDFDU(desciptor.get('uuid'),
+                     desciptor.get('name'),
+                     desciptor.get('interfaces'),
+                     desciptor.get('connection_points'),
+                     desciptor.get('base_image'),
+                     desciptor.get('computation_requirements'),
+                     desciptor.get('configuration'),
+                     desciptor.get('ssh-key'))
+        return FDU
+
+    def get_image_uri(self):
+        return self.image.get('uri')
+
+    def get_image_checksum(self):
+        return self.image.get('checksum')
+
+    def get_image_format(self):
+        return self.image.get('format')
+
+    def get_interfaces(self):
+        return self.interfaces
+
+    def get_connection_points(self):
+        return self.cps
 
     def on_configured(self, configuration):
         self.conf = configuration

@@ -27,7 +27,7 @@ type fdu = {
   ?command : string option; (* Present only if hypervisor_type is BARE *)
   computation_requirements : computational_requirements_type;
   hypervisor_type : hv_types;
-  ?configuration : string option;
+  ?configuration : configuration_type option;
   interfaces : interface_type list;
   io_ports : io_type list;
   connection_points : connection_point_type list;
