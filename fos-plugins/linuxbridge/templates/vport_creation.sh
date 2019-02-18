@@ -21,4 +21,4 @@
 #WAN=$(awk '$2 == 00000000 { print $1 }' /proc/net/route)
 
 sudo ip link add {{ int_port }} type veth peer name {{ ext_port }}
-
+sudo ip link set {{ ext_port }} up

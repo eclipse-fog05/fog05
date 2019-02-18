@@ -454,6 +454,19 @@ class LAD(object):
         return Constants.create_path(
             [self.prefix, nodeid, 'os', 'exec', func_name])
 
+    def get_node_nw_exec_path(self, nodeid, net_manager_uuid , func_name):
+        return Constants.create_path(
+            [self.prefix, nodeid, 'network_managers',
+            net_manager_uuid , 'exec', func_name])
+
+    def get_node_nw_exec_path_with_params(self, nodeid, net_manager_uuid,
+        func_name, params):
+        p = self.dict2args(params)
+        f = func_name + '?' + p
+        return Constants.create_path(
+            [self.prefix, nodeid, 'network_managers',
+            net_manager_uuid , 'exec', f])
+
     def get_node_os_exec_path_with_params(self, nodeid, func_name, params):
         p = self.dict2args(params)
         f = func_name + '?' + p
@@ -495,6 +508,25 @@ class LAD(object):
         else:
             return json.loads(res[0][1].value)
 
+    def add_nw_eval(self, nodeid, nm_uuid, func_name, func):
+        p = self.get_node_nw_exec_path(nodeid, nm_uuid, func_name)
+
+        def cb(path, **props):
+            v = Value(json.dumps(func(**props)), encoding=Encoding.STRING)
+            return v
+        r = self.ws.register_eval(p, cb)
+        self.evals.append(p)
+        return r
+
+    def exec_nw_eval(self, nodeid, nm_uuid, func_name, parameters):
+        s = self.get_node_nw_exec_path_with_params(
+            nodeid, nm_uuid, func_name, parameters)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError("Empty data on exec_os_eval")
+        else:
+            return json.loads(res[0][1].value)
+
     def exec_plugin_eval(self, nodeid, pluginid, func_name, parameters):
         s = self.get_node_plugin_eval_path_with_params(
             nodeid, pluginid, func_name, parameters)
@@ -518,6 +550,15 @@ class LAD(object):
         p = self.get_node_plugin_info_path(nodeid, pluginid)
         v = Value(json.dumps(plugininfo), encoding=Encoding.STRING)
         return self.ws.put(p, v)
+
+    def get_all_plugins(self, nodeid):
+        s = self.get_node_plugins_selector(nodeid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            raise ValueError('Empty message list on get_all_tenants_ids')
+        else:
+            xs = map(lambda x: json.loads(x[1]), res)
+            return list(xs)
 
     def add_node_information(self, nodeid, nodeinfo):
         p = self.get_node_info_path(nodeid)

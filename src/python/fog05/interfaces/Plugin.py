@@ -35,6 +35,19 @@ class Plugin(object):
             # return None
         return res.get('result')
 
+    def call_nw_plugin_function(self, fname, fparameters):
+        pls = self.connector.loc.actual.get_all_plugins(self.node)
+        nms = [x for x in pls if pls.get('type') == 'network']
+        if len(nms) == 0:
+            raise RuntimeError('No network_manager present in the node!!')
+        nm = nms[0]
+        res = self.connector.loc.actual.exec_nw_eval(
+            self.node, nm, fname, fparameters)
+        if res.get('error'):
+            raise ValueError('NM Eval returned {}'.format(res.get('error')))
+            # return None
+        return res.get('result')
+
     def get_version(self):
         return self.version
 

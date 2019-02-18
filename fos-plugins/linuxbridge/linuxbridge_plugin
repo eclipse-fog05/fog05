@@ -15,7 +15,6 @@
 # Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Base plugins set
 
 
-
 #
 # This plugin use Full LinuxBridge implementation for
 # connection points and virtual links
@@ -73,7 +72,7 @@ class LinuxBridge(NetworkPlugin):
         signal.signal(signal.SIGTERM, self.__catch_signal)
 
     def __catch_signal(self, signal, _):
-        if signal in [2,15]:
+        if signal in [2, 15]:
             self.var.put(signal)
 
     def start_network_manager(self):
@@ -101,6 +100,25 @@ class LinuxBridge(NetworkPlugin):
                 )
                 if cird == intf_cird:
                     self.overlay_interface = n.get('intf_name')
+
+
+        d = {
+            'create_virtual_interface': self.create_virtual_interface,
+            'delete_virtual_interface': self.delete_virtual_interface,
+            'create_virtual_bridge': self.create_virtual_bridge,
+            'delete_virtual_bridge': self.delete_virtual_bridge,
+            'create_bridges_if_not_exist': self.create_bridges_if_not_exist,
+            'connect_interface_to_connection_point': self.connect_interface_to_connection_point,
+            'disconnect_interface': self.disconnect_interface,
+            'connect_cp_to_vnetwork': self.connect_cp_to_vnetwork,
+            'disconnect_cp': self.disconnect_cp
+        }
+
+        for k in d:
+            f = d.get(k)
+            self.logger.info(
+                '__init__()', 'Linux Bridge Plugin - Registering {}'.format(k))
+            self.connector.loc.actual.add_nw_eval(self.node_id, self.uuid, k, f)
 
 
         self.connector.loc.desired.observe_node_networks(self.node, self.uuid, self.__net_observer)
@@ -136,6 +154,7 @@ class LinuxBridge(NetworkPlugin):
         output = self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
         return self.get_bridge_names_from_output_string(output)
 
+    # this is an eval
     def create_bridges_if_not_exist(self, expected_bridges):
         current_bridges = self.get_virtual_bridges_in_node()
         for bridge in expected_bridges:
@@ -321,6 +340,57 @@ class LinuxBridge(NetworkPlugin):
         # return True
         pass
 
+    # eval
+    def connect_interface_to_connection_point(self, intf_id, cp_id):
+        intf_info = self.intfs.get(intf_id)
+        cp_info = self.ports.get(cp_id)
+        if intf_info is None or cp_info is None:
+            self.logger.error('connect_interface_to_connection_point',
+            'Nor connection point or virtual interface exist')
+            return {'error':-2}
+        ext_intf = intf_info.get('ext_name')
+        int_cp = cp_info.get('cp_name')
+        cmd = 'sudo ip link set dev {} master {}'.format(ext_intf, int_cp)
+        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
+        return {'result':{'int':intf_id, 'ext':cp_id}}
+
+
+    # eval
+    def disconnect_interface(self, intf_id):
+        intf_info = self.intfs.get(intf_id)
+        if intf_info is None:
+            self.logger.error('disconnect_interface',
+            'Virtual interface does not exist')
+            return {'error':-2}
+        ext_intf = intf_info.get('ext_name')
+        cmd = 'sudo ip link set dev {} nomaster'.format(ext_intf)
+        return {'result':{'int':intf_id, 'ext':None}}
+
+    # eval
+    def connect_cp_to_vnetwork(self, cp_id, vnet_id):
+        net_info = self.networks.get(vnet_id)
+        cp_info = self.ports.get(cp_id)
+        if net_info is None or cp_info is None:
+            self.logger.error('connect_cp_to_vnetwork',
+            'Nor connection point or virtual network exist')
+            return {'error':-2}
+        net_dev = net_info.get('virtual_device')
+        ext_cp = cp_info.get('ext_name')
+        cmd = 'sudo ip link set dev {} master {}'.format(ext_cp, net_dev)
+        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
+        return {'result':{'int':cp_id, 'ext':vnet_id}}
+
+    # eval
+    def disconnect_cp(self, cp_id):
+        cp_info = self.ports.get(cp_id)
+        if cp_info is None:
+            self.logger.error('disconnect_interface',
+            'Connection point does not exist')
+            return {'error':-2}
+        ext_cp = cp_info.get('ext_name')
+        cmd = 'sudo ip link set dev {} nomaster'.format(ext_cp)
+        return {'result':{'int':cp_id, 'ext':None}}
+
 
 
     def remove_interface_from_network(self, network_uuid, intf_uuid):
@@ -361,7 +431,7 @@ class LinuxBridge(NetworkPlugin):
         self.call_os_plugin_function('execute_command',{'command':'sudo {}'.format(shutdown_file),'blocking':True, 'external':True})
         self.call_os_plugin_function('remove_file',{'file_path':shutdown_file})
         self.call_os_plugin_function('remove_file',{'file_path':start_file})
-        #self.call_os_plugin_function('remove_file',{'file_path':dnsmasq_file})
+        # self.call_os_plugin_function('remove_file',{'file_path':dnsmasq_file})
         m  = self.networks.pop(network_uuid)
         m.update({'status':'remove'})
         self.net_files.pop(network_uuid)
