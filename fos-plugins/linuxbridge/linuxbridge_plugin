@@ -160,6 +160,7 @@ class LinuxBridge(NetworkPlugin):
         for bridge in expected_bridges:
             if bridge not in current_bridges:
                 self.create_virtual_bridge(bridge, '{}'.format(uuid.uuid4()))
+        return {'result':expected_bridges}
 
     # this is an eval
     def create_virtual_interface(self,intf_id, descriptor):
@@ -173,8 +174,7 @@ class LinuxBridge(NetworkPlugin):
         self.call_os_plugin_function('execute_command',{'command':cmd_start,'blocking':True, 'external':True})
         descriptor.update({'intf_id':intf_id})
 
-        if descriptor.get('cp_id') is not None:
-            cpid = descriptor.get('cp_id')
+
 
         intf_info = {
             'descriptor':descriptor,
@@ -184,7 +184,10 @@ class LinuxBridge(NetworkPlugin):
             'stop':cmd_stop
         }
         self.intfs.update({intf_id: intf_info})
-        return intf_info
+        if descriptor.get('cp_id') is not None:
+            cpid = descriptor.get('cp_id')
+            self.connect_interface_to_connection_point(internal_name, cp_id)
+        return {'result':intf_info}
 
     # this is an eval
     def delete_virtual_interface(self, intf_id):
@@ -195,11 +198,12 @@ class LinuxBridge(NetworkPlugin):
         stop_file = intf_info.get('stop')
         if intf_info.get('descriptor').get('cp_id') is not None:
             cpid = intf_info.get('descriptor').get('cp_id')
+            self.disconnect_interface(intf_id)
         self.call_os_plugin_function('execute_command',{'command':stop_file,'blocking':True, 'external':True})
         self.call_os_plugin_function('remove_file',{'file_path':stop_file})
         self.call_os_plugin_function('remove_file',{'file_path':intf_info.get('start')})
         self.intfs.pop(intf_id)
-        return True
+        return {'result':intf_id}
 
     # this is an eval
     def create_virtual_bridge(self, name, uuid):
@@ -207,7 +211,8 @@ class LinuxBridge(NetworkPlugin):
         self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
         br_uuid = uuid
         self.bridges.update({br_uuid: name})
-        return br_uuid, name
+        return {'result':{'uuid':br_uuid, 'name':name}}
+
 
     # this is an eval
     def delete_virtual_bridge(self, br_uuid):
@@ -215,11 +220,12 @@ class LinuxBridge(NetworkPlugin):
         name = self.bridges.get(br_uuid)
         if name is None:
             self.logger.error('delete_virtual_bridge', 'Bridge {} not existing'.format(br_uuid))
-            return
+            return {'error':-2}
         cmd = 'sudo ip link del {}'.format(name)
         self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
         self.bridges.pop(br_uuid)
         self.logger.error('delete_virtual_bridge', 'Removed {}'.format(br_uuid))
+        return {'result':br_uuid}
 
     def create_port(self, descriptor):
         cp_id = descriptor.get('uuid')
@@ -232,9 +238,6 @@ class LinuxBridge(NetworkPlugin):
         cmd_start = os.path.join(self.BASE_DIR, start_file)
         cmd_stop = os.path.join(self.BASE_DIR, stop_file)
         self.call_os_plugin_function('execute_command',{'command':cmd_start,'blocking':True, 'external':True})
-        if descriptor.get("vnet_id") is not None:
-            net_id = descriptor.get("vnet_id")
-
         cp_info = {
             'descriptor':descriptor,
             'int_name': int_name,
@@ -244,6 +247,9 @@ class LinuxBridge(NetworkPlugin):
             'stop':cmd_stop
         }
         self.ports.update({cp_id: cp_info})
+        if descriptor.get("vnet_id") is not None:
+            net_id = descriptor.get("vnet_id")
+            self.connect_cp_to_vnetwork(cp_id, net_id)
         self.connector.loc.actual.add_node_port(self.node, self.uuid, cp_id,descriptor)
 
 
@@ -255,6 +261,7 @@ class LinuxBridge(NetworkPlugin):
         stop_file = port_info.get('stop')
         if port_info.get('descriptor').get('vnet_id') is not None:
             vnet_id = port_info.get('descriptor').get('vnet_id')
+            self.disconnect_cp(cp_id)
         self.call_os_plugin_function('execute_command',{'command':stop_file,'blocking':True, 'external':True})
         self.call_os_plugin_function('remove_file',{'file_path':stop_file})
         self.call_os_plugin_function('remove_file',{'file_path':port_info.get('start')})
