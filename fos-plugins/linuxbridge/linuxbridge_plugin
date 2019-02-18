@@ -118,7 +118,7 @@ class LinuxBridge(NetworkPlugin):
             f = d.get(k)
             self.logger.info(
                 '__init__()', 'Linux Bridge Plugin - Registering {}'.format(k))
-            self.connector.loc.actual.add_nw_eval(self.node_id, self.uuid, k, f)
+            self.connector.loc.actual.add_nw_eval(self.node, self.uuid, k, f)
 
 
         self.connector.loc.desired.observe_node_networks(self.node, self.uuid, self.__net_observer)
