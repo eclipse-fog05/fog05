@@ -557,7 +557,7 @@ class LAD(object):
         if len(res) == 0:
             raise ValueError('Empty message list on get_all_tenants_ids')
         else:
-            xs = map(lambda x: json.loads(x[1]), res)
+            xs = map(lambda x: json.loads(x[1].value), res)
             return list(xs)
 
     def add_node_information(self, nodeid, nodeinfo):
