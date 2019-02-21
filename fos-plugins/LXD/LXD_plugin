@@ -304,12 +304,12 @@ class LXD(RuntimePluginFDU):
                 conf = {'environment.FOSUUID': fdu_uuid,
                         'environment.FOSNODEUUID': self.node
                         }
-                dev = self.__generate_custom_profile_devices_configuration(fdu)
-                self.logger.info('configure_fdu()', '[ INFO ] Profile devices {}'.format(dev))
                 for cp in fdu.get_connection_points():
                     cp_id = cp.get('uuid')
                     self.conn.loc.desired.add_node_port(
                         self.node, self.nm, cp_id,cp)
+                dev = self.__generate_custom_profile_devices_configuration(fdu)
+                self.logger.info('configure_fdu()', '[ INFO ] Profile devices {}'.format(dev))
                 # if fdu.devices:
                 #     for d in fdu.devices:
                 #         dev.update(d)

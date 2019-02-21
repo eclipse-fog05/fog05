@@ -165,6 +165,7 @@ class LinuxBridge(NetworkPlugin):
 
     # this is an eval
     def create_virtual_interface(self,intf_id, descriptor):
+        self.logger.info('create_virtual_interface','Creating {}'.format(intf_id))
         descriptor = json.loads(descriptor)
         intf_name = intf_id
         internal_name = '{}-i'.format(intf_id)
@@ -175,7 +176,7 @@ class LinuxBridge(NetworkPlugin):
         cmd_stop = os.path.join(self.BASE_DIR, stop_file)
         self.call_os_plugin_function('execute_command',{'command':cmd_start,'blocking':True, 'external':True})
         descriptor.update({'intf_id':intf_id})
-
+        self.logger.info('create_virtual_interface','Created {}'.format(intf_id))
 
 
         intf_info = {
@@ -188,9 +189,9 @@ class LinuxBridge(NetworkPlugin):
         self.intfs.update({intf_id: intf_info})
         if descriptor.get('cp_id') is not None:
             cpid = descriptor.get('cp_id')
-            if cpid not in self.ports:
-                self.create_port(cpid)
+            self.logger.info('create_virtual_interface','Attach to {}'.format(cpid))
             self.connect_interface_to_connection_point(internal_name, cpid)
+            self.logger.info('create_virtual_interface','Attached to {}'.format(cpid))
         return {'result':intf_info}
 
     # this is an eval
@@ -228,7 +229,7 @@ class LinuxBridge(NetworkPlugin):
         cmd = 'sudo ip link del {}'.format(name)
         self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
         self.bridges.pop(br_uuid)
-        self.logger.error('delete_virtual_bridge', 'Removed {}'.format(br_uuid))
+        self.logger.info('delete_virtual_bridge', 'Removed {}'.format(br_uuid))
         return {'result':br_uuid}
 
     def create_port(self, descriptor):
