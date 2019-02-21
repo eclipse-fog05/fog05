@@ -842,7 +842,7 @@ class LXD(RuntimePluginFDU):
 
         for intf in fdu.get_interfaces():
             intf_name = intf.get('name')
-            intf_id = 'vif-{}-{}'.format(fdu.name, intf_name)
+            intf_id = 'lxd-{}-{}'.format(fdu.name, intf_name)
             mac = intf.get('mac_address')
             intf_data = \
                 self.call_nw_plugin_function('create_virtual_interface',

@@ -166,9 +166,9 @@ class LinuxBridge(NetworkPlugin):
     # this is an eval
     def create_virtual_interface(self,intf_id, descriptor):
         descriptor = json.loads(descriptor)
-        intf_name = descriptor.get('name')
-        internal_name = 'vif-{}-int'.format(intf_id)
-        external_name = 'vif-{}-ext'.format(intf_id)
+        intf_name = intf_id
+        internal_name = '{}-i'.format(intf_id)
+        external_name = '{}-e'.format(intf_id)
         start_file = self.__generate_interface_create_script(internal_name, external_name, intf_name)
         stop_file = self.__generate_interface_destroy_script(external_name, intf_name)
         cmd_start = os.path.join(self.BASE_DIR, start_file)
@@ -188,7 +188,7 @@ class LinuxBridge(NetworkPlugin):
         self.intfs.update({intf_id: intf_info})
         if descriptor.get('cp_id') is not None:
             cpid = descriptor.get('cp_id')
-            self.connect_interface_to_connection_point(internal_name, cp_id)
+            self.connect_interface_to_connection_point(internal_name, cpid)
         return {'result':intf_info}
 
     # this is an eval
