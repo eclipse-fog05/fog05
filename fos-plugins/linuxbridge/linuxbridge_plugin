@@ -101,7 +101,6 @@ class LinuxBridge(NetworkPlugin):
                 if cird == intf_cird:
                     self.overlay_interface = n.get('intf_name')
 
-
         d = {
             'create_virtual_interface': self.create_virtual_interface,
             'delete_virtual_interface': self.delete_virtual_interface,
@@ -120,9 +119,10 @@ class LinuxBridge(NetworkPlugin):
                 '__init__()', 'Linux Bridge Plugin - Registering {}'.format(k))
             self.connector.loc.actual.add_nw_eval(self.node, self.uuid, k, f)
 
-
-        self.connector.loc.desired.observe_node_networks(self.node, self.uuid, self.__net_observer)
-        self.connector.loc.desired.observe_node_ports(self.node, self.uuid, self.__port_observer)
+        self.connector.loc.desired.observe_node_networks(
+            self.node, self.uuid, self.__net_observer)
+        self.connector.loc.desired.observe_node_ports(
+            self.node, self.uuid, self.__port_observer)
         self.manifest.update({'pid': self.pid})
         self.manifest.update({'status': 'running'})
         self.connector.loc.actual.add_node_plugin(
@@ -136,10 +136,15 @@ class LinuxBridge(NetworkPlugin):
         exit(0)
 
     def stop_network_manager(self):
-        for k in self.networks:
+        for k in list(self.intfs.keys()):
+            self.delete_virtual_interface(k)
+        for k in list(self.ports.keys()):
+            self.delete_port(k)
+        for k in list(self.networks.keys()):
             self.delete_virtual_network(k)
-        for k in self.bridges:
+        for k in list(self.bridges.keys()):
             self.delete_virtual_bridge(k)
+
 
 
     # todo: last item is empty-> delete
