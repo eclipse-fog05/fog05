@@ -57,7 +57,7 @@ type hv_types = [
   | KVM_UK
   | XEN
   | XEN_UK
-  | LXC
+  | LXD
   | DOCKER
 ]
 
