@@ -188,6 +188,8 @@ class LinuxBridge(NetworkPlugin):
         self.intfs.update({intf_id: intf_info})
         if descriptor.get('cp_id') is not None:
             cpid = descriptor.get('cp_id')
+            if cpid not in self.ports:
+                self.create_port(cpid)
             self.connect_interface_to_connection_point(internal_name, cpid)
         return {'result':intf_info}
 
