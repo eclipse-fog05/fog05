@@ -34,6 +34,7 @@ class LXDFDU(FDU):
         self.comp_requirements = comp_requirements
         self.devices = None
         self.conf = None
+        self.profiles = None
 
     @staticmethod
     def from_descriptor(desciptor):
