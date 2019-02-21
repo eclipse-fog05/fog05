@@ -849,7 +849,7 @@ class LXD(RuntimePluginFDU):
             self.logger.info('__generate_custom_profile_userdata_configuration()','LXD Plugin - Interface info {}'.format(intf_data))
             dev_name = intf_data.get('int_name')
             nw_v = json.loads(str(template_vintf % (intf_name, dev_name, mac)))
-            devices.update(intf_name, nw_v)
+            devices.update({intf_name: nw_v})
 
 
         # template_key = '{}'
@@ -918,7 +918,7 @@ class LXD(RuntimePluginFDU):
 
         # devices = Environment().from_string(template)
         # devices = devices.render(networks=entity.networks)
-        mid = {'machine-id': {'path': 'etc/machine-id', 'source': '/etc/machine-id', 'type': 'disk'}}
+        mid = {'machine-id': {'path': '/etc/machine-id', 'source': '/etc/machine-id', 'type': 'disk'}}
         devices.update(mid)
         self.logger.info('__generate_custom_profile_devices_configuration()', 'LXD Plugin - Container Devices {}'.format(devices))
         return devices
