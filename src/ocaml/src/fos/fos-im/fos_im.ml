@@ -29,5 +29,5 @@ let string_of_hv_type (hvtype:FTypes.hv_types) =
   | `BARE -> "native"
   | `KVM | `KVM_UK -> "kvm"
   | `XEN | `XEN_UK -> "xen"
-  | `LXC -> "lxc"
+  | `LXD -> "lxd"
   | `DOCKER -> "dock"
