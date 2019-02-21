@@ -906,15 +906,18 @@ class LXD(RuntimePluginFDU):
 
         lxd_version = self.conn.host_info['environment']['server_version']
         if version.parse(lxd_version) >= version.parse('2.20'):
-            if fdu.storage is None or len(fdu.storage) == 0:
-                st_n = 'root'
-                st_v = json.loads(str(template_disk % ('/', 'default')))
-                devices.update({st_n: st_v})
-            else:
-                for s in fdu.storage:
-                    st_n = s.get('name')
-                    st_v = json.loads(str(template_disk % (s.get('path'), s.get('pool'))))
-                    devices.update({st_n: st_v})
+            st_n = 'root'
+            st_v = json.loads(str(template_disk % ('/', 'default')))
+            devices.update({st_n: st_v})
+            # if fdu.storage is None or len(fdu.storage) == 0:
+            #     st_n = 'root'
+            #     st_v = json.loads(str(template_disk % ('/', 'default')))
+            #     devices.update({st_n: st_v})
+            # else:
+            #     for s in fdu.storage:
+            #         st_n = s.get('name')
+            #         st_v = json.loads(str(template_disk % (s.get('path'), s.get('pool'))))
+            #         devices.update({st_n: st_v})
 
         # devices = Environment().from_string(template)
         # devices = devices.render(networks=entity.networks)
