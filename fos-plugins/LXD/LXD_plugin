@@ -266,8 +266,12 @@ class LXD(RuntimePluginFDU):
                     profile.sync()
                     time.sleep(1)
                 profile.delete()
+
+                img = self.conn.images.get_by_alias(fdu_uuid)
+                img.delete()
+
             except Exception as e:
-                        self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Clean a Container Exception raised {}'.format(e))
+                        self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Undefine a Container Exception raised {}'.format(e))
 
 
             self.current_fdus.pop(fdu_uuid, None)
@@ -307,8 +311,11 @@ class LXD(RuntimePluginFDU):
                 for cp in fdu.get_connection_points():
                     cp_id = cp.get('uuid')
                     cp.update({'status':'add'})
-                    self.connector.loc.desired.add_node_port(
-                        self.node, self.nm, cp_id,cp)
+                    self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id,cp)
+                    res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
+                    while res is None:
+                        res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
+
                 dev = self.__generate_custom_profile_devices_configuration(fdu)
                 self.logger.info('configure_fdu()', '[ INFO ] Profile devices {}'.format(dev))
                 # if fdu.devices:
@@ -365,6 +372,16 @@ class LXD(RuntimePluginFDU):
             # The FDU should be removed from the hypervisor
             #
             fdu.on_clean()
+
+
+            for intf in fdu.get_interfaces():
+                intf_name = intf.get('name')
+                intf_id = 'lxd-{}-{}'.format(fdu.name, intf_name)
+                self.call_nw_plugin_function('delete_virtual_interface',{'intf_id':intf_id})
+            for cp in fdu.get_connection_points():
+                cp_id = cp.get('uuid')
+                cp.update({'status':'add'})
+                self.connector.loc.desired.remove_node_port( self.node, self.nm, cp_id)
             self.current_fdus.update({fdu_uuid: fdu})
             lxd_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
             lxd_info.update({'status': 'defined'})

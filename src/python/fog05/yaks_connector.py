@@ -724,7 +724,7 @@ class LAD(object):
         s = self.get_node_network_port_info_path(nodeid, pluginid, portid)
         res = self.ws.get(s)
         if len(res) == 0:
-            raise ValueError("Empty data on get_node_port")
+            return None
         else:
             return json.loads(res[0][1].value)
 
