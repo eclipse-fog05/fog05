@@ -269,7 +269,7 @@ class LXD(RuntimePluginFDU):
 
                 img = self.conn.images.get_by_alias(fdu_uuid)
                 img.delete()
-                self.images.pop(fdu_uuid)
+                self.images.pop
 
             except Exception as e:
                         self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Undefine a Container Exception raised {}'.format(e))
@@ -380,8 +380,9 @@ class LXD(RuntimePluginFDU):
                 self.call_nw_plugin_function('delete_virtual_interface',{'intf_id':intf_id})
             for cp in fdu.get_connection_points():
                 cp_id = cp.get('uuid')
-                cp.update({'status':'add'})
-                self.connector.loc.desired.remove_node_port( self.node, self.nm, cp_id)
+                cp = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
+                cp.update({'status':'remove'})
+                self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id, cp)
             self.current_fdus.update({fdu_uuid: fdu})
             lxd_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
             lxd_info.update({'status': 'defined'})
