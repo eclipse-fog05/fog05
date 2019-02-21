@@ -66,7 +66,7 @@ class LXD(RuntimePluginFDU):
         self.images = {}
         self.flavors = {}
         self.mon_th = {}
-        self.nm = self.get_nm_plugin()
+        self.nm = self.get_nm_plugin().get('uuid')
         signal.signal(signal.SIGINT, self.__catch_signal)
         signal.signal(signal.SIGTERM, self.__catch_signal)
 
