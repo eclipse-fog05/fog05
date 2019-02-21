@@ -45,7 +45,7 @@ class LXDFDU(FDU):
                      desciptor.get('computation_requirements'),
                      desciptor.get('configuration'),
                      desciptor.get('ssh-key'))
-        return FDU
+        return fdu
 
     def get_image_uri(self):
         return self.image.get('uri')
