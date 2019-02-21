@@ -156,6 +156,7 @@ class LinuxBridge(NetworkPlugin):
 
     # this is an eval
     def create_bridges_if_not_exist(self, expected_bridges):
+        expected_bridges = json.loads(expected_bridges)
         current_bridges = self.get_virtual_bridges_in_node()
         for bridge in expected_bridges:
             if bridge not in current_bridges:
@@ -164,6 +165,7 @@ class LinuxBridge(NetworkPlugin):
 
     # this is an eval
     def create_virtual_interface(self,intf_id, descriptor):
+        descriptor = json.loads(descriptor)
         intf_name = descriptor.get('name')
         internal_name = 'vif-{}-int'.format(intf_id)
         external_name = 'vif-{}-ext'.format(intf_id)
