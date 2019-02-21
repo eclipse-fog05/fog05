@@ -360,8 +360,12 @@ class LinuxBridge(NetworkPlugin):
 
     # eval
     def connect_interface_to_connection_point(self, intf_id, cp_id):
+        self.logger.info('connect_interface_to_connection_point()','vIntf {} Network'.format(intf_id))
+        self.logger.info('connect_interface_to_connection_point()','CP {} Network'.format(cp_id))
+        self.logger.info('connect_interface_to_connection_point()','Faces \n{} CPs {}'.format(self.intfs, self.ports))
         intf_info = self.intfs.get(intf_id)
         cp_info = self.ports.get(cp_id)
+        self.logger.info('connect_interface_to_connection_point()','Face \n{} CP {}'.format(intf_info, cp_info))
         if intf_info is None or cp_info is None:
             self.logger.error('connect_interface_to_connection_point',
             'Nor connection point or virtual interface exist')
@@ -542,7 +546,6 @@ class LinuxBridge(NetworkPlugin):
         net_sh = Environment().from_string(template_sh)
         net_sh = net_sh.render(int_port=internal_name, ext_port=external_name)
         net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
-        self.logger.info('__generate_port_create_script()', 'File content : {}'.format(net_sh))
         f_name = 'create_face_{}.sh'.format(name)
         self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
@@ -554,7 +557,6 @@ class LinuxBridge(NetworkPlugin):
         net_sh = Environment().from_string(template_sh)
         net_sh = net_sh.render(ext_port=external_name)
         net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
-        self.logger.info('__generate_port_create_script()', 'File content : {}'.format(net_sh))
         f_name = 'destroy_face_{}.sh'.format(name)
         self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
@@ -566,10 +568,8 @@ class LinuxBridge(NetworkPlugin):
         template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'cp_creation.sh'), 'root':False})
         net_sh = Environment().from_string(template_sh)
         net_sh = net_sh.render(int_port=internal_name, ext_port=external_name, cp_name=name)
-        self.logger.info('__generate_port_create_script()', 'File content : {}'.format(net_sh))
         net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
         f_name = 'create_port_{}.sh'.format(name)
-        self.logger.info('__generate_port_create_script()', 'File content : {}'.format(net_sh))
         self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
         self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
@@ -580,7 +580,6 @@ class LinuxBridge(NetworkPlugin):
         net_sh = Environment().from_string(template_sh)
         net_sh = net_sh.render(ext_port=external_name, cp_name=name)
         net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
-        self.logger.info('__generate_port_create_script()', 'File content : {}'.format(net_sh))
         f_name = 'destroy_port_{}.sh'.format(name)
         self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
@@ -603,7 +602,6 @@ class LinuxBridge(NetworkPlugin):
         net_sh = Environment().from_string(template_sh)
         net_sh = net_sh.render(net_id=netid)
         net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
-        self.logger.info('__generate_port_create_script()', 'File content : {}'.format(net_sh))
         f_name = 'stop_{}.sh'.format(netid)
         self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
