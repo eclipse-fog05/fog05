@@ -315,7 +315,6 @@ class LXD(RuntimePluginFDU):
                     res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
                     while res is None:
                         res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
-
                 dev = self.__generate_custom_profile_devices_configuration(fdu)
                 self.logger.info('configure_fdu()', '[ INFO ] Profile devices {}'.format(dev))
                 # if fdu.devices:

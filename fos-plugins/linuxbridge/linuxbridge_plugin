@@ -538,7 +538,7 @@ class LinuxBridge(NetworkPlugin):
 
 
     def __generate_interface_create_script(self, internal_name, external_name, name):
-        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vport_creation.sh'), 'root':False})
+        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vface_creation.sh'), 'root':False})
         net_sh = Environment().from_string(template_sh)
         net_sh = net_sh.render(int_port=internal_name, ext_port=external_name)
         net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
@@ -550,7 +550,7 @@ class LinuxBridge(NetworkPlugin):
         return f_name
 
     def __generate_interface_destroy_script(self, external_name, name):
-        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vport_destroy.sh'), 'root':False})
+        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vface_destroy.sh'), 'root':False})
         net_sh = Environment().from_string(template_sh)
         net_sh = net_sh.render(ext_port=external_name)
         net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
