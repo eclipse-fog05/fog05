@@ -195,7 +195,7 @@ class LinuxBridge(NetworkPlugin):
         if descriptor.get('cp_id') is not None:
             cpid = descriptor.get('cp_id')
             self.logger.info('create_virtual_interface','Attach to {}'.format(cpid))
-            self.connect_interface_to_connection_point(internal_name, cpid)
+            self.connect_interface_to_connection_point(intf_id, cpid)
             self.logger.info('create_virtual_interface','Attached to {}'.format(cpid))
         return {'result':intf_info}
 
@@ -360,9 +360,7 @@ class LinuxBridge(NetworkPlugin):
 
     # eval
     def connect_interface_to_connection_point(self, intf_id, cp_id):
-        self.logger.info('connect_interface_to_connection_point()','vIntf {} Network'.format(intf_id))
-        self.logger.info('connect_interface_to_connection_point()','CP {} Network'.format(cp_id))
-        self.logger.info('connect_interface_to_connection_point()','Faces \n{} CPs {}'.format(self.intfs, self.ports))
+        self.logger.info('connect_interface_to_connection_point()','vIntf {} <-> CP {} Network'.format(intf_id, cp_id))
         intf_info = self.intfs.get(intf_id)
         cp_info = self.ports.get(cp_id)
         self.logger.info('connect_interface_to_connection_point()','Face \n{} CP {}'.format(intf_info, cp_info))
