@@ -847,7 +847,7 @@ class LXD(RuntimePluginFDU):
             mac = intf.get('mac_address')
             intf_data = self.call_nw_plugin_function('create_virtual_interface', {'intf_id':intf_id, 'descriptor': intf})
             self.logger.info('__generate_custom_profile_userdata_configuration()','LXD Plugin - Interface info {}'.format(intf_data))
-            dev_name = intf_data.get('result').get('int_name')
+            dev_name = intf_data.get('int_name')
             nw_v = json.loads(str(template_vintf % intf_name, dev_name, mac))
             devices.update(intf_name, nw_v)
 
