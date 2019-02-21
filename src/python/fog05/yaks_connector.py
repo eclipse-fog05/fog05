@@ -365,6 +365,8 @@ class LAD(object):
         b = ''
         for k in d:
             v = d.get(k)
+            if isinstance(v,(dict, list)):
+                v = json.dumps(v)
             if i == 0:
                 b = b + '{}={}'.format(k, v)
             else:
