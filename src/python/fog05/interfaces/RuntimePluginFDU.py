@@ -35,7 +35,7 @@ class RuntimePluginFDU(Plugin):
         return nm
 
     def call_nw_plugin_function(self, fname, fparameters):
-        nm = self.get_nm_plugin()
+        nm = self.get_nm_plugin().get('uuid')
         res = self.connector.loc.actual.exec_nw_eval(
             self.node, nm, fname, fparameters)
         if res.get('error'):
