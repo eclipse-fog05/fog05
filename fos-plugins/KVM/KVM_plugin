@@ -338,7 +338,7 @@ class KVM(RuntimePluginFDU):
             # qemu-img create -f qcow2 -o preallocation=metadata newdisk.qcow2 15G
             # virt-resize --expand /dev/sda2 olddisk newdisk.qcow2
 
-            dd_cmd = 'dd if={} of={}'.format(img.get('path'), fdu.disk)
+            dd_cmd = 'dd if={} of={}'.format(img.get('base_image'), fdu.disk)
 
             self.call_os_plugin_function('execute_command',{'command':qemu_cmd,'blocking':True, 'external':False})
             self.call_os_plugin_function('execute_command',{'command':conf_cmd,'blocking':True, 'external':False})
