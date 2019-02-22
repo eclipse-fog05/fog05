@@ -203,7 +203,7 @@ class KVM(RuntimePluginFDU):
         fdu.on_define()
 
 
-        vm_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
+        vm_info = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid)
         vm_info.update({'status': 'defined'})
         self.current_fdus.update({fdu_uuid: fdu})
         self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, vm_info)
