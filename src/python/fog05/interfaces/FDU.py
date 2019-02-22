@@ -32,6 +32,9 @@ class FDU(object):
     def set_state(self, state):
         self.state = state
 
+    def get_short_id(self):
+        return ''.join([x[0] for x in self.uuid.split('-')])
+
     def on_defined(self):
         raise NotImplementedError('This is and interface!')
 

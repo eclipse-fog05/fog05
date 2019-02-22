@@ -369,15 +369,16 @@ class LXD(RuntimePluginFDU):
 
             fdu.on_clean()
 
-
+            i = 0
             for intf in fdu.get_interfaces():
                 intf_name = intf.get('name')
                 if intf.get('virtual_interface').get('intf_type').upper() not in ['PHYSICAL','BRIDGED']:
-                    intf_id = 'lxd-{}-{}'.format(fdu.name, intf_name)
+                    intf_id = 'lxd-{}-{}'.format(fdu.get_short_id(), i)
                     self.call_nw_plugin_function('delete_virtual_interface',{'intf_id':intf_id})
                 else:
                     real_intf_name = intf.get('virtual_interface').get('vpci')
                     self.call_os_plugin_function('set_interface_available', {'intf_name': real_intf_name})
+                i += 1
             for cp in fdu.get_connection_points():
                 cp_id = cp.get('uuid')
                 cp = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
@@ -859,7 +860,7 @@ class LXD(RuntimePluginFDU):
 
         template_disk = '{"path":"%s","type":"disk","pool":"%s"}'
 
-
+        i = 0
         for intf in fdu.get_interfaces():
             intf_name = intf.get('name')
             mac = intf.get('mac_address')
@@ -874,12 +875,13 @@ class LXD(RuntimePluginFDU):
                 else:
                     nw_v = json.loads(str(template_value_bridge_mac % (intf_name, real_intf_name, mac)))
             else:
-                intf_id = 'lxd-{}-{}'.format(fdu.name, intf_name)
+                intf_id = 'lxd-{}-{}'.format(fdu.get_short_id(), i)
                 intf_data = self.call_nw_plugin_function('create_virtual_interface', {'intf_id':intf_id, 'descriptor': intf})
                 self.logger.info('__generate_custom_profile_userdata_configuration()','LXD Plugin - Interface info {}'.format(intf_data))
                 dev_name = intf_data.get('int_name')
                 nw_v = json.loads(str(template_vintf % (intf_name, dev_name, mac)))
             devices.update({intf_name: nw_v})
+            i += 1
 
         lxd_version = self.conn.host_info['environment']['server_version']
         if version.parse(lxd_version) >= version.parse('2.20'):

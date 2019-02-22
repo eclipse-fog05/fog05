@@ -239,10 +239,10 @@ class LinuxBridge(NetworkPlugin):
 
     def create_port(self, descriptor):
         cp_id = descriptor.get('uuid')
-        cp_small_id = cp_id.split('-')[0]
+        cp_small_id = ''.join([x[0] for x in cp_id.split('-')])
         cp_name = 'br-cp-{}'.format(cp_small_id)
-        int_name = 'cp-{}-int'.format(cp_small_id)
-        ext_name = 'cp-{}-ext'.format(cp_small_id)
+        int_name = 'cp-{}-i'.format(cp_small_id)
+        ext_name = 'cp-{}-e'.format(cp_small_id)
         self.logger.info('create_port', 'Creating {} {} {}'.format(cp_name, int_name, ext_name))
         start_file = self.__generate_port_create_script(int_name, ext_name, cp_name)
         stop_file = self.__generate_port_destroy_script(ext_name, cp_name)
