@@ -193,11 +193,25 @@ class NetworkPlugin(Plugin):
          (the connection point is a virtual interface like a vtap interface)
         '''
 
+    def get_virtual_bridges_in_node(self):
+        '''
+        Gets a list with the names of the current virtual bridges running in the node
+
+        :return: a list of virtual bridges names
+        '''
+
     def stop_network(self):
         raise NotImplementedError
 
     def get_network_info(self, network_uuid):
         raise NotImplementedError
+
+    def create_bridges_if_not_exist(self, expected_bridges):
+        '''
+        Creates the bridges missing after checking the manifest file
+        :param expected_bridges: a list of bridges names
+        :return:
+        '''
 
 
 class BridgeAssociatedToNetworkException(Exception):
