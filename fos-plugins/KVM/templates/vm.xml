@@ -88,11 +88,11 @@
         {% endfor %}
         {% endif %}
         <serial type='file'>
-            <source path='/opt/fos/kvm/logs/{{ uuid }}_log.log'/>
+            <source path='/var/fos/kvm/logs/{{ uuid }}_log.log'/>
             <target port='0'/>
         </serial>
         <console type='file'>
-            <source path='/opt/fos/kvm/logs/{{ uuid }}_log.log'/>
+            <source path='/var/fos/kvm/logs/{{ uuid }}_log.log'/>
             <target type='serial' port='0'/>
         </console>
 
