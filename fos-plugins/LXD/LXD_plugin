@@ -372,8 +372,12 @@ class LXD(RuntimePluginFDU):
 
             for intf in fdu.get_interfaces():
                 intf_name = intf.get('name')
-                intf_id = 'lxd-{}-{}'.format(fdu.name, intf_name)
-                self.call_nw_plugin_function('delete_virtual_interface',{'intf_id':intf_id})
+                if intf.get('virtual_interface').get('intf_type').upper() not in ['PHYSICAL','BRIDGED']:
+                    intf_id = 'lxd-{}-{}'.format(fdu.name, intf_name)
+                    self.call_nw_plugin_function('delete_virtual_interface',{'intf_id':intf_id})
+                else:
+                    real_intf_name = intf.get('virtual_interface').get('vpci')
+                    self.call_os_plugin_function('set_interface_available', {'intf_name': real_intf_name})
             for cp in fdu.get_connection_points():
                 cp_id = cp.get('uuid')
                 cp = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
