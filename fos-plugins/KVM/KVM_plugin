@@ -343,8 +343,9 @@ class KVM(RuntimePluginFDU):
 
             if fdu.ssh_key is not None and fdu.ssh_key != '':
                 self.call_os_plugin_function('remove_file',{'file_path':key_filename})
-            if fdu.user_file is not None and fdu.user_file != '':
-                self.call_os_plugin_function('remove_file',{'file_path':data_filename})
+            if fdu.configuration is not None:
+                if fdu.configuration.get('conf_type') in ['CLOUD_INIT']:
+                    self.call_os_plugin_function('remove_file',{'file_path':data_filename})
             self.call_os_plugin_function('remove_file',{'file_path':vendor_filename})
 
             try:
