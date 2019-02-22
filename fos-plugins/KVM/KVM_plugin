@@ -1009,10 +1009,10 @@ class KVM(RuntimePluginFDU):
                         return found
 
     def __force_fdu_termination(self, fdu_uuid):
-        self.logger.info('stop_fdu()', ' LXD Plugin - Stop a container uuid {}'.format(fdu_uuid))
+        self.logger.info('stop_fdu()', ' KVM Plugin - Stop a container uuid {}'.format(fdu_uuid))
         fdu = self.current_fdus.get(fdu_uuid, None)
         if fdu is None:
-            self.logger.error('stop_fdu()', 'LXD Plugin - FDU not exists')
+            self.logger.error('stop_fdu()', 'KVM Plugin - FDU not exists')
         else:
             if fdu.get_state() == State.PAUSED:
                 self.resume_fdu(fdu_uuid)
@@ -1030,6 +1030,7 @@ class KVM(RuntimePluginFDU):
                 self.undefine_fdu(fdu_uuid)
 
     def __generate_dom_xml(self, fdu, flavor, image, net_cfg):
+        self.logger.info('__generate_dom_xml()', ' KVM Plugin - Net Cfg {}'.format(net_cfg))
         template_xml = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vm.xml'), 'root':False})
         vm_xml = Environment().from_string(template_xml)
         vm_xml = vm_xml.render(name=fdu.name, uuid=fdu.uuid, memory=flavor.get('memory'),
