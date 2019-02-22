@@ -201,9 +201,10 @@ class KVM(RuntimePluginFDU):
             self.logger.error('define_fdu()', '[ ERRO ] KVM Plugin - Cannot find flavor {}'.format(fdu_uuid))
 
         fdu.on_define()
-        vm_info = KVMFDU.to_descriptor(fdu)
-        vm_info.update({'status': 'defined'})
 
+
+        vm_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
+        vm_info.update({'status': 'defined'})
         self.current_fdus.update({fdu_uuid: fdu})
         self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, vm_info)
         self.logger.info('define_fdu()', '[ DONE ] KVM Plugin - VM Defined uuid: {}'.format(fdu_uuid))
