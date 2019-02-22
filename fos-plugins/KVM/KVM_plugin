@@ -389,6 +389,8 @@ class KVM(RuntimePluginFDU):
             self.call_os_plugin_function('remove_file',{'file_path':fdu.cdrom})
             self.call_os_plugin_function('remove_file',{'file_path':fdu.disk})
             self.call_os_plugin_function('remove_file',{'file_path':os.path.join(self.BASE_DIR, self.LOG_DIR, vmlog)})
+            xml_file_name = 'kvm-{}.xml'.format(fdu_uuid)
+            self.call_os_plugin_function('remove_file',{'file_path':os.path.join(self.BASE_DIR, xml_file_name)})
 
             for i, intf in enumerate(fdu.get_interfaces()):
                 intf_name = intf.get('name')
