@@ -33,7 +33,7 @@ package dependencies:
 
 - libvirt-bin
 - libvirt-dev
-- genisofs
+- mkisofs
 - seabios
 - python3-libvirt
 - qemu-img

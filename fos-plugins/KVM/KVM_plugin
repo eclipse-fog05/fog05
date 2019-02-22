@@ -925,16 +925,6 @@ class KVM(RuntimePluginFDU):
         pass
 
     def __add_image(self, manifest):
-        url = manifest.get('base_image')
-        img_uuid = manifest.get('uuid')
-        if url.startswith('http'):
-            image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, url.split('/')[-1])
-            self.call_os_plugin_function('download_file',{'url':url,'file_path':image_name})
-        elif url.startswith('file://'):
-            image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, url.split('/')[-1])
-            cmd = 'cp {} {}'.format(url[len('file://'):], image_name)
-            self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
-        manifest.update({'path': image_name})
         self.images.update({img_uuid: manifest})
         self.connector.loc.actual.add_node_image(self.node, self.uuid, img_uuid, manifest)
 
