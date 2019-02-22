@@ -273,7 +273,7 @@ class KVM(RuntimePluginFDU):
                     while res is None:
                         res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
 
-            net_cfg = {}
+            net_cfg = []
             if fdu.get_interfaces() is not None:
                 for i, intf in enumerate(fdu.get_interfaces()):
                     intf_name = intf.get('name')
@@ -293,7 +293,7 @@ class KVM(RuntimePluginFDU):
                         intf_data = self.call_nw_plugin_function('create_virtual_interface', {'intf_id':intf_id, 'descriptor': intf})
                         self.logger.info('__generate_custom_profile_userdata_configuration()','LXD Plugin - Interface info {}'.format(intf_data))
                         dev_name = intf_data.get('int_name')
-                        net_cfg.update({'name':intf_name, 'mac':mac, 'dev':dev_name, 'type':'direct'})
+                        net_cfg.append({'name':intf_name, 'mac':mac, 'dev':dev_name, 'type':'direct'})
 
 
             vm_xml = self.__generate_dom_xml(fdu, flavor, img, net_cfg)
@@ -1030,7 +1030,6 @@ class KVM(RuntimePluginFDU):
                 self.undefine_fdu(fdu_uuid)
 
     def __generate_dom_xml(self, fdu, flavor, image, net_cfg):
-        self.logger.info('__generate_dom_xml()', ' KVM Plugin - Net Cfg {}'.format(net_cfg))
         template_xml = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vm.xml'), 'root':False})
         vm_xml = Environment().from_string(template_xml)
         vm_xml = vm_xml.render(name=fdu.name, uuid=fdu.uuid, memory=flavor.get('memory'),
