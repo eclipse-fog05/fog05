@@ -367,10 +367,6 @@ class LXD(RuntimePluginFDU):
                                                      'FDU {} is not in CONFIGURED state'.format(fdu_uuid))
         else:
 
-            # TODO: to redefine the mean of clean for FDU
-            #
-            # The FDU should be removed from the hypervisor
-            #
             fdu.on_clean()
 
 
@@ -840,12 +836,13 @@ class LXD(RuntimePluginFDU):
         '''
         devices = {}
         template_value_bridge = '{"name":"%s","type":"nic","parent":"%s","nictype":"bridged"}'
-        template_value_bridge_mac = '{"name":"%s","type":"nic","parent":"%s","nictype":"bridged","hwaddr":"%s"}'
         template_value_phy = '{"name":"%s","type":"nic","parent":"%s","nictype":"physical"}'
         template_value_macvlan = '{"name":"%s","type":"nic","parent":"%s","nictype":"macvlan"}'
 
         template_vintf = '{"name":"%s","type":"nic","parent":"%s","nictype":"physical","hwaddr":"%s"}'
-
+        template_value_phy_mac = '{"name":"%s","type":"nic","parent":"%s","nictype":"physical","hwaddr":"%s"}'
+        template_value_macvlan_mac = '{"name":"%s","type":"nic","parent":"%s","nictype":"macvlan",,"hwaddr":"%s"}'
+        template_value_bridge_mac = '{"name":"%s","type":"nic","parent":"%s","nictype":"bridged","hwaddr":"%s"}'
         '''
         # Create tenant's storage pool
         # TODO: allow more storage backends
@@ -861,66 +858,24 @@ class LXD(RuntimePluginFDU):
 
         for intf in fdu.get_interfaces():
             intf_name = intf.get('name')
-            intf_id = 'lxd-{}-{}'.format(fdu.name, intf_name)
             mac = intf.get('mac_address')
-            intf_data = self.call_nw_plugin_function('create_virtual_interface', {'intf_id':intf_id, 'descriptor': intf})
-            self.logger.info('__generate_custom_profile_userdata_configuration()','LXD Plugin - Interface info {}'.format(intf_data))
-            dev_name = intf_data.get('int_name')
-            nw_v = json.loads(str(template_vintf % (intf_name, dev_name, mac)))
+            if intf.get('if_type').get('intf_type').upper() in ['PHYSICAL','BRIDGED']:
+                real_intf_name = intf.get('if_type').get('intf_name')
+                if self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['ethernet']:
+                    nw_v = json.loads(str(template_value_macvlan_mac % (intf_name, real_intf_name, mac)))
+                    self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
+                elif self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['wireless']:
+                    nw_v = json.loads(str(template_value_phy_mac % (intf_name, real_intf_name, mac)))
+                    self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
+                else:
+                    nw_v = json.loads(str(template_value_bridge_mac % (intf_name, real_intf_name, mac)))
+            else:
+                intf_id = 'lxd-{}-{}'.format(fdu.name, intf_name)
+                intf_data = self.call_nw_plugin_function('create_virtual_interface', {'intf_id':intf_id, 'descriptor': intf})
+                self.logger.info('__generate_custom_profile_userdata_configuration()','LXD Plugin - Interface info {}'.format(intf_data))
+                dev_name = intf_data.get('int_name')
+                nw_v = json.loads(str(template_vintf % (intf_name, dev_name, mac)))
             devices.update({intf_name: nw_v})
-
-
-        # template_key = '{}'
-        # template_key2 = 'eth{}'
-        # for i, n in enumerate(fdu.networks):
-        #     if n.get('network_uuid') is not None:
-        #         net = self.connector.loc.actual.find_node_network(self.node, n.get('network_uuid'))
-        #         if net is None:
-        #             self.logger.info('__generate_custom_profile_devices_configuration()', 'LXD Plugin - Network {} not found!!'.format(n.get('network_uuid')))
-        #         else:
-        #             # print(nws.getNetworkInfo(n.get('network_uuid')))
-        #             br_name = net.get('virtual_device')
-        #             # print(br_name)
-        #             n.update({'br_name': br_name})
-        #             if n.get('intf_name') is None:
-        #                 n.update({'intf_name': 'eth{}'.format(i)})
-        #             # nw_k = template_key % n.get('intf_name'))
-        #             nw_k = template_key2.format(i)
-        #             if n.get('mac') is not None:
-        #                 nw_v = json.loads(str(template_value_bridge_mac % (n.get('intf_name'), n.get('br_name'), n.get('mac'))))
-        #             else:
-        #                 nw_v = json.loads(str(template_value_bridge % (n.get('intf_name'), n.get('br_name'))))
-
-        #     elif self.call_os_plugin_function('get_intf_type', {'name': n.get('br_name')}) in ['ethernet']:
-        #         # if n.get('')
-        #         # cmd = "sudo ip link add name {} link {} type macvlan"
-        #         # veth_name = 'veth-{}' % entity.uuid[:5])
-        #         # cmd = cmd % (veth_name, n.get('br_name')))
-        #         # self.agent.getOSPlugin().executeCommand(cmd, True)
-        #         # nw_v = json.loads(template_value_phy % (n.get('intf_name'), veth_name)))
-        #         nw_v = json.loads(str(template_value_macvlan % (n.get('intf_name'), n.get('br_name'))))
-        #         # nw_k = template_key % n.get('intf_name'))
-        #         nw_k = template_key2.format(i)
-        #         self.call_os_plugin_function('set_interface_unaviable', {'intf_name': n.get('br_name')})
-        #         # self.agent.getOSPlugin().set_interface_unaviable(n.get('br_name'))
-        #     elif self.call_os_plugin_function('get_intf_type', {'name': n.get('br_name')}) in ['wireless']:
-        #         nw_v = json.loads(str(template_value_phy % (n.get('intf_name'), n.get('br_name'))))
-        #         # nw_k = template_key % n.get('intf_name'))
-        #         nw_k = template_key2.format(i)
-        #         self.call_os_plugin_function('set_interface_unaviable', {'intf_name': n.get('br_name')})
-        #         #self.agent.get_os_plugin().set_interface_unaviable(n.get('br_name'))
-        #     else:
-        #         if n.get('intf_name') is None:
-        #             n.update({'intf_name': 'eth{}'.format(i)})
-        #         # nw_k = template_key % n.get('intf_name'))
-        #         nw_k = template_key2.format(i)
-        #         if n.get('mac') is not None:
-        #             nw_v = json.loads(str(template_value_bridge_mac % (n.get('intf_name'), n.get('br_name'), n.get('mac'))))
-        #         else:
-        #             nw_v = json.loads(str(template_value_bridge % (n.get('intf_name'), n.get('br_name'))))
-
-
-        #     devices.update({nw_k: nw_v})
 
         lxd_version = self.conn.host_info['environment']['server_version']
         if version.parse(lxd_version) >= version.parse('2.20'):

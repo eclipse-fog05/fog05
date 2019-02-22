@@ -86,12 +86,15 @@ type vif_type = {
   intf_type : vintf_t;
   vpci : string;
   bandwidth : int;
+  ?intf_name : string option;
 }
 
 
 type intf_t = [
   | INTERNAL
   | EXTERNAL
+  | PHYSICAL
+  | BRIDGED
 ]
 
 type vintf_t = [
