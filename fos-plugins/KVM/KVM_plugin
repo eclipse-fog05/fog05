@@ -925,6 +925,7 @@ class KVM(RuntimePluginFDU):
         pass
 
     def __add_image(self, manifest):
+        img_uuid = manifest.get('uuid')
         self.images.update({img_uuid: manifest})
         self.connector.loc.actual.add_node_image(self.node, self.uuid, img_uuid, manifest)
 
