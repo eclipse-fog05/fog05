@@ -246,7 +246,7 @@ class KVM(RuntimePluginFDU):
         else:
 
             name = fdu.name
-            flavor = self.flavors.get(fdu.flavor_id, None)
+            flavor = self.flavors.get(fdu_uuid, None)
             img = self.images.get(fdu_uuid, None)
             if flavor is None:
                 self.logger.error('configure_fdu()', '[ ERRO ] KVM Plugin - Cannot find flavor {}'.format(fdu.flavor_id))
