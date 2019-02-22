@@ -1,10 +1,10 @@
 
-<!-- 
+<!--
 # Copyright (c) 2014,2018 ADLINK Technology Inc.
-# 
+#
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
-# 
+#
 # This program and the accompanying materials are made available under the
 # terms of the Eclipse Public License 2.0 which is available at
 # http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
@@ -70,16 +70,16 @@
          {% if net.type is defined %}
         <devices>
             <interface type='direct' trustGuestRxFilters='no'>
-                <source dev='{{ net.direct_intf }}' mode='vepa'/>
+                <target dev='{{ net.name }}'/>
+                <mac address='{{ net.mac }}'/>
+                <source dev='{{ net.dev }}' mode='vepa'/>
             </interface>
         </devices>
             {% else %}
         <interface type='bridge'>
-            {% if net.mac is defined %}
             <mac address='{{ net.mac }}'/>
-            {% endif %}
-            <source network='default' bridge='{{ net.br_name }}'/>
-            <target dev='{{ net.intf_name }}'/>
+            <source network='default' bridge='{{ net.dev }}'/>
+            <target dev='{{ net.name }}'/>
             <model type='virtio'/>
             <alias name='net{{loop.index}}'/>
             <!-- <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/> -->

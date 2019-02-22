@@ -20,8 +20,8 @@ from fog05.interfaces.FDU import FDU
 
 class LXDFDU(FDU):
 
-    def __init__(self, uuid, name, interfaces, connection_points, image, comp_requirements,
-                 configuration, ssh_key):
+    def __init__(self, uuid, name, interfaces, connection_points, image,
+                 comp_requirements, configuration, ssh_key):
 
         super(LXDFDU, self).__init__()
         self.uuid = uuid
@@ -48,20 +48,8 @@ class LXDFDU(FDU):
                      desciptor.get('ssh-key'))
         return fdu
 
-    def get_image_uri(self):
-        return self.image.get('uri')
-
-    def get_image_checksum(self):
-        return self.image.get('checksum')
-
-    def get_image_format(self):
-        return self.image.get('format')
-
-    def get_interfaces(self):
-        return self.interfaces
-
-    def get_connection_points(self):
-        return self.cps
+    def on_defined(self):
+        self.state = State.DEFINED
 
     def on_configured(self, configuration):
         self.conf = configuration
@@ -82,5 +70,8 @@ class LXDFDU(FDU):
     def on_resume(self):
         self.state = State.RUNNING
 
-    def __str__(self):
-        return "Name : {0} UUID: {1}".format(self.name, self.uuid)
+        def before_migrate(self):
+        pass
+
+    def after_migrate(self):
+        pass

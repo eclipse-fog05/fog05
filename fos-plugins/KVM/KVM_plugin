@@ -63,7 +63,7 @@ class KVM(RuntimePluginFDU):
         self.conn = None
         self.images = {}
         self.flavors = {}
-        # self.lock = threading.Lock()
+        self.nm = self.get_nm_plugin().get('uuid')
         signal.signal(signal.SIGINT, self.__catch_signal)
         signal.signal(signal.SIGTERM, self.__catch_signal)
 
@@ -111,7 +111,6 @@ class KVM(RuntimePluginFDU):
         self.connector.close()
         exit(0)
 
-        return self.uuid
 
     def stop_runtime(self):
         self.logger.info('stopRuntime()', ' KVM Plugin - Destroying running domains')
@@ -145,71 +144,66 @@ class KVM(RuntimePluginFDU):
         flavor = None
 
         fdu_uuid = fdu_manifest.get('uuid')
-        edata = fdu_manifest.get('entity_data')
-        base_image = edata.get('base_image')
-        name = fdu_manifest.get('name')
+        fdu = KVMFDU.from_descriptor(fdu_manifest)
 
-        if self.is_uuid(base_image):
-
-            img = self.images.get(base_image, None)
+        if self.is_uuid(fdu.get_image_uri()):
+            img = self.images.get(fdu.get_image_uri(), None)
             if img is None:
                 self.logger.error('define_fdu()', '[ ERRO ] KVM Plugin - Cannot find image {}'.format(base_image))
-
+                # TODO write error using Yaks_connector
                 return
+            else:
+                fdu.image.update({'file':img.get('base_image')})
+                fdu.image.update({'uuid':img.get('uuid')})
 
         else:
             self.logger.warning('define_fdu()', '[ WARN ] KVM Plugin - No image id specified defining from manifest information new image id uuid:{}'.format(fdu_uuid))
+            if fdu.get_image_uri().startswith('http'):
+                image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
+                self.call_os_plugin_function('download_file',{'url':fdu.get_image_uri(),'file_path':image_name})
+            elif fdu.get_image_uri().startswith('file://'):
+                image_name = os.path.join(
+                    self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
+                cmd = 'cp {} {}'.format(fdu.get_image_uri()[len('file://'):], image_name)
+                self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
+
+
             img_info = {}
             img_info.update({'uuid': fdu_uuid})
-            img_info.update({'name': '{}_img'.format(name)})
-            img_info.update({'base_image': base_image})
+            img_info.update({'name': '{}_img'.format(fdu.name)})
+            img_info.update({'base_image': image_name})
             img_info.update({'type':'kvm'})
-            img_info.update({'format': ''.join(base_image.split('.')[-1:])})
+            img_info.update({'format': fdu.get_image_format()})
+
+            fdu.image.update({'file': image_name})
+            fdu.image.update({'uuid': fdu_uuid})
+
             self.__add_image(img_info)
             img = self.images.get(fdu_uuid, None)
             if img is None:
                 self.logger.error('define_fdu()', '[ ERRO ] KVM Plugin - Cannot find image {}'.format(fdu_uuid))
 
-        if edata.get('flavor_id', None) is None:
-            self.logger.warning('define_fdu()', '[ WARN ] KVM Plugin - No flavor specified defining from manifest information new flavor uuid:{}'.format(fdu_uuid))
-            cpu = edata.get('cpu')
-            mem = edata.get('memory')
-            disk_size = edata.get('disk_size')
-            flavor_info = {}
-            flavor_info.update({'name': '{}_flavor'.format(name)})
-            flavor_info.update({'uuid': fdu_uuid})
-            flavor_info.update({'cpu': cpu})
-            flavor_info.update({'memory': mem})
-            flavor_info.update({'disk_size': disk_size})
-            flavor_info.update({'type':'kvm'})
-            self.__add_flavor(flavor_info)
-            flavor = self.flavors.get(fdu_uuid, None)
-            if flavor is None:
-                self.logger.error('define_fdu()', '[ ERRO ] KVM Plugin - Cannot find flavor {}'.format(fdu_uuid))
-                return
-        else:
+        self.logger.info('define_fdu()', '[ WARN ] KVM Plugin - New flavor uuid:{}'.format(fdu_uuid))
+        cpu = fdu.comp_requirements.get('cpu_min_count')
+        mem = fdu.comp_requirements.get('ram_size_mb')
+        disk_size = fdu.comp_requirements.get('storage_size_gb')
+        flavor_info = {}
+        flavor_info.update({'name': '{}_flavor'.format(fdu.name)})
+        flavor_info.update({'uuid': fdu_uuid})
+        flavor_info.update({'cpu': cpu})
+        flavor_info.update({'memory': mem})
+        flavor_info.update({'disk_size': disk_size})
+        flavor_info.update({'type':'kvm'})
+        fdu.comp_requirements.update({'uuid': fdu_uuid})
+        self.__add_flavor(flavor_info)
+        flavor = self.flavors.get(fdu_uuid, None)
+        if flavor is None:
+            self.logger.error('define_fdu()', '[ ERRO ] KVM Plugin - Cannot find flavor {}'.format(fdu_uuid))
 
-            flavor = self.flavors.get(edata.get('flavor_id'), None)
-            if flavor is None:
-                self.logger.error('define_fdu()', '[ ERRO ] KVM Plugin - Cannot find flavor {}'.format(edata.get('flavor_id')))
-
-                return
-
-        # (uuid, name, disk, cdrom, networks, user_file, ssh_key, flavor_id, image_id):
-        fdu = KVMFDU(fdu_uuid, name, '','',edata.get('networks'),edata.get('user-data'),edata.get('ssh-key'), img.get('uuid'), flavor.get('uuid'))
-
-        fdu.on_defined()
-        vm_info = fdu_manifest
+        fdu.on_define()
+        vm_info = KVMFDU.to_descriptor(fdu)
         vm_info.update({'status': 'defined'})
-        data = vm_info.get('entity_data')
 
-        data.update({'flavor_id': flavor.get('uuid')})
-        data.pop('cpu', None)
-        data.pop('memory', None)
-        data.pop('disk_size', None)
-        data.update({'base_image': img.get('uuid')})
-
-        vm_info.update({'entity_data': data})
         self.current_fdus.update({fdu_uuid: fdu})
         self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, vm_info)
         self.logger.info('define_fdu()', '[ DONE ] KVM Plugin - VM Defined uuid: {}'.format(fdu_uuid))
@@ -229,15 +223,15 @@ class KVM(RuntimePluginFDU):
             if (self.current_fdus.pop(fdu_uuid, None)) is None:
                 self.logger.warning('undefine_fdu()', 'KVM Plugin - pop from entities dict returned none')
 
+
+            image_name = fdu.image.get('file')
+            self.call_os_plugin_function('remove_file',{'file_path':image_name})
+            self.images.pop(fdu_uuid)
+            self.flavors.pop(fdu_uuid)
             self.connector.loc.actual.remove_node_fdu(self.node, self.uuid, fdu_uuid)
             self.logger.info('undefine_fdu()', '[ DONE ] KVM Plugin - Undefine a VM uuid {} '.format(fdu_uuid))
 
     def configure_fdu(self, fdu_uuid):
-        '''
-        :param entity_uuid:
-        :param instance_uuid:
-        :return:
-        '''
 
         self.logger.info('configure_fdu()', ' KVM Plugin - Configure a VM uuid {} '.format(fdu_uuid))
         fdu = self.current_fdus.get(fdu_uuid, None)
@@ -252,7 +246,7 @@ class KVM(RuntimePluginFDU):
 
             name = fdu.name
             flavor = self.flavors.get(fdu.flavor_id, None)
-            img = self.images.get(fdu.image_id, None)
+            img = self.images.get(fdu_uuid, None)
             if flavor is None:
                 self.logger.error('configure_fdu()', '[ ERRO ] KVM Plugin - Cannot find flavor {}'.format(fdu.flavor_id))
                 return
@@ -270,30 +264,38 @@ class KVM(RuntimePluginFDU):
             fdu.cdrom = cdrom_path
 
 
-            ### vm networking TODO: add support for SR-IOV
+            for cp in fdu.get_connection_points():
+                    cp_id = cp.get('uuid')
+                    cp.update({'status':'add'})
+                    self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id,cp)
+                    res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
+                    while res is None:
+                        res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
+
+            net_cfg = {}
             if fdu.networks is not None:
-                for i, n in enumerate(fdu.networks):
-                    if n.get('type') in ['wifi']:
-
-                        nw_ifaces = self.call_os_plugin_function('get_network_informations', {})
-                        for iface in nw_ifaces:
-                            if self.call_os_plugin_function('get_intf_type', {'name': iface.get('intf_name')})  == 'wireless' and iface.get('available') is True:
-                                self.call_os_plugin_function('set_interface_unaviable', {'intf_name':iface.get('intf_name') })
-                                n.update({'direct_intf': iface.get('intf_name')})
-                        # TODO get available interface from os plugin
-                    if n.get('network_uuid') is not None:
-                        net = self.connector.loc.actual.find_node_network(self.node, n.get('network_uuid'))
-                        if net is None:
-                            self.logger.info('configure_fdu()', 'KVM Plugin - Network {} not found!!'.format(n.get('network_uuid')))
-                            return
+                for i, intf in enumerate(fdu.networks):
+                    intf_name = intf.get('name')
+                    mac = intf.get('mac_address')
+                    if intf.get('virtual_interface').get('intf_type').upper() in ['PHYSICAL','BRIDGED']:
+                        real_intf_name = intf.get('virtual_interface').get('vpci')
+                        if self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['ethernet']:
+                            net_cfg.update({'name':intf_name, 'mac':mac, 'dev':real_intf_name,'type':'direct'})
+                            self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
+                        elif self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['wireless']:
+                            net_cfg.update({'name':intf_name, 'mac':mac, 'dev':real_intf_name,'type':'direct'})
+                            self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
                         else:
-                            br_name = net.get('virtual_device')
-                            n.update({'br_name': br_name})
-                    if n.get('intf_name') is None:
-                        n.update({'intf_name': 'veth{0}'.format(i)})
-            ######
+                            net_cfg.update({'name':intf_name, 'mac':mac, 'dev':real_intf_name})
+                    else:
+                        intf_id = 'kvm-{}-{}'.format(fdu.get_short_id(), i)
+                        intf_data = self.call_nw_plugin_function('create_virtual_interface', {'intf_id':intf_id, 'descriptor': intf})
+                        self.logger.info('__generate_custom_profile_userdata_configuration()','LXD Plugin - Interface info {}'.format(intf_data))
+                        dev_name = intf_data.get('int_name')
+                        net_cfg.update({'name':intf_name, 'mac':mac, 'dev':dev_name, 'type':'direct'})
 
-            vm_xml = self.__generate_dom_xml(fdu, flavor, img)
+
+            vm_xml = self.__generate_dom_xml(fdu, flavor, img, net_cfg)
 
             vendor_conf = self.__generate_vendor_data(fdu_uuid, self.node)
             vendor_filename = 'vendor_{}.yaml'.format(fdu_uuid)
@@ -380,6 +382,21 @@ class KVM(RuntimePluginFDU):
             self.call_os_plugin_function('remove_file',{'file_path':fdu.cdrom})
             self.call_os_plugin_function('remove_file',{'file_path':fdu.disk})
             self.call_os_plugin_function('remove_file',{'file_path':os.path.join(self.BASE_DIR, self.LOG_DIR, vmlog)})
+
+            for intf in fdu.get_interfaces():
+                intf_name = intf.get('name')
+                if intf.get('virtual_interface').get('intf_type').upper() not in ['PHYSICAL','BRIDGED']:
+                    intf_id = 'kvm-{}-{}'.format(fdu.get_short_id(), i)
+                    self.call_nw_plugin_function('delete_virtual_interface',{'intf_id':intf_id})
+                else:
+                    real_intf_name = intf.get('virtual_interface').get('vpci')
+                    self.call_os_plugin_function('set_interface_available', {'intf_name': real_intf_name})
+                i += 1
+            for cp in fdu.get_connection_points():
+                cp_id = cp.get('uuid')
+                cp = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
+                cp.update({'status':'remove'})
+                self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id, cp)
 
 
             fdu.on_clean()
@@ -1014,12 +1031,12 @@ class KVM(RuntimePluginFDU):
             if fdu.get_state() == State.DEFINED:
                 self.undefine_fdu(fdu_uuid)
 
-    def __generate_dom_xml(self, fdu, flavor, image):
+    def __generate_dom_xml(self, fdu, flavor, image, net_cfg):
         template_xml = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vm.xml'), 'root':False})
         vm_xml = Environment().from_string(template_xml)
         vm_xml = vm_xml.render(name=fdu.name, uuid=fdu.uuid, memory=flavor.get('memory'),
                                cpu=flavor.get('cpu'), disk_image=fdu.disk,
-                               iso_image=fdu.cdrom, networks=fdu.networks, format=image.get('format'))
+                               iso_image=fdu.cdrom, networks=net_cfg, format=image.get('format'))
         return vm_xml
 
     def __generate_vendor_data(self, entityid, nodeid):

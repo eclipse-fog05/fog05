@@ -20,7 +20,7 @@ ifeq "$(wildcard $(ETC_FOS_DIR))" ""
 endif
 	sudo id -u fos  >/dev/null 2>&1 ||  sudo useradd -r -s /bin/false fos
 	sudo usermod -aG sudo fos
-	curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/ix28wgn4kqqonaa/yaksd.tar.gz
+	curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/qrqrp0uqwm2kvjl/yaksd.tar.gz
 	tar -xzvf /tmp/yaks.tar.gz -C /etc/fos
 	rm -rf /tmp/yaks.tar.gz
 

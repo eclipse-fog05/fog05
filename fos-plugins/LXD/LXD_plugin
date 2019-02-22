@@ -123,7 +123,6 @@ class LXD(RuntimePluginFDU):
         self.connector.close()
         exit(0)
 
-        return self.uuid
 
     def stop_runtime(self):
         self.logger.info(
@@ -270,6 +269,10 @@ class LXD(RuntimePluginFDU):
                 img = self.conn.images.get_by_alias(fdu_uuid)
                 img.delete()
                 self.images.pop
+                image_name = fdu.image.get('file')
+                self.call_os_plugin_function('remove_file',{'file_path':image_name})
+
+
 
             except Exception as e:
                         self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Undefine a Container Exception raised {}'.format(e))

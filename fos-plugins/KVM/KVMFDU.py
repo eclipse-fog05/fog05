@@ -15,28 +15,53 @@
 
 import sys
 import os
-
+import json
 from fog05.interfaces.States import State
 from fog05.interfaces.FDU import FDU
 
 
 class KVMFDU(FDU):
 
-    # , cpu, ram, disk_size, networks, image, user_file, ssh_key):
-    def __init__(self, uuid, name, disk, cdrom, networks, user_file, ssh_key, flavor_id, image_id):
+    def __init__(self, uuid, name, interfaces, connection_points, image,
+                 comp_requirements, configuration, ssh_key):
 
         super(KVMFDU, self).__init__()
         self.uuid = uuid
         self.name = name
-        self.disk = disk
-        self.cdrom = cdrom
-        self.networks = networks
-        self.user_file = user_file
+        self.interfaces = interfaces
+        self.cps = connection_points
+        self.image = image
+        self.configuration = configuration
         self.ssh_key = ssh_key
-        self.image_id = image_id
-        self.flavor_id = flavor_id
+        self.comp_requirements = comp_requirements
         self.xml = None
-        self.state = State.DEFINED
+        self.cdrom = None
+        self.disk = None
+
+    @staticmethod
+    def from_descriptor(desciptor):
+        fdu = KVMFDU(desciptor.get('uuid'),
+                     desciptor.get('name'),
+                     desciptor.get('interfaces'),
+                     desciptor.get('connection_points'),
+                     desciptor.get('base_image'),
+                     desciptor.get('computation_requirements'),
+                     desciptor.get('configuration'),
+                     desciptor.get('ssh-key'))
+        return fdu
+
+    @staticmethod
+    def to_descriptor(fdu):
+        d = {
+            'name': fdu.name,
+            'uuid': fdu.uuid,
+            'computation_requirements': json.dumps(fdu.comp_requirements),
+            'base_image': json.dumps(fdu.image),
+            'hypervisor_type': 'KVM',
+            'interfaces': json.dumps(fdu.interfaces),
+            'connection_points': json.dumps(fdu.cps)
+        }
+        return d
 
     def on_define(self):
         self.state = State.DEFINED
@@ -65,15 +90,6 @@ class KVMFDU(FDU):
 
     def after_migrate(self):
         pass
-
-    def set_user_file(self, user_file):
-        self.user_file = user_file
-
-    def set_ssh_key(self, ssh_key):
-        self.ssh_key = ssh_key
-
-    def set_networks(self, networks):
-        self.networks = networks
 
     def on_defined(self):
         self.state = State.DEFINED
