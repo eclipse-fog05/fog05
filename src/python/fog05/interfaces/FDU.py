@@ -24,9 +24,9 @@ class FDU(object):
         self.state = State.UNDEFINED
         self.uuid = ''
         self.name = ''
-        self.interfaces = []
+        self.interfaces = None
         self.image = None
-        self.cps = []
+        self.cps = None
 
     def get_state(self):
         return self.state

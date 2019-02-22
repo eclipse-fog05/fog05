@@ -274,8 +274,8 @@ class KVM(RuntimePluginFDU):
                         res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
 
             net_cfg = {}
-            if fdu.networks is not None:
-                for i, intf in enumerate(fdu.networks):
+            if fdu.get_interfaces() is not None:
+                for i, intf in enumerate(fdu.get_interfaces()):
                     intf_name = intf.get('name')
                     mac = intf.get('mac_address')
                     if intf.get('virtual_interface').get('intf_type').upper() in ['PHYSICAL','BRIDGED']:
