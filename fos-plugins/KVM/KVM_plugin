@@ -297,6 +297,9 @@ class KVM(RuntimePluginFDU):
 
 
             vm_xml = self.__generate_dom_xml(fdu, flavor, img, net_cfg)
+            xml_file_name = 'kvm-{}.xml'.format(fdu_uuid)
+            vm_xml_store = binascii.hexlify(base64.b64encode(bytes(vm_xml, 'utf-8'))).decode()
+            self.call_os_plugin_function('store_file',{'content':vm_xml_store, 'file_path':self.BASE_DIR, 'filename':xml_file_name})
 
             vendor_conf = self.__generate_vendor_data(fdu_uuid, self.node)
             vendor_filename = 'vendor_{}.yaml'.format(fdu_uuid)
