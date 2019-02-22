@@ -1,5 +1,5 @@
 (*********************************************************************************
- * Copyright (c) 2018 ADLINK Technology Inc. 
+ * Copyright (c) 2018 ADLINK Technology Inc.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License 2.0 which is available at
@@ -14,7 +14,7 @@
 (* type json <ocaml module="Yaks_Core.Abs_json"> = abstract *)
 
 (* MEAO Types
- *  These types are the atd version of the YANG models for 
+ *  These types are the atd version of the YANG models for
  *  MEC, the mapping should be 1:1
 *)
 
@@ -25,7 +25,7 @@ type serializer_types = [
   | JSON
   | XML
   | PROTOBUF3
-] 
+]
 
 type transport_types = [
   | REST_HTTP
@@ -35,35 +35,35 @@ type transport_types = [
   | RPC
   | RPC_STREAMING
   | WEBSOCKET
-] 
+]
 
 type tunnel_types = [
   | GTP_U
   | GRE
-] 
+]
 
 type interface_types = [
   | MAC
   | TUNNEL
   | IP
-] 
+]
 
 type grant_types = [
   | OAUTH2_AUTORIZATION_CODE
   | OAUTH2_IMPLICIT_GRANT
   | OAUTH2_RESOURCE_OWNER
   | OAUTH2_CLIENT_CREDENTIALS
-] 
+]
 
 type filter_types = [
   | FLOW
   | PACKET
-] 
+]
 
 type ip_address_types = [
   | IP_V4
   | IP_V6
-] 
+]
 
 
 type filter_action_types = [
@@ -73,7 +73,7 @@ type filter_action_types = [
   | PASSTHROUGH
   | DUPLICATE_DECAPSULATED
   | DUPLICATE_AS_IS
-] 
+]
 
 
 type tunnel_info_type = {
@@ -160,9 +160,9 @@ type traffic_rule_descriptor = {
 
 type dns_rule_descriptor = {
   dns_rule_id : string;
-  domain_name : string; 
+  domain_name : string;
   ip_address_type : ip_address_types;
-  ip_addresse : string;
+  ip_addresses : string;
   ttl : int;
 }
 
@@ -172,7 +172,7 @@ type latency_descriptor = {
 }
 
 
-(* 
+(*
  * AppD Base types
  *
  *)

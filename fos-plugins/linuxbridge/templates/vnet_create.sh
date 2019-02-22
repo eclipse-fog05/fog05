@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 
-# Copyright (c) 2014,2018 ADLINK Technology Inc.
+# Copyright (c) 2014,2019 ADLINK Technology Inc.
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -13,12 +13,11 @@
 #
 # SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
 #
-# Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Base plugins set
+# Contributors: Gabriele Baldoni, ADLINK Technology Inc. - OCamk plugins set
 
 
 
-#sudo brctl addbr {{ bridge_name }}
-#WAN=$(awk '$2 == 00000000 { print $1 }' /proc/net/route)
-
-sudo ip link add {{port-id}}s type veth peer name {{port-id}}
-
+sudo ip netns add fosns-{{ net_id }}
+sudo ip link add br-{{ net_id }} type bridge
+sudo ip link set up dev br-{{ net_id }}
+sudo ethtool --offload br-{{ net_id }} rx off tx off

@@ -412,64 +412,68 @@ class Native(RuntimePlugin):
                 pid = int(self.agent.get_os_plugin().read_file(pid_file))
                 self.agent.logger.info('stopEntity()', 'FILE PID: {}'.format(pid))
 
-                proc = psutil.Process(pid)
-                proc.terminate()
-                # os.system("sudo kill -15 {}".format(p.pid))
-                self.agent.logger.info('stopEntity()', 'Sended sigterm - Sleep 3 seconds')
-                # self.agent.logger.info('stopEntity()', 'sigterm - sudo kill -15 {}'.format(pid))
+                if self.operating_system.lower() == 'windows':
+                    cmd = "Taskkill /T /PID {}".format(pid)
+                    self.agent.get_os_plugin().execute_command(cmd)
+                elif self.operating_system.lower() == 'linux':
+                    proc = psutil.Process(pid)
+                    proc.terminate()
+                    # os.system("sudo kill -15 {}".format(p.pid))
+                    self.agent.logger.info('stopEntity()', 'Sended sigterm - Sleep 3 seconds')
+                    # self.agent.logger.info('stopEntity()', 'sigterm - sudo kill -15 {}'.format(pid))
 
-                cmd = '{} {}'.format(entity.command, ' '.join(str(x) for x in entity.args))
-                time.sleep(3)
-                if instance.source is None and proc.is_running():
+                    cmd = '{} {}'.format(entity.command, ' '.join(str(x) for x in entity.args))
+                    time.sleep(3)
+                    if instance.source is None and proc.is_running():
 
-                    self.agent.logger.info('stopEntity()', 'FILE PID: {}'.format(pid))
-                    self.agent.logger.info('stopEntity()', 'Instance source is none')
-                    self.agent.logger.info('stopEntity()', 'Native Plugin - PID {}'.format(pid))
-                    self.agent.logger.info('stopEntity()', 'Still Alive - Sending sigint - Sleep 2 seconds')
-                    proc.send_signal(2)
-                    f_name = '{}_{}.pid'.format(entity_uuid, instance_uuid)
-                    f_path = self.BASE_DIR
-                    time.sleep(2)
-                    if proc.is_running():
-                        self.agent.logger.info('stopEntity()', 'Still Alive!!!!! - Sending sigkill')
-                        proc.kill()
-
-                    pid_file = os.path.join(f_path, f_name)
-                    self.agent.logger.info('stopEntity()', 'Check if PID file exists {}'.format(pid_file))
-                    if self.agent.get_os_plugin().file_exists(pid_file):
-                        pid = int(self.agent.get_os_plugin().read_file(pid_file))
+                        self.agent.logger.info('stopEntity()', 'FILE PID: {}'.format(pid))
+                        self.agent.logger.info('stopEntity()', 'Instance source is none')
                         self.agent.logger.info('stopEntity()', 'Native Plugin - PID {}'.format(pid))
-                        self.agent.get_os_plugin().execute_command('sudo pkill -9 -P {}'.format(pid))
+                        self.agent.logger.info('stopEntity()', 'Still Alive - Sending sigint - Sleep 2 seconds')
+                        proc.send_signal(2)
+                        f_name = '{}_{}.pid'.format(entity_uuid, instance_uuid)
+                        f_path = self.BASE_DIR
+                        time.sleep(2)
+                        if proc.is_running():
+                            self.agent.logger.info('stopEntity()', 'Still Alive!!!!! - Sending sigkill')
+                            proc.kill()
+
+                        pid_file = os.path.join(f_path, f_name)
+                        self.agent.logger.info('stopEntity()', 'Check if PID file exists {}'.format(pid_file))
+                        if self.agent.get_os_plugin().file_exists(pid_file):
+                            pid = int(self.agent.get_os_plugin().read_file(pid_file))
+                            self.agent.logger.info('stopEntity()', 'Native Plugin - PID {}'.format(pid))
+                            self.agent.get_os_plugin().execute_command('sudo pkill -9 -P {}'.format(pid))
+                            if self.agent.get_os_plugin().check_if_pid_exists(pid):
+                                self.agent.get_os_plugin().send_sig_int(pid)
+                                time.sleep(3)
+                            if self.agent.get_os_plugin().check_if_pid_exists(pid):
+                                self.agent.get_os_plugin().send_sig_kill(pid)
+
+                        pid_file = os.path.join(self.BASE_DIR, self.STORE_DIR, entity_uuid, instance.name, '{}.pid'.format(instance_uuid))
+                        self.agent.logger.info('stopEntity()', 'Check if PID file exists {}'.format(pid_file))
+                        if self.agent.get_os_plugin().file_exists(pid_file):
+                            pid = int(self.agent.get_os_plugin().read_file(pid_file))
+                            self.agent.logger.info('stopEntity()', 'Native Plugin - PID {}'.format(pid))
+                            self.agent.get_os_plugin().execute_command('sudo pkill -9 -P {}'.format(pid))
+                            if self.agent.get_os_plugin().check_if_pid_exists(pid):
+                                self.agent.get_os_plugin().send_sig_int(pid)
+                                time.sleep(3)
+                            if self.agent.get_os_plugin().check_if_pid_exists(pid):
+                                self.agent.get_os_plugin().send_sig_kill(pid)
+
+                    else:
+                        self.agent.logger.info('stopEntity()', 'Instance source is not none')
+                        pid_file = os.path.join(self.BASE_DIR, self.STORE_DIR, entity_uuid, instance.name, '{}.pid'.format(instance_uuid))
+                        pid = int(self.agent.get_os_plugin().read_file(pid_file))
+                        if self.operating_system.lower == 'linux':
+                            self.agent.logger.info('stopEntity()', 'Native Plugin - PID {}'.format(pid))
+                            self.agent.get_os_plugin().execute_command('sudo pkill -9 -P {}'.format(pid))
                         if self.agent.get_os_plugin().check_if_pid_exists(pid):
                             self.agent.get_os_plugin().send_sig_int(pid)
                             time.sleep(3)
                         if self.agent.get_os_plugin().check_if_pid_exists(pid):
                             self.agent.get_os_plugin().send_sig_kill(pid)
-
-                    pid_file = os.path.join(self.BASE_DIR, self.STORE_DIR, entity_uuid, instance.name, '{}.pid'.format(instance_uuid))
-                    self.agent.logger.info('stopEntity()', 'Check if PID file exists {}'.format(pid_file))
-                    if self.agent.get_os_plugin().file_exists(pid_file):
-                        pid = int(self.agent.get_os_plugin().read_file(pid_file))
-                        self.agent.logger.info('stopEntity()', 'Native Plugin - PID {}'.format(pid))
-                        self.agent.get_os_plugin().execute_command('sudo pkill -9 -P {}'.format(pid))
-                        if self.agent.get_os_plugin().check_if_pid_exists(pid):
-                            self.agent.get_os_plugin().send_sig_int(pid)
-                            time.sleep(3)
-                        if self.agent.get_os_plugin().check_if_pid_exists(pid):
-                            self.agent.get_os_plugin().send_sig_kill(pid)
-
-                else:
-                    self.agent.logger.info('stopEntity()', 'Instance source is not none')
-                    pid_file = os.path.join(self.BASE_DIR, self.STORE_DIR, entity_uuid, instance.name, '{}.pid'.format(instance_uuid))
-                    pid = int(self.agent.get_os_plugin().read_file(pid_file))
-                    if self.operating_system.lower == 'linux':
-                        self.agent.logger.info('stopEntity()', 'Native Plugin - PID {}'.format(pid))
-                        self.agent.get_os_plugin().execute_command('sudo pkill -9 -P {}'.format(pid))
-                    if self.agent.get_os_plugin().check_if_pid_exists(pid):
-                        self.agent.get_os_plugin().send_sig_int(pid)
-                        time.sleep(3)
-                    if self.agent.get_os_plugin().check_if_pid_exists(pid):
-                        self.agent.get_os_plugin().send_sig_kill(pid)
 
                 instance.on_stop()
                 self.current_entities.update({entity_uuid: entity})

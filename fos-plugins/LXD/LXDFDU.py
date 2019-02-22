@@ -20,21 +20,36 @@ from fog05.interfaces.FDU import FDU
 
 class LXDFDU(FDU):
 
-    def __init__(self, uuid, name, networks, image, user_file,
-                 ssh_key, storage, profiles):
+    def __init__(self, uuid, name, interfaces, connection_points, image,
+                 comp_requirements, configuration, ssh_key):
 
         super(LXDFDU, self).__init__()
         self.uuid = uuid
         self.name = name
-        self.networks = networks
-        self.image_url = image
-        self.user_file = user_file
+        self.interfaces = interfaces
+        self.cps = connection_points
+        self.image = image
+        self.configuration = configuration
         self.ssh_key = ssh_key
-        self.storage = storage
-        self.profiles = profiles
+        self.comp_requirements = comp_requirements
         self.devices = None
         self.conf = None
-        self.image = ""
+        self.profiles = None
+
+    @staticmethod
+    def from_descriptor(desciptor):
+        fdu = LXDFDU(desciptor.get('uuid'),
+                     desciptor.get('name'),
+                     desciptor.get('interfaces'),
+                     desciptor.get('connection_points'),
+                     desciptor.get('base_image'),
+                     desciptor.get('computation_requirements'),
+                     desciptor.get('configuration'),
+                     desciptor.get('ssh-key'))
+        return fdu
+
+    def on_defined(self):
+        self.state = State.DEFINED
 
     def on_configured(self, configuration):
         self.conf = configuration
@@ -55,5 +70,8 @@ class LXDFDU(FDU):
     def on_resume(self):
         self.state = State.RUNNING
 
-    def __str__(self):
-        return "Name : {0} UUID: {1}".format(self.name, self.uuid)
+        def before_migrate(self):
+        pass
+
+    def after_migrate(self):
+        pass

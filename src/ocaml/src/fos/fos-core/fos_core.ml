@@ -1,5 +1,5 @@
 (*********************************************************************************
- * Copyright (c) 2018 ADLINK Technology Inc. 
+ * Copyright (c) 2018 ADLINK Technology Inc.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License 2.0 which is available at
@@ -10,20 +10,11 @@
  * Contributors: 1
  *   Gabriele Baldoni (gabriele (dot) baldoni (at) adlinktech (dot) com ) - OCaml implementation
  *********************************************************************************)
-
-module FAgentTypes = Agent_types_t
-module FAgentTypesJson = Agent_types_j
-module FAgentTypesValidator = Agent_types_v
-
-module FTypes = Types_t
-module FTypesJson = Types_j
-module FTypesValidator = Types_v
-module FStore = Store
-
+open Fos_im
 module Str = Re.Str
 module MVar = Apero.MVar_lwt
 
-type configuration  = Agent_types_t.configuration
+type configuration  = FAgentTypes.configuration
 
 type system_status = {
 
@@ -50,10 +41,10 @@ let rec read_from_ic s ic =
   | End_of_file -> s
 
 
-let string_split token data = 
+let string_split token data =
   String.split_on_char token data
 
-let read_file path = 
+let read_file path =
   let ic = Pervasives.open_in path in
   let data = read_from_ic "" ic in
   let _ = close_in ic in
@@ -70,41 +61,41 @@ let get_platform () =
   | _ -> "windows"
 
 
-let get_unix_syslog_reporter () = 
+let get_unix_syslog_reporter () =
   match String.uppercase_ascii @@ get_platform () with
   | "LINUX" ->
     (Apero.Result.get (Logs_syslog_unix.unix_reporter ()))
-  | "DARWIN" -> 
+  | "DARWIN" ->
     (Apero.Result.get (Logs_syslog_unix.unix_reporter ~socket:"/var/run/syslog"  ()))
   | "WINDOWS" -> (Apero.Result.get (Logs_syslog_unix.unix_reporter ()))
   | _ -> failwith "[ ERRO ] Operating System not recognized!"
 
 
-let getuuid () = 
+let getuuid () =
   match String.uppercase_ascii @@ get_platform () with
   | "LINUX" ->
     let ic = Pervasives.open_in "/etc/machine-id" in
     let uuid = input_line ic in
     let _ = close_in ic in
     uuid
-  | "DARWIN" -> 
+  | "DARWIN" ->
     let ic = Unix.open_process_in "ioreg -rd1 -c IOPlatformExpertDevice |  awk '/IOPlatformUUID/ { print $3; }'" in
     let uuid = input_line ic in
     let _ = close_in ic in
     String.sub uuid 1 ((String.length uuid)-2)
-  | "WINDOWS" -> 
+  | "WINDOWS" ->
     (* uuid_regex = r"UUID.+\r\r\n(.{0,36})"
        p = psutil.Popen('wmic csproduct get UUID'.split(), stdout=PIPE)
-       uuid is group 1 
+       uuid is group 1
     *)
     ""
   | _ -> failwith "[ ERRO ] Operating System not recognized!"
 
 
-let load_config filename = 
+let load_config filename =
   let cont = read_file filename in
-  let conf = Agent_types_j.configuration_of_string cont in
-  let conf = 
+  let conf = FAgentTypes.configuration_of_string cont in
+  let conf =
     match conf.agent.uuid with
     | Some _ -> conf
     | None -> {conf with agent = {conf.agent with uuid = Some( getuuid () )} }
@@ -112,5 +103,5 @@ let load_config filename =
   conf
 
 
-let config_to_json config = 
-  Agent_types_j.string_of_configuration config
+let config_to_json config =
+  FAgentTypes.string_of_configuration config

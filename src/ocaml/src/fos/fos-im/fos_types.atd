@@ -13,6 +13,137 @@
 
 type json <ocaml module="Abs_json"> = abstract
 (* Atomit Entity Manifest *)
+
+
+
+
+
+type fdu = {
+  uuid : string;
+  name : string;
+  ?status : string option;
+  ?description : string option;
+  ?base_image : image_type option;
+  ?command : string option; (* Present only if hypervisor_type is BARE *)
+  computation_requirements : computational_requirements_type;
+  hypervisor_type : hv_types;
+  ?configuration : configuration_type option;
+  interfaces : interface_type list;
+  io_ports : io_type list;
+  connection_points : connection_point_type list;
+}
+
+
+type image_type = {
+  ?uri : string option;
+  ?checksum : string option;
+  format : string;
+
+}
+
+(* This is the flavor *)
+type computational_requirements_type =  {
+  cpu_arch : string;
+  cpu_min_freq : float;
+  cpu_min_count: int;
+  ram_size_mb : int;
+  storage_size_gb : int
+}
+
+
+type hv_types = [
+  | BARE
+  | KVM
+  | KVM_UK
+  | XEN
+  | XEN_UK
+  | LXD
+  | DOCKER
+]
+
+type conf_types = [
+  | SCRIPT
+  | CLOUD_INIT
+]
+
+
+type configuration_type = {
+  conf_type : conf_types;
+  ?cloud_init : string option;
+  ?script : string option;
+}
+
+type interface_type = {
+  name : string;
+  is_mgmt : bool;
+  if_type : intf_t;
+  mac_address : string;
+  virtual_interface : vif_type;
+  ?cp_id : string option;
+}
+
+type vif_type = {
+  intf_type : vintf_t;
+  vpci : string; (* in case of bridged is the name of the bridge*)
+  bandwidth : int;
+}
+
+
+type intf_t = [
+  | INTERNAL
+  | EXTERNAL
+
+]
+
+type vintf_t = [
+  | PARAVIRT
+  | FOS_MGMT
+  | PCI_PASSTHROUGH
+  | SR_IOV
+  | VIRTIO
+  | E1000
+  | RTL8139
+  | PCNET
+  | PHYSICAL
+  | BRIDGED
+]
+
+
+type io_t = [
+  | GPIO
+  | I2C
+  | BUS
+]
+
+type io_type = {
+  name : string;
+  io_type : io_t;
+  min_io_ports : int
+}
+
+
+type virtual_network = {
+  uuid : string;
+  name : string;
+  ?status: string option;
+  net_type : vn_type;
+  is_mgmt : bool
+}
+
+
+type vn_type = [
+  | ELINE
+  | ELAN
+ ]
+
+
+type connection_point_type = {
+  uuid: string;
+  vnet_id : string;
+  ?status: string option;
+}
+
+
 type atomic_entity = {
   uuid : string;
   name : string;
@@ -24,6 +155,7 @@ type atomic_entity = {
                ?dst : string option;
                ?error : string option;
               }
+
 type constraints_type = {
   ?i_o <json name="i/o"> : constraint_type list option;
   ?networks : constraint_type list option;
@@ -52,7 +184,7 @@ type migration_constraint_type = {
 }
 
 type cpu_constraint_type = {
-  ?arch_constraint <json name="arch"> : string option;
+  arch_constraint <json name="arch"> : string;
   min_cpu_freq : float;
   min_cpu_cores : int;
 }

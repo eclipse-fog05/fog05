@@ -1,0 +1,4 @@
+[unit]
+Description = Eclipse fog05 Agent
+Requires=fogagent.service
+After=yaks.target

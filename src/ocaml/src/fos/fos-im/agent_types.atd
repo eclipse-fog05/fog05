@@ -1,5 +1,5 @@
 (*********************************************************************************
- * Copyright (c) 2018 ADLINK Technology Inc. 
+ * Copyright (c) 2018 ADLINK Technology Inc.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License 2.0 which is available at
@@ -27,6 +27,9 @@ type agent_config = {
   ?passwd : string option;
   yaks : string;
   path : string;
+  enable_lldp : bool;
+  enable_spawner : bool;
+  pid_file : string;
 }
 
 type plugins_conf = {
@@ -47,38 +50,7 @@ type plugin_loader_item = {
   info : string;
 }
 
-type plugin_type = {
-  name : string;
-  version : int;
-  uuid : string;
-  description : string;
-  ?url : string option;
-  ?configuration : json option;
-  ?requirements : string list option;
-  ?status : string option;
-  pl_type <json name="type"> : string;
-}
 
-
-type plugins_type = {
-  plugins : plugin_type list;
-}
-
-type plugin_pid = {
-  pid : int
-}
-
-type node_info = {
-  uuid : string;
-  name : string;
-  os : string;
-  cpu : json;
-  ram : json;
-  disks : json;
-  network : json;
-  io : json;
-  accelerator : json;
-}
 
 type quota_type = {
   max_vcpu : int;
@@ -90,16 +62,6 @@ type quota_type = {
   max_instances : int;
   current_instances: int;
 }
-
-type network_type = {
-  uuid : string;
-  nodes : string list;
-  manifest : json;
-}
-
-type entities = { entities : string list}
-
-type networks = { networks : network_type list }
 
 
 type tenant_info = {

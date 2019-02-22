@@ -1,0 +1,15 @@
+[unit]
+Description = Eclipse fog05 Agent
+After=yaks.target
+
+
+[Service]
+Type=simple
+PIDFile=/var/fos/agent.pid
+ExecStart = /etc/fos/agent -c /etc/fos/agent.json
+KillMode=process
+Restart=on-failure
+User=fos
+[Install]
+WantedBy=multi-user.target
+Alias=fogagent.service

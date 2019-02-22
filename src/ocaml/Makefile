@@ -1,35 +1,29 @@
-all:
-
-	atdgen -t src/fos/fos-core/agent_types.atd
-	atdgen -j src/fos/fos-core/agent_types.atd
-	atdgen -v src/fos/fos-core/agent_types.atd
-	atdgen -t src/fos/fos-core/types.atd
-	atdgen -j src/fos/fos-core/types.atd
-	atdgen -v src/fos/fos-core/types.atd
-	atdgen -t src/fos/fos-im/im.atd
-	atdgen -j src/fos/fos-im/im.atd
-	atdgen -v src/fos/fos-im/im.atd
-	dune build
+all: atd
+	 dune build
 
 atd:
-	atdgen -t src/fos/fos-core/agent_types.atd
-	atdgen -j src/fos/fos-core/agent_types.atd
-	atdgen -v src/fos/fos-core/agent_types.atd
-	atdgen -t src/fos/fos-core/types.atd
-	atdgen -j src/fos/fos-core/types.atd
-	atdgen -v src/fos/fos-core/types.atd
+	atdgen -t src/fos/fos-im/agent_types.atd
+	atdgen -j-std src/fos/fos-im/agent_types.atd
+	atdgen -v src/fos/fos-im/agent_types.atd
+	atdgen -t src/fos/fos-im/fos_types.atd
+	atdgen -j-std src/fos/fos-im/fos_types.atd
+	atdgen -v src/fos/fos-im/fos_types.atd
+	atdgen -t src/fos/fos-im/types_record.atd
+	atdgen -j-std src/fos/fos-im/types_record.atd
+	atdgen -v src/fos/fos-im/types_record.atd
 	atdgen -t src/fos/fos-im/im.atd
-	atdgen -j src/fos/fos-im/im.atd
+	atdgen -j-std src/fos/fos-im/im.atd
 	atdgen -v src/fos/fos-im/im.atd
 
 clean:
-	rm -rf src/fos/fos-core/agent_types*.ml src/fos/fos-core/agent_types*.mli
-	rm -rf src/fos/fos-core/types*.ml src/fos/fos-core/types*.mli
-	rm -rf src/fos/fos-im/im_*.ml*
+	rm -rf src/fos/fos-im/agent_types*.ml src/fos/fos-im/agent_types*.mli
+	rm -rf src/fos/fos-im/fos_types*.ml src/fos/fos-im/fos_types*.mli
+	rm -rf src/fos/fos-im/types_record*.ml src/fos/fos-im/types_record*.mli
+	rm -rf src/fos/fos-im/im*.ml*
 	rm -rf ./bin
 	dune clean
 	rm -rf agent
-	
+
 
 install:
 	mkdir ./bin

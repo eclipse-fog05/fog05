@@ -93,21 +93,16 @@ class GAD(object):
 
     def get_all_entities_selector(self, sysid, tenantid):
         return Constants.create_path(
-            [self.prefix, 'tenants', tenantid, 'entities', '*'])
+            [self.prefix, sysid, 'tenants', tenantid, 'entities', '*'])
 
     def get_all_networks_selector(self, sysid, tenantid):
         return Constants.create_path(
-            [self.prefix, 'tenants', tenantid, 'networks', '*'])
+            [self.prefix, sysid, 'tenants', tenantid, 'networks', '*', 'info'])
 
     def get_entity_all_instances_selector(self, sysid, tenantid, entityid):
         return Constants.create_path(
             [self.prefix, sysid, 'tenants', tenantid,
              'entities',  entityid, 'instances', '*'])
-
-    def get_network_all_ports_selector(self, sysid, tenantid, networkid):
-        return Constants.create_path(
-            [self.prefix, sysid, 'tenants', tenantid,
-             'networks', networkid, 'ports', '*'])
 
     def get_entity_info_path(self, sysid, tenantid, entityid):
         return Constants.create_path(
@@ -125,10 +120,15 @@ class GAD(object):
             [self.prefix, sysid, 'tenants',
              tenantid, 'entities', entityid, 'instances', instanceid, 'info'])
 
-    def get_network_port_info_path(self, sysid, tenantid, networkid, portid):
+    def get_network_port_info_path(self, sysid, tenantid, portid):
         return Constants.create_path(
             [self.prefix, sysid, 'tenants',
-             tenantid, 'networks', networkid, 'ports', portid, 'info'])
+             tenantid, 'networks', 'ports', portid, 'info'])
+
+    def get_all_ports_selector(self, sysid, tenantid):
+        return Constants.create_path([
+            self.prefix,sysid ,'tenants', tenantid,'networks','ports',
+            '*', 'info'])
 
     def extract_userid_from_path(self, path):
         return path.split('/')[4]
@@ -140,6 +140,9 @@ class GAD(object):
         return path.split('/')[6]
 
     def extract_plugin_from_path(self, path):
+        return path.split('/')[8]
+
+    def extract_fduid_from_path(self, path):
         return path.split('/')[8]
 
     def get_sys_info(self, sysid):
@@ -283,6 +286,55 @@ class GAD(object):
         p = self.get_node_fdu_info_path(sysid, tenantid, nodeid, fduid)
         return self.ws.remove(p)
 
+    def get_network_port(self, sysid, tenantid, portid):
+        s = self.get_network_port_info_path(sysid, tenantid, portid)
+        kvs = self.ws.get(s)
+        if len(kvs) == 0:
+            return None
+        return json.loads(kvs[0][1].value)
+
+    def add_network_port(self, sysid, tenantid, portid, portinfo):
+        p = self.get_network_port_info_path(sysid, tenantid, portid)
+        v = Value(json.dumps(portinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def remove_network_port(self, sysid, tenantid, portid):
+        p = self.get_network_port_info_path(sysid, tenantid, portid)
+        return self.ws.remove(p)
+
+    def get_all_network_ports(self, sysid, tenantid):
+        p = self.get_all_ports_selector(sysid, tenantid)
+        kvs = self.ws.get(p)
+        d = []
+        for k in kvs:
+            d.append(json.loads(kvs[0][1].value))
+        return d
+
+    def get_network(self, sysid, tenantid, netid):
+        s = self.get_network_info_path(sysid, tenantid, netid)
+        kvs = self.ws.get(s)
+        if len(kvs) == 0:
+            return None
+        return json.loads(kvs[0][1].value)
+
+    def get_all_networks (self, sysid, tenantid):
+        p = self.get_all_networks_selector(sysid, tenantid)
+        kvs = self.ws.get(p)
+        d = []
+        for k in kvs:
+            d.append(json.loads(kvs[0][1].value))
+        return d
+
+    def add_network(self, sysid, tenantid, netid, netinfo):
+        p = self.get_network_info_path(sysid, tenantid, netid)
+        v = Value(json.dumps(netinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def remove_network(self, sysid, tenantid, portid):
+        p = self.get_network_port_info_path(sysid, tenantid, portid)
+        return self.ws.remove(p)
+
+
 
 class LAD(object):
     def __init__(self, workspace, prefix):
@@ -313,6 +365,8 @@ class LAD(object):
         b = ''
         for k in d:
             v = d.get(k)
+            if isinstance(v,(dict, list)):
+                v = json.dumps(v)
             if i == 0:
                 b = b + '{}={}'.format(k, v)
             else:
@@ -327,7 +381,8 @@ class LAD(object):
         return Constants.create_path([self.prefix, nodeid, 'configuration'])
 
     def get_node_plugins_selector(self, nodeid):
-        return Constants.create_path([self.prefix, nodeid, 'plugins', '*'])
+        return Constants.create_path([self.prefix, nodeid,
+                                      'plugins', '*', 'info'])
 
     def get_node_plugins_subscriber_selector(self, nodeid):
         return Constants.create_path([self.prefix, nodeid, 'plugins', '**'])
@@ -381,25 +436,38 @@ class LAD(object):
             [self.prefix, nodeid, 'network_managers',
              '*', 'networks', netid, 'info'])
 
-    def get_node_networks_port_selector(self, nodeid, pluginid, networkid):
+    def get_node_networks_port_selector(self, nodeid, pluginid):
         return Constants.create_path(
             [self.prefix, nodeid, 'network_managers',
-             pluginid, 'networks', networkid, 'ports'])
+             pluginid, 'ports', '*',"info"])
 
     def get_node_network_info_path(self, nodeid, pluginid, networkid):
         return Constants.create_path(
-            [self.prefix, nodeid, 'network_manages',
+            [self.prefix, nodeid, 'network_managers',
              pluginid, 'networks', networkid, 'info'])
 
-    def get_node_network_port_info_path(self, nodeid, pluginid, networkid,
+    def get_node_network_port_info_path(self, nodeid, pluginid,
                                         portid):
         return Constants.create_path(
             [self.prefix, nodeid, 'network_managers',
-             pluginid, 'networks', networkid, 'ports', portid, 'info'])
+             pluginid, 'ports', portid, 'info'])
 
     def get_node_os_exec_path(self, nodeid, func_name):
         return Constants.create_path(
             [self.prefix, nodeid, 'os', 'exec', func_name])
+
+    def get_node_nw_exec_path(self, nodeid, net_manager_uuid , func_name):
+        return Constants.create_path(
+            [self.prefix, nodeid, 'network_managers',
+            net_manager_uuid , 'exec', func_name])
+
+    def get_node_nw_exec_path_with_params(self, nodeid, net_manager_uuid,
+        func_name, params):
+        p = self.dict2args(params)
+        f = func_name + '?' + p
+        return Constants.create_path(
+            [self.prefix, nodeid, 'network_managers',
+            net_manager_uuid , 'exec', f])
 
     def get_node_os_exec_path_with_params(self, nodeid, func_name, params):
         p = self.dict2args(params)
@@ -442,6 +510,25 @@ class LAD(object):
         else:
             return json.loads(res[0][1].value)
 
+    def add_nw_eval(self, nodeid, nm_uuid, func_name, func):
+        p = self.get_node_nw_exec_path(nodeid, nm_uuid, func_name)
+
+        def cb(path, **props):
+            v = Value(json.dumps(func(**props)), encoding=Encoding.STRING)
+            return v
+        r = self.ws.register_eval(p, cb)
+        self.evals.append(p)
+        return r
+
+    def exec_nw_eval(self, nodeid, nm_uuid, func_name, parameters):
+        s = self.get_node_nw_exec_path_with_params(
+            nodeid, nm_uuid, func_name, parameters)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError("Empty data on exec_os_eval")
+        else:
+            return json.loads(res[0][1].value)
+
     def exec_plugin_eval(self, nodeid, pluginid, func_name, parameters):
         s = self.get_node_plugin_eval_path_with_params(
             nodeid, pluginid, func_name, parameters)
@@ -465,6 +552,15 @@ class LAD(object):
         p = self.get_node_plugin_info_path(nodeid, pluginid)
         v = Value(json.dumps(plugininfo), encoding=Encoding.STRING)
         return self.ws.put(p, v)
+
+    def get_all_plugins(self, nodeid):
+        s = self.get_node_plugins_selector(nodeid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            raise ValueError('Empty message list on get_all_tenants_ids')
+        else:
+            xs = map(lambda x: json.loads(x[1].value), res)
+            return list(xs)
 
     def add_node_information(self, nodeid, nodeinfo):
         p = self.get_node_info_path(nodeid)
@@ -504,6 +600,14 @@ class LAD(object):
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
+
+    def get_node_info(self, nodeid):
+        s = self.get_node_info_path(nodeid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            raise ValueError("Empty data on get_node_info")
+        else:
+            return json.loads(res[0][1].value)
 
     def get_node_os_info(self, nodeid):
         s = self.get_node_os_info_path(nodeid)
@@ -606,6 +710,36 @@ class LAD(object):
     def remove_node_network(self, nodeid, pluginid, netid):
         p = self.get_node_network_info_path(nodeid, pluginid, netid)
         return self.ws.remove(p)
+
+    def add_node_port(self, nodeid, pluginid, portid, portinfo):
+        p = self.get_node_network_port_info_path(nodeid, pluginid, portid)
+        v = Value(json.dumps(portinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def remove_node_port(self, nodeid, pluginid, portid):
+        p = self.get_node_network_port_info_path(nodeid, pluginid, portid)
+        return self.ws.remove(p)
+
+    def get_node_port(self, nodeid, pluginid, portid):
+        s = self.get_node_network_port_info_path(nodeid, pluginid, portid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            return None
+        else:
+            return json.loads(res[0][1].value)
+
+    def observe_node_ports(self, nodeid, pluginid, callback):
+        s = self.get_node_networks_port_selector(nodeid, pluginid)
+
+        def cb(kvs):
+            if len(kvs) == 0:
+                raise ValueError('Listener received empty datas')
+            else:
+                v = json.loads(kvs[0][1].value)
+                callback(v)
+        subid = self.ws.subscribe(s, cb)
+        self.listeners.append(subid)
+        return subid
 
 
 class Global(object):

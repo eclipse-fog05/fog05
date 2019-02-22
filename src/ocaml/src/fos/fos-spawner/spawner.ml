@@ -11,6 +11,7 @@
  *********************************************************************************)
 
 open Fos_core
+open Fos_im
 open Lwt.Infix
 
 module PluginMap = Map.Make(String)
@@ -60,7 +61,7 @@ let rec check_plugins_pid state process cmd (manifest:FTypes.plugin) n =
 let load_plugin state (manifest:FTypes.plugin) =
   MVar.read state >>= fun self ->
   let ya = self.conf.agent.yaks in
-  let%lwt _ = Lwt_io.printf "Manifest: %s\n" @@ FTypesJson.string_of_plugin manifest in
+  let%lwt _ = Lwt_io.printf "Manifest: %s\n" @@ FTypes.string_of_plugin manifest in
   let pl = Printf.sprintf "%s/%s/%s_plugin \"%s\" %s\n" self.conf.plugins.plugin_path manifest.name manifest.name ya (Apero.Option.get self.conf.agent.uuid)  in
   MVar.guarded state @@ fun self ->
   let%lwt _ = Lwt_io.printf "CLI FOR PLUGIN IS %s" pl in
@@ -73,7 +74,7 @@ let load_plugin state (manifest:FTypes.plugin) =
 
 let load_plugin_from_file state name =
   MVar.read state >>= fun self ->
-  let pl_manifest = FTypesJson.plugin_of_string @@ read_file (Printf.sprintf "%s/%s/%s_plugin.json" self.conf.plugins.plugin_path name name) in
+  let pl_manifest = FTypes.plugin_of_string @@ read_file (Printf.sprintf "%s/%s/%s_plugin.json" self.conf.plugins.plugin_path name name) in
   load_plugin state pl_manifest
 
 
@@ -93,7 +94,7 @@ let remove_plugin state pluginid process =
 
 let wait_os_plugin (manifest: FTypes.plugin) state =
   MVar.read state >>= fun self ->
-  let wait_os_plugin_cb state (pl:Types_t.plugin) =
+  let wait_os_plugin_cb state (pl:FTypes.plugin) =
     MVar.read state >>= fun self ->
     let%lwt _ = Lwt_io.printf  "[FOS-SPAWNER] - ##############\n" in
     let%lwt _ = Lwt_io.printf  "[FOS-SPAWNER] - Wait OS plugin load - Received update\n" in
@@ -114,14 +115,14 @@ let load_os_plugin state =
   match String.uppercase_ascii @@ get_platform () with
   | "LINUX" ->
     let%lwt _ = Lwt_io.printf "Running on Linux\n" in
-    let pl_manifest = FTypesJson.plugin_of_string @@ read_file (Printf.sprintf "%s/linux/linux_plugin.json" self.conf.plugins.plugin_path) in
+    let pl_manifest = FTypes.plugin_of_string @@ read_file (Printf.sprintf "%s/linux/linux_plugin.json" self.conf.plugins.plugin_path) in
     load_plugin state pl_manifest
     >>= fun _ ->
     wait_os_plugin pl_manifest state
     >>= Lwt.return
   | "DARWIN" ->
     let%lwt _ = Lwt_io.printf "Running on macOS\n" in
-    let pl_manifest = FTypesJson.plugin_of_string @@ read_file (Printf.sprintf "%s/macos/macos_plugin.json" self.conf.plugins.plugin_path) in
+    let pl_manifest = FTypes.plugin_of_string @@ read_file (Printf.sprintf "%s/macos/macos_plugin.json" self.conf.plugins.plugin_path) in
     load_plugin state pl_manifest
     >>= fun _ ->
     wait_os_plugin pl_manifest state
@@ -153,7 +154,7 @@ let main _ cpath =
   let%lwt yaks = Yaks_connector.get_connector conf in
   let pm = PluginMap.empty in
   let state = MVar.create {yaks; plugins = pm; conf; lock= MVar.create_empty () } in
-  let cb_ld state (pl:Types_t.plugin) =
+  let cb_ld state (pl:FTypes.plugin) =
     MVar.read state >>= fun _ ->
     let%lwt _ = Lwt_io.printf  "[FOS-SPAWNER] - PLUGIN CB-LD - ##############\n" in
     let%lwt _ = Lwt_io.printf  "[FOS-SPAWNER] - PLUGIN CB-LD - Received plugin\n" in

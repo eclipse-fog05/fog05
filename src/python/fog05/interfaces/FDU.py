@@ -24,13 +24,33 @@ class FDU(object):
         self.state = State.UNDEFINED
         self.uuid = ''
         self.name = ''
-        self.instances = {}
+        self.interfaces = None
+        self.image = None
+        self.cps = None
 
     def get_state(self):
         return self.state
 
     def set_state(self, state):
         self.state = state
+
+    def get_short_id(self):
+        return ''.join([x[0] for x in self.uuid.split('-')])
+
+    def get_image_uri(self):
+        return self.image.get('uri')
+
+    def get_image_checksum(self):
+        return self.image.get('checksum')
+
+    def get_image_format(self):
+        return self.image.get('format')
+
+    def get_interfaces(self):
+        return self.interfaces
+
+    def get_connection_points(self):
+        return self.cps
 
     def on_defined(self):
         raise NotImplementedError('This is and interface!')
@@ -59,16 +79,5 @@ class FDU(object):
     def after_migrate(self):
         raise NotImplementedError('This is and interface!')
 
-    def has_instance(self, instance_uuid):
-        return instance_uuid in self.instances.keys()
-
-    def add_instance(self, instance_object):
-        if instance_object.uuid not in self.instances.keys():
-            self.instances.update({instance_object.uuid: instance_object})
-
-    def remove_instance(self, instance_object):
-        if instance_object.uuid in self.instances.keys():
-            self.instances.pop(instance_object.uuid)
-
-    def get_instance(self, instance_uuid):
-        return self.instances.get(instance_uuid, None)
+    def __str__(self):
+        return "Name : {0} UUID: {1}".format(self.name, self.uuid)

@@ -28,9 +28,5 @@ depends: [
   "atdgen"
   "lwt"
   "lwt_ppx"
-  "apero-core"
-  "apero-net"
-  "yaks-core"
-  "yaks-api"
   "fos-core"
 ]

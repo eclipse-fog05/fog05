@@ -24,6 +24,7 @@ import shutil
 import socket
 import os
 import sys
+import codecs
 
 # TODO Plugins should not be aware of the Agent - The Agent is in OCaml no way to access his store, his logger and the OS plugin
 
@@ -116,8 +117,15 @@ class Windows(OSPlugin):
             for line in iter(process.stdout.readline, ''):
                 data = data + "{}".format(line)
         else:
-            with open(file_path, 'r') as f:
-                data = f.read()
+            try:
+                f = codecs.open(file_path, encoding='utf-16')
+                data = f.read().strip()
+            except UnicodeError:
+                with open(file_path, 'r') as f:
+                    data = f.read()
+            finally:
+                f.close()
+
         return data
 
     def read_binary_file(self, file_path):
@@ -140,16 +148,11 @@ class Windows(OSPlugin):
     def get_storage_level(self):
         return psutil.disk_usage('/').percent
 
-    def checkIfPidExists(self, pid):
-        try:
-            os.kill(pid, 0)
-        except OSError:
-            return False
-        else:
-            return True
+    def check_if_pid_exists(self, pid):
+        psutil.pid_exists(pid)
 
     def send_signal(self, signal, pid):
-        if self.checkIfPidExists(pid) is False:
+        if self.check_if_pid_exists(pid) is False:
             self.agent.logger.error(
                 'sendSignal()', 'OS Plugin Process not exists {}'.format(pid))
             raise ProcessNotExistingException(
@@ -159,7 +162,7 @@ class Windows(OSPlugin):
         return True
 
     def send_sig_int(self, pid):
-        if self.checkIfPidExists(pid) is False:
+        if self.check_if_pid_exists(pid) is False:
             self.agent.logger.error(
                 'sendSigInt()', 'OS Plugin Process not exists {}'.format(pid))
             raise ProcessNotExistingException(
@@ -169,7 +172,7 @@ class Windows(OSPlugin):
         return True
 
     def send_sig_kill(self, pid):
-        if self.checkIfPidExists(pid) is False:
+        if self.check_if_pid_exists(pid) is False:
             self.agent.logger.error(
                 'sendSigInt()', 'OS Plugin Process not exists {}'.format(pid))
             raise ProcessNotExistingException(

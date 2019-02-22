@@ -26,6 +26,23 @@ class RuntimePluginFDU(Plugin):
         self.name = ''
         self.current_fdus = {}
 
+    def get_nm_plugin(self):
+        pls = self.connector.loc.actual.get_all_plugins(self.node)
+        nms = [x for x in pls if x.get('type') == 'network']
+        if len(nms) == 0:
+            raise RuntimeError('No network_manager present in the node!!')
+        nm = nms[0]
+        return nm
+
+    def call_nw_plugin_function(self, fname, fparameters):
+        nm = self.get_nm_plugin().get('uuid')
+        res = self.connector.loc.actual.exec_nw_eval(
+            self.node, nm, fname, fparameters)
+        if res.get('error'):
+            raise ValueError('NM Eval returned {}'.format(res.get('error')))
+            # return None
+        return res.get('result')
+
     def start_runtime(self):
         '''
         start the runtime

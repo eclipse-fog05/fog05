@@ -41,7 +41,7 @@ class FIMAPIv2(object):
         self.manifest = self.Manifest()
         self.node = self.Node(self.connector, self.sysid, self.tenantid)
         self.plugin = self.Plugin(self.connector, self.sysid, self.tenantid)
-        # self.network = self.Network(self.store)
+        self.network = self.Network(self.connector, self.sysid, self.tenantid)
         self.fdu = self.FDU(self.connector, self.sysid, self.tenantid)
         # self.image = self.Image(self.store)
         # self.flavor = self.Flavor(self.store)
@@ -278,7 +278,7 @@ class FIMAPIv2(object):
             # else:
             #     return None
 
-        def add(self, manifest, node_uuid=None):
+        def add_network(self, manifest):
             '''
 
             Add a network element to a node o to all nodes
@@ -291,33 +291,13 @@ class FIMAPIv2(object):
             :return: boolean
             '''
 
-            # manifest.update({'status': 'add'})
-            # json_data = json.dumps(manifest)
+            manifest.update({'status': 'add'})
+            net_id = manifest.get('uuid')
 
-            # if node_uuid is not None:
-            #     all_plugins = self.__get_all_node_plugin(node_uuid)
-            #     if all_plugins is None:
-            #         print('Error on receive plugin from node')
-            #         return False
-            #     nws = [x for x in all_plugins if x.get('type') == 'network']
-            #     if len(nws) == 0:
-            #         print('No network plugin loaded on node, aborting')
-            #         return False
-            #     brctl = nws[0].get('uuid')  # will use the first plugin
-            #     uri = '{}/{}/network/{}/networks/{}'.format(
-            #         self.store.droot, node_uuid, brctl, manifest.get('uuid'))
-            # else:
-            #     uri = '{}/*/network/*/networks/{}'.format(
-            #         self.store.droot, manifest.get('uuid'))
+            self.connector.glob.desired.add_network(
+                self.sysid, self.tenantid, net_id, manifest)
 
-            # res = self.store.desired.put(uri, json_data)
-            # if res >= 0:
-            #     return True
-            # else:
-            #     return False
-            pass
-
-        def remove(self, net_uuid, node_uuid=None):
+        def remove_network(self, net_uuid):
             '''
 
             Remove a network element form one or all nodes
@@ -327,31 +307,32 @@ class FIMAPIv2(object):
              the network element
             :return: boolean
             '''
+            manifest = self.connector.glob.actual.get_network(
+                self.sysid, self.tenantid, net_uuid)
+            manifest.update({'status': 'remove'})
+            self.connector.glob.desired.add_network(
+                self.sysid, self.tenantid, net_uuid, manifest)
 
-            # if node_uuid is not None:
-            #     all_plugins = self.__get_all_node_plugin(node_uuid)
-            #     if all_plugins is None:
-            #         print('Error on receive plugin from node')
-            #         return False
-            #     nws = [x for x in all_plugins if x.get('type') == 'network']
-            #     if len(nws) == 0:
-            #         print('No network plugin loaded on node, aborting')
-            #         return False
-            #     brctl = nws[0]  # will use the first plugin
-            #     uri = '{}/{}/network/{}/networks/{}#status=undefine'.format(
-            #         self.store.droot, node_uuid, brctl.get('uuid'), net_uuid)
-            # else:
-            #     uri = '{}/*/network/*/networks/{}#status=undefine'.format(
-            #         self.store.droot, net_uuid)
+        def add_connection_point(self, cp_descriptor):
+            cp_descriptor.update({'status': 'add'})
+            cp_id = cp_descriptor.get('uuid')
+            self.connector.glob.desired.add_network_port(
+                self.sysid, self.tenantid, cp_id, cp_descriptor)
 
-            # res = self.store.desired.dput(uri)
-            # if res:
-            #     return True
-            # else:
-            #     return False
+        def delete_connection_point(self, cp_uuid):
+            manifest = self.connector.glob.actual.get_network_port(
+                self.sysid, self.tenantid, cp_uuid)
+            manifest.update({'status': 'remove'})
+            self.connector.glob.desired.add_network_port(
+                self.sysid, self.tenantid, cp_uuid, manifest)
+
+        def connect_cp_to_network(self, cp_uuid, net_uuid):
             pass
 
-        def list(self, node_uuid=None):
+        def disconnect_cp(self, cp_uuid):
+            pass
+
+        def list(self):
             '''
 
             List all network element available in the system/teneant or in a
@@ -361,34 +342,8 @@ class FIMAPIv2(object):
             :return: dictionary {network uuid:
              {network manifest dictionary, pluginid, nodes}}
             '''
-
-            # if node_uuid is not None:
-            #     n_list = []
-            #     uri = '{}/{}/network/*/networks/**'.format(
-            #         self.store.aroot, node_uuid)
-            #     response = self.store.actual.resolveAll(uri)
-            #     for i in response:
-            #         n_list.append(json.loads(i[1]))
-            #     return {node_uuid: n_list}
-
-            # nets = {}
-            # uri = '{}/*/network/*/networks/**'.format(self.store.aroot)
-            # response = self.store.actual.resolveAll(uri)
-            # for i in response:
-            #     nodeid = i[0].split('/')[4]
-            #     pluginid = i[0].split('/')[6]
-            #     netid = i[0].split('/')[-1]
-            #     net = nets.get(netid, None)
-            #     if net is None:
-            #         net = json.loads(i[1])
-            #         net.update({'plugin': pluginid,
-            #                     'nodes': [nodeid]})
-            #         nets.update({netid: net})
-            #     else:
-            #         net.get('nodes').append(nodeid)
-
-            # return nets
-            pass
+            return self.connector.glob.actual.get_all_networks(
+                self.sysid, self.tenantid)
 
         def search(self, search_dict, node_uuid=None):
             '''

@@ -29,6 +29,7 @@ import distutils.util
 import base64
 import signal
 import json
+import codecs
 from fog05.interfaces.OSPlugin import *
 from subprocess import PIPE
 from mvar import MVar
@@ -322,8 +323,14 @@ class Windows(OSPlugin):
                 for line in iter(process.stdout.readline, ''):
                     data = data + '{}'.format(line)
             else:
-                with open(file_path, 'r') as f:
-                    data = f.read()
+                try:
+                    f = codecs.open(file_path, encoding='utf-16')
+                    data = f.read().strip()
+                except UnicodeError:
+                    with open(file_path, 'r') as f:
+                        data = f.read()
+                finally:
+                    f.close()
             self.logger.info(
                 'read_file()', ' {} bytes read from file'.format(len(data)))
             res = {'result': data}
@@ -376,12 +383,7 @@ class Windows(OSPlugin):
             return True
 
     def check_if_pid_exists(self, pid):
-        try:
-            os.kill(pid, 0)
-        except OSError:
-            return False
-        else:
-            return True
+        psutil.pid_exists(pid)
 
     def send_signal(self, signal, pid):
         if isinstance(pid, str):
@@ -472,6 +474,9 @@ class Windows(OSPlugin):
             arch = platform.machine()
             cpu.append({'model': model, 'frequency': frequency, 'arch': arch})
         return cpu
+
+    def get_neighbors(self):
+        return {}
 
     def get_memory_information(self):
         # conversion to MB
