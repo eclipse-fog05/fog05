@@ -309,12 +309,14 @@ class KVM(RuntimePluginFDU):
                                                                           vendor_filename)
 
             rm_temp_cmd = 'rm'
-            if fdu.user_file is not None and fdu.user_file != '':
-                data_filename = 'userdata_{}'.format(fdu_uuid)
-                userdata = binascii.hexlify(base64.b64encode(bytes(fdu.user_file, 'utf-8'))).decode()
-                self.call_os_plugin_function('store_file',{'content':userdata, 'file_path':self.BASE_DIR, 'filename':data_filename})
-                data_filename = os.path.join(self.BASE_DIR, data_filename)
-                conf_cmd = conf_cmd + ' --user-data {}'.format(data_filename)
+            if fdu.configuration is not None:
+                if fdu.configuration.get('conf_type') in ['CLOUD_INIT']:
+                    c_init_file = fdu.configuration.get('cloud_init')
+                    data_filename = 'userdata_{}'.format(fdu_uuid)
+                    userdata = binascii.hexlify(base64.b64encode(bytes(fdu.c_init_file, 'utf-8'))).decode()
+                    self.call_os_plugin_function('store_file',{'content':userdata, 'file_path':self.BASE_DIR, 'filename':data_filename})
+                    data_filename = os.path.join(self.BASE_DIR, data_filename)
+                    conf_cmd = conf_cmd + ' --user-data {}'.format(data_filename)
             if fdu.ssh_key is not None and fdu.ssh_key != '':
                 key_filename = 'key_{}.pub'.format(fdu_uuid)
                 keydata = binascii.hexlify(base64.b64encode(bytes(fdu.ssh_key, 'utf-8'))).decode()
