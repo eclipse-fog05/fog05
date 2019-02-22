@@ -84,17 +84,15 @@ type interface_type = {
 
 type vif_type = {
   intf_type : vintf_t;
-  vpci : string;
+  vpci : string; (* in case of bridged is the name of the bridge*)
   bandwidth : int;
-  ?intf_name : string option;
 }
 
 
 type intf_t = [
   | INTERNAL
   | EXTERNAL
-  | PHYSICAL
-  | BRIDGED
+
 ]
 
 type vintf_t = [
@@ -106,6 +104,8 @@ type vintf_t = [
   | E1000
   | RTL8139
   | PCNET
+  | PHYSICAL
+  | BRIDGED
 ]
 
 
