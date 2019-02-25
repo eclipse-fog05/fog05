@@ -23,9 +23,9 @@ endif
 ifeq ($(shell uname -m), x86_64)
 	curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/qrqrp0uqwm2kvjl/yaksd.tar.gz
 else ifeq ($(shell uname -m), armv7l)
-    curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/ku6i5s0t09gayqf/yaks_armv7l.tar.gz
+	curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/ku6i5s0t09gayqf/yaks_armv7l.tar.gz
 else ifeq ($(shell uname -m), aarch64)
-    curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/gzhucpcykegum3d/yaks_arm64.tar.gz
+	curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/gzhucpcykegum3d/yaks_arm64.tar.gz
 endif
 	tar -xzvf /tmp/yaks.tar.gz -C /etc/fos
 	rm -rf /tmp/yaks.tar.gz
