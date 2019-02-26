@@ -18,7 +18,7 @@ type json <ocaml module="Abs_json"> = abstract
 
 
 
-type fdud = {
+type fdu = {
   fdu_uuid : string;
   fdu_name : string;
   ?fdu_description : string option;
