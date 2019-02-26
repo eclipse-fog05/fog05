@@ -305,7 +305,7 @@ class LXD(RuntimePluginFDU):
 
                 if fdu.configuration is not None:
                     if fdu.configuration.get('conf_type') in ['CLOUD_INIT']:
-                        c_init_file = fdu.configuration.get('cloud_init')
+                        c_init_file = fdu.configuration.get('script')
                         user_data = self.__generate_custom_profile_userdata_configuration(fdu.c_init_file)
                         custom_profile_for_fdu.config = user_data
 

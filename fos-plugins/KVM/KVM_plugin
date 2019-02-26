@@ -314,7 +314,7 @@ class KVM(RuntimePluginFDU):
             rm_temp_cmd = 'rm'
             if fdu.configuration is not None:
                 if fdu.configuration.get('conf_type') in ['CLOUD_INIT']:
-                    c_init_file = fdu.configuration.get('cloud_init')
+                    c_init_file = fdu.configuration.get('script')
                     data_filename = 'userdata_{}'.format(fdu_uuid)
                     userdata = binascii.hexlify(base64.b64encode(bytes(fdu.c_init_file, 'utf-8'))).decode()
                     self.call_os_plugin_function('store_file',{'content':userdata, 'file_path':self.BASE_DIR, 'filename':data_filename})

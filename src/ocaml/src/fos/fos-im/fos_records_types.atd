@@ -19,14 +19,14 @@ type json <ocaml module="Abs_json"> = abstract
 
 
 type fdud = {
-  fdu_uuid : string;
-  fdu_name : string;
-  ?fdu_description : string option;
-  ?image : image_type option;
+  uuid : string;
+  name : string;
+  ?status : string option;
+  ?description : string option;
+  ?base_image : image_type option;
   ?command : string option; (* Present only if hypervisor_type is BARE *)
   computation_requirements : computational_requirements_type;
   hypervisor_type : hv_types;
-  migration_type :  migr_types;
   ?configuration : configuration_type option;
   interfaces : interface_type list;
   io_ports : io_type list;
@@ -36,8 +36,8 @@ type fdud = {
 
 
 type image_descriptor_type = {
-  uri : string option;
-  checksum : string option;
+  ?uri : string option;
+  ?checksum : string option;
   format : string;
 
 }
@@ -47,10 +47,10 @@ type computational_requirements_type =  {
   cpu_arch : string;
   cpu_min_freq : float;
   cpu_min_count: int;
-  ?gpu_min_count : int;
-  ?fpga_min_count : int;
-  ram_size_mb : float;
-  storage_size_gb : float;
+  gpu_min_count : int;
+  fpga_min_count : int;
+  ram_size_mb : int;
+  storage_size_gb : int
   ?min_running_time_minutes : int option;
   ?max_running_time_minutes : int option;
   ?position : position option;
@@ -63,11 +63,6 @@ type position_type = {
   radius : float;
 }
 
-type migr_types = [
-  | LIVE
-  | COLD
-]
-
 type hv_types = [
   | BARE
   | KVM
@@ -76,7 +71,6 @@ type hv_types = [
   | XEN_UK
   | LXD
   | DOCKER
-  | MCU
 ]
 
 type conf_types = [
@@ -87,7 +81,8 @@ type conf_types = [
 
 type configuration_type = {
   conf_type : conf_types;
-  script : string;
+  ?cloud_init : string option;
+  ?script : string option;
 }
 
 type interface_type = {
@@ -138,15 +133,11 @@ type io_type = {
   min_io_ports : int
 }
 
-type connection_point_type = {
-  uuid: string;
-  ?pair_id : string option;
-}
-
 
 type virtual_network = {
   uuid : string;
   name : string;
+  ?status: string option;
   net_type : vn_type;
   is_mgmt : bool
 }
@@ -157,7 +148,13 @@ type vn_type = [
   | ELAN
  ]
 
-(* This are the old entities/atomic entities *)
+
+type connection_point_type = {
+  uuid: string;
+  vnet_id : string;
+  ?status: string option;
+}
+
 
 type atomic_entity = {
   uuid : string;
