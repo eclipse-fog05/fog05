@@ -105,7 +105,7 @@ type conf_types = [
 type configuration = {
   conf_type : conf_types;
   script : string;
-  ?ssh-keys : string list option;
+  ?ssh_keys : string list option;
 }
 
 type interface = {
