@@ -70,7 +70,7 @@ class LXDFDU(FDU):
     def on_resume(self):
         self.state = State.RUNNING
 
-        def before_migrate(self):
+    def before_migrate(self):
         pass
 
     def after_migrate(self):
