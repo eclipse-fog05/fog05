@@ -156,6 +156,7 @@ class LXD(RuntimePluginFDU):
 
         fdu_uuid = fdu_record.get('fdu_uuid')
         descriptor = self.get_fdu_descriptor(fdu_uuid)
+        print(descriptor)
         fdu = LXDFDU.from_descriptor(descriptor)
 
         if self.is_uuid(fdu.get_image_uri()):
