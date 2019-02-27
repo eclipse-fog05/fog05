@@ -237,8 +237,9 @@ class LinuxBridge(NetworkPlugin):
         self.logger.info('delete_virtual_bridge', 'Removed {}'.format(br_uuid))
         return {'result':br_uuid}
 
-    def create_port(self, descriptor):
-        cp_id = descriptor.get('uuid')
+    def create_port(self, record):
+        cp_id = record.get('cp_uuid')
+        descriptor = self.get_port_descriptor(cp_id)
         cp_small_id = ''.join([x[0] for x in cp_id.split('-')])
         cp_name = 'br-cp-{}'.format(cp_small_id)
         int_name = 'cp-{}-i'.format(cp_small_id)
@@ -250,7 +251,7 @@ class LinuxBridge(NetworkPlugin):
         cmd_stop = os.path.join(self.BASE_DIR, stop_file)
         self.call_os_plugin_function('execute_command',{'command':cmd_start,'blocking':True, 'external':True})
         cp_info = {
-            'descriptor':descriptor,
+            'descriptor':record,
             'int_name': int_name,
             'ext_name':ext_name,
             'cp_name':cp_name,
@@ -261,7 +262,16 @@ class LinuxBridge(NetworkPlugin):
         if descriptor.get("pair_id") is not None:
             pair_id = descriptor.get("pair_id")
             self.connect_cp_to_vnetwork(cp_id, pair_id)
-        self.connector.loc.actual.add_node_port(self.node, self.uuid, cp_id,descriptor)
+        properties = {
+            'int_name': int_name,
+            'ext_name':ext_name,
+            'cp_name':cp_name,
+            'start':cmd_start,
+            'stop':cmd_stop
+        }
+        record.update({'status':'CREATE'})
+        record.update({'properties':properties})
+        self.connector.loc.actual.add_node_port(self.node, self.uuid, cp_id,record)
 
 
     def delete_port(self, cp_id):
@@ -284,6 +294,7 @@ class LinuxBridge(NetworkPlugin):
     # network_name, net_uuid, ip_range=None, has_dhcp=False, gateway=None,
     def create_virtual_network(self, manifest):
         net_uuid = manifest.get('uuid')
+        descriptor = self.get_network_descriptor(net_uuid)
         self.logger.info('create_virtual_network()','Creating Network with UUID: {}'.format(net_uuid))
 
         net = self.networks.get(net_uuid, None)
@@ -299,10 +310,10 @@ class LinuxBridge(NetworkPlugin):
         netns_name = 'fosns-{}'.format(n_small_id)
 
         self.call_os_plugin_function('execute_command',{'command':os.path.join(self.BASE_DIR, start_file),'blocking':True, 'external':True})
-
-        manifest.update({'virtual_device': vdev_name})
-        manifest.update({'net_ns': netns_name})
-        manifest.update({'manager':self.uuid})
+        properties = {}
+        properties.update({'virtual_device': vdev_name})
+        properties.update({'net_ns': netns_name})
+        properties.update({'manager':self.uuid})
 
 
         # self.agent.getOSPlugin().executeCommand(brcmd)
@@ -329,7 +340,8 @@ class LinuxBridge(NetworkPlugin):
         #     self.call_os_plugin_function('execute_command',{'command':ifcmd,'blocking':True, 'external':True})
         #     self.call_os_plugin_function('execute_command',{'command':dhcp_cmd,'blocking':True, 'external':True})
 
-        manifest.update({'status':'added'})
+        manifest.update({'status':'CREATE'})
+        manifest.update({'properties':properties})
         self.networks.update({net_uuid: manifest})
         self.net_files.update({net_uuid: (start_file, shutdown_file)})
         self.connector.loc.actual.add_node_network(self.node, self.uuid, net_uuid, manifest)
@@ -515,10 +527,10 @@ class LinuxBridge(NetworkPlugin):
         self.logger.info('__net_observer()', 'Linux Bridge Plugin - New Action of a Network - Net Info: {}'.format(net_info))
         action = net_info.get('status')
         net_uuid = net_info.get('uuid')
-        if action == 'remove':
+        if action == 'DESTROY':
             self.logger.info('__net_observer()', 'Linux Bridge Plugin - This is a remove for : {}'.format(net_info))
             self.delete_virtual_network(net_uuid)
-        elif action == 'add':
+        elif action == 'CREATE':
             self.logger.info('__net_observer()', 'Linux Bridge Plugin - This is a add for : {}'.format(net_info))
             self.create_virtual_network(net_info)
         else:
@@ -529,10 +541,10 @@ class LinuxBridge(NetworkPlugin):
         self.logger.info('__port_observer()', 'Linux Bridge Plugin - New Action of a Port - Port Info: {}'.format(port_info))
         action = port_info.get('status')
         port_uuid = port_info.get('uuid')
-        if action == 'remove':
+        if action == 'DESTROY':
             self.logger.info('__port_observer()', 'Linux Bridge Plugin - This is a remove for : {}'.format(port_info))
             self.delete_port(port_uuid)
-        elif action == 'add':
+        elif action == 'CREATE':
             self.logger.info('__port_observer()', 'Linux Bridge Plugin - This is a add for : {}'.format(port_info))
             self.create_port(port_info)
         else:

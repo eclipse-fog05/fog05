@@ -153,6 +153,22 @@ let agent verbose_flag debug_flag configuration =
     let eval_res = FAgentTypes.{result = Some js ; error=None} in
     Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
+  let eval_get_network_info self (props:Apero.properties) =
+    MVar.read self >>= fun state ->
+    let net_uuid = Apero.Option.get @@ Apero.Properties.get "uuid" props in
+    let%lwt descriptor = Yaks_connector.Global.Actual.get_network sys_id Yaks_connector.default_tenant_id net_uuid state.yaks in
+    let js = FAgentTypes.json_of_string @@ FTypes.string_of_virtual_network descriptor in
+    let eval_res = FAgentTypes.{result = Some js ; error=None} in
+    Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+  in
+  let eval_get_port_info self (props:Apero.properties) =
+    MVar.read self >>= fun state ->
+    let cp_uuid = Apero.Option.get @@ Apero.Properties.get "cp_uuid" props in
+    let%lwt descriptor = Yaks_connector.Global.Actual.get_port sys_id Yaks_connector.default_tenant_id cp_uuid state.yaks in
+    let js = FAgentTypes.json_of_string @@ FTypes.string_of_connection_point descriptor in
+    let eval_res = FAgentTypes.{result = Some js ; error=None} in
+    Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+  in
   (* Listeners *)
   (* Global Desired *)
   let cb_gd_plugin self (pl:FTypes.plugin) =
@@ -189,7 +205,8 @@ let agent verbose_flag debug_flag configuration =
   let cb_gd_net self (net:FTypes.virtual_network) =
     MVar.read self >>= fun self ->
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - vNET Updated! Agent will call the right plugin!") in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - vNET Updated! Agent will update actual store and call the right plugin!") in
+    let%lwt _ = Yaks_connector.Global.Actual.add_network sys_id Yaks_connector.default_tenant_id net.uuid net self.yaks in
     let%lwt plugins = Yaks_connector.Local.Actual.get_node_plugins (Apero.Option.get self.configuration.agent.uuid) self.yaks in
     let%lwt p = Lwt_list.find_s (fun e ->
         let%lwt pl = Yaks_connector.Local.Actual.get_node_plugin (Apero.Option.get self.configuration.agent.uuid) e self.yaks in
@@ -198,13 +215,15 @@ let agent verbose_flag debug_flag configuration =
         | _ -> Lwt.return_false
       ) plugins
     in
-    Yaks_connector.Local.Desired.add_node_network (Apero.Option.get self.configuration.agent.uuid) p net.uuid net self.yaks
+    let record = FTypesRecord.{uuid = net.uuid; status = `CREATE; properties = None} in
+    Yaks_connector.Local.Desired.add_node_network (Apero.Option.get self.configuration.agent.uuid) p record.uuid record self.yaks
     >>= Lwt.return
   in
   let cb_gd_cp self (cp:FTypes.connection_point) =
     MVar.read self >>= fun self ->
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-CP - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-CP - CP Updated! Agent will call the right plugin!") in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-CP - CP Updated! Agent will update actual store and call the right plugin!") in
+    let%lwt _ = Yaks_connector.Global.Actual.add_port sys_id Yaks_connector.default_tenant_id cp.uuid cp self.yaks in
     let%lwt plugins = Yaks_connector.Local.Actual.get_node_plugins (Apero.Option.get self.configuration.agent.uuid) self.yaks in
     let%lwt p = Lwt_list.find_s (fun e ->
         let%lwt pl = Yaks_connector.Local.Actual.get_node_plugin (Apero.Option.get self.configuration.agent.uuid) e self.yaks in
@@ -213,27 +232,30 @@ let agent verbose_flag debug_flag configuration =
         | _ -> Lwt.return_false
       ) plugins
     in
-    Yaks_connector.Local.Desired.add_node_port (Apero.Option.get self.configuration.agent.uuid) p cp.uuid cp self.yaks
+    let record = FTypesRecord.{cp_uuid = cp.uuid; status = `CREATE; properties = None} in
+    Yaks_connector.Local.Desired.add_node_port (Apero.Option.get self.configuration.agent.uuid) p record.cp_uuid record self.yaks
     >>= Lwt.return
   in
   (* Local Actual *)
-  let cb_la_net self (net:FTypes.virtual_network) =
+  let cb_la_net self (net:FTypesRecord.virtual_network) =
     MVar.read self >>= fun self ->
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-NET - ##############") in
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-NET - vNET Updated! Advertising on GA") in
-    (* match net.status with
-       | Some "remove" -> Yaks_connector.Global.Actual.remove_network sys_id Yaks_connector.default_tenant_id net.uuid self.yaks
-       | _ -> *)
-    Yaks_connector.Global.Actual.add_network sys_id Yaks_connector.default_tenant_id net.uuid net self.yaks >>= Lwt.return
+    let nid = (Apero.Option.get self.configuration.agent.uuid) in
+    match net.status with
+    | `DESTROY -> Yaks_connector.Global.Actual.remove_node_network sys_id Yaks_connector.default_tenant_id nid net.uuid self.yaks
+    | _ ->
+      Yaks_connector.Global.Actual.add_node_network sys_id Yaks_connector.default_tenant_id nid net.uuid net self.yaks >>= Lwt.return
   in
-  let cb_la_cp self (cp:FTypes.connection_point) =
+  let cb_la_cp self (cp:FTypesRecord.connection_point) =
     MVar.read self >>= fun self ->
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-CP - ##############") in
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-CP - CP Updated! Advertising on GA") in
-    (* match cp.status with
-       | Some "remove" -> Yaks_connector.Global.Actual.remove_port sys_id Yaks_connector.default_tenant_id cp.uuid self.yaks
-       | _ -> *)
-    Yaks_connector.Global.Actual.add_port sys_id Yaks_connector.default_tenant_id cp.uuid cp self.yaks >>= Lwt.return
+    let nid = (Apero.Option.get self.configuration.agent.uuid) in
+    match cp.status with
+    | `DESTROY -> Yaks_connector.Global.Actual.remove_node_port sys_id Yaks_connector.default_tenant_id nid cp.cp_uuid self.yaks
+    | _ ->
+      Yaks_connector.Global.Actual.add_node_port sys_id Yaks_connector.default_tenant_id nid cp.cp_uuid cp self.yaks >>= Lwt.return
   in
   let cb_la_plugin self (pl:FTypes.plugin) =
     MVar.read self >>= fun self ->
@@ -296,6 +318,8 @@ let agent verbose_flag debug_flag configuration =
   in
   (* Registering Evals *)
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_fdu_info" (eval_get_fdu_info state) yaks in
+  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_network_info" (eval_get_network_info state) yaks in
+  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_port_info" (eval_get_port_info state) yaks in
   (* Registering listeners *)
   let%lwt _ = Yaks_connector.Global.Desired.observe_node_plugins sys_id Yaks_connector.default_tenant_id uuid (cb_gd_plugin state) yaks in
   let%lwt _ = Yaks_connector.Global.Desired.observe_fdu sys_id Yaks_connector.default_tenant_id (cb_gd_fdu state) yaks in

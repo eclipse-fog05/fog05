@@ -28,6 +28,16 @@ class NetworkPlugin(Plugin):
     def __init__(self, version, plugin_uuid):
         super(NetworkPlugin, self).__init__(version, plugin_uuid)
 
+    def get_network_descriptor(self, fduid):
+        parameters = {'uuid': fduid}
+        fname = 'get_network_info'
+        return self.call_agent_function(fname, parameters)
+
+    def get_port_descriptor(self, fduid):
+        parameters = {'cp_uuid': fduid}
+        fname = 'get_port_info'
+        return self.call_agent_function(fname, parameters)
+
     def create_virtual_interface(self, name, uuid):
         '''
         This should create a virtual network interface

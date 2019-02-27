@@ -429,13 +429,13 @@ class FIMAPIv2(object):
             def cb(fdu_info):
                 local_var.put(fdu_info)
 
-            subid = self.connector.glob.actual.observe_fdu(
-                self.sysid, self.tenantid, fdu_uuid, cb)
-
-            fdu_info = local_var.get()
+            fdu_info = self.connector.glob.actual.get_fdu_info(
+                self.sysid, self.tenantid, fdu_uuid)
             while fdu_info is None:
-                fdu_info = local_var.get()
-            self.connector.glob.actual.unsubscribe(subid)
+                fdu_info = self.connector.glob.actual.get_fdu_info(
+                    self.sysid, self.tenantid, fdu_uuid)
+            # while fdu_info is None:
+            #     fdu_info = local_var.get()
             res = {
                 'fdu_uuid': fdu_uuid
             }

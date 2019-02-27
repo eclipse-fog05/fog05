@@ -154,7 +154,7 @@ class LXD(RuntimePluginFDU):
         self.logger.info(
             'define_fdu()', ' LXD Plugin - Defining a Container')
 
-        fdu_uuid = fdu_record.get('uuid')
+        fdu_uuid = fdu_record.get('fdu_uuid')
         descriptor = self.get_fdu_descriptor(fdu_uuid)
         fdu = LXDFDU.from_descriptor(descriptor)
 

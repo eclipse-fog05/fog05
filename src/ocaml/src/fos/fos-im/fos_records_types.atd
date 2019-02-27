@@ -33,7 +33,7 @@ type fdu_state = [
 ]
 
 
-(* 
+(*
 type error_code = [
   | DEFINE_ERROR of 1
   | CONFIGURE_ERROR of 2
@@ -50,9 +50,10 @@ type error_code = [
 *)
 
 type net_state = [
-  | CREATED
-  | CONNECTED
-  | DISCONNECTED
+  | CREATE
+  | CONNECT
+  | DISCONNECT
+  | DESTROY
 ]
 
 type fdu = {
@@ -67,18 +68,21 @@ type fdu = {
 type interface = {
   vintf_name : string;
   status : net_state;
+  ?properties : json option;
 }
 
 type connection_point = {
   cp_uuid: string;
   status : net_state;
+  ?properties : json option;
 }
 
 
 type virtual_network = {
   uuid : string;
   status: net_state;
-}
+  ?properties : json option;
+  }
 
 
 
