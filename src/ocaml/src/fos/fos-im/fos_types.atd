@@ -127,7 +127,7 @@ type intf_t = [
   | INTERNAL
   | EXTERNAL
   | WLAN  (* then virtual_interface has to be PHYSICAL *)
-  | BLUETHOOT (* then virtual_interface has to be PHYSICAL *)
+  | BLUETOOTH (* then virtual_interface has to be PHYSICAL *)
 ]
 
 type vintf_t = [
