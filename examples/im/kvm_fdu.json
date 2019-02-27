@@ -13,7 +13,8 @@
         "checksum": "21f436639dda7941a26d1eb0c5427862fd19910b",
         "format": "tar.gz"
     },
-    "hypervisor_type": "KVM",
+    "hypervisor": "KVM",
+    "migration_kind": "LIVE",
     "interfaces": [
         {
             "name": "eth0",

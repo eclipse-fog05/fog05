@@ -19,56 +19,73 @@ type json <ocaml module="Abs_json"> = abstract
 
 
 type fdu = {
-  fdu_uuid : string;
-  fdu_name : string;
-  ?fdu_description : string option;
-  ?image : image_type option;
+  uuid : string;
+  name : string;
+  ?description : string option;
+  ?image : image option;
   ?command : string option; (* Present only if hypervisor_type is BARE *)
-  computation_requirements : computational_requirements_type;
-  hypervisor_type : hv_types;
-  migration_type :  migr_types;
-  ?configuration : configuration_type option;
-  interfaces : interface_type list;
-  io_ports : io_type list;
-  connection_points : connection_point_type list;
+  computation_requirements : computational_requirements;
+  ?geographical_requirements : geographical_requirements option;
+  ?energy_requirements : energy_requirements option;
+  hypervisor : hv_kind;
+  migration_kind :  migr_kind;
+  ?configuration : configuration option;
+  interfaces : interface list;
+  io_ports : io_port list;
+  connection_points : connection_point list;
   depends_on : string list;
 }
 
 
-type image_descriptor_type = {
-  uri : string option;
-  checksum : string option;
+type image = {
+  uri : string;
+  checksum : string;
   format : string;
 
 }
 
+type geographical_requirements = {
+  ?position : position option;
+  ?proximity : proximity list option;
+}
+
+type energy_requirements = {
+  key : string;
+}
+
 (* This is the flavor *)
-type computational_requirements_type =  {
+type computational_requirements =  {
   cpu_arch : string;
   cpu_min_freq : float;
   cpu_min_count: int;
-  ?gpu_min_count : int;
-  ?fpga_min_count : int;
+  ?gpu_min_count : int option;
+  ?fpga_min_count : int option;
   ram_size_mb : float;
   storage_size_gb : float;
+  ?duty_cycle : float option;
+  (*
   ?min_running_time_minutes : int option;
   ?max_running_time_minutes : int option;
-  ?position : position option;
-
+  *)
 }
 
-type position_type = {
+type position = {
   lat : string;
   lon : string;
   radius : float;
 }
 
-type migr_types = [
+type proximity = {
+  neighbour : string;
+  radius : float;
+}
+
+type migr_kind = [
   | LIVE
   | COLD
 ]
 
-type hv_types = [
+type hv_kind = [
   | BARE
   | KVM
   | KVM_UK
@@ -85,12 +102,12 @@ type conf_types = [
 ]
 
 
-type configuration_type = {
+type configuration = {
   conf_type : conf_types;
   script : string;
 }
 
-type interface_type = {
+type interface = {
   name : string;
   is_mgmt : bool;
   if_type : intf_t;
@@ -109,7 +126,8 @@ type vif_type = {
 type intf_t = [
   | INTERNAL
   | EXTERNAL
-
+  | WLAN  (* then virtual_interface has to be PHYSICAL *)
+  | BLUETHOOT (* then virtual_interface has to be PHYSICAL *)
 ]
 
 type vintf_t = [
@@ -126,19 +144,20 @@ type vintf_t = [
 ]
 
 
-type io_t = [
+type io_kind = [
   | GPIO
   | I2C
   | BUS
+  | COM
 ]
 
-type io_type = {
-  name : string;
-  io_type : io_t;
+type io_port = {
+  address : string;
+  io_kind : io_kind;
   min_io_ports : int
 }
 
-type connection_point_type = {
+type connection_point = {
   uuid: string;
   ?pair_id : string option;
 }
@@ -293,7 +312,7 @@ type plugin = {
 
 (* VM/CONTAINERS FLAVOR AND IMAGES *)
 
-type image = {
+type image_old = {
   uuid : string;
   name : string;
   base_image :  string;

@@ -17,62 +17,52 @@ type json <ocaml module="Abs_json"> = abstract
 
 
 
+type fdu_state = [
+  | DEFINE
+  | CONFIGURE
+  | CLEAN
+  | RUN
+  | STOP
+  | PAUSE
+  | SCALE
+  | TAKE_OFF
+  | LAND
+  | MIGRATE
+  | UNDEFINE
+]
 
-type fdur = {
-  uuid : string;
-  name : string;
-  ?status : string option;
-  ?description : string option;
-  ?base_image : image_type option;
-  ?command : string option; (* Present only if hypervisor_type is BARE *)
-  computation_requirements : computational_requirements_type;
-  hypervisor_type : hv_types;
-  ?configuration : configuration_type option;
-  interfaces : interface_type list;
-  io_ports : io_type list;
-  connection_points : connection_point_type list;
-  depends_on : string list;
+
+type net_state = [
+  | CREATED
+  | CONNECTED
+  | DISCONNECTED
+]
+
+type fdu = {
+  fdu_uuid : string;
+  status : fdu_state;
+  interfaces : interface list;
+  connection_points : connection_point list;
 }
 
 
-
-
-
-
-
-
-
-type interface_type = {
-  name : string;
-  is_mgmt : bool;
-  if_type : intf_t;
-  mac_address : string;
-  virtual_interface : vif_type;
-  ?cp_id : string option;
+type interface = {
+  vintf_name : string;
+  status : net_state;
 }
 
-
-
+type connection_point = {
+  cp_uuid: string;
+  status : net_state;
+}
 
 
 type virtual_network = {
   uuid : string;
-  name : string;
-  ?status: string option;
-  net_type : vn_type;
-  is_mgmt : bool
+  status: net_state;
 }
 
 
-type vn_type = [
-  | ELINE
-  | ELAN
- ]
 
 
-type connection_point_type = {
-  uuid: string;
-  vnet_id : string;
-  ?status: string option;
-}
 
