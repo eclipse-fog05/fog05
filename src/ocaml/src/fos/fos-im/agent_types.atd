@@ -50,6 +50,10 @@ type plugin_loader_item = {
   info : string;
 }
 
+type eval_result = {
+  ?result : json option;
+  ?error : int option;
+}
 
 
 type quota_type = {

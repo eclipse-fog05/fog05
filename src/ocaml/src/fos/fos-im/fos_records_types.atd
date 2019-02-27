@@ -29,8 +29,25 @@ type fdu_state = [
   | LAND
   | MIGRATE
   | UNDEFINE
+  | ERROR
 ]
 
+
+(* 
+type error_code = [
+  | DEFINE_ERROR of 1
+  | CONFIGURE_ERROR of 2
+  | CLEAN_ERROR of 3
+  | RUN_ERROR of 4
+  | STOP_ERROR of 5
+  | PAUSE_ERROR of 6
+  | SCALE_ERROR of 7
+  | TAKE_OFF_ERROR of 8
+  | LAND_ERROR of 9
+  | MIGRATE_ERROR of 10
+  | UNDEFINE_ERROR of 11
+]
+*)
 
 type net_state = [
   | CREATED
@@ -43,6 +60,7 @@ type fdu = {
   status : fdu_state;
   interfaces : interface list;
   connection_points : connection_point list;
+  ?error_code : int option;
 }
 
 

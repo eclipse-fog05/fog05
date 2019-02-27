@@ -144,8 +144,18 @@ let agent verbose_flag debug_flag configuration =
   let%lwt _ = MVar.read state >>= fun state ->
     Yaks_connector.Local.Actual.add_node_configuration uuid conf state.yaks
   in
+  (* Evals *)
+  let eval_get_fdu_info self (props:Apero.properties) =
+    MVar.read self >>= fun state ->
+    let fdu_uuid = Apero.Option.get @@ Apero.Properties.get "fdu_uuid" props in
+    let%lwt descriptor = Yaks_connector.Global.Actual.get_fdu_info sys_id Yaks_connector.default_tenant_id fdu_uuid state.yaks in
+    let js = FAgentTypes.json_of_string @@ FTypes.string_of_fdu descriptor in
+    let eval_res = FAgentTypes.{result = Some js ; error=None} in
+    Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+  in
+  (* Listeners *)
   (* Global Desired *)
-  let cb_gd__plugin self (pl:FTypes.plugin) =
+  let cb_gd_plugin self (pl:FTypes.plugin) =
     MVar.read self >>= fun self ->
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-PLUGIN - ##############") in
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-PLUGIN - Received plugin") in
@@ -284,8 +294,10 @@ let agent verbose_flag debug_flag configuration =
     >>= fun _ ->  Yaks_connector.LocalConstraint.Actual.observe_node_fdu uuid (cb_lac_node_fdu self ni.uuid) yaks
     >>= fun _ -> Lwt.return_unit
   in
+  (* Registering Evals *)
+  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_fdu_info" (eval_get_fdu_info state) yaks in
   (* Registering listeners *)
-  let%lwt _ = Yaks_connector.Global.Desired.observe_node_plugins sys_id Yaks_connector.default_tenant_id uuid (cb_gd__plugin state) yaks in
+  let%lwt _ = Yaks_connector.Global.Desired.observe_node_plugins sys_id Yaks_connector.default_tenant_id uuid (cb_gd_plugin state) yaks in
   let%lwt _ = Yaks_connector.Global.Desired.observe_fdu sys_id Yaks_connector.default_tenant_id (cb_gd_fdu state) yaks in
   let%lwt _ = Yaks_connector.Global.Desired.observe_node_fdu sys_id Yaks_connector.default_tenant_id uuid (cb_gd_node_fdu state) yaks in
   let%lwt _ = Yaks_connector.Global.Desired.observe_network sys_id Yaks_connector.default_tenant_id (cb_gd_net state) yaks in

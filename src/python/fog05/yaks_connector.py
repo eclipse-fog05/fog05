@@ -50,6 +50,14 @@ class GAD(object):
         return Constants.create_path(
             [self.prefix, sysid, 'tenants', tenantid, 'configuration'])
 
+    def get_fdu_info_path(self, sysid, tenantid, fduid):
+        return Constants.create_path([self.prefix, sysid, 'tenants',
+            tenantid, "fdu", fduid, "info"])
+
+    def get_all_fdu_selector(self, sysid, tenantid):
+        return Constants.create_path([self.prefix, sysid, 'tenants',
+            tenantid, 'fdu', '*', 'info'])
+
     def get_all_nodes_selector(self, sysid, tenantid):
         return Constants.create_path(
             [self.prefix, sysid, 'tenants', tenantid, 'nodes', '*', 'info'])
@@ -136,13 +144,16 @@ class GAD(object):
     def extract_tenantid_from_path(self, path):
         return path.split('/')[4]
 
+    def extract_fduid_from_path(self, path):
+        return path.split('/')[6]
+
     def extract_nodeid_from_path(self, path):
         return path.split('/')[6]
 
     def extract_plugin_from_path(self, path):
         return path.split('/')[8]
 
-    def extract_fduid_from_path(self, path):
+    def extract_node_fduid_from_path(self, path):
         return path.split('/')[8]
 
     def get_sys_info(self, sysid):
@@ -199,6 +210,67 @@ class GAD(object):
             v = res[0][1]
             return json.loads(v.value)
 
+    def add_node_info(self, sysid, tenantid, nodeid, nodeinfo):
+        p = self.get_node_info_path(sysid, tenantid, nodeid)
+        v = Value(json.dumps(nodeinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def add_node_configuration(self, sysid, tenantid, nodeid, nodeconf):
+        p = self.get_node_configuration_path(sysid, tenantid, nodeid)
+        v = Value(json.dumps(nodeconf), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def get_all_fdus(self, sysid, tenantid):
+        s = self.get_all_fdu_selector(sysid, tenantid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            return []
+        else:
+            xs = map(lambda x: self.extract_fduid_from_path(x[0]), res)
+            return list(xs)
+
+    def get_fdu_info(self, sysid, tenantid, fduid):
+        p = self.get_fdu_info_path(sysid, tenantid, fduid)
+        res = self.ws.get(p)
+        if len(res) == 0:
+            raise ValueError('Empty message list on get_fdu_info')
+        else:
+            v = res[0][1]
+            return json.loads(v.value)
+
+    def add_fdu_info(self, sysid, tenantid, fduid, fduinfo):
+        p = self.get_fdu_info_path(sysid, tenantid, fduid)
+        v = Value(json.dumps(fduinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def remove_fdu_info(self, sysid, tenantid, fduid):
+        p = self.get_fdu_info_path
+        self.ws.remove(p)
+
+    def observe_fdus(self, sysid, tenantid, callback):
+        s = self.get_all_fdu_selector(sysid, tenantid)
+        def cb(kvs):
+            if len(kvs) == 0:
+                raise ValueError('Listener received empty datas')
+            else:
+                v = json.loads(kvs[0][1].value)
+                callback(v)
+        subid = self.ws.subscribe(s, cb)
+        self.listeners.append(subid)
+        return subid
+
+    def observe_fdu(self, sysid, tenantid, fduid,callback):
+        s = self.get_fdu_info_path(sysid, tenantid, fduid)
+        def cb(kvs):
+            if len(kvs) == 0:
+                raise ValueError('Listener received empty datas')
+            else:
+                v = json.loads(kvs[0][1].value)
+                callback(v)
+        subid = self.ws.subscribe(s, cb)
+        self.listeners.append(subid)
+        return subid
+
     def get_all_plugins_ids(self, sysid, tenantid, nodeid):
         s = self.get_node_plugins_selector(sysid, tenantid, nodeid)
         res = self.ws.get(s)
@@ -216,16 +288,6 @@ class GAD(object):
         else:
             v = res[0][1]
             return json.loads(v.value)
-
-    def add_node_info(self, sysid, tenantid, nodeid, nodeinfo):
-        p = self.get_node_info_path(sysid, tenantid, nodeid)
-        v = Value(json.dumps(nodeinfo), encoding=Encoding.STRING)
-        return self.ws.put(p, v)
-
-    def add_node_configuration(self, sysid, tenantid, nodeid, nodeconf):
-        p = self.get_node_configuration_path(sysid, tenantid, nodeid)
-        v = Value(json.dumps(nodeconf), encoding=Encoding.STRING)
-        return self.ws.put(p, v)
 
     def add_node_plugin(self, sysid, tenantid, nodeid, pluginid, plugininfo):
         p = self.get_node_plugin_info_path(sysid, tenantid, nodeid, pluginid)
@@ -275,7 +337,16 @@ class GAD(object):
         self.listeners.append(subid)
         return subid
 
-    def get_node_fdu(self, sysid, tenantid, nodeid, fduid):
+    def get_node_fdus(self, sysid, tenantid, nodeid):
+        s = self.get_node_fdu_selector(sysid, tenantid, nodeid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            return []
+        else:
+            xs = map(lambda x: self.extract_fduid_from_path(x[0]), res)
+            return list(xs)
+
+    def get_node_fdu_info(self, sysid, tenantid, nodeid, fduid):
         p = self.get_node_fdu_info_path(sysid, tenantid, nodeid, fduid)
         kvs = self.ws.get(p)
         if len(kvs) == 0:
@@ -452,9 +523,26 @@ class LAD(object):
             [self.prefix, nodeid, 'network_managers',
              pluginid, 'ports', portid, 'info'])
 
+
+    def get_agent_exec_path(self, nodeid, func_name):
+        return Constants.create_path([self.prefix, nodeid, 'agent', 'exec',
+        func_name])
+
+    def get_agent_exec_path_with_params(self, nodeid, func_name, params):
+        p = self.dict2args(params)
+        f = func_name + '?' + p
+        return Constants.create_path([self.prefix, nodeid, 'agent', 'exec',
+        f])
+
     def get_node_os_exec_path(self, nodeid, func_name):
         return Constants.create_path(
             [self.prefix, nodeid, 'os', 'exec', func_name])
+
+    def get_node_os_exec_path_with_params(self, nodeid, func_name, params):
+        p = self.dict2args(params)
+        f = func_name + '?' + p
+        return Constants.create_path(
+            [self.prefix, nodeid, 'os', 'exec', f])
 
     def get_node_nw_exec_path(self, nodeid, net_manager_uuid , func_name):
         return Constants.create_path(
@@ -468,12 +556,6 @@ class LAD(object):
         return Constants.create_path(
             [self.prefix, nodeid, 'network_managers',
             net_manager_uuid , 'exec', f])
-
-    def get_node_os_exec_path_with_params(self, nodeid, func_name, params):
-        p = self.dict2args(params)
-        f = func_name + '?' + p
-        return Constants.create_path(
-            [self.prefix, nodeid, 'os', 'exec', f])
 
     def get_node_os_info_path(self, nodeid):
         return Constants.create_path(
@@ -500,6 +582,15 @@ class LAD(object):
         r = self.ws.register_eval(p, cb)
         self.evals.append(p)
         return r
+
+    def exec_agent_eval(self, nodeid, func_name, parameters):
+        s = self.get_agent_exec_path_with_params(
+            nodeid, func_name, parameters)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError("Empty data on exec_agent_eval")
+        else:
+            return json.loads(res[0][1].value)
 
     def exec_os_eval(self, nodeid, func_name, parameters):
         s = self.get_node_os_exec_path_with_params(

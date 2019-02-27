@@ -374,7 +374,7 @@ class FIMAPIv2(object):
             self.sysid = sysid
             self.tenantid = tenantid
 
-        def __wait_fdu_state_change(self, node_uuid, fdu_uuid, state):
+        def __wait_node_fdu_state_change(self, node_uuid, fdu_uuid, state):
             '''
 
             Function used to wait if an instance changest state
@@ -399,7 +399,7 @@ class FIMAPIv2(object):
 
             fdu_info = local_var.get()
             es = fdu_info.get('status')
-            while es not in [state, 'error']:
+            while es.lower() not in [state, 'error']:
                 fdu_info = local_var.get()
                 es = fdu_info.get('status')
             self.connector.glob.actual.unsubscribe(subid)
@@ -409,7 +409,51 @@ class FIMAPIv2(object):
             }
             return res
 
-        def define(self, manifest, node_uuid, wait=False):
+        def __wait_fdu(self, fdu_uuid):
+            '''
+
+            Function used to wait if an instance changest state
+             (eg. configured -> run) or goes to error state
+
+            :param node_uuid
+            :param fdu_uuid
+            :param state the new expected state
+
+            :return dict {'status':<new status>,
+                            'fdu_uuid':fdu_uuid}
+
+            '''
+
+            local_var = MVar()
+
+            def cb(fdu_info):
+                local_var.put(fdu_info)
+
+            subid = self.connector.glob.actual.observe_fdu(
+                self.sysid, self.tenantid, fdu_uuid, cb)
+
+            fdu_info = local_var.get()
+            while fdu_info is None:
+                fdu_info = local_var.get()
+            self.connector.glob.actual.unsubscribe(subid)
+            res = {
+                'fdu_uuid': fdu_uuid
+            }
+            return res
+
+        def onboard(self, descriptor, wait=False):
+            fduid = descriptor.get('uuid')
+            res = self.connector.glob.desired.add_fdu_info(
+                self.sysid, self.tenantid, fduid, descriptor)
+            if wait:
+                self.__wait_fdu(fduid)
+            return res
+
+        def offload(self, fdu_uuid, wait=False):
+            res = self.connector.glob.desired.remove_fdu_info(
+                self.sysid, self.tenantid, fdu_uuid)
+
+        def define(self, fduid, node_uuid, wait=False):
             '''
 
             Defines an atomic entity in a node, this method will check
@@ -421,12 +465,20 @@ class FIMAPIv2(object):
              returning
             :return: boolean
             '''
-            manifest.update({'status': 'define'})
-            fduid = manifest.get('uuid')
+            desc = self.connector.glob.actual.get_fdu_info(
+                self.sysid, self.tenantid, fduid)
+            if desc is None:
+                raise ValueError('FDU with this UUID not found in the catalog')
+
+            record = {'fdu_uuid': fduid,
+                      'status': 'DEFINE',
+                      'interfaces': [],
+                      'connection_points': []
+                      }
             res = self.connector.glob.desired.add_node_fdu(
-                self.sysid, self.tenantid, node_uuid, fduid, manifest)
+                self.sysid, self.tenantid, node_uuid, fduid, record)
             if wait:
-                self.__wait_fdu_state_change(node_uuid, fduid, 'defined')
+                self.__wait_node_fdu_state_change(node_uuid, fduid, 'defined')
             return res
 
         def undefine(self, fdu_uuid, node_uuid, wait=False):
@@ -440,14 +492,14 @@ class FIMAPIv2(object):
             :return: boolean
             '''
 
-            manifest = self.connector.glob.actual.get_node_fdu(
+            record = self.connector.glob.actual.get_node_fdu(
                 self.sysid, self.tenantid, node_uuid, fdu_uuid
             )
-            manifest.update({'status': 'undefine'})
+            record.update({'status': 'UNDEFINE'})
 
-            fduid = manifest.get('uuid')
+            fduid = record.get('uuid')
             return self.connector.glob.desired.add_node_fdu(
-                self.sysid, self.tenantid, node_uuid, fduid, manifest)
+                self.sysid, self.tenantid, node_uuid, fduid, record)
 
         def configure(self, fdu_uuid, node_uuid, wait=False):
             '''
@@ -461,15 +513,16 @@ class FIMAPIv2(object):
             :param wait: optional wait before returning
             :return: instance uuid or none in case of error
             '''
-            manifest = self.connector.glob.actual.get_node_fdu(
+            record = self.connector.glob.actual.get_node_fdu(
                 self.sysid, self.tenantid, node_uuid, fdu_uuid
             )
-            manifest.update({'status': 'configure'})
+            record.update({'status': 'CONFIGURE'})
 
             res = self.connector.glob.desired.add_node_fdu(
-                self.sysid, self.tenantid, node_uuid, fdu_uuid, manifest)
+                self.sysid, self.tenantid, node_uuid, fdu_uuid, record)
             if wait:
-                self.__wait_fdu_state_change(node_uuid, fdu_uuid, 'configured')
+                self.__wait_node_fdu_state_change(
+                    node_uuid, fdu_uuid, 'CONFIGURE')
             return res
 
         def clean(self, fdu_uuid, node_uuid, wait=False):
@@ -485,15 +538,16 @@ class FIMAPIv2(object):
 
             '''
 
-            manifest = self.connector.glob.actual.get_node_fdu(
+            record = self.connector.glob.actual.get_node_fdu(
                 self.sysid, self.tenantid, node_uuid, fdu_uuid
             )
-            manifest.update({'status': 'clean'})
+            record.update({'status': 'CLEAN'})
 
             res = self.connector.glob.desired.add_node_fdu(
-                self.sysid, self.tenantid, node_uuid, fdu_uuid, manifest)
+                self.sysid, self.tenantid, node_uuid, fdu_uuid, record)
             if wait:
-                self.__wait_fdu_state_change(node_uuid, fdu_uuid, 'defined')
+                self.__wait_node_fdu_state_change(
+                    node_uuid, fdu_uuid, 'CLEAN')
             return res
 
         def run(self, fdu_uuid, node_uuid, wait=False):
@@ -508,15 +562,15 @@ class FIMAPIv2(object):
             :return: boolean
             '''
 
-            manifest = self.connector.glob.actual.get_node_fdu(
+            record = self.connector.glob.actual.get_node_fdu(
                 self.sysid, self.tenantid, node_uuid, fdu_uuid
             )
-            manifest.update({'status': 'run'})
+            record.update({'status': 'RUN'})
 
             res = self.connector.glob.desired.add_node_fdu(
-                self.sysid, self.tenantid, node_uuid, fdu_uuid, manifest)
+                self.sysid, self.tenantid, node_uuid, fdu_uuid, record)
             if wait:
-                self.__wait_fdu_state_change(node_uuid, fdu_uuid, 'run')
+                self.__wait_node_fdu_state_change(node_uuid, fdu_uuid, 'RUN')
             return res
 
         def stop(self, fdu_uuid, node_uuid, wait=False):
@@ -531,15 +585,15 @@ class FIMAPIv2(object):
             :return: boolean
             '''
 
-            manifest = self.connector.glob.actual.get_node_fdu(
+            record = self.connector.glob.actual.get_node_fdu(
                 self.sysid, self.tenantid, node_uuid, fdu_uuid
             )
-            manifest.update({'status': 'stop'})
+            record.update({'status': 'STOP'})
 
             res = self.connector.glob.desired.add_node_fdu(
-                self.sysid, self.tenantid, node_uuid, fdu_uuid, manifest)
+                self.sysid, self.tenantid, node_uuid, fdu_uuid, record)
             if wait:
-                self.__wait_fdu_state_change(node_uuid, fdu_uuid, 'stop')
+                self.__wait_node_fdu_state_change(node_uuid, fdu_uuid, 'STOP')
             return res
 
         def pause(self, entity_uuid, node_uuid, instance_uuid, wait=False):

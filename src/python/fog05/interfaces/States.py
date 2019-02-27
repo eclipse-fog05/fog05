@@ -23,14 +23,14 @@ class State(Enum):
     States of entities
     """
 
-    ERROR = -1
-    UNDEFINED = 0
-    DEFINED = 1
-    CONFIGURED = 3
-    RUNNING = 4
-    PAUSED = 5
-    SCALING = 6
-    MIGRATING = 7
+    ERROR = 'ERROR'
+    UNDEFINED = 'UNDEFINE'
+    DEFINED = 'DEFINE'
+    CONFIGURED = 'CONFIGURE'
+    RUNNING = 'RUN'
+    PAUSED = 'PAUSE'
+    SCALING = 'SCALE'
+    MIGRATING = 'MIGRATE'
     # Migration concurrent states
-    TAKING_OFF = 8
-    LANDING = 9
+    TAKING_OFF = 'TAKE_OFF'
+    LANDING = 'LAND'
