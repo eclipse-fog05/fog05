@@ -178,8 +178,8 @@ let agent verbose_flag debug_flag configuration =
       let%lwt cps = Lwt_list.filter_map_p (fun e ->
           let%lwt fdu = Yaks_connector.Global.Actual.get_fdu_info sys_id Yaks_connector.default_tenant_id e state.yaks in
           let%lwt c = Lwt_list.filter_map_p (fun (cp:FTypes.connection_point) ->
-              let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - eval_get_port_info - %s == %s ? %b " cp.uuid cp_uuid (cp.uuid == cp_uuid)) in
-              if cp.uuid == cp_uuid then  Lwt.return @@ Some cp
+              let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - eval_get_port_info - %s == %s ? %d " cp.uuid cp_uuid (String.compare cp.uuid  cp_uuid)) in
+              if (String.compare cp.uuid cp_uuid) == 0 then  Lwt.return @@ Some cp
               else Lwt.return None
             ) fdu.connection_points
           in Lwt.return @@ List.nth_opt c 0
