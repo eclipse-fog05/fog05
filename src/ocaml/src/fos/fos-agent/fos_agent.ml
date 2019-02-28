@@ -165,7 +165,7 @@ let agent verbose_flag debug_flag configuration =
   let eval_get_port_info self (props:Apero.properties) =
     MVar.read self >>= fun state ->
     let cp_uuid = Apero.Option.get @@ Apero.Properties.get "cp_uuid" props in
-    try
+    try%lwt
       let%lwt descriptor = Yaks_connector.Global.Actual.get_port sys_id Yaks_connector.default_tenant_id cp_uuid state.yaks in
       let js = FAgentTypes.json_of_string @@ FTypes.string_of_connection_point descriptor in
       let eval_res = FAgentTypes.{result = Some js ; error=None} in
