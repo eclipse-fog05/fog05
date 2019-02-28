@@ -538,6 +538,19 @@ class LAD(object):
         return Constants.create_path(
             [self.prefix, nodeid, 'os', 'exec', func_name])
 
+    def get_node_nw_exec_path(self, nodeid, net_manager_uuid , func_name):
+        return Constants.create_path(
+            [self.prefix, nodeid, 'network_managers',
+            net_manager_uuid , 'exec', func_name])
+
+    def get_node_nw_exec_path_with_params(self, nodeid, net_manager_uuid,
+        func_name, params):
+        p = self.dict2args(params)
+        f = func_name + '?' + p
+        return Constants.create_path(
+            [self.prefix, nodeid, 'network_managers',
+            net_manager_uuid , 'exec', f])
+
     def get_node_os_exec_path_with_params(self, nodeid, func_name, params):
         p = self.dict2args(params)
         f = func_name + '?' + p
