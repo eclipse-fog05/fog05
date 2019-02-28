@@ -346,7 +346,7 @@ class GAD(object):
             xs = map(lambda x: self.extract_fduid_from_path(x[0]), res)
             return list(xs)
 
-    def get_node_fdu_info(self, sysid, tenantid, nodeid, fduid):
+    def get_node_fdu(self, sysid, tenantid, nodeid, fduid):
         p = self.get_node_fdu_info_path(sysid, tenantid, nodeid, fduid)
         kvs = self.ws.get(p)
         if len(kvs) == 0:

@@ -156,7 +156,6 @@ class LXD(RuntimePluginFDU):
 
         fdu_uuid = fdu_record.get('fdu_uuid')
         descriptor = self.get_fdu_descriptor(fdu_uuid)
-        print(descriptor)
         fdu = LXDFDU.from_descriptor(descriptor)
 
         if self.is_uuid(fdu.get_image_uri()):
@@ -317,8 +316,11 @@ class LXD(RuntimePluginFDU):
                         }
                 for cp in fdu.get_connection_points():
                     cp_id = cp.get('uuid')
-                    cp.update({'status':'add'})
-                    self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id,cp)
+                    cp_record = {
+                        'cp_uuid':cp_id,
+                        'status':'CREATE'
+                    }
+                    self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id,cp_record)
                     res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
                     while res is None:
                         res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
@@ -391,7 +393,7 @@ class LXD(RuntimePluginFDU):
             for cp in fdu.get_connection_points():
                 cp_id = cp.get('uuid')
                 cp = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
-                cp.update({'status':'remove'})
+                cp.update({'status':'DESTROY'})
                 self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id, cp)
             self.current_fdus.update({fdu_uuid: fdu})
             lxd_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
@@ -415,7 +417,7 @@ class LXD(RuntimePluginFDU):
                                                      'FDU {} is not in CONFIGURED state'.format(fdu_uuid))
         else:
             container_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            container_info.update({'status': 'starting'})
+            container_info.update({'status': 'STARTING'})
             self.current_fdus.update({fdu_uuid: fdu})
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, container_info)
 

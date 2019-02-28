@@ -399,7 +399,7 @@ class FIMAPIv2(object):
 
             fdu_info = local_var.get()
             es = fdu_info.get('status')
-            while es.lower() not in [state, 'error']:
+            while es.upper() not in [state, 'ERROR']:
                 fdu_info = local_var.get()
                 es = fdu_info.get('status')
             self.connector.glob.actual.unsubscribe(subid)
@@ -478,7 +478,7 @@ class FIMAPIv2(object):
             res = self.connector.glob.desired.add_node_fdu(
                 self.sysid, self.tenantid, node_uuid, fduid, record)
             if wait:
-                self.__wait_node_fdu_state_change(node_uuid, fduid, 'defined')
+                self.__wait_node_fdu_state_change(node_uuid, fduid, 'DEFINE')
             return res
 
         def undefine(self, fdu_uuid, node_uuid, wait=False):
