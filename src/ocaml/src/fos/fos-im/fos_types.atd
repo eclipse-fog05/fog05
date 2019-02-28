@@ -22,8 +22,8 @@ type fdu = {
   uuid : string;
   name : string;
   ?description : string option;
-  image : image;
-  ?command : string option; (* Present only if hypervisor_type is BARE *)
+  ?image : image option;
+  ?command : command option; (* Present only if hypervisor_type is BARE *)
   computation_requirements : computational_requirements;
   ?geographical_requirements : geographical_requirements option;
   ?energy_requirements : energy_requirements option;
@@ -42,6 +42,12 @@ type image = {
   checksum : string;
   format : string;
 
+}
+
+
+type command = {
+  binary : string;
+  args : string list;
 }
 
 type geographical_requirements = {
