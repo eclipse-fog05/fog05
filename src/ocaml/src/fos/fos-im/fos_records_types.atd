@@ -24,6 +24,7 @@ type fdu_state = [
   | RUN
   | STARTING
   | STOP
+  | RESUME
   | PAUSE
   | SCALE
   | TAKE_OFF
