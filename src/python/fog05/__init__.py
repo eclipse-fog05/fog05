@@ -18,3 +18,4 @@ from fog05.fimapiv2 import FIMAPIv2
 # from fog05.web_api import WebAPI
 from fog05.fosagent import FosAgent
 from fog05.yaks_connector import Yaks_Connector
+from fog05.yaks_connector import Yaks_Constraint_Connector
