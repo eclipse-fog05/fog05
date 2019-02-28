@@ -44,7 +44,7 @@ class KVMFDU(FDU):
                      desciptor.get('name'),
                      desciptor.get('interfaces'),
                      desciptor.get('connection_points'),
-                     desciptor.get('base_image'),
+                     desciptor.get('image'),
                      desciptor.get('computation_requirements'),
                      desciptor.get('configuration'),
                      desciptor.get('ssh-key'))

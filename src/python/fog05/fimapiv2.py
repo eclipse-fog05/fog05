@@ -497,7 +497,7 @@ class FIMAPIv2(object):
             )
             record.update({'status': 'UNDEFINE'})
 
-            fduid = record.get('uuid')
+            fduid = record.get('fdu_uuid')
             return self.connector.glob.desired.add_node_fdu(
                 self.sysid, self.tenantid, node_uuid, fduid, record)
 

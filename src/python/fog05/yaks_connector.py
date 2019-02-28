@@ -244,7 +244,7 @@ class GAD(object):
         return self.ws.put(p, v)
 
     def remove_fdu_info(self, sysid, tenantid, fduid):
-        p = self.get_fdu_info_path
+        p = self.get_fdu_info_path(sysid, tenantid, fduid)
         self.ws.remove(p)
 
     def observe_fdus(self, sysid, tenantid, callback):
