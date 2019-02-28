@@ -547,7 +547,7 @@ class FIMAPIv2(object):
                 self.sysid, self.tenantid, node_uuid, fdu_uuid, record)
             if wait:
                 self.__wait_node_fdu_state_change(
-                    node_uuid, fdu_uuid, 'CLEAN')
+                    node_uuid, fdu_uuid, 'DEFINE')
             return res
 
         def run(self, fdu_uuid, node_uuid, wait=False):
@@ -593,7 +593,8 @@ class FIMAPIv2(object):
             res = self.connector.glob.desired.add_node_fdu(
                 self.sysid, self.tenantid, node_uuid, fdu_uuid, record)
             if wait:
-                self.__wait_node_fdu_state_change(node_uuid, fdu_uuid, 'STOP')
+                self.__wait_node_fdu_state_change(
+                    node_uuid, fdu_uuid, 'CONFIGURE')
             return res
 
         def pause(self, entity_uuid, node_uuid, instance_uuid, wait=False):
