@@ -1,7 +1,7 @@
 import json
 from yaks import Yaks
 from yaks import Encoding
-from yaks import Selector
+# from yaks import Selector
 from yaks import Value
 
 

@@ -14,8 +14,7 @@
 # Initial implementation and API
 
 
-import sys
-import os
+
 from fog05.interfaces.States import State
 
 

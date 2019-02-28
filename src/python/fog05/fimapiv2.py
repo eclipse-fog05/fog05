@@ -13,16 +13,16 @@
 # Contributors: Gabriele Baldoni, ADLINK Technology Inc. - API v2
 
 
-import re
-import uuid
-import json
-import fnmatch
-import time
+# import re
+# import uuid
+# import json
+# import fnmatch
+# import time
 from fog05.yaks_connector import Yaks_Connector
 from fog05.interfaces import Constants
-from jsonschema import validate, ValidationError
-from enum import Enum
-from fog05 import Schemas
+# from jsonschema import validate, ValidationError
+# from enum import Enum
+# from fog05 import Schemas
 from mvar import MVar
 
 
@@ -67,49 +67,49 @@ class FIMAPIv2(object):
             :param manifest_type: the manifest type from API.Manifest.Type
             :return: boolean
             '''
-            if manifest_type == self.Type.ENTITY:
-                t = manifest.get('type')
-                try:
-                    if t == 'vm':
-                        validate(manifest.get('entity_data'),
-                                 Schemas.vm_schema)
-                    elif t == 'container':
-                        validate(manifest.get('entity_data'),
-                                 Schemas.container_schema)
-                    elif t == 'native':
-                        validate(manifest.get('entity_data'),
-                                 Schemas.native_schema)
-                    elif t == 'ros2':
-                        validate(manifest.get('entity_data'),
-                                 Schemas.ros2_schema)
-                    elif t == 'usvc':
-                        return False
-                    else:
-                        return False
-                except ValidationError as ve:
-                    return False
-            if manifest_type == self.Type.NETWORK:
-                try:
-                    validate(manifest, Schemas.network_schema)
-                except ValidationError as ve:
-                    return False
-            if manifest_type == self.Type.ENTITY:
-                try:
-                    validate(manifest, Schemas.entity_schema)
-                except ValidationError as ve:
-                    return False
+            # if manifest_type == self.Type.ENTITY:
+            #     t = manifest.get('type')
+            #     try:
+            #         if t == 'vm':
+            #             validate(manifest.get('entity_data'),
+            #                      Schemas.vm_schema)
+            #         elif t == 'container':
+            #             validate(manifest.get('entity_data'),
+            #                      Schemas.container_schema)
+            #         elif t == 'native':
+            #             validate(manifest.get('entity_data'),
+            #                      Schemas.native_schema)
+            #         elif t == 'ros2':
+            #             validate(manifest.get('entity_data'),
+            #                      Schemas.ros2_schema)
+            #         elif t == 'usvc':
+            #             return False
+            #         else:
+            #             return False
+            #     except ValidationError as ve:
+            #         return False
+            # if manifest_type == self.Type.NETWORK:
+            #     try:
+            #         validate(manifest, Schemas.network_schema)
+            #     except ValidationError as ve:
+            #         return False
+            # if manifest_type == self.Type.ENTITY:
+            #     try:
+            #         validate(manifest, Schemas.entity_schema)
+            #     except ValidationError as ve:
+            #         return False
 
             return True
 
-        class Type(Enum):
-            '''
-            Manifest types
-            '''
-            ENTITY = 0
-            IMAGE = 1
-            FLAVOR = 3
-            NETWORK = 4
-            PLUGIN = 5
+        # class Type(Enum):
+        #     '''
+        #     Manifest types
+        #     '''
+        #     ENTITY = 0
+        #     IMAGE = 1
+        #     FLAVOR = 3
+        #     NETWORK = 4
+        #     PLUGIN = 5
 
     class Node(object):
         '''
