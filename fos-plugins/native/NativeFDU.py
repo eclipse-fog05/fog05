@@ -82,8 +82,7 @@ class NativeFDU(FDU):
         raise RuntimeError('Cannot migrate Native')
 
     def __str__(self):
-        s = 'UUID {} Name {} Command {} ARGS {} OUTFILE {} PID {} SOURCE {}' \
-            ' PROCESS {}'.format(
-                self.uuid, self.name, self.command,
-                self.outfile, self.pid, self.image, self.process)
+        s = 'UUID {} Name {} Command {} ARGS {} OUTFILE {} PID {}' \
+            ' SOURCE {}'.format(self.uuid, self.name, self.command,
+                                self.args, self.outfile, self.pid, self.image)
         return s
