@@ -506,7 +506,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     Yaks.Workspace.get s connector.ws
     >>= fun kvs ->
     match kvs with
-    | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("get_network received empty data!!") ))
+    | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("get_port received empty data!!") ))
     | _ -> let _,v = List.hd kvs in
       Lwt.return @@ FTypes.connection_point_of_string (Yaks.Value.to_string v)
 
@@ -535,7 +535,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     Yaks.Workspace.get s connector.ws
     >>= fun kvs ->
     match kvs with
-    | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("get_network received empty data!!") ))
+    | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("get_all_ports received empty data!!") ))
     | _ ->
       Lwt_list.map_p (
         fun (_,v )-> Lwt.return  @@ FTypes.connection_point_of_string (Yaks.Value.to_string v)) kvs
