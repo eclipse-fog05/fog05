@@ -1058,7 +1058,7 @@ class KVM(RuntimePluginFDU):
     def __fdu_observer(self, fdu_info):
         self.logger.info('__fdu_observer()', ' KVM Plugin - New Action of a FDU - FDU Info: {}'.format(fdu_info))
         action = fdu_info.get('status')
-        fdu_uuid = fdu_info.get('uuid')
+        fdu_uuid = fdu_info.get('fdu_uuid')
         react_func = self.__react(action)
         if action == 'UNDEFINE':
             self.logger.info('__fdu_observer()', ' KVM Plugin - This is a remove for : {}'.format(fdu_info))
