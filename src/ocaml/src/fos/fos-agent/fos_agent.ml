@@ -149,18 +149,26 @@ let agent verbose_flag debug_flag configuration =
   let eval_get_fdu_info self (props:Apero.properties) =
     MVar.read self >>= fun state ->
     let fdu_uuid = Apero.Option.get @@ Apero.Properties.get "fdu_uuid" props in
-    let%lwt descriptor = Yaks_connector.Global.Actual.get_fdu_info sys_id Yaks_connector.default_tenant_id fdu_uuid state.yaks in
-    let js = FAgentTypes.json_of_string @@ FTypes.string_of_fdu descriptor in
-    let eval_res = FAgentTypes.{result = Some js ; error=None} in
-    Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+    try%lwt
+      let%lwt descriptor = Yaks_connector.Global.Actual.get_fdu_info sys_id Yaks_connector.default_tenant_id fdu_uuid state.yaks in
+      let js = FAgentTypes.json_of_string @@ FTypes.string_of_fdu descriptor in
+      let eval_res = FAgentTypes.{result = Some js ; error=None} in
+      Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+    with
+    | _ -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
+      Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   let eval_get_network_info self (props:Apero.properties) =
     MVar.read self >>= fun state ->
     let net_uuid = Apero.Option.get @@ Apero.Properties.get "uuid" props in
-    let%lwt descriptor = Yaks_connector.Global.Actual.get_network sys_id Yaks_connector.default_tenant_id net_uuid state.yaks in
-    let js = FAgentTypes.json_of_string @@ FTypes.string_of_virtual_network descriptor in
-    let eval_res = FAgentTypes.{result = Some js ; error=None} in
-    Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+    try%lwt
+      let%lwt descriptor = Yaks_connector.Global.Actual.get_network sys_id Yaks_connector.default_tenant_id net_uuid state.yaks in
+      let js = FAgentTypes.json_of_string @@ FTypes.string_of_virtual_network descriptor in
+      let eval_res = FAgentTypes.{result = Some js ; error=None} in
+      Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+    with
+    | _ -> let eval_res = FAgentTypes.{result = None ; error=Some 22} in
+      Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   let eval_get_port_info self (props:Apero.properties) =
     MVar.read self >>= fun state ->
@@ -192,7 +200,7 @@ let agent verbose_flag debug_flag configuration =
         Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
       with
       | _ ->
-        let eval_res = FAgentTypes.{result = None ; error=Some 22} in
+        let eval_res = FAgentTypes.{result = None ; error=Some 33} in
         Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   (* Listeners *)
