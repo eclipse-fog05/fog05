@@ -296,7 +296,7 @@ class KVM(RuntimePluginFDU):
                     else:
                         intf_id = 'kvm-{}-{}'.format(fdu.get_short_id(), i)
                         intf_data = self.call_nw_plugin_function('create_virtual_interface', {'intf_id':intf_id, 'descriptor': intf})
-                        self.logger.info('__generate_custom_profile_userdata_configuration()','LXD Plugin - Interface info {}'.format(intf_data))
+                        self.logger.info('configure_fdu()','KVM Plugin - Interface info {}'.format(intf_data))
                         dev_name = intf_data.get('int_name')
                         net_cfg.append({'name':intf_name, 'mac':mac, 'dev':dev_name, 'type':'direct'})
 
@@ -336,7 +336,7 @@ class KVM(RuntimePluginFDU):
             conf_cmd = conf_cmd + ' {}'.format(fdu.cdrom)
             #############
 
-            qemu_cmd = 'qemu-img create -f {} {} {}G'.format(img.get('format'), fdu.disk, flavor.get('disk_size'))
+            qemu_cmd = 'qemu-img create -f {} {} {}G'.format(img.get('format'), fdu.disk, int(flavor.get('disk_size')))
 
             # As in the first example, but the output format will be qcow2 instead of a raw  disk:
             #
@@ -1039,7 +1039,7 @@ class KVM(RuntimePluginFDU):
     def __generate_dom_xml(self, fdu, flavor, image, net_cfg):
         template_xml = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vm.xml'), 'root':False})
         vm_xml = Environment().from_string(template_xml)
-        vm_xml = vm_xml.render(name=fdu.name, uuid=fdu.uuid, memory=flavor.get('memory'),
+        vm_xml = vm_xml.render(name=fdu.name, uuid=fdu.uuid, memory=int(flavor.get('memory')),
                                cpu=flavor.get('cpu'), disk_image=fdu.disk,
                                iso_image=fdu.cdrom, networks=net_cfg, format=image.get('format'))
         return vm_xml
