@@ -443,7 +443,7 @@ class LXD(RuntimePluginFDU):
             fdu.on_start()
 
             container_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            container_info.update({'status': 'run'})
+            container_info.update({'status': 'RUN'})
             self.current_fdus.update({fdu_uuid: fdu})
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, container_info)
             self.logger.info('run_fdu()', '[ DONE ] LXD Plugin - Starting a Container uuid {}'.format(fdu_uuid))
