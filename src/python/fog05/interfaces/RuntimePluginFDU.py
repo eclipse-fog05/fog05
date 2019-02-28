@@ -43,6 +43,11 @@ class RuntimePluginFDU(Plugin):
             # return None
         return res.get('result')
 
+    def get_fdu_descriptor(self, fduid):
+        parameters = {'fdu_uuid': fduid}
+        fname = 'get_fdu_info'
+        return self.call_agent_function(fname, parameters)
+
     def start_runtime(self):
         '''
         start the runtime

@@ -135,7 +135,7 @@ class KVM(RuntimePluginFDU):
     def get_fdus(self):
         return self.current_fdus
 
-    def define_fdu(self, fdu_manifest):
+    def define_fdu(self, fdu_record):
 
         self.logger.info('define_fdu()', ' KVM Plugin - Defining a VM')
 
@@ -143,13 +143,14 @@ class KVM(RuntimePluginFDU):
         img = None
         flavor = None
 
-        fdu_uuid = fdu_manifest.get('uuid')
-        fdu = KVMFDU.from_descriptor(fdu_manifest)
+        fdu_uuid = fdu_record.get('fdu_uuid')
+        descriptor = self.get_fdu_descriptor(fdu_uuid)
+        fdu = KVMFDU.from_descriptor(descriptor)
 
         if self.is_uuid(fdu.get_image_uri()):
             img = self.images.get(fdu.get_image_uri(), None)
             if img is None:
-                self.logger.error('define_fdu()', '[ ERRO ] KVM Plugin - Cannot find image {}'.format(base_image))
+                self.logger.error('define_fdu()', '[ ERRO ] KVM Plugin - Cannot find image {}'.format(fdu.get_image_uri()))
                 # TODO write error using Yaks_connector
                 return
             else:
@@ -204,7 +205,7 @@ class KVM(RuntimePluginFDU):
 
 
         vm_info = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid)
-        vm_info.update({'status': 'defined'})
+        vm_info.update({'status': 'DEFINE'})
         self.current_fdus.update({fdu_uuid: fdu})
         self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, vm_info)
         self.logger.info('define_fdu()', '[ DONE ] KVM Plugin - VM Defined uuid: {}'.format(fdu_uuid))
@@ -267,8 +268,12 @@ class KVM(RuntimePluginFDU):
 
             for cp in fdu.get_connection_points():
                     cp_id = cp.get('uuid')
-                    cp.update({'status':'add'})
-                    self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id,cp)
+                    cp_id = cp.get('uuid')
+                    cp_record = {
+                        'cp_uuid':cp_id,
+                        'status':'CREATE'
+                    }
+                    self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id,cp_record)
                     res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
                     while res is None:
                         res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
@@ -281,17 +286,17 @@ class KVM(RuntimePluginFDU):
                     if intf.get('virtual_interface').get('intf_type').upper() in ['PHYSICAL','BRIDGED']:
                         real_intf_name = intf.get('virtual_interface').get('vpci')
                         if self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['ethernet']:
-                            net_cfg.update({'name':intf_name, 'mac':mac, 'dev':real_intf_name,'type':'direct'})
+                            net_cfg.append({'name':intf_name, 'mac':mac, 'dev':real_intf_name,'type':'direct'})
                             self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
                         elif self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['wireless']:
-                            net_cfg.update({'name':intf_name, 'mac':mac, 'dev':real_intf_name,'type':'direct'})
+                            net_cfg.append({'name':intf_name, 'mac':mac, 'dev':real_intf_name,'type':'direct'})
                             self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
                         else:
-                            net_cfg.update({'name':intf_name, 'mac':mac, 'dev':real_intf_name})
+                            net_cfg.append({'name':intf_name, 'mac':mac, 'dev':real_intf_name})
                     else:
                         intf_id = 'kvm-{}-{}'.format(fdu.get_short_id(), i)
                         intf_data = self.call_nw_plugin_function('create_virtual_interface', {'intf_id':intf_id, 'descriptor': intf})
-                        self.logger.info('__generate_custom_profile_userdata_configuration()','LXD Plugin - Interface info {}'.format(intf_data))
+                        self.logger.info('configure_fdu()','KVM Plugin - Interface info {}'.format(intf_data))
                         dev_name = intf_data.get('int_name')
                         net_cfg.append({'name':intf_name, 'mac':mac, 'dev':dev_name, 'type':'direct'})
 
@@ -314,7 +319,7 @@ class KVM(RuntimePluginFDU):
             rm_temp_cmd = 'rm'
             if fdu.configuration is not None:
                 if fdu.configuration.get('conf_type') in ['CLOUD_INIT']:
-                    c_init_file = fdu.configuration.get('cloud_init')
+                    c_init_file = fdu.configuration.get('script')
                     data_filename = 'userdata_{}'.format(fdu_uuid)
                     userdata = binascii.hexlify(base64.b64encode(bytes(fdu.c_init_file, 'utf-8'))).decode()
                     self.call_os_plugin_function('store_file',{'content':userdata, 'file_path':self.BASE_DIR, 'filename':data_filename})
@@ -331,7 +336,7 @@ class KVM(RuntimePluginFDU):
             conf_cmd = conf_cmd + ' {}'.format(fdu.cdrom)
             #############
 
-            qemu_cmd = 'qemu-img create -f {} {} {}G'.format(img.get('format'), fdu.disk, flavor.get('disk_size'))
+            qemu_cmd = 'qemu-img create -f {} {} {}G'.format(img.get('format'), fdu.disk, int(flavor.get('disk_size')))
 
             # As in the first example, but the output format will be qcow2 instead of a raw  disk:
             #
@@ -361,7 +366,7 @@ class KVM(RuntimePluginFDU):
             self.current_fdus.update({fdu_uuid: fdu})
 
             vm_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            vm_info.update({'status': 'configured'})
+            vm_info.update({'status': 'CONFIGURE'})
             self.current_fdus.update({fdu_uuid: fdu})
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, vm_info)
             self.logger.info('configure_fdu()', '[ DONE ] KVM Plugin - Configure a VM uuid {}'.format(fdu_uuid))
@@ -404,14 +409,14 @@ class KVM(RuntimePluginFDU):
             for cp in fdu.get_connection_points():
                 cp_id = cp.get('uuid')
                 cp = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
-                cp.update({'status':'remove'})
+                cp.update({'status':'DESTROY'})
                 self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id, cp)
 
 
             fdu.on_clean()
             self.current_fdus.update({fdu_uuid: fdu})
             vm_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            vm_info.update({'status': 'defined'})
+            vm_info.update({'status': 'DEFINE'})
             # TODO: this should be an update when YAKS will implement update
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, vm_info)
             self.logger.info('clean_fdu()', '[ DONE ] KVM Plugin - Clean a VM uuid {} '.format(fdu_uuid))
@@ -429,7 +434,7 @@ class KVM(RuntimePluginFDU):
             raise StateTransitionNotAllowedException('FDU is not in CONFIGURED state', 'FDU {} is not in CONFIGURED state'.format(fdu_uuid))
         else:
             vm_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            vm_info.update({'status': 'starting'})
+            vm_info.update({'status': 'STARTING'})
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, vm_info)
 
             dom = self.__lookup_by_uuid(fdu_uuid)
@@ -448,7 +453,7 @@ class KVM(RuntimePluginFDU):
             self.current_fdus.update({fdu_uuid: fdu})
 
             vm_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            vm_info.update({'status': 'run'})
+            vm_info.update({'status': 'RUN'})
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, vm_info)
 
             self.logger.info('run_fdu()', '[ DONE ] KVM Plugin - Starting a VM uuid {}'.format(fdu_uuid))
@@ -482,7 +487,7 @@ class KVM(RuntimePluginFDU):
             self.current_fdus.update({fdu_uuid: fdu})
 
             vm_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            vm_info.update({'status': 'stop'})
+            vm_info.update({'status': 'CONFIGURE'})
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, vm_info)
             self.logger.info('stop_fdu()', '[ DONE ] KVM Plugin - Stop a VM uuid {}'.format(fdu_uuid))
 
@@ -502,7 +507,7 @@ class KVM(RuntimePluginFDU):
             fdu.on_pause()
             self.current_fdus.update({fdu_uuid: fdu})
             vm_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            vm_info.update({'status': 'pause'})
+            vm_info.update({'status': 'PAUSE'})
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, vm_info)
             self.logger.info('pause_fdu()', '[ DONE ] KVM Plugin - Pause a VM uuid {}'.format(fdu_uuid))
 
@@ -521,7 +526,7 @@ class KVM(RuntimePluginFDU):
                     fdu.on_resume()
                     self.current_fdus.update({fdu_uuid: fdu})
                     vm_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-                    vm_info.update({'status': 'run'})
+                    vm_info.update({'status': 'RUN'})
                     self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, vm_info)
                     self.logger.info('resume_fdu()', '[ DONE ] KVM Plugin - Resume a VM uuid {}'.format(fdu_uuid))
                     return True
@@ -1034,7 +1039,7 @@ class KVM(RuntimePluginFDU):
     def __generate_dom_xml(self, fdu, flavor, image, net_cfg):
         template_xml = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vm.xml'), 'root':False})
         vm_xml = Environment().from_string(template_xml)
-        vm_xml = vm_xml.render(name=fdu.name, uuid=fdu.uuid, memory=flavor.get('memory'),
+        vm_xml = vm_xml.render(name=fdu.name, uuid=fdu.uuid, memory=int(flavor.get('memory')),
                                cpu=flavor.get('cpu'), disk_image=fdu.disk,
                                iso_image=fdu.cdrom, networks=net_cfg, format=image.get('format'))
         return vm_xml
@@ -1053,12 +1058,12 @@ class KVM(RuntimePluginFDU):
     def __fdu_observer(self, fdu_info):
         self.logger.info('__fdu_observer()', ' KVM Plugin - New Action of a FDU - FDU Info: {}'.format(fdu_info))
         action = fdu_info.get('status')
-        fdu_uuid = fdu_info.get('uuid')
+        fdu_uuid = fdu_info.get('fdu_uuid')
         react_func = self.__react(action)
-        if action == 'undefine':
+        if action == 'UNDEFINE':
             self.logger.info('__fdu_observer()', ' KVM Plugin - This is a remove for : {}'.format(fdu_info))
             self.undefine_fdu(fdu_uuid)
-        elif action == 'define':
+        elif action == 'DEFINE':
             self.logger.info('__fdu_observer()', ' KVM Plugin - This is a define for : {}'.format(fdu_info))
             self.define_fdu(fdu_info)
         elif react_func is not None:
@@ -1069,11 +1074,11 @@ class KVM(RuntimePluginFDU):
 
     def __react(self, action):
         r = {
-            'configure': self.configure_fdu,
-            'stop': self.stop_fdu,
-            'resume': self.resume_fdu,
-            'run': self.run_fdu,
-            'clean': self.clean_fdu
+            'CONFIGURE': self.configure_fdu,
+            'STOP': self.stop_fdu,
+            'RESUME': self.resume_fdu,
+            'RUN': self.run_fdu,
+            'CLEAN': self.clean_fdu
             # 'landing': self.migrate_entity,
             # 'taking_off': self.migrate_entity
         }

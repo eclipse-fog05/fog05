@@ -20,14 +20,17 @@ module FAgentTypes = Agent_types
 module FAgentTypesValidator = Agent_types_v
 
 module FTypes = Fos_types
-(* module FTypesJson = Types *)
+module FTypesRecord = Fos_records_types
 module FTypesValidator = Fos_types_v
 
 
-let string_of_hv_type (hvtype:FTypes.hv_types) =
-  match hvtype with
+module ConstraintMap = Map.Make(String)
+
+let string_of_hv_type (kind:FTypes.hv_kind) =
+  match kind with
   | `BARE -> "native"
   | `KVM | `KVM_UK -> "kvm"
   | `XEN | `XEN_UK -> "xen"
   | `LXD -> "lxd"
   | `DOCKER -> "dock"
+  | `MCU -> "mcu"

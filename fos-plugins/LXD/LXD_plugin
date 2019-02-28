@@ -130,8 +130,8 @@ class LXD(RuntimePluginFDU):
         for k in list(self.current_fdus.keys()):
             fdu = self.current_fdus.get(k)
             self.__force_fdu_termination(k)
-            if fdu.get_state() == State.DEFINED:
-                self.undefine_fdu(k)
+            # if fdu.get_state() == State.DEFINED:
+            #     self.undefine_fdu(k)
         keys = list(self.images.keys())
         for k in keys:
             self.logger.info(
@@ -150,12 +150,13 @@ class LXD(RuntimePluginFDU):
     def get_fdus(self):
         return self.current_fdus
 
-    def define_fdu(self, fdu_manifest):
+    def define_fdu(self, fdu_record):
         self.logger.info(
             'define_fdu()', ' LXD Plugin - Defining a Container')
 
-        fdu_uuid = fdu_manifest.get('uuid')
-        fdu = LXDFDU.from_descriptor(fdu_manifest)
+        fdu_uuid = fdu_record.get('fdu_uuid')
+        descriptor = self.get_fdu_descriptor(fdu_uuid)
+        fdu = LXDFDU.from_descriptor(descriptor)
 
         if self.is_uuid(fdu.get_image_uri()):
             img_info = self.images.get(fdu.get_image_uri(), None)
@@ -219,8 +220,9 @@ class LXD(RuntimePluginFDU):
                 self.logger.error('define_fdu()', 'Error {}'.format(e))
                 self.current_fdus.update({fdu_uuid: fdu})
                 lxd_info = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid)
-                lxd_info.update({'status': 'error'})
-                lxd_info.update({'error': '{}'.format(e)})
+                lxd_info.update({'status': 'ERROR'})
+                # TODO define error codes
+                lxd_info.update({'error_core':1})
                 self.current_fdus.update({fdu_uuid: fdu})
                 self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, lxd_info)
                 self.logger.info('define_fdu()', '[ ERRO ] LXD Plugin - Container uuid: {}'.format(fdu_uuid))
@@ -232,7 +234,7 @@ class LXD(RuntimePluginFDU):
         #     fdu.devices = json.loads(fdudata.get('devices'))
         self.current_fdus.update({fdu_uuid: fdu})
         lxd_info = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid)
-        lxd_info.update({'status': 'defined'})
+        lxd_info.update({'status': 'DEFINE'})
         self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, lxd_info)
         self.logger.info('define_fdu()', '[ DONE ] LXD Plugin - Container uuid: {}'.format(lxd_info))
 
@@ -305,7 +307,7 @@ class LXD(RuntimePluginFDU):
 
                 if fdu.configuration is not None:
                     if fdu.configuration.get('conf_type') in ['CLOUD_INIT']:
-                        c_init_file = fdu.configuration.get('cloud_init')
+                        c_init_file = fdu.configuration.get('script')
                         user_data = self.__generate_custom_profile_userdata_configuration(fdu.c_init_file)
                         custom_profile_for_fdu.config = user_data
 
@@ -314,8 +316,11 @@ class LXD(RuntimePluginFDU):
                         }
                 for cp in fdu.get_connection_points():
                     cp_id = cp.get('uuid')
-                    cp.update({'status':'add'})
-                    self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id,cp)
+                    cp_record = {
+                        'cp_uuid':cp_id,
+                        'status':'CREATE'
+                    }
+                    self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id,cp_record)
                     res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
                     while res is None:
                         res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
@@ -331,7 +336,11 @@ class LXD(RuntimePluginFDU):
 
             except LXDAPIException as e:
                 self.logger.error('configure_fdu()', 'Error {}'.format(e))
-                pass
+                container_info =self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
+                container_info.update({'status': 'ERROR'})
+                container_info.update({'error_code': 2})
+                self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid,container_info)
+                return
             self.logger.info('configure_fdu()', '[ DONE ] LXD Plugin - Creating profile...')
             if fdu.profiles is None:
                 fdu.profiles = list()
@@ -351,9 +360,8 @@ class LXD(RuntimePluginFDU):
             self.current_fdus.update({fdu_uuid: fdu})
 
             container_info =self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            container_info.update({'status': 'configured'})
+            container_info.update({'status': 'CONFIGURE'})
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid,container_info)
-
             self.logger.info('configure_fdu()', '[ DONE ] LXD Plugin - Configure a Container uuid {}'.format(fdu_uuid))
 
     def clean_fdu(self, fdu_uuid):
@@ -385,11 +393,11 @@ class LXD(RuntimePluginFDU):
             for cp in fdu.get_connection_points():
                 cp_id = cp.get('uuid')
                 cp = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
-                cp.update({'status':'remove'})
+                cp.update({'status':'DESTROY'})
                 self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id, cp)
             self.current_fdus.update({fdu_uuid: fdu})
             lxd_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            lxd_info.update({'status': 'defined'})
+            lxd_info.update({'status': 'DEFINE'})
             # TODO: this should be an update when YAKS will implement update
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, lxd_info)
             self.logger.info('clean_fdu()', '[ DONE ] LXD Plugin - Clean a Container uuid {} '.format(fdu_uuid))
@@ -409,7 +417,7 @@ class LXD(RuntimePluginFDU):
                                                      'FDU {} is not in CONFIGURED state'.format(fdu_uuid))
         else:
             container_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            container_info.update({'status': 'starting'})
+            container_info.update({'status': 'STARTING'})
             self.current_fdus.update({fdu_uuid: fdu})
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, container_info)
 
@@ -420,7 +428,12 @@ class LXD(RuntimePluginFDU):
                     c.sync()
                 except Exception as e:
                     self.logger.info('run_fdu()', '[ ERR ] LXD Plugin - {}'.format(e))
-                    pass
+                    container_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
+                    container_info.update({'status': 'ERROR'})
+                    container_info.update({'error_code': 4})
+                    self.current_fdus.update({fdu_uuid: fdu})
+                    self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, container_info)
+                    return
 
             fm = c.FilesManager(self.conn, c)
             envs = 'export FOSUUID={} \n' \
@@ -430,7 +443,7 @@ class LXD(RuntimePluginFDU):
             fdu.on_start()
 
             container_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            container_info.update({'status': 'run'})
+            container_info.update({'status': 'RUN'})
             self.current_fdus.update({fdu_uuid: fdu})
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, container_info)
             self.logger.info('run_fdu()', '[ DONE ] LXD Plugin - Starting a Container uuid {}'.format(fdu_uuid))
@@ -466,7 +479,7 @@ class LXD(RuntimePluginFDU):
             self.current_fdus.update({fdu_uuid: fdu})
 
             container_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            container_info.update({'status': 'stop'})
+            container_info.update({'status': 'CONFIGURE'})
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, container_info)
             self.logger.info('stop_fdu()', '[ DONE ] LXD Plugin - Stop a Container uuid {}'.format(fdu_uuid))
 
@@ -489,7 +502,7 @@ class LXD(RuntimePluginFDU):
             fdu.on_pause()
             self.current_fdus.update({fdu_uuid: fdu})
             container_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            container_info.update({'status': 'pause'})
+            container_info.update({'status': 'PAUSE'})
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, container_info)
             self.logger.info('pause_fdu()', '[ DONE ] LXD Plugin - Pause a Container uuid {}'.format(fdu_uuid))
 
@@ -512,7 +525,7 @@ class LXD(RuntimePluginFDU):
             self.current_fdus.update({fdu_uuid: fdu})
 
             container_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            container_info.update({'status': 'run'})
+            container_info.update({'status': 'RUN'})
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, container_info)
             self.logger.info('resume_fdu()', '[ DONE ] LXD Plugin - Resume a Container uuid {}'.format(fdu_uuid))
 
@@ -1013,12 +1026,12 @@ class LXD(RuntimePluginFDU):
     def __fdu_observer(self, fdu_info):
         self.logger.info('__fdu_observer()', ' LXD Plugin - New Action of a FDU - FDU Info: {}'.format(fdu_info))
         action = fdu_info.get('status')
-        fdu_uuid = fdu_info.get('uuid')
+        fdu_uuid = fdu_info.get('fdu_uuid')
         react_func = self.__react(action)
-        if action == 'undefine':
+        if action == 'UNDEFINE':
             self.logger.info('__fdu_observer()', ' LXD Plugin - This is a remove for : {}'.format(fdu_info))
             self.undefine_fdu(fdu_uuid)
-        elif action == 'define':
+        elif action == 'DEFINE':
             self.logger.info('__fdu_observer()', ' LXD Plugin - This is a define for : {}'.format(fdu_info))
             self.define_fdu(fdu_info)
         elif react_func is not None:
@@ -1028,11 +1041,11 @@ class LXD(RuntimePluginFDU):
 
     def __react(self, action):
         r = {
-            'configure': self.configure_fdu,
-            'stop': self.stop_fdu,
-            'resume': self.resume_fdu,
-            'run': self.run_fdu,
-            'clean': self.clean_fdu,
+            'CONFIGURE': self.configure_fdu,
+            'STOP': self.stop_fdu,
+            'RESUME': self.resume_fdu,
+            'RUN': self.run_fdu,
+            'CLEAN': self.clean_fdu,
             # 'landing': self.migrate_entity,
             # 'taking_off': self.migrate_entity
         }

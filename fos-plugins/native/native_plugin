@@ -58,6 +58,7 @@ class Native(RuntimePluginFDU):
         self.LOG_DIR = 'logs'
         self.STORE_DIR = 'apps'
         self.configuration = manifest.get('configuration',{})
+        self.nm = self.get_nm_plugin().get('uuid')
         signal.signal(signal.SIGINT, self.__catch_signal)
         signal.signal(signal.SIGTERM, self.__catch_signal)
 
@@ -111,19 +112,18 @@ class Native(RuntimePluginFDU):
         self.logger.info('stopRuntime()', '[ DONE ] Native Plugin - Bye')
         return True
 
-    def define_fdu(self, fdu_manifest):
+    def define_fdu(self, fdu_record):
 
-        fdu_uuid = fdu_manifest.get('uuid')
+        fdu_uuid = fdu_record.get('fdu_uuid')
+        descriptor = self.get_fdu_descriptor(fdu_uuid)
         out_file = 'native_{}.log'.format(fdu_uuid)
-        edata = fdu_manifest.get('entity_data')
-        fdu = NativeFDU(fdu_uuid, fdu_manifest.get('name'), edata.get('command'), edata.get('source'),
-                                  edata.get('args'), out_file)
+        fdu = NativeFDU.from_descriptor(descriptor)
 
         self.logger.info('define_fdu()', ' Native Plugin - Define BE FDU')
         self.logger.info('define_fdu()', ' Native Plugin - FDU is {}'.format(fdu))
 
-        if fdu.source_url is not None and fdu.source_url.startswith('http'):
-            zip_name = fdu.source_url.split('/')[-1]
+        if fdu.image is not None and fdu.get_image_uri().startswith('http'):
+            zip_name = fdu.get_image_uri().split('/')[-1]
             zip_file = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, zip_name)
             dest = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid)
             # entity.source = os.path.join(dest,entity.command)
@@ -139,7 +139,7 @@ class Native(RuntimePluginFDU):
                 unzip_cmd = ''
 
             self.call_os_plugin_function('create_dir',{'dir_path':os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid)})
-            self.call_os_plugin_function('download_file',{'url':fdu.source_url,'file_path':os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, zip_name)})
+            self.call_os_plugin_function('download_file',{'url':fdu.get_image_uri(),'file_path':os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, zip_name)})
             self.call_os_plugin_function('execute_command',{'command':unzip_cmd,'blocking':True, 'external':True})
             fdu.source = dest
         else:
@@ -147,8 +147,8 @@ class Native(RuntimePluginFDU):
 
         fdu.set_state(State.DEFINED)
         self.current_fdus.update({fdu_uuid: fdu})
-        na_info = fdu_manifest
-        na_info.update({'status': 'defined'})
+        na_info = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid)
+        na_info.update({'status': 'DEFINE'})
         self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, na_info)
         self.logger.info('define_fdu()', ' Native Plugin - Defined BE FDU uuid {}'.format(fdu_uuid))
         return fdu_uuid
@@ -196,7 +196,7 @@ class Native(RuntimePluginFDU):
 
             self.current_fdus.update({fdu_uuid: fdu})
             na_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            na_info.update({'status': 'configured'})
+            na_info.update({'status': 'CONFIGURE'})
             # TODO: this should be an update when YAKS will implement update
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, na_info)
             self.logger.info('configure_fdu()', '[ DONE ] Native Plugin - Configure BE FDU uuid {}'.format(fdu_uuid))
@@ -222,7 +222,7 @@ class Native(RuntimePluginFDU):
             fdu.on_clean()
             self.current_fdus.update({fdu_uuid: fdu})
             na_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            na_info.update({'status': 'defined'})
+            na_info.update({'status': 'DEFINE'})
             # TODO: this should be an update when YAKS will implement update
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, na_info)
             self.logger.info('clean_fdu()', '[ DONE ] Native Plugin - Clean BE uuid {}'.format(fdu_uuid))
@@ -301,7 +301,7 @@ class Native(RuntimePluginFDU):
             self.current_fdus.update({fdu_uuid: fdu})
 
             na_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            na_info.update({'status': 'run'})
+            na_info.update({'status': 'RUN'})
             # TODO: this should be an update when YAKS will implement update
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, na_info)
             self.logger.info('run_fdu()', '[ DONE ] Native Plugin - Running BE uuid {}'.format(fdu_uuid))
@@ -366,7 +366,7 @@ class Native(RuntimePluginFDU):
             fdu.on_stop()
             self.current_fdus.update({fdu_uuid: fdu})
             na_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            na_info.update({'status': 'stop'})
+            na_info.update({'status': 'CONFIGURE'})
             # TODO: this should be an update when YAKS will implement update
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, na_info)
             self.logger.info('stop_fdu()', '[ DONE ] Native Plugin - Stopped BE uuid {}'.format(fdu_uuid))
@@ -428,12 +428,12 @@ class Native(RuntimePluginFDU):
     def __fdu_observer(self, fdu_info):
         self.logger.info('__fdu_observer()', ' Native Plugin - New Action of a FDU - FDU Info: {}'.format(fdu_info))
         action = fdu_info.get('status')
-        fdu_uuid = fdu_info.get('uuid')
+        fdu_uuid = fdu_info.get('fdu_uuid')
         react_func = self.__react(action)
-        if action == 'undefine':
+        if action == 'UNDEFINE':
             self.logger.info('__fdu_observer()', ' Native Plugin - This is a remove for : {}'.format(fdu_info))
             self.undefine_fdu(fdu_uuid)
-        elif action == 'define':
+        elif action == 'DEFINE':
             self.logger.info('__fdu_observer()', ' Native Plugin - This is a define for : {}'.format(fdu_info))
             self.define_fdu(fdu_info)
         elif react_func is not None:
@@ -444,11 +444,11 @@ class Native(RuntimePluginFDU):
 
     def __react(self, action):
         r = {
-            'configure': self.configure_fdu,
-            'stop': self.stop_fdu,
-            'resume': self.resume_fdu,
-            'run': self.run_fdu,
-            'clean': self.clean_fdu
+            'CONFIGURE': self.configure_fdu,
+            'STOP': self.stop_fdu,
+            'RESUME': self.resume_fdu,
+            'RUN': self.run_fdu,
+            'CLEAN': self.clean_fdu
         }
         return r.get(action, None)
 

@@ -21,7 +21,7 @@ from fog05.interfaces.FDU import FDU
 class LXDFDU(FDU):
 
     def __init__(self, uuid, name, interfaces, connection_points, image,
-                 comp_requirements, configuration, ssh_key):
+                 comp_requirements, configuration, ssh_keys):
 
         super(LXDFDU, self).__init__()
         self.uuid = uuid
@@ -30,7 +30,7 @@ class LXDFDU(FDU):
         self.cps = connection_points
         self.image = image
         self.configuration = configuration
-        self.ssh_key = ssh_key
+        self.ssh_key = ssh_keys
         self.comp_requirements = comp_requirements
         self.devices = None
         self.conf = None
@@ -42,7 +42,7 @@ class LXDFDU(FDU):
                      desciptor.get('name'),
                      desciptor.get('interfaces'),
                      desciptor.get('connection_points'),
-                     desciptor.get('base_image'),
+                     desciptor.get('image'),
                      desciptor.get('computation_requirements'),
                      desciptor.get('configuration'),
                      desciptor.get('ssh-key'))
@@ -70,7 +70,7 @@ class LXDFDU(FDU):
     def on_resume(self):
         self.state = State.RUNNING
 
-        def before_migrate(self):
+    def before_migrate(self):
         pass
 
     def after_migrate(self):

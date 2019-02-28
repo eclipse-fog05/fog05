@@ -43,7 +43,9 @@ end
 
 module FDU : sig
 
-  val define : FTypes.fdu -> string -> ?wait:bool -> api -> bool Lwt.t
+  val onboard : FTypes.fdu -> ?wait:bool -> api -> bool Lwt.t
+  val offload : string -> ?wait:bool -> api -> bool Lwt.t
+  val define : string-> string -> ?wait:bool -> api -> bool Lwt.t
   val undeifne : string -> string -> ?wait:bool -> api -> bool Lwt.t
   val configure : string -> string -> ?wait:bool -> api -> bool Lwt.t
   val clean : string -> string -> ?wait:bool -> api -> bool Lwt.t
@@ -51,8 +53,10 @@ module FDU : sig
   val stop : string -> string -> ?wait:bool -> api -> bool Lwt.t
   val pause : string -> string -> ?wait:bool -> api -> bool Lwt.t
   val migrate : string -> string -> string -> ?wait:bool -> api -> bool Lwt.t
-  val info : string -> string -> api -> FTypes.fdu  Lwt.t
-  val list : ?nodeid:string -> api -> (FTypes.fdu list) Lwt.t
+  val info_node : string -> string -> api -> FTypesRecord.fdu  Lwt.t
+  val list_node : string -> api -> (FTypesRecord.fdu list) Lwt.t
+  val info : string -> api -> FTypes.fdu Lwt.t
+  val list : api -> (FTypes.fdu list) Lwt.t
 
 end
 

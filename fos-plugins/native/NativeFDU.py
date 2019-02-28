@@ -23,18 +23,35 @@ from fog05.interfaces.FDU import FDU
 
 
 class NativeFDU(FDU):
-    def __init__(self, uuid, name, command, source, args, outfile):
+    def __init__(self, uuid, name, interfaces, connection_points, image,
+                 command, computation_requirements, configuration):
         super(NativeFDU, self).__init__()
         self.uuid = uuid
         self.name = name
-        self.command = command
-        self.args = args
-        self.outfile = outfile
+        self.interfaces = interfaces
+        self.comp_requirements = computation_requirements
+        self.cps = connection_points
+        self.image = image
+        self.configuration = configuration
+        self.command = command.get('binary')
+        self.args = command.get('args')
+        self.outfile = None
         self.pid = -1
-        self.source_url = source
         self.process = None
-        # self.source = ''
+        self.source = ''
         # self.outfile = ''
+
+    @staticmethod
+    def from_descriptor(desciptor):
+        fdu = NativeFDU(desciptor.get('uuid'),
+                        desciptor.get('name'),
+                        desciptor.get('interfaces'),
+                        desciptor.get('connection_points'),
+                        desciptor.get('image'),
+                        desciptor.get('command'),
+                        desciptor.get('computation_requirements'),
+                        desciptor.get('configuration'))
+        return fdu
 
     def on_configured(self):
         self.state = State.CONFIGURED
@@ -65,8 +82,7 @@ class NativeFDU(FDU):
         raise RuntimeError('Cannot migrate Native')
 
     def __str__(self):
-        s = 'UUID {} Name {} Command {} ARGS {} OUTFILE {} PID {} SOURCE {}' \
-            ' PROCESS {}'.format(
-                self.uuid, self.name, self.command, self.args,
-                self.outfile, self.pid, self.source_url, self.process)
+        s = 'UUID {} Name {} Command {} ARGS {} OUTFILE {} PID {}' \
+            ' SOURCE {}'.format(self.uuid, self.name, self.command,
+                                self.args, self.outfile, self.pid, self.image)
         return s

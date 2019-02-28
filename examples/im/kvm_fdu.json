@@ -1,19 +1,20 @@
 {
-    "uuid": "345",
+    "uuid": "b909c88a-5eca-493a-92ce-89b44acd235a",
     "name": "test",
     "computation_requirements": {
         "cpu_arch": "x86_64",
         "cpu_min_freq": 0.0,
         "cpu_min_count": 1,
-        "ram_size_mb": 128,
-        "storage_size_gb": 10
+        "ram_size_mb": 128.0,
+        "storage_size_gb": 10.0
     },
     "base_image": {
         "uri": "file:///home/ubuntu/alpine.tar.gz",
         "checksum": "21f436639dda7941a26d1eb0c5427862fd19910b",
         "format": "tar.gz"
     },
-    "hypervisor_type": "KVM",
+    "hypervisor": "KVM",
+    "migration_kind": "LIVE",
     "interfaces": [
         {
             "name": "eth0",
@@ -25,14 +26,15 @@
                 "vpci": "0:0:0",
                 "bandwidth": 10
             },
-            "cp_id": "123"
+            "cp_id": "bbd9595b-75c5-414c-9d9d-8811838be1f7"
         }
     ],
     "io_ports": [],
     "connection_points": [
         {
-            "uuid": "123",
-            "vnet_id": "net1"
+            "uuid": "bbd9595b-75c5-414c-9d9d-8811838be1f7",
+            "pair_id": "6cc2aa30-1dcf-4c93-a57e-433fd0bd498e"
         }
-    ]
+    ],
+    "depends_on": []
 }

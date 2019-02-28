@@ -35,6 +35,14 @@ class Plugin(object):
             # return None
         return res.get('result')
 
+    def call_agent_function(self, fname, fparameters):
+        res = self.connector.loc.actual.exec_agent_eval(
+            self.node, fname, fparameters)
+        if res.get('error'):
+            raise ValueError('Agent Eval returned {}'.format(res.get('error')))
+            # return None
+        return res.get('result')
+
     def get_version(self):
         return self.version
 
