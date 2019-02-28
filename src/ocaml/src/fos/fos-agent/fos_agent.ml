@@ -165,6 +165,7 @@ let agent verbose_flag debug_flag configuration =
   let eval_get_port_info self (props:Apero.properties) =
     MVar.read self >>= fun state ->
     let cp_uuid = Apero.Option.get @@ Apero.Properties.get "cp_uuid" props in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - eval_get_port_info - Getting info for port %s" cp_uuid ) in
     try%lwt
       let%lwt descriptor = Yaks_connector.Global.Actual.get_port sys_id Yaks_connector.default_tenant_id cp_uuid state.yaks in
       let js = FAgentTypes.json_of_string @@ FTypes.string_of_connection_point descriptor in
@@ -177,16 +178,22 @@ let agent verbose_flag debug_flag configuration =
       let%lwt cps = Lwt_list.filter_map_p (fun e ->
           let%lwt fdu = Yaks_connector.Global.Actual.get_fdu_info sys_id Yaks_connector.default_tenant_id e state.yaks in
           let%lwt c = Lwt_list.filter_map_p (fun (cp:FTypes.connection_point) ->
+              let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - eval_get_port_info - %s == %s ? %b " cp.uuid cp_uuid (cp.uuid == cp_uuid)) in
               if cp.uuid == cp_uuid then  Lwt.return @@ Some cp
               else Lwt.return None
             ) fdu.connection_points
           in Lwt.return @@ List.nth_opt c 0
         ) fdu_ids
       in
-      let cp = List.hd cps in
-      let js = FAgentTypes.json_of_string @@ FTypes.string_of_connection_point cp in
-      let eval_res = FAgentTypes.{result = Some js ; error=None} in
-      Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+      try%lwt
+        let cp = List.hd cps in
+        let js = FAgentTypes.json_of_string @@ FTypes.string_of_connection_point cp in
+        let eval_res = FAgentTypes.{result = Some js ; error=None} in
+        Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+      with
+      | _ ->
+        let eval_res = FAgentTypes.{result = None ; error=Some 22} in
+        Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   (* Listeners *)
   (* Global Desired *)

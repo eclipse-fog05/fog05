@@ -39,7 +39,7 @@ class Plugin(object):
         res = self.connector.loc.actual.exec_agent_eval(
             self.node, fname, fparameters)
         if res.get('error'):
-            raise ValueError('OS Eval returned {}'.format(res.get('error')))
+            raise ValueError('Agent Eval returned {}'.format(res.get('error')))
             # return None
         return res.get('result')
 
