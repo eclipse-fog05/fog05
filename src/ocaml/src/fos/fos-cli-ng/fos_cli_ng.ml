@@ -14,8 +14,8 @@
 open Cmdliner
 open Lwt.Infix
 open Fos_core
-(* open Fos_im *)
-
+open Fos_im
+open Fos_fim_api
 
 let check s =
   let n = String.length s in
@@ -62,32 +62,31 @@ let plugin_cmd action nodeid _ descriptor =
   | _ -> Lwt_io.printf "%s action not recognized!!" action
 
 (* Node commands *)
-
-let node_list () =
-  let _ = Lwt_io.printf "Node list\n" in
-  let _ = Lwt_io.printf "+---------------------------------------------+\n" in
-  (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= Cli_helper.get_all_nodes >>=
-  Lwt_list.iter_p (
-    fun (nid,name) ->
-      Lwt_io.printf "UUID: %s \t Name: %s\n" nid name
-  ) >>= fun _ ->
-  Lwt_io.printf "+---------------------------------------------+\n"
-
-let node_info nodeid =
-  match nodeid with
-  | Some nid ->
-    let _ = Lwt_io.printf "Node info\n" in
-    (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>=
-    Cli_helper.get_node_info nid
-    >>=
-    Cli_printing.print_node_info
-  | None -> Lwt_io.printf "Node uuid parameter missing!!\n"
-
-let node_cmd action nodeid =
+let node_cmd api action nodeid =
   match action with
-  | "list" -> node_list ()
-  | "info" -> node_info nodeid
-  | _ -> Lwt_io.printf "%s action not recognized!!" action
+  | "list" ->
+    let print_node (n:FTypes.node_info) =
+      Lwt_io.printf "Node ID: %s Hostname: %s\n" n.uuid n.name
+    in
+    Node.list api >>= Lwt_list.iter_p print_node
+  | "info" ->
+    (match nodeid with
+     | Some nid ->
+       let print_node (n:FTypes.node_info) =
+         Lwt_io.printf "Node ID: %s Info: %s\n" n.uuid (FTypes.string_of_node_info n)
+       in
+       Node.info nid api >>= print_node
+     | None -> Lwt_io.print "Missing Node UUID paratemer!")
+  | "plugins" ->
+    (match nodeid with
+     | Some nid ->
+       let print_plugin (p:FTypes.plugin) =
+         Lwt_io.printf "Plugin ID: %s  Name: %s Type: %s Info: %s\n" p.uuid p.name p.plugin_type (FTypes.string_of_plugin p)
+       in
+       Lwt_io.printf "Node ID: %s" nid >>= fun _ ->
+       Node.plugins nid api >>= Lwt_list.iter_p print_plugin
+     | None -> Lwt_io.print "Missing Node UUID paratemer!")
+  | _ -> Lwt_io.printf "Action %s not recognized" action
 
 
 (* Network commands *)
@@ -205,167 +204,179 @@ let descriptor_cmd action descriptor =
 
 (* FDU COMMANDS *)
 
-let add_entity descriptor =
+let add_fdu_descriptor_to_catalog api (descriptor:string option) =
   match descriptor with
-  | Some _ ->
-    Lwt.return_unit
+  | Some dp ->
+    let d = read_file dp in
+    let fdu = FTypes.fdu_of_string d in
+    FDU.onboard fdu api >>= fun res ->
+    (match res with
+     | true -> Lwt_io.printf "Descriptor Onboarder!\n"
+     | false -> Lwt_io.printf "Error while onboarding the descriptor\n")
   (* (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= Cli_helper.onboard path *)
   | None -> Lwt_io.printf "Manifest parameter missing!!\n"
 
-let remove_entity entityid =
-  match entityid with
-  | Some _ ->
-    Lwt.return_unit
+let remove_fdu_descriptor_from_catalog api fduid =
+  match fduid with
+  | Some id ->
+    FDU.offload id api >>=  fun res ->
+    (match res with
+     | true -> Lwt_io.printf "Descriptor Removed!\n"
+     | false -> Lwt_io.printf "Error while removing the descriptor\n")
   (* (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= Cli_helper.offload id *)
   | None -> Lwt_io.printf "Entity uuid parameter missing!!\n"
 
-let atomic_entity_define nodeid descriptor =
+let fdu_define api fduid nodeid =
   match nodeid with
-  | Some _ ->
-    (match descriptor with
-     | Some _ ->
-       (* let cont = read_file path in
-          let res = Cli_helper.check_descriptor cont FTypes.atomic_entity_of_string Types_v.validate_atomic_entity  in
-          (match res with
-          | Ok _ ->
-          Lwt.return_unit
-          (* let descriptor = Cli_helper.load_descriptor cont FTypes.atomic_entity_of_string in
-           Cli_helper.send_atomic_entity_define descriptor id (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= fun _ ->
-           Lwt_io.printf "Atomic Entity Defined\n"; *)
-          | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e)) *)
-       Lwt.return_unit
-     |None  -> Lwt_io.printf "Manifest parameter missing!!\n")
-  | None ->  Lwt_io.printf "Node uuid parameter missing!!\n"
+  | Some nid ->
+    (match fduid with
+     | Some fid ->
+       FDU.define fid nid api >>= fun res ->
+       (match res with
+        | true -> Lwt_io.printf "FDU Defined!\n"
+        | false -> Lwt_io.printf "Error while defining FDU\n")
+     | None  -> Lwt_io.printf "FDU UUID parameter missing!!\n")
+  | None ->  Lwt_io.printf "Node UUID parameter missing!!\n"
 
-let atomic_entity_undefine nodeid entityid =
+let fdu_undefine api fduid nodeid =
   match nodeid with
-  | Some _ ->
-    (match entityid with
-     | Some _ ->
-       Lwt.return_unit
-     (* let _ = Lwt_io.printf "Undefine entity %s from node %s" entity_uuid node_uuid in
-        let%lwt _ = Cli_helper.send_atomic_entity_remove node_uuid entity_uuid (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) in
-        Lwt_io.printf "Atomic Entity Removed\n"; *)
-     | None -> Lwt_io.printf "Atomic Entity uuid parameter missing!!\n")
-  | None ->  Lwt_io.printf "Node uuid parameter missing!!\n"
+  | Some nid ->
+    (match fduid with
+     | Some fid ->
+       FDU.undeifne fid nid api >>= fun res ->
+       (match res with
+        | true -> Lwt_io.printf "FDU Undefined!\n"
+        | false -> Lwt_io.printf "Error while undefining FDU\n")
+     | None -> Lwt_io.printf "FDU UUID parameter missing!!\n")
+  | None ->  Lwt_io.printf "Node UUID parameter missing!!\n"
 
-let atomic_entity_clean nodeid entityid instanceid =
-  match nodeid with
-  | Some _ ->
-    (match entityid with
-     | Some _ ->
-       (match instanceid with
-        | Some _ ->
-          Lwt.return_unit
-        (* let _ = Lwt_io.printf "Clean instance %s entity %s from node %s\n" instance_uuid entity_uuid node_uuid in
-           let%lwt _ = Cli_helper.send_atomic_entity_instance_remove node_uuid entity_uuid instance_uuid (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) in
-           Lwt_io.printf "Atomic Entity Cleaned\n"; *)
-        | None -> Lwt_io.printf "Instance uuid parameter missing!!\n")
-     | None -> Lwt_io.printf "Atomic Entity uuid parameter missing!!\n")
-  | None ->  Lwt_io.printf "Node uuid parameter missing!!\n"
-
-let atomic_entity_change_state nodeid entityid instanceid _ _  =
-  match nodeid with
-  | Some _ ->
-    (match entityid with
-     | Some _ ->
-       (match instanceid with
-        | Some _ ->
-          Lwt.return_unit
-        (* let _ = Lwt_io.printf "Configure entity %s with instance %s to node %s\n" entity_uuid instance_uuid node_uuid in
-           let%lwt _ = Cli_helper.send_atomic_entity_instance_action node_uuid entity_uuid instance_uuid action newstate (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) in
-           Lwt_io.printf "Atomic Entity Configured\n"; *)
-        | None -> Lwt_io.printf "Instance uuid parameter missing!!\n")
-     | None -> Lwt_io.printf "Atomic Entity uuid parameter missing!!\n")
-  | None ->  Lwt_io.printf "Node uuid parameter missing!!\n"
-
-
-let atomic_entity_migrate nodeid entityid instanceid destinationid  =
-  match nodeid with
-  | Some _ ->
-    (match entityid with
-     | Some _ ->
-       (match instanceid with
-        | Some _ ->
-          (match destinationid with
-           |Some _ ->
-             Lwt.return_unit
-           (* (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= Cli_helper.send_migrate_atomic_entity_instance node_uuid entity_uuid instance_uuid destination_node *)
-           |None -> Lwt_io.printf "Destination Node uuid parameter missing!!\n")
-        | None -> Lwt_io.printf "Instance uuid parameter missing!!\n")
-     | None -> Lwt_io.printf "Atomic Entity uuid parameter missing!!\n")
-  | None ->  Lwt_io.printf "Node uuid parameter missing!!\n"
-
-
-
-let fdu_list nodeid =
-  (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver)  >>=
-  fun connector ->
-  (match nodeid with
+(* let fdu_clean api fduid nodeid instanceid =
+   match nodeid with
    | Some nid ->
-     Cli_helper.get_all_node_fdus nid connector
-   | None ->
-     Cli_helper.get_all_node_fdus "*" connector)
-  >>= fun _ -> Lwt.return_unit
+    (match fduid with
+     | Some fid ->
+       FDU.clean fid nid api >>= fun res ->
+       (match res with
+        | true -> Lwt_io.printf "FDU Cleaned!"
+        | false -> Lwt_io.printf "Error while clean FDU")
+     | None -> Lwt_io.printf "Atomic Entity uuid parameter missing!!\n")
+   | None ->  Lwt_io.printf "Node uuid parameter missing!!\n" *)
 
-let fdu_cmd action nodeid entityid instanceid destid descriptor =
+let fdu_state_change api fduid nodeid state  =
+  match nodeid with
+  | Some nid ->
+    (match fduid with
+     | Some fid ->
+       (
+         let api_func =
+           match state with
+           | `CONDIFURE -> FDU.configure
+           | `CLEAN -> FDU.clean
+           | `RUN -> FDU.run
+           | `STOP -> FDU.stop
+           | `PAUSE -> FDU.pause
+           | _ -> fun _ _ ?(wait=true) _ -> ignore wait; Lwt.return_false
+         in
+         api_func fid nid api >>= fun res ->
+         (match res with
+          | true -> Lwt_io.printf "FDU State Update!\n"
+          | false -> Lwt_io.printf "Error while updating FDU state\n")
+       )
+     | None -> Lwt_io.printf "FDU UUID parameter missing!!\n")
+  | None ->  Lwt_io.printf "Node UUID parameter missing!!\n"
+
+
+let fdu_migrate fduid nodeid destinationid  =
+  match nodeid with
+  | Some _ ->
+    (match fduid with
+     | Some _ ->
+       (match destinationid with
+        |Some _ ->
+          Lwt.return_unit
+        (* (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= Cli_helper.send_migrate_atomic_entity_instance node_uuid entity_uuid instance_uuid destination_node *)
+        |None -> Lwt_io.printf "Destination Node UUID parameter missing!!\n")
+     | None -> Lwt_io.printf "FDU UUID parameter missing!!\n")
+  | None ->  Lwt_io.printf "Node UUID parameter missing!!\n"
+
+
+
+let fdu_list api nodeid =
+  match nodeid with
+  | Some nid ->
+    let print_fdu (f:FTypesRecord.fdu) =
+      Lwt_io.printf "FDU ID: %s Descriptor %s\n" f.fdu_uuid (FTypesRecord.string_of_fdu f)
+    in
+    FDU.list_node nid api >>=
+    Lwt_list.iter_p print_fdu
+  | None ->
+    let print_fdu (f:FTypes.fdu) =
+      Lwt_io.printf "FDU ID: %s Descriptor %s\n" f.uuid (FTypes.string_of_fdu f)
+    in
+    FDU.list api >>=
+    Lwt_list.iter_p print_fdu
+    >>= fun _ -> Lwt.return_unit
+
+let fdu_cmd api action nodeid fduid destid descriptor =
   match action with
   | "list" ->
-    fdu_list nodeid
-  | "add" | "onboard" ->
-    add_entity descriptor
-  | "remove" | "offload" ->
-    remove_entity entityid
+    fdu_list api nodeid
+  |  "onboard" ->
+    add_fdu_descriptor_to_catalog api descriptor
+  | "offload" ->
+    remove_fdu_descriptor_from_catalog api fduid
   | "define" ->
-    atomic_entity_define nodeid descriptor
+    fdu_define api fduid nodeid
   | "configure" ->
-    atomic_entity_change_state nodeid entityid instanceid action "configured"
+    fdu_state_change api fduid nodeid `CONFIGURE
   | "run" ->
-    atomic_entity_change_state nodeid entityid instanceid action "run"
+    fdu_state_change api fduid nodeid `RUN
   | "stop" ->
-    atomic_entity_change_state nodeid entityid instanceid action "stop"
+    fdu_state_change api fduid nodeid `STOP
   | "pause" ->
-    atomic_entity_change_state nodeid entityid instanceid action "pause"
+    fdu_state_change api fduid nodeid `PAUSE
   | "resume" ->
-    atomic_entity_change_state nodeid entityid instanceid action "run"
+    fdu_state_change api fduid nodeid `RUN
   | "clean" ->
-    atomic_entity_clean nodeid entityid instanceid
+    fdu_state_change  api fduid nodeid `CLEAN
   | "undefine" ->
-    atomic_entity_undefine nodeid entityid
+    fdu_undefine api fduid nodeid
   | "migrate" ->
-    atomic_entity_migrate nodeid entityid instanceid destid
+    fdu_migrate nodeid fduid destid
   | _ ->
-    let _ = Lwt_io.printf "%s action not recognized!!" action in
-    let _ = Lwt_io.printf "action: %s parameters  %s %s %s %s %s %s\n"
-        action   (Apero.Option.get_or_default nodeid "") (Apero.Option.get_or_default entityid "")
-        (Apero.Option.get_or_default instanceid "") (Apero.Option.get_or_default destid "") (Apero.Option.get_or_default descriptor "")
+    let _ = Lwt_io.printf "%s action not recognized!!\n" action in
+    let _ = Lwt_io.printf "action: %s parameters  %s %s %s %s %s\n"
+        action   (Apero.Option.get_or_default nodeid "") (Apero.Option.get_or_default fduid "") (Apero.Option.get_or_default destid "") (Apero.Option.get_or_default descriptor "")
     in Lwt.return_unit
 
 
 
-let parser component cmd action netid nodeid entityid instanceid destid descriptor =
+let parser component cmd action netid nodeid fduid destid descriptor =
+  let%lwt fimapi = Cli_helper.yapi () in
   match String.lowercase_ascii component with
   | "fim" ->
     (match cmd with
      | "fdu" ->
-       Lwt_main.run @@ fdu_cmd action nodeid entityid instanceid destid descriptor
+       fdu_cmd fimapi action nodeid fduid destid descriptor
      | "network" ->
-       Lwt_main.run @@ network_cmd action descriptor netid nodeid
+       network_cmd action descriptor netid nodeid
      | "plugin" ->
-       Lwt_main.run @@ plugin_cmd action nodeid None descriptor
+       plugin_cmd action nodeid None descriptor
      | "descriptor" ->
-       Lwt_main.run @@ descriptor_cmd action descriptor
+       descriptor_cmd action descriptor
      | "node" ->
-       Lwt_main.run @@ node_cmd action nodeid
-     | _ -> Printf.printf "%s Is not a command\n" cmd)
-  | _ -> Printf.printf "%s not implemented" component
+       node_cmd fimapi action nodeid
+     | _ -> Lwt_io.printf "%s Is not a command\n" cmd)
+  | _ -> Lwt_io.printf "%s not implemented\n" component
 
+
+let p1 component cmd action netid nodeid fduid destid descriptor =
+  Lwt_main.run @@ parser component cmd action netid nodeid fduid destid descriptor
 
 let usage = "usage: " ^ Sys.argv.(0) ^ " [node|network|descriptor|entity] "
 
 let node_uuid_par = Arg.(value & opt (some string) None & info ["nu"] ~docv:"node uuid")
-let entity_uuid_par = Arg.(value & opt (some string) None & info ["eu"] ~docv:"entity uuid")
-let instance_uuid_par = Arg.(value & opt (some string) None & info ["iu"] ~docv:"instance uuid")
+let fdu_uuid_par = Arg.(value & opt (some string) None & info ["fu"] ~docv:"entity uuid")
 let dest_node_uuid_par = Arg.(value & opt (some string) None & info ["du"] ~docv:"destination uuid")
 let net_uuid_par = Arg.(value & opt (some string) None & info ["net"] ~docv:"network uuid")
 let descriptor_par = Arg.(value & opt (some string) None & info ["d";"descriptor"] ~docv:"descriptor file")
@@ -376,8 +387,8 @@ let component_t = Arg.(required & pos 0 (some string) None & info [] ~docv:"comp
 
 let fos_t =
   Term.(
-    const parser $ component_t $ cmd_t $ act_t $ net_uuid_par
-    $ node_uuid_par $ entity_uuid_par $ instance_uuid_par $ dest_node_uuid_par $ descriptor_par)
+    const p1 $ component_t $ cmd_t $ act_t $ net_uuid_par
+    $ node_uuid_par $ fdu_uuid_par  $ dest_node_uuid_par $ descriptor_par)
 
 
 let () =

@@ -14,11 +14,14 @@
 open Fos_core
 open Fos_im
 open Lwt.Infix
+open Fos_fim_api
+
 
 let yaksserver = Apero.Option.get @@ Apero_net.Locator.of_string @@ Apero.Option.get_or_default (Sys.getenv_opt "FOS_YAKS_ENDPOINT") "tcp/127.0.0.1:7887"
 let ysystem = Apero.Option.get_or_default (Sys.getenv_opt "FOS_SYS_ID") "0"
 let ytenant = Apero.Option.get_or_default (Sys.getenv_opt "FOS_TENANT_ID") "0"
 
+let yapi u = FIMAPI.connect ~locator:yaksserver ~sysid:ysystem ~tenantid:ytenant u
 
 
 let check_descriptor descriptor parser validator =
@@ -61,6 +64,9 @@ let  get_plugins_by_name (all_plugins : FTypes.plugin list) (pl_name : string) =
 
 let get_all_node_fdus node_uuid yconnector =
   Yaks_connector.Global.Actual.get_node_fdus ysystem ytenant node_uuid yconnector
+
+let get_all_fdus  yconnector =
+  Yaks_connector.Global.Actual.get_all_fdus ysystem ytenant yconnector
 
 (*
 let get_all_networks yserver =
