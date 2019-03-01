@@ -54,10 +54,17 @@ class RuntimePluginFDU(Plugin):
             'node_uuid':destinationid
         }
         fname = 'get_node_fdu_info'
-        res = self.call_agent_function(fname, parameter)
-        while res.get('status') != 'LAND':
-            res = self.call_agent_function(fname, parameter)
-        return True
+        flag = False
+        while not flag:
+            try:
+                res = self.call_agent_function(fname, parameter)
+                while res.get('status') != 'LAND':
+                    res = self.call_agent_function(fname, parameter)
+                flag = True
+            except:
+                pass
+        return Flag
+
 
     def get_destination_node_mgmt_net(self, destinationid):
         parameters = {
