@@ -340,7 +340,6 @@ let agent verbose_flag debug_flag configuration =
     match fdu.status with
     | `UNDEFINE -> Yaks_connector.Global.Actual.remove_node_fdu sys_id Yaks_connector.default_tenant_id nodeid fdu.fdu_uuid self.yaks
     | _ ->
-
       Yaks_connector.Global.Actual.add_node_fdu sys_id Yaks_connector.default_tenant_id nodeid fdu.fdu_uuid fdu self.yaks >>= Lwt.return
   in
   let cb_lac_plugin self nodeid (pl:FTypes.plugin) =
