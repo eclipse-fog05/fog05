@@ -63,7 +63,7 @@ class RuntimePluginFDU(Plugin):
                 flag = True
             except:
                 pass
-        return Flag
+        return flag
 
 
     def get_destination_node_mgmt_net(self, destinationid):
