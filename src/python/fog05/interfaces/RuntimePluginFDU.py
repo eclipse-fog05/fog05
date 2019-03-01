@@ -55,7 +55,7 @@ class RuntimePluginFDU(Plugin):
         }
         fname = 'get_node_fdu_info'
         res = self.call_agent_function(fname, parameter)
-        while res.get('status') != 'LANDING':
+        while res.get('status') != 'LAND':
             res = self.call_agent_function(fname, parameter)
         return True
 

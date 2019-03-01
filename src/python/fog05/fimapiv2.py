@@ -653,7 +653,7 @@ class FIMAPIv2(object):
             }
 
             src_record.update({'status': 'TAKE_OFF'})
-            dst_record.update({'status':'LANDING'})
+            dst_record.update({'status':'LAND'})
             src_record.update({'migration_properties':migr_properties})
             dst_record.update({'migration_properties':migr_properties})
 
