@@ -725,12 +725,12 @@ class KVM(RuntimePluginFDU):
                             self.logger.info('migrate_fdu()', ' KVM Plugin - Domain in this host but not running')
                     time.sleep(1)
 
-                fdu.on_start()
-                self.current_fdus.update({fdu_uuid: fdu})
-                record.pop('migration_properties')
-                record.update({'status': 'RUN'})
-                self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
-                self.logger.info('migrate_fdu()', '[ DONE ] KVM Plugin - Migrate a VM uuid {}'.format(entity_uuid))
+            fdu.on_start()
+            self.current_fdus.update({fdu_uuid: fdu})
+            record.pop('migration_properties')
+            record.update({'status': 'RUN'})
+            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
+            self.logger.info('migrate_fdu()', '[ DONE ] KVM Plugin - Migrate a VM uuid {}'.format(entity_uuid))
 
                 #
                 # Here we shoudl copy the disk image somehow
