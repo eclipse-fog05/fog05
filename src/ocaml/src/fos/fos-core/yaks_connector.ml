@@ -702,7 +702,6 @@ module MakeLAD(P: sig val prefix: string end) = struct
   let get_node_plugin_eval_path nodeid pluginid func_name =
     create_path [P.prefix; nodeid; "plugins"; pluginid; "exec"; func_name ]
 
-
   let get_agent_exec_path nodeid func_name =
     create_path [P.prefix; nodeid; "agent"; "exec"; func_name]
 
@@ -968,6 +967,10 @@ module MakeCLAD(P: sig val prefix: string end) = struct
   let get_node_os_exec_path nodeid func_name =
     create_path [P.prefix; nodeid; "os"; "exec"; func_name]
 
+  let get_agent_exec_path nodeid func_name =
+    create_path [P.prefix; nodeid; "agent"; "exec"; func_name]
+
+
   let get_node_plugin_eval_path nodeid pluginid func_name =
     create_path [P.prefix; nodeid; "plugins"; pluginid; "exec"; func_name ]
 
@@ -984,6 +987,18 @@ module MakeCLAD(P: sig val prefix: string end) = struct
     let p = get_node_os_exec_path nodeid func_name in
     let cb _ props =
       let r = func props in
+      Lwt.return @@ Yaks.Value.StringValue r
+    in
+    let%lwt _ = Yaks.Workspace.register_eval p cb connector.ws in
+    let ls = List.append connector.evals [p] in
+    MVar.return Lwt.return_unit {connector with evals = ls}
+
+
+  let add_agent_eval nodeid func_name func connector =
+    MVar.guarded connector @@ fun connector ->
+    let p = get_agent_exec_path nodeid func_name in
+    let cb _ props =
+      let%lwt r = func props in
       Lwt.return @@ Yaks.Value.StringValue r
     in
     let%lwt _ = Yaks.Workspace.register_eval p cb connector.ws in

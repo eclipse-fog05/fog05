@@ -12,20 +12,20 @@
 #
 # Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Initial implementation and API
 
-from jsonschema import validate, ValidationError
-from fog05 import Schemas
+#from jsonschema import validate, ValidationError
+#from fog05 import Schemas
 # from dstore import Store
-from enum import Enum
+# from enum import Enum
 import re
 import uuid
 import json
 import fnmatch
-import time
-from yaks import Yaks
-from fog05.store import Store, FOSStore
-from fog05.interfaces.Constants import *
-from threading import Condition, Lock
-from mvar import MVar
+#import time
+# from yaks import Yaks
+from fog05.store import FOSStore
+from fog05.interfaces.Constants import aroot, droot, sroot, append_to_path
+# from threading import Condition, Lock
+#from mvar import MVar
 
 class API(object):
     '''
@@ -68,11 +68,11 @@ class API(object):
         instances_uuids = {}
         networks_uuid = []
 
-        try:
-            validate(manifest, Schemas.entity_schema)
-        except ValidationError as ve:
-            print(ve.message)
-            exit(-1)
+        # try:
+        #     validate(manifest, Schemas.entity_schema)
+        # except ValidationError as ve:
+        #     print(ve.message)
+        #     exit(-1)
         nws = manifest.get('networks')
         # print('networks: {}'.format(nws))
         for n in nws:
@@ -206,59 +206,59 @@ class API(object):
                 raise RuntimeError('store cannot be none in API!')
             self.store = store
 
-        def check(self, manifest, manifest_type):
-            '''
-
-            This method allow you to check if a manifest is write in the correct way
-
-
-            :param manifest: a dictionary rapresenting the JSON manifest
-            :param manifest_type: the manifest type from API.Manifest.Type
-            :return: boolean
-            '''
-            if manifest_type == self.Type.ENTITY:
-                t = manifest.get('type')
-                try:
-                    if t == 'vm':
-                        validate(manifest.get('entity_data'),
-                                 Schemas.vm_schema)
-                    elif t == 'container':
-                        validate(manifest.get('entity_data'),
-                                 Schemas.container_schema)
-                    elif t == 'native':
-                        validate(manifest.get('entity_data'),
-                                 Schemas.native_schema)
-                    elif t == 'ros2':
-                        validate(manifest.get('entity_data'),
-                                 Schemas.ros2_schema)
-                    elif t == 'usvc':
-                        return False
-                    else:
-                        return False
-                except ValidationError as ve:
-                    return False
-            if manifest_type == self.Type.NETWORK:
-                try:
-                    validate(manifest, Schemas.network_schema)
-                except ValidationError as ve:
-                    return False
-            if manifest_type == self.Type.ENTITY:
-                try:
-                    validate(manifest, Schemas.entity_schema)
-                except ValidationError as ve:
-                    return False
-
-            return True
-
-        class Type(Enum):
-            '''
-            Manifest types
-            '''
-            ENTITY = 0
-            IMAGE = 1
-            FLAVOR = 3
-            NETWORK = 4
-            PLUGIN = 5
+        # def check(self, manifest, manifest_type):
+        #     '''
+        #
+        #     This method allow you to check if a manifest is write in the correct way
+        #
+        #
+        #     :param manifest: a dictionary rapresenting the JSON manifest
+        #     :param manifest_type: the manifest type from API.Manifest.Type
+        #     :return: boolean
+        #     '''
+        #     if manifest_type == self.Type.ENTITY:
+        #         t = manifest.get('type')
+        #         try:
+        #             if t == 'vm':
+        #                 validate(manifest.get('entity_data'),
+        #                          Schemas.vm_schema)
+        #             elif t == 'container':
+        #                 validate(manifest.get('entity_data'),
+        #                          Schemas.container_schema)
+        #             elif t == 'native':
+        #                 validate(manifest.get('entity_data'),
+        #                          Schemas.native_schema)
+        #             elif t == 'ros2':
+        #                 validate(manifest.get('entity_data'),
+        #                          Schemas.ros2_schema)
+        #             elif t == 'usvc':
+        #                 return False
+        #             else:
+        #                 return False
+        #         except ValidationError as ve:
+        #             return False
+        #     if manifest_type == self.Type.NETWORK:
+        #         try:
+        #             validate(manifest, Schemas.network_schema)
+        #         except ValidationError as ve:
+        #             return False
+        #     if manifest_type == self.Type.ENTITY:
+        #         try:
+        #             validate(manifest, Schemas.entity_schema)
+        #         except ValidationError as ve:
+        #             return False
+        #
+        #     return True
+        #
+        # class Type(Enum):
+        #     '''
+        #     Manifest types
+        #     '''
+        #     ENTITY = 0
+        #     IMAGE = 1
+        #     FLAVOR = 3
+        #     NETWORK = 4
+        #     PLUGIN = 5
 
     class Node(object):
         '''
@@ -701,30 +701,30 @@ class API(object):
             manifest.update({'status': 'define'})
             handler = None
             t = manifest.get('type')
-            try:
-                if t in ['kvm', 'xen']:
-                    handler = self.__search_plugin_by_name(t, node_uuid)
-                    validate(manifest.get('entity_data'), Schemas.vm_schema)
-                elif t in ['container', 'lxd','docker']:
-                    handler = self.__search_plugin_by_name(t, node_uuid)
-                    validate(manifest.get('entity_data'), Schemas.container_schema)
-                elif t == 'native':
-                    handler = self.__search_plugin_by_name('native', node_uuid)
-                    validate(manifest.get('entity_data'), Schemas.native_schema)
-                elif t == 'ros2':
-                    handler = self.__search_plugin_by_name('ros2', node_uuid)
-                    validate(manifest.get('entity_data'), Schemas.ros2_schema)
-                elif t == 'usvc':
-                    print('microservice not yet')
-                else:
-                    print('type not recognized')
-
-                if handler is None or handler == 'None':
-                    print('Handler not found!! (Is none)')
-                    return False
-            except ValidationError as ve:
-                print('Validation error: {}'.format(ve.message))
-                return False
+            # try:
+            #     if t in ['kvm', 'xen']:
+            #         handler = self.__search_plugin_by_name(t, node_uuid)
+            #         validate(manifest.get('entity_data'), Schemas.vm_schema)
+            #     elif t in ['container', 'lxd','docker']:
+            #         handler = self.__search_plugin_by_name(t, node_uuid)
+            #         validate(manifest.get('entity_data'), Schemas.container_schema)
+            #     elif t == 'native':
+            #         handler = self.__search_plugin_by_name('native', node_uuid)
+            #         validate(manifest.get('entity_data'), Schemas.native_schema)
+            #     elif t == 'ros2':
+            #         handler = self.__search_plugin_by_name('ros2', node_uuid)
+            #         validate(manifest.get('entity_data'), Schemas.ros2_schema)
+            #     elif t == 'usvc':
+            #         print('microservice not yet')
+            #     else:
+            #         print('type not recognized')
+            #
+            #     if handler is None or handler == 'None':
+            #         print('Handler not found!! (Is none)')
+            #         return False
+            # except ValidationError as ve:
+            #     print('Validation error: {}'.format(ve.message))
+            #     return False
 
             if handler.get('uuid') is None:
                 print('Handler not found!! (Cannot get handler uuid)')

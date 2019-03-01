@@ -314,7 +314,25 @@ let agent verbose_flag debug_flag configuration =
     | _ ->
       Yaks_connector.Global.Actual.add_node_fdu sys_id Yaks_connector.default_tenant_id (Apero.Option.get self.configuration.agent.uuid) fdu.fdu_uuid fdu self.yaks >>= Lwt.return
   in
-  (* Constrained Nodes *)
+  (* Constrained Nodes Global *)
+  let cb_gd_cnode_fdu self nodeid (fdu:FTypesRecord.fdu) =
+    MVar.read self >>= fun self ->
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-NODE-FDU - ##############") in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-NODE-FDU - FDU Updated! Agent will call the right plugin!") in
+    let%lwt fdu_d = Yaks_connector.Global.Actual.get_fdu_info sys_id Yaks_connector.default_tenant_id fdu.fdu_uuid self.yaks in
+    let fdu_type = Fos_im.string_of_hv_type fdu_d.hypervisor in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-FDU - FDU Type %s" fdu_type) in
+    let%lwt plugins = Yaks_connector.LocalConstraint.Actual.get_node_plugins nodeid self.yaks in
+    Lwt_list.iter_p (fun e ->
+        let%lwt pl = Yaks_connector.LocalConstraint.Actual.get_node_plugin nodeid e self.yaks in
+        if String.uppercase_ascii (pl.name) = String.uppercase_ascii (fdu_type) then
+          let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-FDU - Calling %s plugin" pl.name) in
+          Yaks_connector.LocalConstraint.Desired.add_node_fdu nodeid pl.uuid fdu.fdu_uuid fdu self.yaks >>= Lwt.return
+        else
+          Lwt.return_unit
+      ) plugins >>= Lwt.return
+  in
+  (* Constrained Nodes Local *)
   let cb_lac_node_fdu self nodeid (fdu:FTypesRecord.fdu) =
     MVar.read self >>= fun self ->
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LAC-NODE-FDU - ##############") in
@@ -341,19 +359,23 @@ let agent verbose_flag debug_flag configuration =
      Yaks_connector.Global.Actual.add_node_configuration sys_id Yaks_connector.default_tenant_id nodeid pl self.yaks >>= Lwt.return
      in *)
   let cb_lac_nodes self (ni:FTypes.node_info) =
-    MVar.read self >>= fun state ->
+    MVar.guarded self @@ fun state ->
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LAC-NI - ##############") in
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LAC-NI - Updated node info advertising of GA") in
-    (* TODO should generate the NodeID *)
-    Yaks_connector.Global.Actual.add_node_info sys_id Yaks_connector.default_tenant_id "" ni state.yaks
-    >>= fun _ ->  Yaks_connector.LocalConstraint.Actual.observe_node_plugins uuid (cb_lac_plugin self  ni.uuid ) yaks
-    >>= fun _ ->  Yaks_connector.LocalConstraint.Actual.observe_node_fdu uuid (cb_lac_node_fdu self ni.uuid) yaks
-    >>= fun _ -> Lwt.return_unit
+    let intid = ni.uuid in
+    let extid = Apero.Uuid.to_string @@ Apero.Uuid.make () in
+    let%lwt _ = Yaks_connector.Global.Actual.add_node_info sys_id Yaks_connector.default_tenant_id extid ni state.yaks in
+    let%lwt _ = Yaks_connector.LocalConstraint.Actual.observe_node_plugins intid (cb_lac_plugin self  extid) yaks in
+    let%lwt _ =  Yaks_connector.LocalConstraint.Actual.observe_node_fdu intid (cb_lac_node_fdu self extid) yaks in
+    let%lwt _ = Yaks_connector.Global.Desired.observe_node_fdu sys_id Yaks_connector.default_tenant_id extid (cb_gd_cnode_fdu self intid) yaks in
+    MVar.return () {state with constrained_nodes = ConstraintMap.add extid intid state.constrained_nodes}
   in
   (* Registering Evals *)
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_fdu_info" (eval_get_fdu_info state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_network_info" (eval_get_network_info state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_port_info" (eval_get_port_info state) yaks in
+  (* Constraint Eval  *)
+  let%lwt _ = Yaks_connector.LocalConstraint.Actual.add_agent_eval uuid "get_fdu_info" (eval_get_fdu_info state) yaks in
   (* Registering listeners *)
   let%lwt _ = Yaks_connector.Global.Desired.observe_node_plugins sys_id Yaks_connector.default_tenant_id uuid (cb_gd_plugin state) yaks in
   let%lwt _ = Yaks_connector.Global.Desired.observe_fdu sys_id Yaks_connector.default_tenant_id (cb_gd_fdu state) yaks in

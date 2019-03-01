@@ -47,7 +47,7 @@ type error_code = [
   | TAKE_OFF_ERROR of 8
   | LAND_ERROR of 9
   | MIGRATE_ERROR of 10
-  | UNDEFINE_ERROR of 11
+  | UNDEFINE_ERROR of 0
 ]
 *)
 

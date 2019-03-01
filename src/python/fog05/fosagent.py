@@ -19,7 +19,7 @@ import time
 import traceback
 import sys
 import json
-import uuid
+# import uuid
 from fog05.DLogger import DLogger
 from .store import Store
 from fog05.PluginLoader import PluginLoader

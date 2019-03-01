@@ -1,4 +1,4 @@
-# Copyright (c) 2014,2018 Contributors to the Eclipse Foundation
+# Copyright (c) 2014,2018 ADLINK Technology Inc.
 #
 # See the NOTICE file(s) distributed with this work for additional
 # information regarding copyright ownership.
@@ -10,12 +10,4 @@
 #
 # SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
 #
-# Contributors: Gabriele Baldoni, ADLINK Technology Inc.
-# OCaml implementation and API
-
-from fog05.api import API
-from fog05.fimapiv2 import FIMAPIv2
-# from fog05.web_api import WebAPI
-from fog05.fosagent import FosAgent
-from fog05.yaks_connector import Yaks_Connector
-from fog05.yaks_connector import Yaks_Constraint_Connector
+# Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Ocaml plugins set

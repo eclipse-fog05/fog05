@@ -369,10 +369,10 @@ class Linux(OSPlugin):
             res = self.__execute_command(wget_cmd, True)
             res = {'result':res}
         except TypeError as e:
-            self.logger.error('executeCommand()', 'Error: {}'.format(e))
+            self.logger.error('download_file()', 'Error: {}'.format(e))
             res = {'error': 0}
         except:
-            self.logger.error('executeCommand()', 'Exception!!')
+            self.logger.error('download_file()', 'Exception!!')
             res = {'error': -1}
         finally:
             return res
@@ -405,10 +405,10 @@ class Linux(OSPlugin):
             else:
                 res = {'result': True}
         except TypeError as e:
-            self.logger.error('executeCommand()', 'Error: {}'.format(e))
+            self.logger.error('check_if_pid_exists()', 'Error: {}'.format(e))
             res = {'error': 0}
         except:
-            self.logger.error('executeCommand()', 'Exception!!')
+            self.logger.error('check_if_pid_exists()', 'Exception!!')
             res = {'error': -1}
         finally:
             return res
@@ -425,10 +425,10 @@ class Linux(OSPlugin):
                 psutil.Process(pid).send_signal(signal)
                 res = {'result': True}
         except TypeError as e:
-            self.logger.error('executeCommand()', 'Error: {}'.format(e))
+            self.logger.error('send_signal()', 'Error: {}'.format(e))
             res = {'error': 0}
         except:
-            self.logger.error('executeCommand()', 'Exception!!')
+            self.logger.error('send_signal()', 'Exception!!')
             res = {'error': -1}
         finally:
             return res
@@ -445,10 +445,10 @@ class Linux(OSPlugin):
                 psutil.Process(pid).send_signal(2)
                 res = {'result': True}
         except TypeError as e:
-            self.logger.error('executeCommand()', 'Error: {}'.format(e))
+            self.logger.error('send_sig_int()', 'Error: {}'.format(e))
             res = {'error': 0}
         except:
-            self.logger.error('executeCommand()', 'Exception!!')
+            self.logger.error('send_sig_int()', 'Exception!!')
             res = {'error': -1}
         finally:
             return res
@@ -465,10 +465,10 @@ class Linux(OSPlugin):
                 psutil.Process(pid).send_signal(9)
                 res = {'result': True}
         except TypeError as e:
-            self.logger.error('executeCommand()', 'Error: {}'.format(e))
+            self.logger.error('send_sig_kill()', 'Error: {}'.format(e))
             res = {'error': 0}
         except:
-            self.logger.error('executeCommand()', 'Exception!!')
+            self.logger.error('send_sig_kill()', 'Exception!!')
             res = {'error': -1}
         finally:
             return res
