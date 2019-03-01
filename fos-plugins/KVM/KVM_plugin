@@ -709,7 +709,7 @@ class KVM(RuntimePluginFDU):
                     self.call_os_plugin_function('remove_file',{'file_path':data_filename})
             self.call_os_plugin_function('remove_file',{'file_path':vendor_filename})
 
-            record.update({'status': 'LANDING'})
+            record.update({'status': 'LAND'})
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
             self.logger.info('migrate_fdu()', '[ DONE ] KVM Plugin - Destination Node is ready for {}'.format(fdu_uuid))
 
