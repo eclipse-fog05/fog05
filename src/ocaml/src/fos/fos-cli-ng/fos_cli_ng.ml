@@ -270,7 +270,7 @@ let fdu_state_change api fduid nodeid state  =
        (
          let api_func =
            match state with
-           | `CONDIFURE -> FDU.configure
+           | `CONFIGURE -> FDU.configure
            | `CLEAN -> FDU.clean
            | `RUN -> FDU.run
            | `STOP -> FDU.stop

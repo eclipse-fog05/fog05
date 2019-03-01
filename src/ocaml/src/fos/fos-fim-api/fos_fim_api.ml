@@ -87,7 +87,7 @@ module FDU = struct
     ignore wait;
     let%lwt _ = Yaks_connector.Global.Actual.get_fdu_info api.sysid api.tenantid fduid api.yconnector in
     let record = Fos_im.FTypesRecord.{ fdu_uuid = fduid;  status = `DEFINE; interfaces =  []; connection_points = []; error_code = None } in
-    Yaks_connector.Global.Actual.add_node_fdu api.sysid api.tenantid nodeid fduid record api.yconnector
+    Yaks_connector.Global.Desired.add_node_fdu api.sysid api.tenantid nodeid fduid record api.yconnector
     >>= fun _ -> Lwt.return_true
 
   let undeifne fduid nodeid ?(wait=true) api =
@@ -95,42 +95,42 @@ module FDU = struct
     Yaks_connector.Global.Actual.get_node_fdu_info api.sysid api.tenantid nodeid fduid api.yconnector
     >>= fun descriptor ->
     let descriptor = {descriptor with status = `UNDEFINE } in
-    Yaks_connector.Global.Actual.add_node_fdu api.sysid api.tenantid nodeid fduid descriptor api.yconnector
+    Yaks_connector.Global.Desired.add_node_fdu api.sysid api.tenantid nodeid fduid descriptor api.yconnector
     >>= fun _ -> Lwt.return_true
 
   let configure  fduid nodeid ?(wait=true) api =
     ignore wait;
     Yaks_connector.Global.Actual.get_node_fdu_info api.sysid api.tenantid nodeid fduid api.yconnector>>= fun descriptor ->
     let descriptor = {descriptor with status = `CONFIGURE } in
-    Yaks_connector.Global.Actual.add_node_fdu api.sysid api.tenantid nodeid fduid descriptor api.yconnector
+    Yaks_connector.Global.Desired.add_node_fdu api.sysid api.tenantid nodeid fduid descriptor api.yconnector
     >>= fun _ -> Lwt.return_true
 
   let clean fduid nodeid ?(wait=true) api =
     ignore wait;
     Yaks_connector.Global.Actual.get_node_fdu_info api.sysid api.tenantid nodeid fduid api.yconnector>>= fun descriptor ->
     let descriptor = {descriptor with status = `CLEAN } in
-    Yaks_connector.Global.Actual.add_node_fdu api.sysid api.tenantid nodeid fduid descriptor api.yconnector
+    Yaks_connector.Global.Desired.add_node_fdu api.sysid api.tenantid nodeid fduid descriptor api.yconnector
     >>= fun _ -> Lwt.return_true
 
   let run fduid nodeid ?(wait=true) api =
     ignore wait;
     Yaks_connector.Global.Actual.get_node_fdu_info api.sysid api.tenantid nodeid fduid api.yconnector>>= fun descriptor ->
     let descriptor = {descriptor with status = `RUN } in
-    Yaks_connector.Global.Actual.add_node_fdu api.sysid api.tenantid nodeid fduid descriptor api.yconnector
+    Yaks_connector.Global.Desired.add_node_fdu api.sysid api.tenantid nodeid fduid descriptor api.yconnector
     >>= fun _ -> Lwt.return_true
 
   let stop fduid nodeid ?(wait=true) api =
     ignore wait;
     Yaks_connector.Global.Actual.get_node_fdu_info api.sysid api.tenantid nodeid fduid api.yconnector>>= fun descriptor ->
     let descriptor = {descriptor with status = `STOP } in
-    Yaks_connector.Global.Actual.add_node_fdu api.sysid api.tenantid nodeid fduid descriptor api.yconnector
+    Yaks_connector.Global.Desired.add_node_fdu api.sysid api.tenantid nodeid fduid descriptor api.yconnector
     >>= fun _ -> Lwt.return_true
 
   let pause fduid nodeid ?(wait=true) api =
     ignore wait;
     Yaks_connector.Global.Actual.get_node_fdu_info api.sysid api.tenantid nodeid fduid api.yconnector>>= fun descriptor ->
     let descriptor = {descriptor with status = `PAUSE} in
-    Yaks_connector.Global.Actual.add_node_fdu api.sysid api.tenantid nodeid fduid descriptor api.yconnector
+    Yaks_connector.Global.Desired.add_node_fdu api.sysid api.tenantid nodeid fduid descriptor api.yconnector
     >>= fun _ -> Lwt.return_true
 
   let migrate fduid nodeid destination ?(wait=true) api =

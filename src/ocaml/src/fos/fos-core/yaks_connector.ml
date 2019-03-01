@@ -107,10 +107,10 @@ module MakeGAD(P: sig val prefix: string end) = struct
     create_path [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid; "configuration"]
 
   let get_node_plugins_selector sysid tenantid nodeid =
-    create_selector [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid; "plugins"; "*"]
+    create_selector [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid; "plugins"; "*"; "info"]
 
   let get_node_plugins_subscriber_selector sysid tenantid nodeid =
-    create_selector [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid; "plugins"; "**"]
+    create_selector [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid; "plugins"; "*"; "info"]
 
   let get_node_plugin_info_path sysid tenantid nodeid pluginid =
     create_path [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid; "plugins"; pluginid; "info"]
@@ -645,7 +645,7 @@ module MakeLAD(P: sig val prefix: string end) = struct
     create_selector [P.prefix; nodeid; "plugins"; "*"; "info"]
 
   let get_node_plugins_subscriber_selector nodeid =
-    create_selector [P.prefix; nodeid; "plugins"; "**"]
+    create_selector [P.prefix; nodeid; "plugins"; "*"; "info"]
 
   let get_node_plugin_info_path nodeid pluginid=
     create_path [P.prefix; nodeid; "plugins"; pluginid; "info"]
@@ -663,7 +663,7 @@ module MakeLAD(P: sig val prefix: string end) = struct
     create_selector [P.prefix; nodeid; "runtimes"; "*"; "fdu"; "*"; "info"]
 
   let get_node_fdus_subscriber_selector nodeid pluginid =
-    create_selector [P.prefix; nodeid; "runtimes"; pluginid; "fdu"; "**"]
+    create_selector [P.prefix; nodeid; "runtimes"; pluginid; "fdu"; "*"; "info"]
 
   let get_node_runtime_fdu_atomic_entitiy_selector nodeid pluginid fduid =
     create_selector [P.prefix; nodeid; "runtimes"; pluginid; "fdu"; fduid; "atomic_entity"; "*"]
@@ -932,7 +932,7 @@ module MakeCLAD(P: sig val prefix: string end) = struct
     create_selector [P.prefix; nodeid; "plugins"; "*"; "info"]
 
   let get_node_plugins_subscriber_selector nodeid =
-    create_selector [P.prefix; nodeid; "plugins"; "**"]
+    create_selector [P.prefix; nodeid; "plugins"; "*"; "info"]
 
   let get_node_plugin_info_path nodeid pluginid=
     create_path [P.prefix; nodeid; "plugins"; pluginid; "info"]
@@ -947,7 +947,7 @@ module MakeCLAD(P: sig val prefix: string end) = struct
     create_selector [P.prefix; nodeid; "runtimes"; "*"; "fdu"; "*"; "info"]
 
   let get_node_fdus_subscriber_selector nodeid pluginid =
-    create_selector [P.prefix; nodeid; "runtimes"; pluginid; "fdu"; "**"]
+    create_selector [P.prefix; nodeid; "runtimes"; pluginid; "fdu"; "*"; "info"]
 
   (* let get_node_runtime_fdu_atomic_entitiy_selector nodeid pluginid fduid =
      create_selector [P.prefix; nodeid; "runtimes"; pluginid; "fdu"; fduid; "atomic_entity"; "*"] *)
