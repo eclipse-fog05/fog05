@@ -885,7 +885,7 @@ class KVM(RuntimePluginFDU):
             'STOP': self.stop_fdu,
             'RESUME': self.resume_fdu,
             'RUN': self.run_fdu,
-            'CLEAN': self.clean_fdu
+            'CLEAN': self.clean_fdu,
             'LANDING': self.migrate_fdu,
             'TAKE_OFF': self.migrate_fdu
         }
