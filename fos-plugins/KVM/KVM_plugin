@@ -581,6 +581,8 @@ class KVM(RuntimePluginFDU):
 
 
         else:
+            record.update({'status': 'DEFINE'})
+            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
             descriptor = self.get_fdu_descriptor(fdu_uuid)
             fdu = KVMFDU.from_descriptor(descriptor)
             image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
@@ -695,7 +697,7 @@ class KVM(RuntimePluginFDU):
                 key_filename = os.path.join(self.BASE_DIR, key_filename)
                 conf_cmd = conf_cmd + ' --ssh-key {}'.format(key_filename)
 
-
+            qemu_cmd = 'qemu-img create -f {} {} {}G'.format(img.get('format'), fdu.disk, int(flavor.get('disk_size')))
             conf_cmd = conf_cmd + ' {}'.format(fdu.cdrom)
 
             self.call_os_plugin_function('execute_command',{'command':qemu_cmd,'blocking':True, 'external':False})
