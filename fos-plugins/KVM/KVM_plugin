@@ -548,6 +548,7 @@ class KVM(RuntimePluginFDU):
             self.logger.info('migrate_fdu()', '[ DONE ] KVM Plugin - Migrating...')
 
             # ACTUAL MIGRATIION #
+            dom = self.__lookup_by_uuid(fdu_uuid)
             dst_ip = self.get_destination_node_mgmt_net(destination).get('ipv4_address')
             dst_host = 'qemu+ssh://{}/system'.format(dst_ip)
             dest_conn = libvirt.open(dst_host)
