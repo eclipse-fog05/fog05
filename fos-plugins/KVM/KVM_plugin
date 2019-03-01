@@ -560,7 +560,7 @@ class KVM(RuntimePluginFDU):
                 self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
                 return
             flags = libvirt.VIR_MIGRATE_LIVE | libvirt.VIR_MIGRATE_PERSIST_DEST
-            new_dom = dom.migrate(dest_conn, flags, name, None, 0)
+            new_dom = dom.migrate(dest_conn, flags, fdu.name, None, 0)
             # new_dom = dom.migrate(dest_conn, libvirt.VIR_MIGRATE_LIVE and libvirt.VIR_MIGRATE_PERSIST_DEST and libvirt.VIR_MIGRATE_NON_SHARED_DISK, name, None, 0)
             if new_dom is None:
                 self.logger.error('migrate_fdu()', 'KVM Plugin - Before Migration Source: Migration failed')
