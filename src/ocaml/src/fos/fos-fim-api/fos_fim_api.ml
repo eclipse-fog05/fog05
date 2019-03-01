@@ -86,7 +86,7 @@ module FDU = struct
   let define fduid nodeid ?(wait=true) api =
     ignore wait;
     let%lwt _ = Yaks_connector.Global.Actual.get_fdu_info api.sysid api.tenantid fduid api.yconnector in
-    let record = Fos_im.FTypesRecord.{ fdu_uuid = fduid;  status = `DEFINE; interfaces =  []; connection_points = []; error_code = None } in
+    let record = Fos_im.FTypesRecord.{ fdu_uuid = fduid;  status = `DEFINE; interfaces =  []; connection_points = []; error_code = None; migration_properties = None } in
     Yaks_connector.Global.Desired.add_node_fdu api.sysid api.tenantid nodeid fduid record api.yconnector
     >>= fun _ -> Lwt.return_true
 

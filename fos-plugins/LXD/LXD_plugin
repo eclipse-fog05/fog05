@@ -220,11 +220,7 @@ class LXD(RuntimePluginFDU):
                 self.logger.error('define_fdu()', 'Error {}'.format(e))
                 self.current_fdus.update({fdu_uuid: fdu})
                 lxd_info = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid)
-                lxd_info.update({'status': 'ERROR'})
-                # TODO define error codes
-                lxd_info.update({'error_core':1})
-                self.current_fdus.update({fdu_uuid: fdu})
-                self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, lxd_info)
+
                 self.logger.info('define_fdu()', '[ ERRO ] LXD Plugin - Container uuid: {}'.format(fdu_uuid))
 
 

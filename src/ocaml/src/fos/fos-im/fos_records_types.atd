@@ -58,12 +58,19 @@ type net_state = [
   | DESTROY
 ]
 
+
+type migration_properties = {
+  destination : string;
+  source : string;
+}
+
 type fdu = {
   fdu_uuid : string;
   status : fdu_state;
   interfaces : interface list;
   connection_points : connection_point list;
   ?error_code : int option;
+  ?migration_properties : migration_properties option;
 }
 
 

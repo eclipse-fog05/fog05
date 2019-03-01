@@ -626,7 +626,7 @@ class FIMAPIv2(object):
 
             pass
 
-        def migrate(self, entity_uuid, instance_uuid, node_uuid, destination_node_uuid, wait=False):
+        def migrate(self, fduid, node_uuid, destination_node_uuid, wait=False):
             '''
 
             Live migrate an atomic entity instance between two nodes
@@ -635,13 +635,39 @@ class FIMAPIv2(object):
              there is a little overhead for the copy of the base image and the disk image
 
 
-            :param entity_uuid: entity for which you want to migrate the instance
-            :param instance_uuid: instance you want to migrate
-            :param node_uuid: source node for the instance
-            :param destination_node_uuid: destination node for the instance
+            :param fduid: fdu you want to migrate
+            :param node_uuid: source node
+            :param destination_node_uuid: destination node
             :param wait: optional wait before returning
             :return: boolean
             '''
+
+            record = self.connector.glob.actual.get_node_fdu(
+                self.sysid, self.tenantid, node_uuid, fduid)
+
+            src_record = record.copy()
+            dst_record = record.copy()
+            migr_properties = {
+                'destination':destination_node_uuid,
+                'source':node_uuid
+            }
+
+            src_record.update({'status': 'TAKE_OFF'})
+            dst_record.update({'status':'LANDING'})
+            src_record.update({'migration_properties':migr_properties})
+            dst_record.update({'migration_properties':migr_properties})
+
+            self.connector.glob.desired.add_node_fdu(self.sysid, self.tenantid,
+                                                destination_node_uuid,
+                                                fduid, dst_record)
+            self.connector.glob.desired.add_node_fdu(self.sysid, self.tenantid,
+                                                node_uuid, fduid, src_record)
+
+            if wait:
+                self.__wait_node_fdu_state_change(
+                    destination_node_uuid, fdu_uuid, 'RUN')
+            return True
+
 
             # handler = self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
             # uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.store.aroot, node_uuid, handler, entity_uuid, instance_uuid)

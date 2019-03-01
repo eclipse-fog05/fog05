@@ -130,6 +130,7 @@ let agent verbose_flag debug_flag configuration =
   let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - INIT - SPAWNER: %b" conf.agent.enable_spawner) in
   let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - INIT - PID FILE: %s" conf.agent.pid_file) in
   let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - INIT - YAKS Server: %s" conf.agent.yaks) in
+  let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - INIT - MGMT Interface: %s" conf.agent.mgmt_interface) in
   let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - INIT - Plugin Directory: %s" plugin_path) in
   let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - INIT - AUTOLOAD: %b" conf.plugins.autoload) in
   let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - INIT - Plugins:") in
@@ -152,6 +153,19 @@ let agent verbose_flag debug_flag configuration =
     try%lwt
       let%lwt descriptor = Yaks_connector.Global.Actual.get_fdu_info sys_id Yaks_connector.default_tenant_id fdu_uuid state.yaks in
       let js = FAgentTypes.json_of_string @@ FTypes.string_of_fdu descriptor in
+      let eval_res = FAgentTypes.{result = Some js ; error=None} in
+      Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+    with
+    | _ -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
+      Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+  in
+  let eval_get_node_fdu_info self (props:Apero.properties) =
+    MVar.read self >>= fun state ->
+    let fdu_uuid = Apero.Option.get @@ Apero.Properties.get "fdu_uuid" props in
+    let node_uuid = Apero.Option.get @@ Apero.Properties.get "node_uuid" props in
+    try%lwt
+      let%lwt descriptor = Yaks_connector.Global.Actual.get_node_fdu_info sys_id Yaks_connector.default_tenant_id node_uuid fdu_uuid state.yaks in
+      let js = FAgentTypes.json_of_string @@ FTypesRecord.string_of_fdu descriptor in
       let eval_res = FAgentTypes.{result = Some js ; error=None} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
@@ -202,6 +216,29 @@ let agent verbose_flag debug_flag configuration =
       | _ ->
         let eval_res = FAgentTypes.{result = None ; error=Some 33} in
         Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+  in
+
+  let eval_get_node_mgmt_address self (props:Apero.properties) =
+    MVar.read self >>= fun state ->
+    let node_uuid = Apero.Option.get @@ Apero.Properties.get "node_uuid" props in
+    try%lwt
+      let%lwt nconf = Yaks_connector.Global.Actual.get_node_configuration sys_id Yaks_connector.default_tenant_id node_uuid state.yaks in
+      let%lwt descriptor = Yaks_connector.Global.Actual.get_node_info sys_id Yaks_connector.default_tenant_id node_uuid state.yaks in
+      let nws = descriptor.network in
+      let%lwt addr = (Lwt_list.filter_map_p (
+          fun (e:FTypes.network_spec_type) ->
+            if (String.compare e.intf_name  nconf.agent.mgmt_interface) == 0 then
+              Lwt.return @@ Some e.intf_configuration
+            else
+              Lwt.return None
+        ) nws) >>= fun l -> Lwt.return @@ List.hd l
+      in
+      let js = FAgentTypes.json_of_string @@ FTypes.string_of_intf_conf_type addr in
+      let eval_res = FAgentTypes.{result =  Some js; error=None} in
+      Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+    with
+    | _ -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
+      Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   (* Listeners *)
   (* Global Desired *)
@@ -373,6 +410,8 @@ let agent verbose_flag debug_flag configuration =
   in
   (* Registering Evals *)
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_fdu_info" (eval_get_fdu_info state) yaks in
+  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_node_fdu_info" (eval_get_node_fdu_info state) yaks in
+  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_node_mgmt_address" (eval_get_node_mgmt_address state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_network_info" (eval_get_network_info state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_port_info" (eval_get_port_info state) yaks in
   (* Constraint Eval  *)

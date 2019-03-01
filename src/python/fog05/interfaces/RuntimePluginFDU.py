@@ -48,6 +48,24 @@ class RuntimePluginFDU(Plugin):
         fname = 'get_fdu_info'
         return self.call_agent_function(fname, parameters)
 
+    def wait_destination_ready(self, fduid, destinationid):
+        parameter = {
+            'fdu_uuid':fduid,
+            'node_uuid':destinationid
+        }
+        fname = 'get_node_fdu_info'
+        res = self.call_agent_function(fname, parameter)
+        while res.get('status') <> 'LANDING':
+            res = self.call_agent_function(fname, parameter)
+        return True
+
+    def get_destination_node_mgmt_net(self, destinationid):
+        parameters = {
+            'node_uuid': destinationid
+        }
+        fname = 'get_node_mgmt_address'
+        return self.call_agent_function(fname, parameters)
+
     def start_runtime(self):
         '''
         start the runtime

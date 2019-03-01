@@ -532,410 +532,213 @@ class KVM(RuntimePluginFDU):
                     return True
 
     # TODO rethink the migration workflow to be faster, copy the disk first and copy the base image only when migration ended
-    def migrate_fdu(self, fdu_uuid, dst=False):
-        # if type(entity_uuid) == dict:
-        #     entity_uuid = entity_uuid.get('entity_uuid')
-        # self.logger.info('migrate_entity()', ' KVM Plugin - Migrate a VM uuid {}'.format(entity_uuid))
-        # entity = self.current_fdus.get(entity_uuid, None)
-        # if entity is None or entity.get_instance(instance_uuid) is None:
+    def migrate_fdu(self, fdu_uuid):
+        record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
+        destination = record.get('migration_properties').get('destination')
+        if destination <> self.uuid:
+            self.logger.info('migrate_fdu()', '[ DONE ] KVM Plugin - Source Node preparation...')
+            fdu = self.current_fdus.get(fdu_uuid, None)
+            if fdu_uuid is None:
+                self.logger.error('migrate_fdu','FDU not in Runtime!!')
+                return
 
-        #     '''
-        #     How migration works:
+            self.logger.info('migrate_fdu()', '[ DONE ] KVM Plugin - Source Node wait destination...')
+            self.wait_destination_ready(fdu_uuid, destination)
 
-        #     Issue the migration by writing on the store of source and destination the correct states and set dst with uuid for destination node:
-        #         source: migrating | destination: migrating
+            self.logger.info('migrate_fdu()', '[ DONE ] KVM Plugin - Migrating...')
 
-        #     ## BEFORE MIGRATING
+            # ACTUAL MIGRATIION #
+            dst_ip = self.get_destination_node_mgmt_net(destination)
+            dst_host = 'qemu+ssh://{}/system'.format(dst_ip)
+            dest_conn = libvirt.open(dst_host)
+            if dest_conn is None:
+                self.logger.error('migrate_fdu()', 'KVM Plugin - Before Migration Source: Error on libvirt connection')
+                record.pop('migration_properties')
+                record.update({'status': 'ERROR'})
+                record.update({'error_core':10})
+                self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
+                return
+            flags = libvirt.VIR_MIGRATE_LIVE | libvirt.VIR_MIGRATE_PERSIST_DEST
+            new_dom = dom.migrate(dest_conn, flags, name, None, 0)
+            # new_dom = dom.migrate(dest_conn, libvirt.VIR_MIGRATE_LIVE and libvirt.VIR_MIGRATE_PERSIST_DEST and libvirt.VIR_MIGRATE_NON_SHARED_DISK, name, None, 0)
+            if new_dom is None:
+                self.logger.error('migrate_fdu()', 'KVM Plugin - Before Migration Source: Migration failed')
+                record.pop('migration_properties')
+                record.update({'status': 'ERROR'})
+                record.update({'error_core':10})
+                self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
 
-        #     The source node send to the destination node the flavor, the image and the entity
-
-        #     When flavor and image are defined the destination node create the disks and change status to LANDING
-        #     The source node change status to TAKING_OFF
-
-        #     ## MIGRATING
-
-        #     Actual migration using libvirt API
-
-        #     Destination node wait the VM to be defined and active on KVM
-        #     Source Node issue the migration from libvirt
-
-        #     ## AFTER MIGRATING
+                return
+            self.logger.info('migrate_fdu()', ' KVM Plugin - Before Migration Source: Migration succeeds')
+            dest_conn.close()
+            #
 
 
-        #     Source node destroy all information about entity instance (so the entity remains defined, and flavor and image remains in the node)
-
-        #     Destination node update status in RUNNING
 
 
-        #     '''
-        #     if dst is True:
+        else:
+            descriptor = self.get_fdu_descriptor(fdu_uuid)
+            fdu = KVMFDU.from_descriptor(descriptor)
+            image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
 
-        #         self.logger.info('migrate_entity()', ' KVM Plugin - I\'m the Destination Node')
-        #         self.before_migrate_entity_actions(entity_uuid, True, instance_uuid)
+            self.logger.info('migrate_fdu()', '[ DONE ] KVM Plugin - Destination Node creating image and flavor...')
 
-        #         while True:  # wait for migration to be finished
-        #             dom = self.__lookup_by_uuid(instance_uuid)
-        #             if dom is None:
-        #                 self.logger.info('migrate_entity()', ' KVM Plugin - Domain not already in this host')
-        #             else:
-        #                 if dom.isActive() == 1:
-        #                     break
-        #                 else:
-        #                     self.logger.info('migrate_entity()', ' KVM Plugin - Domain in this host but not running')
-        #             time.sleep(5)
+            img = {
+                'uuid': fdu_uuid,
+                'name': '{}_img'.format(fdu.name),
+                'base_image': image_name,
+                'type':'kvm',
+                'format': fdu.get_image_format()
+                }
 
-        #         self.after_migrate_entity_actions(entity_uuid, True, instance_uuid)
-        #         self.logger.info('migrate_entity()', '[ DONE ] KVM Plugin - Migrate a VM uuid {}'.format(entity_uuid))
-        #         return True
+            fdu.image.update({'file': image_name})
+            fdu.image.update({'uuid': fdu_uuid})
 
-        #     else:
-        #         self.logger.error('migrate_entity()', 'KVM Plugin - FDU not exists')
-        #         self.__write_error_entity(entity_uuid, 'FDU not exist')
-        #         raise FDUNotExistingException('FDU not existing', 'FDU {} not in runtime {}'.format(entity_uuid, self.uuid))
-        # elif entity.get_state() != State.DEFINED:
-        #     self.logger.error('migrate_entity()', 'KVM Plugin - FDU state is wrong, or transition not allowed')
-        #     self.__write_error_entity(entity_uuid, 'FDU state transition not allowed')
-        #     raise StateTransitionNotAllowedException('FDU is not in DEFINED state', 'FDU {} is not in DEFINED state'.format(entity_uuid))
-        # else:
-        #     instance = entity.get_instance(instance_uuid)
-        #     if instance.get_state() not in [State.RUNNING, State.TAKING_OFF]:
-        #         self.logger.error('clean_fdu()', 'KVM Plugin - Instance state is wrong, or transition not allowed')
-        #         self.__write_error_instance(entity_uuid, instance_uuid, 'FDU Instance not exist')
-        #         raise StateTransitionNotAllowedException('Instance is not in RUNNING state', 'Instance {} is not in RUNNING state'.format(entity_uuid))
+            cpu = fdu.comp_requirements.get('cpu_min_count')
+            mem = fdu.comp_requirements.get('ram_size_mb')
+            disk_size = fdu.comp_requirements.get('storage_size_gb')
+            flavor = {
+                'name': '{}_flavor'.format(fdu.name),
+                'uuid': fdu_uuid,
+                'cpu': cpu,
+                'memory': mem,
+                'disk_size': disk_size,
+                'type':'kvm'
+                }
+            fdu.comp_requirements.update({'uuid': fdu_uuid})
 
-        #     self.logger.info('migrate_entity()', ' KVM Plugin - I\'m the Source Node')
-        #     res = self.before_migrate_entity_actions(entity_uuid, instance_uuid=instance_uuid)
-        #     if not res:
-        #         self.logger.error('migrate_entity()', ' KVM Plugin - Error source node before migration, aborting')
-        #         self.__write_error_instance(entity_uuid, instance_uuid, 'FDU Instance migration error on source')
-        #         return
+            self.__add_flavor(flavor)
+            self.__add_image(img)
 
-        #     #### MIGRATION
 
-        #     uri_instance = '{}/{}/{}/{}/{}'.format(self.agent.dhome, self.HOME_ENTITY, entity_uuid, self.INSTANCE, instance_uuid)
-        #     instance_info = json.loads(self.agent.dstore.get(uri_instance))
-        #     name = instance_info.get('entity_data').get('name')
-        #     # destination node uuid
-        #     destination_node_uuid = instance_info.get('dst')
-        #     uri = '{}/{}'.format(self.agent.aroot, destination_node_uuid)
+            disk_path = '{}.{}'.format(fdu_uuid, img.get('format'))
+            cdrom_path = '{}_config.iso'.format(fdu_uuid)
+            disk_path = os.path.join(self.BASE_DIR, self.DISK_DIR, disk_path)
+            cdrom_path = os.path.join(self.BASE_DIR, self.DISK_DIR, cdrom_path)
 
-        #     while True:
-        #         dst_node_info = self.agent.astore.get(uri)  # TODO: solve this ASAP
-        #         if dst_node_info is not None:
-        #             if isinstance(dst_node_info, tuple):
-        #                 dst_node_info = dst_node_info[0]
-        #             dst_node_info = dst_node_info.replace("'", '"')
-        #             break
-        #     # print(dst_node_info)
-        #     dst_node_info = json.loads(dst_node_info)
-        #     ## json.decoder.JSONDecodeError: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
-        #     # dst_node_info = json.loads(self.agent.astore.get(uri)[0])
-        #     ##
-        #     dom = self.__lookup_by_uuid(instance_uuid)
-        #     nw = dst_node_info.get('network')
+            fdu.disk = disk_path
+            fdu.cdrom = cdrom_path
 
-        #     dst_hostname = dst_node_info.get('name')
+            self.logger.info('migrate_fdu()', '[ DONE ] KVM Plugin - Destination Node creating Networks...')
 
-        #     dst_ip = [x for x in nw if x.get('default_gw') is True]
-        #     # TODO: or x.get('inft_configuration').get('ipv6_gateway') for ip_v6
-        #     if len(dst_ip) == 0:
-        #         return False
 
-        #     dst_ip = dst_ip[0].get('inft_configuration').get('ipv4_address')  # TODO: as on search should use ipv6
+            for cp in fdu.get_connection_points():
+                    cp_id = cp.get('uuid')
+                    cp_id = cp.get('uuid')
+                    cp_record = {
+                        'cp_uuid':cp_id,
+                        'status':'CREATE'
+                    }
+                    self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id,cp_record)
+                    res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
+                    while res is None:
+                        res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
 
-        #     # ## ADDING TO /etc/hosts otherwise migration can fail
-        #     self.agent.get_os_plugin().add_know_host(dst_hostname, dst_ip)
-        #     ###
+            net_cfg = []
+            if fdu.get_interfaces() is not None:
+                for i, intf in enumerate(fdu.get_interfaces()):
+                    intf_name = intf.get('name')
+                    mac = intf.get('mac_address')
+                    if intf.get('virtual_interface').get('intf_type').upper() in ['PHYSICAL','BRIDGED']:
+                        real_intf_name = intf.get('virtual_interface').get('vpci')
+                        if self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['ethernet']:
+                            net_cfg.append({'name':intf_name, 'mac':mac, 'dev':real_intf_name,'type':'direct'})
+                            self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
+                        elif self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['wireless']:
+                            net_cfg.append({'name':intf_name, 'mac':mac, 'dev':real_intf_name,'type':'direct'})
+                            self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
+                        else:
+                            net_cfg.append({'name':intf_name, 'mac':mac, 'dev':real_intf_name})
+                    else:
+                        intf_id = 'kvm-{}-{}'.format(fdu.get_short_id(), i)
+                        intf_data = self.call_nw_plugin_function('create_virtual_interface', {'intf_id':intf_id, 'descriptor': intf})
+                        self.logger.info('migrate_fdu()','KVM Plugin - Interface info {}'.format(intf_data))
+                        dev_name = intf_data.get('int_name')
+                        net_cfg.append({'name':intf_name, 'mac':mac, 'dev':dev_name, 'type':'direct'})
 
-        #     # ## ACTUAL MIGRATIION ##################
-        #     dst_host = 'qemu+ssh://{}/system'.format(dst_ip)
-        #     dest_conn = libvirt.open(dst_host)
-        #     if dest_conn is None:
-        #         self.logger.error('before_migrate_entity_actions()', 'KVM Plugin - Before Migration Source: Error on libvirt connection')
-        #         self.__write_error_instance(entity_uuid, instance_uuid, 'Source Error on libvirt connection')
-        #         return
-        #     flags = libvirt.VIR_MIGRATE_LIVE | libvirt.VIR_MIGRATE_PERSIST_DEST
-        #     new_dom = dom.migrate(dest_conn, flags, name, None, 0)
-        #     # new_dom = dom.migrate(dest_conn, libvirt.VIR_MIGRATE_LIVE and libvirt.VIR_MIGRATE_PERSIST_DEST and libvirt.VIR_MIGRATE_NON_SHARED_DISK, name, None, 0)
-        #     if new_dom is None:
-        #         self.logger.error('before_migrate_entity_actions()', 'KVM Plugin - Before Migration Source: Migration failed')
-        #         self.__write_error_instance(entity_uuid, instance_uuid, 'Source Error Migration failed')
-        #         return
-        #     self.logger.info('before_migrate_entity_actions()', ' KVM Plugin - Before Migration Source: Migration succeeds')
-        #     dest_conn.close()
-        #     # #######################################
 
-        #     # ## REMOVING AFTER MIGRATION
-        #     self.agent.get_os_plugin().remove_know_host(dst_hostname)
-        #     instance.on_stop()
-        #     self.current_fdus.update({entity_uuid: entity})
 
-        #     ####
+            self.logger.info('migrate_fdu()', '[ DONE ] KVM Plugin - Destination Node creating disks...')
 
-        #     res = self.after_migrate_entity_actions(entity_uuid, instance_uuid=instance_uuid)
-        #     if not res:
-        #         self.logger.error('migrate_entity()', ' KVM Plugin - Error source node after migration, aborting')
-        #         return
-        pass
+            vm_xml = self.__generate_dom_xml(fdu, flavor, img, net_cfg)
+            xml_file_name = 'kvm-{}.xml'.format(fdu_uuid)
+            vm_xml_store = binascii.hexlify(base64.b64encode(bytes(vm_xml, 'utf-8'))).decode()
+            self.call_os_plugin_function('store_file',{'content':vm_xml_store, 'file_path':self.BASE_DIR, 'filename':xml_file_name})
+
+            vendor_conf = self.__generate_vendor_data(fdu_uuid, self.node)
+            vendor_filename = 'vendor_{}.yaml'.format(fdu_uuid)
+            vendor_conf = binascii.hexlify(base64.b64encode(bytes(vendor_conf, 'utf-8'))).decode()
+            self.call_os_plugin_function('store_file',{'content':vendor_conf, 'file_path':self.BASE_DIR, 'filename':vendor_filename})
+            vendor_filename = os.path.join(self.BASE_DIR, vendor_filename)
+            ### creating cloud-init initial drive TODO: check all the possibilities provided by OSM
+            conf_cmd = '{} --hostname {} --uuid {} --vendor-data {}'.format(os.path.join(self.DIR, 'templates',
+                                                                        'create_config_drive.sh'), fdu.name, fdu_uuid,
+                                                                          vendor_filename)
+
+            rm_temp_cmd = 'rm'
+            if fdu.configuration is not None:
+                if fdu.configuration.get('conf_type') in ['CLOUD_INIT']:
+                    c_init_file = fdu.configuration.get('script')
+                    data_filename = 'userdata_{}'.format(fdu_uuid)
+                    userdata = binascii.hexlify(base64.b64encode(bytes(fdu.c_init_file, 'utf-8'))).decode()
+                    self.call_os_plugin_function('store_file',{'content':userdata, 'file_path':self.BASE_DIR, 'filename':data_filename})
+                    data_filename = os.path.join(self.BASE_DIR, data_filename)
+                    conf_cmd = conf_cmd + ' --user-data {}'.format(data_filename)
+            if fdu.ssh_key is not None and fdu.ssh_key != '':
+                key_filename = 'key_{}.pub'.format(fdu_uuid)
+                keydata = binascii.hexlify(base64.b64encode(bytes(fdu.ssh_key, 'utf-8'))).decode()
+                self.call_os_plugin_function('store_file',{'content':keydata, 'file_path':self.BASE_DIR, 'filename':key_filename})
+                key_filename = os.path.join(self.BASE_DIR, key_filename)
+                conf_cmd = conf_cmd + ' --ssh-key {}'.format(key_filename)
+
+
+            conf_cmd = conf_cmd + ' {}'.format(fdu.cdrom)
+
+            self.call_os_plugin_function('execute_command',{'command':qemu_cmd,'blocking':True, 'external':False})
+            self.call_os_plugin_function('execute_command',{'command':conf_cmd,'blocking':True, 'external':False})
+            if fdu.ssh_key is not None and fdu.ssh_key != '':
+                self.call_os_plugin_function('remove_file',{'file_path':key_filename})
+            if fdu.configuration is not None:
+                if fdu.configuration.get('conf_type') in ['CLOUD_INIT']:
+                    self.call_os_plugin_function('remove_file',{'file_path':data_filename})
+            self.call_os_plugin_function('remove_file',{'file_path':vendor_filename})
+
+            record.update({'status': 'LANDING'})
+            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
+            self.logger.info('migrate_fdu()', '[ DONE ] KVM Plugin - Destination Node is ready for {}'.format(fdu_uuid))
+
+
+            ### DESTINATION NODE WAIT FOR VM IN HYPERVISOR
+
+            while True:
+                    dom = self.__lookup_by_uuid(fdu_uuid)
+                    if dom is None:
+                        self.logger.info('migrate_fdu()', ' KVM Plugin - Domain not already in this host')
+                    else:
+                        if dom.isActive() == 1:
+                            break
+                        else:
+                            self.logger.info('migrate_fdu()', ' KVM Plugin - Domain in this host but not running')
+                    time.sleep(1)
+
+                fdu.on_start()
+                self.current_fdus.update({fdu_uuid: fdu})
+                record.pop('migration_properties')
+                record.update({'status': 'RUN'})
+                self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
+                self.logger.info('migrate_fdu()', '[ DONE ] KVM Plugin - Migrate a VM uuid {}'.format(entity_uuid))
+
+                #
+                # Here we shoudl copy the disk image somehow
+                #
+
+
+
 
     def before_migrate_fdu_actions(self, fdu_uuid, dst=False):
-        # if dst is True:
-
-        #     self.logger.info('before_migrate_entity_actions()', ' KVM Plugin - Before Migration Destination: Create Domain and destination files')
-        #     uri = '{}/{}/{}/{}/{}'.format(self.agent.dhome, self.HOME_ENTITY, entity_uuid, self.INSTANCE, instance_uuid)
-        #     instance_info = json.loads(self.agent.dstore.get(uri))
-        #     vm_info = instance_info.get('entity_data')
-
-        #     # waiting flavor
-        #     self.logger.info('before_migrate_entity_actions()', ' KVM Plugin - Waiting flavor')
-        #     while True:
-        #         flavor_id = vm_info.get('flavor_id')
-        #         if flavor_id in self.flavors.keys():
-        #             break
-
-        #     # waiting image
-        #     self.logger.info('before_migrate_entity_actions()', ' KVM Plugin - Waiting image')
-        #     while True:
-        #         base_image = vm_info.get('base_image')
-        #         if base_image in self.images.keys():
-        #             break
-
-        #     # waiting entity
-        #     self.logger.info('before_migrate_entity_actions()', ' KVM Plugin - Waiting entity')
-        #     while True:
-        #         if entity_uuid in self.current_fdus.keys():
-        #             break
-        #     self.logger.info('before_migrate_entity_actions()', ' FDU {} defined!!!'.format(entity_uuid))
-
-        #     img_info = self.images.get(base_image)
-        #     flavor_info = self.flavors.get(flavor_id)
-        #     entity = self.current_fdus.get(entity_uuid)
-
-        #     name = vm_info.get('name')
-        #     disk_path = '{}.{}'.format(instance_uuid, img_info.get('format'))
-        #     cdrom_path = '{}_config.iso'.format(instance_uuid)
-        #     disk_path = os.path.join(self.BASE_DIR, self.DISK_DIR, disk_path)
-        #     cdrom_path = os.path.join(self.BASE_DIR, self.DISK_DIR, cdrom_path)
-
-        #     instance = KVMLibvirtFDUInstance(instance_uuid, name, disk_path, cdrom_path, entity.networks, entity.user_file,
-        #                                         entity.ssh_key, entity_uuid, flavor_info.get('uuid'), img_info.get('uuid'))
-
-        #     instance.state = State.LANDING
-        #     vm_info.update({'name': name})
-        #     vm_xml = self.__generate_dom_xml(instance, flavor_info, img_info)
-
-        #     instance.xml = vm_xml
-        #     qemu_cmd = 'qemu-img create -f {} {} {}G'.format(img_info.get('format'), instance.disk, flavor_info.get('disk_size'))
-        #     self.agent.get_os_plugin().execute_command(qemu_cmd, True)
-        #     self.agent.get_os_plugin().create_file(instance.cdrom)
-        #     self.agent.get_os_plugin().create_file(os.path.join(self.BASE_DIR, self.LOG_DIR, '{}_log.log'.format(instance_uuid)))
-
-        #     conf_cmd = '{} --hostname {} --uuid {}'.format(os.path.join(self.DIR, 'templates',
-        #                                                                 'create_config_drive.sh'), instance.name, instance_uuid)
-        #     rm_temp_cmd = 'rm'
-        #     if instance.user_file is not None and instance.user_file != '':
-        #         data_filename = 'userdata_{}'.format(instance_uuid)
-        #         self.agent.get_os_plugin().store_file(instance.user_file, self.BASE_DIR, data_filename)
-        #         data_filename = os.path.join(self.BASE_DIR, data_filename)
-        #         conf_cmd = conf_cmd + ' --user-data {}'.format(data_filename)
-        #         # rm_temp_cmd = rm_temp_cmd + ' {}'.format(data_filename)
-        #     if instance.ssh_key is not None and instance.ssh_key != '':
-        #         key_filename = 'key_{}.pub'.format(instance_uuid)
-        #         self.agent.get_os_plugin().store_file(instance.ssh_key, self.BASE_DIR, key_filename)
-        #         key_filename = os.path.join(self.BASE_DIR, key_filename)
-        #         conf_cmd = conf_cmd + ' --ssh-key {}'.format(key_filename)
-        #         # rm_temp_cmd = rm_temp_cmd + ' {}'.format(key_filename)
-
-        #     conf_cmd = conf_cmd + ' {}'.format(instance.cdrom)
-
-        #     self.agent.get_os_plugin().execute_command(conf_cmd, True)
-
-        #     instance_info.update({'entity_data': vm_info})
-        #     instance_info.update({'status': 'landing'})
-
-        #     entity.add_instance(instance)
-        #     self.current_fdus.update({entity_uuid: entity})
-
-        #     self.__update_actual_store_instance(entity_uuid, instance_uuid, instance_info)
-
-        #     return True
-        # else:
-        #     self.logger.info('before_migrate_entity_actions()', ' KVM Plugin - Before Migration Source: get information about destination node')
-
-
-        #     local_var = MVar()
-        #     def cb(key, value, v):
-        #         local_var.put(value)
-
-        #     entity = self.current_fdus.get(entity_uuid, None)
-        #     instance = entity.get_instance(instance_uuid)
-
-        #     # reading entity info
-        #     uri_entity = '{}/{}/{}'.format(self.agent.ahome, self.HOME_ENTITY, entity_uuid)
-        #     entity_info = json.loads(self.agent.astore.get(uri_entity))
-        #     entity_info.update({'status': 'define'})
-
-        #     # reading instance info
-        #     uri_instance = '{}/{}/{}/{}/{}'.format(self.agent.dhome, self.HOME_ENTITY, entity_uuid, self.INSTANCE, instance_uuid)
-        #     instance_info = json.loads(self.agent.dstore.get(uri_instance))
-        #     vm_info = instance_info.get('entity_data')
-        #     # destination node uuid
-        #     destination_node_uuid = instance_info.get('dst')
-
-        #     # flavor and image information
-        #     flavor_info = self.flavors.get(vm_info.get('flavor_id'))
-        #     img_info = self.images.get(vm_info.get('base_image'))
-
-        #     # getting same plugin in destination node
-        #     uri = '{}/{}/plugins'.format(self.agent.aroot, destination_node_uuid)
-        #     all_plugins = json.loads(self.agent.astore.get(uri)).get('plugins')  # TODO: solve this ASAP
-
-        #     runtimes = [x for x in all_plugins if x.get('type') == 'runtime']
-        #     search = [x for x in runtimes if 'KVMLibvirt' in x.get('name')]
-        #     if len(search) == 0:
-        #         self.logger.error('before_migrate_entity_actions()', 'KVM Plugin - Before Migration Source: No KVM Plugin, Aborting!!!')
-        #         self.__write_error_instance(entity_uuid, instance_uuid, 'FDU Instance Migration error')
-        #         return False
-        #     else:
-        #         kvm_uuid = search[0].get('uuid')
-
-        #     self.logger.info('before_migrate_entity_actions()', 'KVM Plugin - check if flavor is present on destination')
-        #     uri_flavor = '{}/{}/runtime/{}/flavor/{}'.format(self.agent.aroot, destination_node_uuid, kvm_uuid, flavor_info.get('uuid'))
-        #     if self.agent.astore.get(uri_flavor) is None:
-        #         self.logger.info('before_migrate_entity_actions()', 'KVM Plugin - sending flavor to destination')
-        #         uri_flavor = '{}/{}/runtime/{}/flavor/{}'.format(self.agent.droot, destination_node_uuid, kvm_uuid, flavor_info.get('uuid'))
-        #         self.agent.dstore.put(uri_flavor, json.dumps(flavor_info))
-        #     # wait to be defined flavor
-        #     # self.logger.info('before_migrate_entity_actions()', 'KVM Plugin - waiting flavor in destination')
-        #     # while True:
-        #     #     time.sleep(0.1)
-        #     #     uri_flavor = '{}/{}/runtime/{}/flavor/{}'.format(self.agent.aroot, destination_node_uuid, kvm_uuid, flavor_info.get('uuid'))
-        #     #     f_i = self.agent.astore.get(uri_flavor)
-        #     #     print('{}'.format(f_i))
-        #     #     if f_i is not None:
-        #     #         self.logger.info('before_migrate_entity_actions()', 'KVM Plugin - Flavor in destination!')
-        #     #         break
-
-        #     self.logger.info('before_migrate_entity_actions()', 'KVM Plugin - check if image is present on destination')
-        #     uri_img = '{}/{}/runtime/{}/image/{}'.format(self.agent.aroot, destination_node_uuid, kvm_uuid, img_info.get('uuid'))
-        #     if self.agent.astore.get(uri_img) is None:
-        #         self.logger.info('before_migrate_entity_actions()', 'KVM Plugin - sending image to destination')
-        #         uri_img = '{}/{}/runtime/{}/image/{}'.format(self.agent.droot, destination_node_uuid, kvm_uuid, img_info.get('uuid'))
-        #         self.agent.dstore.put(uri_img, json.dumps(img_info))
-
-        #     # wait to be defined image
-        #     # self.logger.info('before_migrate_entity_actions()', 'KVM Plugin - Waiting image in destination')
-        #     # while True:
-        #     #     time.sleep(0.1)
-        #     #     uri_img = '{}/{}/runtime/{}/image/{}'.format(self.agent.aroot, destination_node_uuid, kvm_uuid, img_info.get('uuid'))
-        #     #     i_i = self.agent.astore.get(uri_img)
-        #     #     if i_i is not None:
-        #     #         self.logger.info('before_migrate_entity_actions()', 'KVM Plugin - Image in destination!')
-        #     #         break
-
-        #     # send entity definition
-
-        #     # uri = '{}/{}/runtime/{}/entity/*'.format(self.agent.aroot, destination_node_uuid, kvm_uuid, entity_uuid, instance_uuid)
-        #     # self.agent.astore.observe(uri, self.dummy_observer)
-        #     # import colorama
-        #     # colorama.init()
-        #     # print(colorama.Fore.RED + '>>>>>> Registered observer for {} <<<<<<< '.format(uri) + colorama.Style.RESET_ALL)
-
-        #     self.logger.info('before_migrate_entity_actions()', 'KVM Plugin - check if image is present on destination')
-        #     uri_entity = '{}/{}/runtime/{}/entity/{}'.format(self.agent.aroot, destination_node_uuid, kvm_uuid, entity_uuid)
-        #     if self.agent.astore.get(uri_entity) is None:
-        #         self.logger.info('before_migrate_entity_actions()', 'KVM Plugin - sending entity to destination')
-        #         uri_entity = '{}/{}/runtime/{}/entity/{}'.format(self.agent.droot, destination_node_uuid, kvm_uuid, entity_uuid)
-        #         self.agent.dstore.put(uri_entity, json.dumps(entity_info))
-        #         self.logger.info('before_migrate_entity_actions()', 'KVM Plugin - Waiting entity in destination')
-
-
-        #         uri_entity = '{}/{}/runtime/{}/entity/{}'.format(self.agent.aroot, destination_node_uuid, kvm_uuid, entity_uuid)
-        #         subid = self.agent.astore.observe(uri_entity, cb)
-        #         entity_info = json.loads(local_var.get())
-        #         es = entity_info.get('status')
-        #         while es not in ['defined','error']:
-        #             entity_info = json.loads(local_var.get())
-        #             es = entity_info.get('status')
-        #         self.agent.astore.overlook(subid)
-
-        #         self.logger.info('before_migrate_entity_actions()', 'KVM Plugin - FDU in destination!')
-        #         # while True:
-        #         #     uri_entity = '{}/{}/runtime/{}/entity/{}'.format(self.agent.aroot, destination_node_uuid, kvm_uuid, entity_uuid)
-        #         #     jdata = self.agent.astore.get(uri_entity)
-        #         #     if jdata is not None:
-        #         #         self.logger.info('before_migrate_entity_actions()', 'KVM Plugin - FDU in destination!')
-        #         #         entity_info = json.loads(jdata)
-        #         #         if entity_info is not None and entity_info.get('status') == 'defined':
-        #         #             break
-
-        #         # waiting for destination node to be ready
-        #     self.logger.info('before_migrate_entity_actions()', ' KVM Plugin - Before Migration Source: Waiting destination to be ready')
-        #     uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.agent.aroot, destination_node_uuid, kvm_uuid, entity_uuid, instance_uuid)
-        #     subid = self.agent.astore.observe(uri, cb)
-        #     self.logger.info('before_migrate_entity_actions()', 'KVM Plugin - FDU in destination!')
-        #     entity_info = json.loads(local_var.get())
-        #     es = entity_info.get('status')
-        #     while es not in ['landing','error']:
-        #         entity_info = json.loads(local_var.get())
-        #         es = entity_info.get('status')
-        #     self.agent.astore.overlook(subid)
-        #     # while True:
-        #     #     # self.logger.info('before_migrate_entity_actions()', ' KVM Plugin - Before Migration Source: Waiting destination to be ready')
-        #     #     uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.agent.aroot, destination_node_uuid, kvm_uuid, entity_uuid, instance_uuid)
-        #     #     vm_info = self.agent.astore.get(uri)
-        #     #     if vm_info is not None:
-        #     #         vm_info = json.loads(vm_info)
-        #     #         if vm_info is not None and vm_info.get('status') == 'landing':
-        #     #             break
-        #     self.logger.info('before_migrate_entity_actions()', ' KVM Plugin - Before Migration Source: Destination is ready!')
-
-        #     instance.state = State.TAKING_OFF
-        #     instance_info.update({'status': 'taking_off'})
-        #     self.__update_actual_store_instance(entity_uuid, instance_uuid, instance_info)
-        #     self.current_fdus.update({entity_uuid: entity})
-        #     return True
         pass
 
     def after_migrate_fdu_actions(self, fdu_uuid, dst=False):
-        # if type(entity_uuid) == dict:
-        #     entity_uuid = entity_uuid.get('entity_uuid')
-        # entity = self.current_fdus.get(entity_uuid, None)
-        # if entity is None:
-        #     self.logger.error('after_migrate_entity_actions()', 'KVM Plugin - FDU not exists')
-        #     self.__write_error_entity(entity_uuid, 'FDU not exist')
-        #     raise FDUNotExistingException('FDU not existing', 'FDU {} not in runtime {}'.format(entity_uuid, self.uuid))
-        # elif entity.get_state() != State.DEFINED:
-        #     self.logger.error('after_migrate_entity_actions()', 'KVM Plugin - FDU state is wrong, or transition not allowed')
-        #     self.__write_error_entity(entity_uuid, 'FDU state transition not allowed')
-        #     raise StateTransitionNotAllowedException('FDU is not in correct state', 'FDU {} is not in correct state'.format(entity.get_state()))
-        # else:
-        #     if dst is True:
-
-        #         instance = entity.get_instance(instance_uuid)
-        #         '''
-        #         Here the plugin also update to the current status, and remove unused keys
-        #         '''
-        #         self.logger.info('after_migrate_entity_actions()', ' KVM Plugin - After Migration Destination: Updating state')
-        #         instance.on_start()
-        #         self.current_fdus.update({entity_uuid: entity})
-
-        #         uri = '{}/{}/{}/{}/{}'.format(self.agent.dhome, self.HOME_ENTITY, entity_uuid, self.INSTANCE, instance_uuid)
-        #         vm_info = json.loads(self.agent.dstore.get(uri))
-        #         vm_info.pop('dst')
-        #         vm_info.update({'status': 'run'})
-
-        #         self.__update_actual_store_instance(entity_uuid, instance_uuid, vm_info)
-        #         self.current_fdus.update({entity_uuid: entity})
-
-        #         return True
-        #     else:
-        #         '''
-        #         Source node destroys all information about vm
-        #         '''
-        #         self.logger.info('after_migrate_entity_actions()', ' KVM Plugin - After Migration Source: Updating state, destroy vm')
-        #         self.__force_entity_instance_termination(entity_uuid, instance_uuid)
-        #         return True
         pass
 
     def __add_image(self, manifest):
@@ -1079,8 +882,8 @@ class KVM(RuntimePluginFDU):
             'RESUME': self.resume_fdu,
             'RUN': self.run_fdu,
             'CLEAN': self.clean_fdu
-            # 'landing': self.migrate_entity,
-            # 'taking_off': self.migrate_entity
+            'LANDING': self.migrate_fdu,
+            'TAKE_OFF': self.migrate_fdu
         }
         return r.get(action, None)
 

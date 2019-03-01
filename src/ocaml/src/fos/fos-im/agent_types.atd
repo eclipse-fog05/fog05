@@ -30,6 +30,7 @@ type agent_config = {
   enable_lldp : bool;
   enable_spawner : bool;
   pid_file : string;
+  mgmt_interface : string;
 }
 
 type plugins_conf = {

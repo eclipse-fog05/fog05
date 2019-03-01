@@ -246,6 +246,22 @@ module MakeGAD(P: sig val prefix: string end) = struct
     | _ ->
       Lwt.return @@ List.map (fun (k,_) -> extract_nodeid_from_path k) res
 
+  let get_node_configuration sysid tenantid nodeid connector =
+    MVar.read connector >>= fun connector ->
+    let s = Yaks.Selector.of_path @@ get_node_configuration_path sysid tenantid nodeid in
+    Yaks.Workspace.get s connector.ws
+    >>= fun res ->
+    match res with
+    | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("Empty value list on get_node_info") ))
+    | _ ->
+      let _,v = (List.hd res) in
+      try
+        Lwt.return @@ FAgentTypes.configuration_of_string (Yaks.Value.to_string v)
+      with
+      | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _ ->
+        Lwt.fail @@ FException (`InternalError (`Msg ("Value is not well formatted in get_node_info") ))
+      | exn -> Lwt.fail exn
+
   let get_node_info sysid tenantid nodeid connector =
     MVar.read connector >>= fun connector ->
     let s = Yaks.Selector.of_path @@ get_node_info_path sysid tenantid nodeid in
