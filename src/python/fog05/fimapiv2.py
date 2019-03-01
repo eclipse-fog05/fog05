@@ -665,7 +665,7 @@ class FIMAPIv2(object):
 
             if wait:
                 self.__wait_node_fdu_state_change(
-                    destination_node_uuid, fdu_uuid, 'RUN')
+                    destination_node_uuid, fduid, 'RUN')
             return True
 
 

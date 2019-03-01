@@ -533,7 +533,7 @@ class KVM(RuntimePluginFDU):
 
     # TODO rethink the migration workflow to be faster, copy the disk first and copy the base image only when migration ended
     def migrate_fdu(self, fdu_uuid):
-        record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
+        record = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid)
         destination = record.get('migration_properties').get('destination')
         if destination != self.uuid:
             self.logger.info('migrate_fdu()', '[ DONE ] KVM Plugin - Source Node preparation...')
