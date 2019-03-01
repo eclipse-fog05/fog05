@@ -535,7 +535,7 @@ class KVM(RuntimePluginFDU):
     def migrate_fdu(self, fdu_uuid):
         record = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid)
         destination = record.get('migration_properties').get('destination')
-        if destination != self.uuid:
+        if destination != self.node:
             self.logger.info('migrate_fdu()', '[ DONE ] KVM Plugin - Source Node preparation...')
             fdu = self.current_fdus.get(fdu_uuid, None)
             if fdu_uuid is None:
