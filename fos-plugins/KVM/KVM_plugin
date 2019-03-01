@@ -535,7 +535,7 @@ class KVM(RuntimePluginFDU):
     def migrate_fdu(self, fdu_uuid):
         record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
         destination = record.get('migration_properties').get('destination')
-        if destination <> self.uuid:
+        if destination != self.uuid:
             self.logger.info('migrate_fdu()', '[ DONE ] KVM Plugin - Source Node preparation...')
             fdu = self.current_fdus.get(fdu_uuid, None)
             if fdu_uuid is None:
@@ -572,7 +572,11 @@ class KVM(RuntimePluginFDU):
             self.logger.info('migrate_fdu()', ' KVM Plugin - Before Migration Source: Migration succeeds')
             dest_conn.close()
             #
-
+            fdu.on_stop()
+            self.current_fdus.update({fdu_uuid: fdu})
+            self.clean_fdu(fdu_uuid)
+            self.undefine_fdu(fdu_uuid)
+            self.logger.info('migrate_fdu()', ' KVM Plugin - Source is Clean')
 
 
 
