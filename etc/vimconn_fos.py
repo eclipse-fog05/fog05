@@ -43,7 +43,7 @@ import sys
 import uuid
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from fog05 import FIMAPIv2
+from fogfimapi import API
 
 #Error variables
 HTTP_Bad_Request = 400
@@ -133,6 +133,7 @@ class vimconnector():
         self.config    = config
         self.availability_zone = None
         self.arch = config.get('arch', 'x86_64')
+        self.hv = config.get('hypervisor', 'LXD')
         self.fdu_node_map = {}
         self.logger = logging.getLogger('openmano.vim')
         if log_level:
@@ -140,7 +141,7 @@ class vimconnector():
         if not self.url_admin:  #try to use normal url
             self.url_admin = self.url
 
-        self.fos_api = FIMAPIv2(locator=self.url)
+        self.fos_api = API(locator=self.url)
 
     def __getitem__(self,index):
         if index=='tenant_id':
@@ -643,7 +644,7 @@ class vimconnector():
             'uuid':fdu_uuid,
             'computation_requirements':flv,
             'image':img,
-            'hypervisor':'LXD',
+            'hypervisor':self.hv,
             'migration_kind':'LIVE',
             'interfaces':[],
             'io_ports':[],

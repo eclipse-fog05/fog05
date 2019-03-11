@@ -160,7 +160,7 @@ class GAD(object):
             'image', '*', 'info'
         ])
 
-     def get_flavor_info_path(self, sysid, tenantid, flavorid):
+    def get_flavor_info_path(self, sysid, tenantid, flavorid):
         return Constants.create_path([
             self.prefix, sysid, 'tenants', tenantid, 'flavor', flavorid, 'info'
         ])
