@@ -43,8 +43,8 @@ class FIMAPIv2(object):
         self.plugin = self.Plugin(self.connector, self.sysid, self.tenantid)
         self.network = self.Network(self.connector, self.sysid, self.tenantid)
         self.fdu = self.FDU(self.connector, self.sysid, self.tenantid)
-        # self.image = self.Image(self.store)
-        # self.flavor = self.Flavor(self.store)
+        self.image = self.Image(self.connector, self.sysid, self.tenantid)
+        self.flavor = self.Flavor(self.connector, self.sysid, self.tenantid)
 
     def close(self):
         self.connector.close()
@@ -712,7 +712,7 @@ class FIMAPIv2(object):
         def search(self, search_dict, node_uuid=None):
             pass
 
-        def info(self, entity_uuid):
+        def info(self, fdu_uuid):
             # uri = '{}/*/runtime/*/entity/{}/instance/**'.format(self.store.aroot, entity_uuid)
             # info = self.store.actual.getAll(uri)
             # if info is None or len(info) == 0:
@@ -724,9 +724,12 @@ class FIMAPIv2(object):
             #     i_uuid = k.split('/')[-1]
             #     i.update({i_uuid: v})
             # return {entity_uuid: i}
-            pass
+            return self.connector.glob.actual.get_fdu_info(self.sysid, self.tenantid, fdu_uuid)
 
-        def list(self, node_uuid=None):
+        def instance_info(self, fdu_uuid, node_uuid):
+            return self.connector.glob.actual.get_node_fdu(self.sysid, self.tenantid, node_uuid, fdu_uuid)
+
+        def list(self, node_uuid='*'):
             '''
 
             List all entity element available in the system/teneant
@@ -760,7 +763,8 @@ class FIMAPIv2(object):
             #     elist = self.list(node_id)
             #     entities.update({node_id: elist.get(node_id)})
             # return entities
-            pass
+            return self.connector.glob.actual.get_node_fdus(self.sysid, self.tenantid, node_uuid)
+
 
     class Image(object):
         '''
@@ -819,7 +823,7 @@ class FIMAPIv2(object):
             # return handler
             pass
 
-        def add(self, manifest, node_uuid=None):
+        def add(self, descriptor):
             '''
 
             Adding an image to a node or to all nodes
@@ -855,9 +859,15 @@ class FIMAPIv2(object):
             #     return True
             # else:
             #     return False
-            pass
+            img_id = descriptor.get('uuid')
+            return self.connector.glob.desired.add_image(self.sysid,
+             self.tenantid,img_id, descriptor)
 
-        def remove(self, image_uuid, node_uuid=None):
+        def get(self, iamge_uuid):
+            return self.connector.glob.desired.get_image(self.sysid,
+             self.tenantid,iamge_uuid, descriptor)
+
+        def remove(self, image_uuid):
             '''
 
             Remove an image for a node or all nodes
@@ -878,12 +888,13 @@ class FIMAPIv2(object):
             #     return True
             # else:
             #     return False
-            pass
+            return self.connector.glob.desired.remove_image(self.sysid,
+             self.tenantid, image_uuid)
 
         def search(self, search_dict, node_uuid=None):
             pass
 
-        def list(self, node_uuid=None):
+        def list(self):
             '''
 
             List available entity images
@@ -911,7 +922,8 @@ class FIMAPIv2(object):
             #         else:
             #             images.get(nodeid).get(pluginid).append(img_data)
             # return images
-            pass
+            return self.connector.loc.actual.get_all_images(self.sysid,
+             self.tenantid)
 
     class Flavor(object):
         '''
@@ -928,7 +940,7 @@ class FIMAPIv2(object):
             self.sysid = sysid
             self.tenantid = tenantid
 
-        def add(self, manifest, node_uuid=None):
+        def add(self, descriptor):
             '''
 
             Add a computing flavor to a node or all nodes
@@ -951,9 +963,37 @@ class FIMAPIv2(object):
             #     return True
             # else:
             #     return False
-            pass
+            flv_id = descriptor.get('uuid')
+            return self.connector.glob.desired.add_flavor(self.sysid,
+             self.tenantid,flv_id, descriptor)
 
-        def remove(self, flavor_uuid, node_uuid=None):
+        def get(self, flavor_uuid):
+            '''
+
+            Add a computing flavor to a node or all nodes
+
+            :param manifest: dictionary representing the manifest
+             for the flavor
+            :param node_uuid: optional node in which add the flavor
+            :return: boolean
+            '''
+            # manifest.update({'status': 'add'})
+            # json_data = json.dumps(manifest)
+            # if node_uuid is None:
+            #     uri = '{}/*/runtime/*/flavor/{}'.format(
+            #         self.store.droot, manifest.get('uuid'))
+            # else:
+            #     uri = '{}/{}/runtime/*/flavor/{}'.format(
+            #         self.store.droot, node_uuid, manifest.get('uuid'))
+            # res = self.store.desired.put(uri, json_data)
+            # if res:
+            #     return True
+            # else:
+            #     return False
+            return self.connector.glob.desired.get_flavor(self.sysid,
+             self.tenantid,flavor_uuid, descriptor)
+
+        def remove(self, flavor_uuid):
             '''
 
             Remove a flavor from all nodes or a specified node
@@ -973,9 +1013,10 @@ class FIMAPIv2(object):
             #     return True
             # else:
             #     return False
-            pass
+            return self.connector.glob.desired.remove_flavor(self.sysid,
+             self.tenantid, flavor_uuid)
 
-        def list(self, node_uuid=None):
+        def list(self):
             '''
 
             List available entity flavors
@@ -1002,7 +1043,8 @@ class FIMAPIv2(object):
             #         else:
             #             flavors.get(nodeid).get(pluginid).append(flv_data)
             # return flavors
-            pass
+            return self.connector.loc.actual.get_all_flavors(self.sysid,
+             self.tenantid)
 
         def search(self, search_dict, node_uuid=None):
             pass

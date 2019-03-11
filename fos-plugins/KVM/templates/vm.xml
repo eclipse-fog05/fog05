@@ -68,13 +68,12 @@
         {% if networks %}
         {% for net in networks %}
          {% if net.type is defined %}
-        <devices>
             <interface type='direct' trustGuestRxFilters='no'>
                 <target dev='{{ net.name }}'/>
                 <mac address='{{ net.mac }}'/>
                 <source dev='{{ net.dev }}' mode='vepa'/>
+                <model type='virtio'/>
             </interface>
-        </devices>
             {% else %}
         <interface type='bridge'>
             <mac address='{{ net.mac }}'/>

@@ -38,6 +38,8 @@ type fdu = {
 
 
 type image = {
+  ?uuid : string option;
+  ?name : string option;
   uri : string;
   checksum : string;
   format : string;
@@ -61,6 +63,8 @@ type energy_requirements = {
 
 (* This is the flavor *)
 type computational_requirements =  {
+  ?uuid : string option;
+  ?name : string option;
   cpu_arch : string;
   cpu_min_freq : float;
   cpu_min_count: int;
@@ -118,7 +122,7 @@ type interface = {
   name : string;
   is_mgmt : bool;
   if_type : intf_t;
-  mac_address : string;
+  ?mac_address : string option;
   virtual_interface : vif_type;
   ?cp_id : string option;
 }

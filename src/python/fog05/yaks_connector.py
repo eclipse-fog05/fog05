@@ -138,6 +138,52 @@ class GAD(object):
             self.prefix,sysid ,'tenants', tenantid,'networks','ports',
             '*', 'info'])
 
+    def get_image_info_path(self, sysid, tenantid, imageid):
+        return Constants.create_path([
+            self.prefix, sysid, 'tenants', tenantid, 'image', imageid, 'info'
+        ])
+
+    def get_all_image_selector(self, sysid, tenantid):
+        return Constants.create_path([
+            self.prefix, sysid, 'tenants', tenantid, 'image', '*', 'info'
+        ])
+
+    def get_node_image_info_path(self, sysid, tenantid, nodeid, imageid):
+        return Constants.create_path([
+            self.prefix, sysid, 'tenants', tenantid, 'nodes', nodeid,
+             'image', imageid, 'info'
+        ])
+
+    def get_all_node_image_selector(self, sysid, tenantid, nodeid):
+        return Constants.create_path([
+            self.prefix, sysid, 'tenants', tenantid, 'nodes', nodeid,
+            'image', '*', 'info'
+        ])
+
+     def get_flavor_info_path(self, sysid, tenantid, flavorid):
+        return Constants.create_path([
+            self.prefix, sysid, 'tenants', tenantid, 'flavor', flavorid, 'info'
+        ])
+
+    def get_all_flavor_selector(self, sysid, tenantid):
+        return Constants.create_path([
+            self.prefix, sysid, 'tenants', tenantid, 'flavor', '*', 'info'
+        ])
+
+    def get_node_flavor_info_path(self, sysid, tenantid, nodeid, flavorid):
+        return Constants.create_path([
+            self.prefix, sysid, 'tenants', tenantid, 'nodes', nodeid,
+             'flavor', flavorid, 'info'
+        ])
+
+    def get_all_flavor_image_selector(self, sysid, tenantid, nodeid):
+        return Constants.create_path([
+            self.prefix, sysid, 'tenants', tenantid, 'nodes', nodeid,
+            'flavor', '*', 'info'
+        ])
+
+
+
     def extract_userid_from_path(self, path):
         return path.split('/')[4]
 
@@ -404,6 +450,110 @@ class GAD(object):
     def remove_network(self, sysid, tenantid, portid):
         p = self.get_network_port_info_path(sysid, tenantid, portid)
         return self.ws.remove(p)
+
+    def add_image(self, sysid, tenantid, imageid, imginfo):
+        p = self.get_image_info_path(sysid, tenantid, imageid)
+        v = Value(json.dumps(imginfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def remove_image(self, sysid, tenatid, imageid):
+        p = self.get_image_info_path(sysid, tenantid, imageid)
+        return self.ws.remove(p)
+
+    def get_image(self, sysid, tenantid, imageid):
+        p = self.get_image_info_path(sysid, tenantid, imageid)
+        res = self.ws.get(p)
+        if len(res) == 0:
+            return None
+        else:
+            v = res[0][1]
+            return json.loads(v.value)
+
+    def get_all_images(self, sysid, tenantid):
+        s = self.get_all_image_selector(sysid, tenantid)
+        kvs = self.ws.get(s)
+        d = []
+        for n in kvs:
+            d.append(json.loads(kvs[0][1].value))
+        return d
+
+    def add_node_image(self, sysid, tenantid, nodeid,imageid, imginfo):
+        p = self.get_node_image_info_path(sysid, tenantid, nodeid, imageid)
+        v = Value(json.dumps(imginfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def remove_node_image(self, sysid, tenatid, nodeid,imageid):
+        p = self.get_node_image_info_path(sysid, tenantid, nodeid, imageid)
+        return self.ws.remove(p)
+
+    def get_node_image(self, sysid, tenantid, nodeid,  imageid):
+        p = self.get_node_image_info_path(sysid, tenantid, nodeid, imageid)
+        res = self.ws.get(p)
+        if len(res) == 0:
+            return None
+        else:
+            v = res[0][1]
+            return json.loads(v.value)
+
+    def get_all_node_images(self, sysid, tenantid, nodeid):
+        s = self.get_all_node_images(sysid, tenantid, nodeid)
+        kvs = self.ws.get(s)
+        d = []
+        for n in kvs:
+            d.append(json.loads(kvs[0][1].value))
+        return d
+
+    def add_flavor(self, sysid, tenantid, flavorid, flvinfo):
+        p = self.get_flavor_info_path(sysid, tenantid, flavorid)
+        v = Value(json.dumps(flvinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def remove_flavor(self, sysid, tenatid, flavorid):
+        p = self.get_flavor_info_path(sysid, tenantid, flavorid)
+        return self.ws.remove(p)
+
+    def get_flavor(self, sysid, tenantid, flavorid):
+        p = self.get_flavor_info_path(sysid, tenantid, flavorid)
+        res = self.ws.get(p)
+        if len(res) == 0:
+            return None
+        else:
+            v = res[0][1]
+            return json.loads(v.value)
+
+    def get_all_flavors(self, sysid, tenantid):
+        s = self.get_all_flavor_selector(sysid, tenantid)
+        kvs = self.ws.get(s)
+        d = []
+        for n in kvs:
+            d.append(json.loads(kvs[0][1].value))
+        return d
+
+    def add_node_flavor(self, sysid, tenantid, nodeid,flavorid, flvinfo):
+        p = self.get_node_flavor_info_path(sysid, tenantid, nodeid, flavorid)
+        v = Value(json.dumps(flvinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def remove_node_flavor(self, sysid, tenatid, nodeid,flavorid):
+        p = self.get_node_flavor_info_path(sysid, tenantid, nodeid, flavorid)
+        return self.ws.remove(p)
+
+    def get_node_flavor(self, sysid, tenantid, nodeid,  flavorid):
+        p = self.get_node_flavor_info_path(sysid, tenantid, nodeid, flavorid)
+        res = self.ws.get(p)
+        if len(res) == 0:
+            return None
+        else:
+            v = res[0][1]
+            return json.loads(v.value)
+
+    def get_all_node_flavors(self, sysid, tenantid, nodeid):
+        s = self.get_all_node_flavors(sysid, tenantid, nodeid)
+        kvs = self.ws.get(s)
+        d = []
+        for n in kvs:
+            d.append(json.loads(kvs[0][1].value))
+        return d
 
 
 
