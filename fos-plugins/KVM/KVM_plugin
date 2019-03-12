@@ -702,9 +702,14 @@ class KVM(RuntimePluginFDU):
 
             qemu_cmd = 'qemu-img create -f {} {} {}G'.format(img.get('format'), fdu.disk, int(flavor.get('disk_size')))
             conf_cmd = conf_cmd + ' {}'.format(fdu.cdrom)
+            # THIS AS TO BE DONE IN DIFFERENT WAY
+            dd_cmd = 'dd if={} of={}'.format(img.get('base_image'), fdu.disk)
 
             self.call_os_plugin_function('execute_command',{'command':qemu_cmd,'blocking':True, 'external':False})
             self.call_os_plugin_function('execute_command',{'command':conf_cmd,'blocking':True, 'external':False})
+
+            # THIS AS TO BE DONE IN DIFFERENT WAY
+            self.call_os_plugin_function('execute_command',{'command':dd_cmd,'blocking':True, 'external':False})
             if fdu.ssh_key is not None and fdu.ssh_key != '':
                 self.call_os_plugin_function('remove_file',{'file_path':key_filename})
             if fdu.configuration is not None:
