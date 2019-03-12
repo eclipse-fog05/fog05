@@ -25,7 +25,7 @@
     <currentMemory unit="MB">{{ memory }}</currentMemory>
     <vcpu placement="static">{{ cpu }}</vcpu>
     <os>
-        <type machine='pc'>hvm</type>
+        <type machine='pc-q35-2.5'>hvm</type>
         <boot dev="hd"/>
     </os>
     <features>
