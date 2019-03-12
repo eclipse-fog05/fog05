@@ -23,13 +23,13 @@ class FIMAPI(object):
     def __init__(self, locator='127.0.0.1:8080',):
 
 
-        self.base_uri = 'http://{}'.format(locator)
-        self.node = self.Node(self.base_uri)
-        self.plugin = self.Plugin(self.base_uri)
-        self.network = self.Network(self.base_uri)
-        self.fdu = self.FDU(self.base_uri)
-        self.image = self.Image(self.base_uri)
-        self.flavor = self.Flavor(self.base_uri)
+        self.base_url = 'http://{}'.format(locator)
+        self.node = self.Node(self.base_url)
+        self.plugin = self.Plugin(self.base_url)
+        self.network = self.Network(self.base_url)
+        self.fdu = self.FDU(self.base_url)
+        self.image = self.Image(self.base_url)
+        self.flavor = self.Flavor(self.base_url)
 
     def close(self):
         pass
@@ -82,24 +82,24 @@ class FIMAPI(object):
             self.base_url = base_url
 
         def add_network(self, manifest):
-            uri = '{}/network/add'.format(self.base_url)
-            return json.loads(str(requests.post(url, data=manifest).content))
+            url = '{}/network/add'.format(self.base_url)
+            return json.loads(str(requests.post(url, data=json.dumps(manifest)).content))
 
         def remove_network(self, net_uuid):
-            uri = '{}/network/remove/{}'.format(self.base_url, net_uuid)
+            url = '{}/network/remove/{}'.format(self.base_url, net_uuid)
             return json.loads(str(requests.delete(url).content))
 
         def add_connection_point(self, cp_descriptor):
-            uri = '{}/connection_point/add'.format(self.base_url)
-            return json.loads(str(requests.post(url, data=cp_descriptor).content))
+            url = '{}/connection_point/add'.format(self.base_url)
+            return json.loads(str(requests.post(url, data=json.dumps(cp_descriptor)).content))
 
         def delete_connection_point(self, cp_uuid):
-            uri = '{}/connection_point/remove/{}'.format(self.base_url, cp_uuid)
+            url = '{}/connection_point/remove/{}'.format(self.base_url, cp_uuid)
             return json.loads(str(requests.delete(url).content))
 
 
         def list(self):
-            uri = '{}/network/list'.format(self.base_url)
+            url = '{}/network/list'.format(self.base_url)
             return json.loads(str(requests.post(url).content))
 
 
@@ -115,58 +115,58 @@ class FIMAPI(object):
 
 
         def onboard(self, descriptor):
-            uri = '{}/fdu/onboard'.format(self.base_url)
-            return json.loads(str(requests.post(url, data=manifest).content))
+            url = '{}/fdu/onboard'.format(self.base_url)
+            return json.loads(str(requests.post(url, data=json.dumps(descriptor)).content))
 
         def offload(self, fdu_uuid):
-            uri = '{}/fdu/offload/{}'.format(self.base_url, fdu_uuid)
+            url = '{}/fdu/offload/{}'.format(self.base_url, fdu_uuid)
             return json.loads(str(requests.delete(url).content))
 
         def define(self, fduid, node_uuid):
-            uri = '{}/fdu/define/{}/{}'.format(self.base_url, fduid, node_uuid)
+            url = '{}/fdu/define/{}/{}'.format(self.base_url, fduid, node_uuid)
             return json.loads(str(requests.post(url).content))
 
-        def undefine(self, fdu_uuid, node_uuid):
-            uri = '{}/fdu/define/{}/{}'.format(self.base_url, fduid, node_uuid)
+        def undefine(self, fduid, node_uuid):
+            url = '{}/fdu/undefine/{}/{}'.format(self.base_url, fduid, node_uuid)
             return json.loads(str(requests.delete(url).content))
 
-        def configure(self, fdu_uuid, node_uuid):
-            uri = '{}/fdu/configure/{}/{}'.format(self.base_url, fduid, node_uuid)
+        def configure(self, fduid, node_uuid):
+            url = '{}/fdu/configure/{}/{}'.format(self.base_url, fduid, node_uuid)
             return json.loads(str(requests.post(url).content))
 
-        def clean(self, fdu_uuid, node_uuid):
-            uri = '{}/fdu/clean/{}/{}'.format(self.base_url, fduid, node_uuid)
+        def clean(self, fduid, node_uuid):
+            url = '{}/fdu/clean/{}/{}'.format(self.base_url, fduid, node_uuid)
             return json.loads(str(requests.post(url).content))
 
-        def run(self, fdu_uuid, node_uuid):
-            uri = '{}/fdu/run/{}/{}'.format(self.base_url, fduid, node_uuid)
+        def run(self, fduid, node_uuid):
+            url = '{}/fdu/run/{}/{}'.format(self.base_url, fduid, node_uuid)
             return json.loads(str(requests.post(url).content))
 
-        def stop(self, fdu_uuid, node_uuid):
-            uri = '{}/fdu/stop/{}/{}'.format(self.base_url, fduid, node_uuid)
+        def stop(self, fduid, node_uuid):
+            url = '{}/fdu/stop/{}/{}'.format(self.base_url, fduid, node_uuid)
             return json.loads(str(requests.post(url).content))
 
-        def pause(self, entity_uuid, node_uuid, instance_uuid):
-            uri = '{}/fdu/pause/{}/{}'.format(self.base_url, fduid, node_uuid)
+        def pause(self, fduid, node_uuid, instance_uuid):
+            url = '{}/fdu/pause/{}/{}'.format(self.base_url, fduid, node_uuid)
             return json.loads(str(requests.post(url).content))
 
-        def resume(self, entity_uuid, node_uuid, instance_uuid):
-            uri = '{}/fdu/resume/{}/{}'.format(self.base_url, fduid, node_uuid)
+        def resume(self, fduid, node_uuid, instance_uuid):
+            url = '{}/fdu/resume/{}/{}'.format(self.base_url, fduid, node_uuid)
             return json.loads(str(requests.post(url).content))
 
         def migrate(self, fduid, node_uuid, destination_node_uuid):
             pass
 
         def info(self, fdu_uuid):
-            uri = '{}/fdu/info/{}'.format(self.base_url, fdu_uuid)
+            url = '{}/fdu/info/{}'.format(self.base_url, fdu_uuid)
             return json.loads(str(requests.get(url).content))
 
         def instance_info(self, fdu_uuid, node_uuid):
-            uri = '{}/fdu/instance_info/{}/{}'.format(self.base_url, fdu_uuid, node_uuid)
+            url = '{}/fdu/instance_info/{}/{}'.format(self.base_url, fdu_uuid, node_uuid)
             return json.loads(str(requests.get(url).content))
 
         def list(self):
-            uri = '{}/fdu/list'.format(self.base_url)
+            url = '{}/fdu/list'.format(self.base_url)
             return json.loads(str(requests.get(url).content))
 
 
@@ -182,21 +182,21 @@ class FIMAPI(object):
             self.base_url = base_url
 
         def add(self, descriptor):
-            uri = '{}/image/add'.format(self.base_url)
-            return json.loads(str(requests.post(url, data=manifest).content))
+            url = '{}/image/add'.format(self.base_url)
+            return json.loads(str(requests.post(url, data=json.dumps(descriptor)).content))
 
         def get(self, image_uuid):
-            uri = '{}/image/{}'.format(self.base_url, image_uuid)
+            url = '{}/image/{}'.format(self.base_url, image_uuid)
             return json.loads(str(requests.get(url).content))
 
 
         def remove(self, image_uuid):
-            uri = '{}/image/{}'.format(self.base_url, image_uuid)
+            url = '{}/image/{}'.format(self.base_url, image_uuid)
             return json.loads(str(requests.delete(url).content))
 
 
         def list(self):
-            uri = '{}/image/list'.format(self.base_url)
+            url = '{}/image/list'.format(self.base_url)
             return json.loads(str(requests.get(url).content))
 
 
@@ -210,17 +210,17 @@ class FIMAPI(object):
             self.base_url = base_url
 
         def add(self, descriptor):
-            uri = '{}/flavor/add'.format(self.base_url)
-            return json.loads(str(requests.post(url, data=manifest).content))
+            url = '{}/flavor/add'.format(self.base_url)
+            return json.loads(str(requests.post(url, data=json.dumps(descriptor)).content))
 
         def get(self, flavor_id):
-            uri = '{}/flavor/{}'.format(self.base_url, flavor_id)
+            url = '{}/flavor/{}'.format(self.base_url, flavor_id)
             return json.loads(str(requests.get(url).content))
 
         def remove(self, flavor_id):
-            uri = '{}/flavor/{}'.format(self.base_url, flavor_id)
+            url = '{}/flavor/{}'.format(self.base_url, flavor_id)
             return json.loads(str(requests.delete(url).content))
 
         def list(self):
-            uri = '{}/flavor/list'.format(self.base_url)
+            url = '{}/flavor/list'.format(self.base_url)
             return json.loads(str(requests.get(url).content))
