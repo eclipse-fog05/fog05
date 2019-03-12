@@ -29,6 +29,14 @@ OSM VM:
 ./vm_manager.py define -b ubuntu16 --cpu 4 --ram 16384 --size 80 --name osmr4 --ssh-key ~/.ssh/id_rsa.pub --sriov 19:10:7
 10.100.1.202
 
+
+OSM RO docker
+
+"CMD": ["/bin/sh", "-c", "#(nop) ", "CMD [\"/bin/sh\" \"-c\" \"/bin/RO/start.sh\"]"
+
+'CMD": ["/bin/sh", "-c", "#(nop) ", "CMD [\"/bin/sh\" \"-c\" \"/bin/RO/start.sh\"]'
+
+
 """
 __author__="Gabriele Baldoni"
 __date__ ="$11-mar-2019 12:00:00$"

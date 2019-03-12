@@ -295,10 +295,11 @@ class KVM(RuntimePluginFDU):
                             net_cfg.append({'name':intf_name, 'mac':mac, 'dev':real_intf_name})
                     else:
                         intf_id = 'kvm-{}-{}'.format(fdu.get_short_id(), i)
-                        intf_data = self.call_nw_plugin_function('create_virtual_interface', {'intf_id':intf_id, 'descriptor': intf})
-                        self.logger.info('configure_fdu()','KVM Plugin - Interface info {}'.format(intf_data))
-                        dev_name = intf_data.get('int_name')
-                        net_cfg.append({'name':intf_name, 'mac':mac, 'dev':dev_name, 'type':'direct'})
+                        intf_data = self.connector.loc.actual.get_node_port(self.node, self.nm, intf.get('cp_id')).get('properties')
+                        #self.call_nw_plugin_function('create_virtual_interface', {'intf_id':intf_id, 'descriptor': intf})
+                        self.logger.info('migrate_fdu()','KVM Plugin - Interface info {}'.format(intf_data))
+                        dev_name = intf_data.get('cp_name')
+                        net_cfg.append({'name':intf_name, 'mac':mac, 'dev':dev_name})
 
 
             vm_xml = self.__generate_dom_xml(fdu, flavor, img, net_cfg)
@@ -645,7 +646,7 @@ class KVM(RuntimePluginFDU):
             if fdu.get_interfaces() is not None:
                 for i, intf in enumerate(fdu.get_interfaces()):
                     intf_name = intf.get('name')
-                    mac = intf.get('mac_address')
+                    mac = intf.get('mac_address', self.__generate_random_mac())
                     if intf.get('virtual_interface').get('intf_type').upper() in ['PHYSICAL','BRIDGED']:
                         real_intf_name = intf.get('virtual_interface').get('vpci')
                         if self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['ethernet']:
@@ -658,10 +659,11 @@ class KVM(RuntimePluginFDU):
                             net_cfg.append({'name':intf_name, 'mac':mac, 'dev':real_intf_name})
                     else:
                         intf_id = 'kvm-{}-{}'.format(fdu.get_short_id(), i)
-                        intf_data = self.call_nw_plugin_function('create_virtual_interface', {'intf_id':intf_id, 'descriptor': intf})
+                        intf_data = self.connector.loc.actual.get_node_port(self.node, self.nm, intf.get('cp_id')).get('properties')
+                        #self.call_nw_plugin_function('create_virtual_interface', {'intf_id':intf_id, 'descriptor': intf})
                         self.logger.info('migrate_fdu()','KVM Plugin - Interface info {}'.format(intf_data))
-                        dev_name = intf_data.get('int_name')
-                        net_cfg.append({'name':intf_name, 'mac':mac, 'dev':dev_name, 'type':'direct'})
+                        dev_name = intf_data.get('cp_name')
+                        net_cfg.append({'name':intf_name, 'mac':mac, 'dev':dev_name})
 
 
 
@@ -864,6 +866,14 @@ class KVM(RuntimePluginFDU):
     def __netmask_to_cidr(self, netmask):
         return sum([bin(int(x)).count('1') for x in netmask.split('.')])
 
+
+    def __generate_random_mac(self):
+        d = [ 0x00, 0x16,
+            random.randint(0x00, 0x7f),
+            random.randint(0x00, 0x7f),
+            random.randint(0x00, 0xff),
+            random.randint(0x00, 0xff) ]
+        return ':'.join(map(lambda x: "%02x" % x, d))
 
     def __fdu_observer(self, fdu_info):
         self.logger.info('__fdu_observer()', ' KVM Plugin - New Action of a FDU - FDU Info: {}'.format(fdu_info))
