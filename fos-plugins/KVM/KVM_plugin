@@ -589,6 +589,15 @@ class KVM(RuntimePluginFDU):
             fdu = KVMFDU.from_descriptor(descriptor)
             image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
 
+            if fdu.get_image_uri().startswith('http'):
+                image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
+                self.call_os_plugin_function('download_file',{'url':fdu.get_image_uri(),'file_path':image_name})
+            elif fdu.get_image_uri().startswith('file://'):
+                image_name = os.path.join(
+                    self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
+                cmd = 'cp {} {}'.format(fdu.get_image_uri()[len('file://'):], image_name)
+                self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
+
             self.logger.info('migrate_fdu()', '[ DONE ] KVM Plugin - Destination Node creating image and flavor...')
 
             img = {

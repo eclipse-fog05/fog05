@@ -61,7 +61,9 @@ class LinuxBridge(NetworkPlugin):
         self.HOME = 'network/{}'.format(self.uuid)
         file_dir = os.path.dirname(__file__)
         self.DIR = os.path.abspath(file_dir)
-        self.overlay_interface = None
+        self.overlay_interface = manifest.get('configuration').get('dataplane_interface')
+        if self.overlay_interface is None:
+            self.agent_conf.get('agent').get('mgmt_interface')
         self.networks = {}
         self.net_files = {}
         self.intfs = {}
