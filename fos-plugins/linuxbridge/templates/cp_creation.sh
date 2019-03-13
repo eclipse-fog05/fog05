@@ -22,6 +22,7 @@
 
 sudo ip link add {{ int_port }} type veth peer name {{ ext_port }}
 sudo ip link add {{ cp_name }} type bridge
-sudo ip link set dev {{ ext_port }} master {{ cp_name }}
+sudo ip link set dev {{ int_port }} master {{ cp_name }}
+sudo ip link set {{ int_port }} up
 sudo ip link set {{ ext_port }} up
 sudo ip link set {{ cp_name }} up

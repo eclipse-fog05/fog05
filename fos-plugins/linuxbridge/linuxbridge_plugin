@@ -106,8 +106,9 @@ class LinuxBridge(NetworkPlugin):
         if self.overlay_interface is None:
             self.agent_conf.get('agent').get('mgmt_interface')
 
-        if self.overlay_interface is None:
+        if self.overlay_interface is None or self.overlay_interface == 'None':
             self.logger.error('start_network_manager()','Data plane interface cannot be None!')
+            exit(-1)
 
         d = {
             'create_virtual_interface': self.create_virtual_interface,

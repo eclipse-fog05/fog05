@@ -48,6 +48,7 @@ and then edit the Linux Bridge plugin configuration file:  `/etc/fos/plugins/lin
 
 update the nodeid parameter with the content of `/etc/machine-id`
 this is used to identify the node and to make the plugin connect the right agent.
+update the dataplane_interface parameter with the name of the interface used for dataplane (VxLANs will be created over that interface)
 
 
 then you have to install the LXD plugin
