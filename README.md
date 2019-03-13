@@ -10,20 +10,17 @@ See also [Introduction](https://github.com/eclipse/fog05/blob/master/Introductio
 
 Inside [plugins](./plugins) there are some plugins for entity
 
-### master
-
-The version on master does not use Cyclone DDS for communication between nodes
-
-You need a running YAKS server to use it.
-
-YAKS can be found [here](https://www.dropbox.com/sh/1imfyzw1z7hkeuy/AADnkkWVLXNU2eB8v4h861xXa)
+See [INSTALL](INSTALL.md) for installation instructions
 
 ### Interact with the nodes
 
 In the wiki you can find information about:
 
 - [Python3 API](https://github.com/eclipse/fog05/wiki/fog05-Python-API)
-- [CLI Interface](https://github.com/eclipse/fog05/wiki/CLI-Interface)
+
+
+REST API are under development as well as CLI interface
+<!-- - [CLI Interface](https://github.com/eclipse/fog05/wiki/CLI-Interface) -->
 
 
 ### Contributing

@@ -311,10 +311,17 @@ class LinuxBridge(NetworkPlugin):
         vdev_name = 'br-{}'.format(n_small_id)
         netns_name = 'fosns-{}'.format(n_small_id)
 
+        hx = bytes.fromhex(netid)
+        vals = struct.unpack('<{}B'.format(len(hx), hx))
+        vxlan_id = sum(vals)
+        mcast_addr = '239.245.{}.{}'.format(val[0], val[1])
+
         self.call_os_plugin_function('execute_command',{'command':os.path.join(self.BASE_DIR, start_file),'blocking':True, 'external':True})
         properties = {}
         properties.update({'virtual_device': vdev_name})
         properties.update({'net_ns': netns_name})
+        properties.update({'vxlan_id': vxlan_id})
+        properties.update({'mcast_addr': mcast_addr})
         properties.update({'manager':self.uuid})
 
 
@@ -599,9 +606,15 @@ class LinuxBridge(NetworkPlugin):
         return f_name
 
     def __generate_vnet_start_script(self, netid):
+
+        hx = bytes.fromhex(netid)
+        vals = struct.unpack('<{}B'.format(len(hx), hx))
+        vxlan_id = sum(vals)
+        mcast_addr = '239.245.{}.{}'.format(val[0], val[1])
+
         template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vnet_create.sh'), 'root':False})
         net_sh = Environment().from_string(template_sh)
-        net_sh = net_sh.render(net_id=netid)
+        net_sh = net_sh.render(net_id=netid, group_id=vxlan_id, mcast_group_address=mcast_addr, wan=self.overlay_interface)
         net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
         f_name = 'start_{}.sh'.format(netid)
         self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
