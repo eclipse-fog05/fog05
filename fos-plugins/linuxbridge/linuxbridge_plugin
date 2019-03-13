@@ -312,7 +312,7 @@ class LinuxBridge(NetworkPlugin):
         vdev_name = 'br-{}'.format(n_small_id)
         netns_name = 'fosns-{}'.format(n_small_id)
 
-        hx = bytes.fromhex(netid)
+        hx = bytes.fromhex(n_small_id)
         vals = struct.unpack('<{}B'.format(len(hx)), hx)
         vxlan_id = sum(vals)
         mcast_addr = '239.245.{}.{}'.format(vals[0], vals[1])
