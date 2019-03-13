@@ -91,17 +91,23 @@ class LinuxBridge(NetworkPlugin):
             self.call_os_plugin_function(
                 'create_dir', {'dir_path': os.path.join(self.BASE_DIR, self.DHCP_DIR)})
 
-        if self.configuration.get('data_subnet'):
-            cird = self.configuration.get('data_subnet')
+        # if self.configuration.get('data_subnet'):
+        #     cird = self.configuration.get('data_subnet')
 
-            data = self.connector.loc.actual.get_node_info(self.node)
-            for n in data.get('network'):
-                intf_cird = self.__ip_mask_to_cird(
-                    n.get('inft_configuration').get('ipv4_address'),
-                    n.get('inft_configuration').get('ipv4_netmask')
-                )
-                if cird == intf_cird:
-                    self.overlay_interface = n.get('intf_name')
+        #     data = self.connector.loc.actual.get_node_info(self.node)
+        #     for n in data.get('network'):
+        #         intf_cird = self.__ip_mask_to_cird(
+        #             n.get('inft_configuration').get('ipv4_address'),
+        #             n.get('inft_configuration').get('ipv4_netmask')
+        #         )
+        #         if cird == intf_cird:
+        #             self.overlay_interface = n.get('intf_name')
+
+        if self.overlay_interface is None:
+            self.agent_conf.get('agent').get('mgmt_interface')
+
+        if self.overlay_interface is None:
+            self.logger.error('start_network_manager()','Data plane interface cannot be None!')
 
         d = {
             'create_virtual_interface': self.create_virtual_interface,
