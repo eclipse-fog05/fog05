@@ -130,6 +130,7 @@ class LinuxBridge(NetworkPlugin):
         self.connector.loc.actual.add_node_plugin(
             self.node, self.uuid, self.manifest)
 
+        self.logger.info('start_runtime()', 'Linux Bridge Plugin - Data Plane (VxLAN) Interface {}'.format(self.overlay_interface))
         self.logger.info('start_runtime()', 'Linux Bridge Plugin - Started...')
 
         r = self.var.get()
@@ -314,7 +315,7 @@ class LinuxBridge(NetworkPlugin):
         hx = bytes.fromhex(netid)
         vals = struct.unpack('<{}B'.format(len(hx)), hx)
         vxlan_id = sum(vals)
-        mcast_addr = '239.245.{}.{}'.format(val[0], val[1])
+        mcast_addr = '239.245.{}.{}'.format(vals[0], vals[1])
 
         self.call_os_plugin_function('execute_command',{'command':os.path.join(self.BASE_DIR, start_file),'blocking':True, 'external':True})
         properties = {}
@@ -610,7 +611,7 @@ class LinuxBridge(NetworkPlugin):
         hx = bytes.fromhex(netid)
         vals = struct.unpack('<{}B'.format(len(hx)), hx)
         vxlan_id = sum(vals)
-        mcast_addr = '239.245.{}.{}'.format(val[0], val[1])
+        mcast_addr = '239.245.{}.{}'.format(vals[0], vals[1])
 
         template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vnet_create.sh'), 'root':False})
         net_sh = Environment().from_string(template_sh)
