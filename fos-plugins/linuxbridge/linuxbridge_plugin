@@ -417,16 +417,19 @@ class LinuxBridge(NetworkPlugin):
 
     # eval
     def connect_cp_to_vnetwork(self, cp_id, vnet_id):
+        self.logger.info('connect_cp_to_vnetwork()','CP {} <-> {} Network'.format(cp_id, vnet_id))
         net_info = self.networks.get(vnet_id)
         cp_info = self.ports.get(cp_id)
         if net_info is None or cp_info is None:
             self.logger.error('connect_cp_to_vnetwork',
             'Nor connection point or virtual network exist')
             return {'error':-2}
-        net_dev = net_info.get('virtual_device')
+        self.logger.info('connect_cp_to_vnetwork()','Net Info {}'.format(net_info))
+        net_dev = net_info.get('properties').get('virtual_device')
         ext_cp = cp_info.get('ext_name')
         cmd = 'sudo ip link set dev {} master {}'.format(ext_cp, net_dev)
         self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
+         self.logger.info('connect_cp_to_vnetwork()','CP {} <-> vNet {} OK'.format(cp_id, vnet_id))
         return {'result':{'int':cp_id, 'ext':vnet_id}}
 
     # eval
