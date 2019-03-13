@@ -2,7 +2,7 @@
 
 ### IMPORTANT
 Current know limitations:
-- no migration of LXD/VMs
+- no migration of LXDs
 - there is a bug in the Linux Bridge plugin that does not allow to create VxLAN
 
 

@@ -312,7 +312,7 @@ class LinuxBridge(NetworkPlugin):
         netns_name = 'fosns-{}'.format(n_small_id)
 
         hx = bytes.fromhex(netid)
-        vals = struct.unpack('<{}B'.format(len(hx), hx))
+        vals = struct.unpack('<{}B'.format(len(hx)), hx)
         vxlan_id = sum(vals)
         mcast_addr = '239.245.{}.{}'.format(val[0], val[1])
 
@@ -608,7 +608,7 @@ class LinuxBridge(NetworkPlugin):
     def __generate_vnet_start_script(self, netid):
 
         hx = bytes.fromhex(netid)
-        vals = struct.unpack('<{}B'.format(len(hx), hx))
+        vals = struct.unpack('<{}B'.format(len(hx)), hx)
         vxlan_id = sum(vals)
         mcast_addr = '239.245.{}.{}'.format(val[0], val[1])
 
