@@ -5,7 +5,7 @@ cd fog05
 git checkout 0.2-devel
 
 sudo apt update -qq
-sudo apt install libev4 libssl1.0.0 pyhton3-pip python3-dev -y
+sudo apt install libev4 libdev-dev libssl1.0.0 pyhton3-pip python3-dev -y
 sudo pip3 install jsonschema
 
 mkdir -p src/ocaml/_build/default/src/fos/fos-agent/

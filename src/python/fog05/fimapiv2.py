@@ -922,7 +922,7 @@ class FIMAPIv2(object):
             #         else:
             #             images.get(nodeid).get(pluginid).append(img_data)
             # return images
-            return self.connector.loc.actual.get_all_images(self.sysid,
+            return self.connector.glob.actual.get_all_images(self.sysid,
              self.tenantid)
 
     class Flavor(object):
@@ -1043,7 +1043,7 @@ class FIMAPIv2(object):
             #         else:
             #             flavors.get(nodeid).get(pluginid).append(flv_data)
             # return flavors
-            return self.connector.loc.actual.get_all_flavors(self.sysid,
+            return self.connector.glob.actual.get_all_flavors(self.sysid,
              self.tenantid)
 
         def search(self, search_dict, node_uuid=None):

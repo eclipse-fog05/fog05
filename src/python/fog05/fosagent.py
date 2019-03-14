@@ -519,7 +519,7 @@ class FosAgent(Agent):
 
 
         if self.use_lldpd:
-            n_info = {'neighbors': self.__osPlugin.get_neighbors()}
+            n_info = self.__osPlugin.get_neighbors()
             uri = '{}/neighbors'.format(self.ahome)
             self.astore.put(uri, json.dumps(n_info))
 

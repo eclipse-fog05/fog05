@@ -297,7 +297,7 @@ class KVM(RuntimePluginFDU):
                         intf_id = 'kvm-{}-{}'.format(fdu.get_short_id(), i)
                         intf_data = self.connector.loc.actual.get_node_port(self.node, self.nm, intf.get('cp_id')).get('properties')
                         #self.call_nw_plugin_function('create_virtual_interface', {'intf_id':intf_id, 'descriptor': intf})
-                        self.logger.info('migrate_fdu()','KVM Plugin - Interface info {}'.format(intf_data))
+                        self.logger.info('configure_fdu()','KVM Plugin - Interface info {}'.format(intf_data))
                         dev_name = intf_data.get('cp_name')
                         net_cfg.append({'name':intf_name, 'mac':mac, 'dev':dev_name})
 

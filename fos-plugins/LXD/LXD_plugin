@@ -527,314 +527,186 @@ class LXD(RuntimePluginFDU):
 
 
     def migrate_fdu(self, fdu_uuid, dst=False):
-        raise NotImplementedError("TBD")
-        # if type(entity_uuid) == dict:
-        #     entity_uuid = entity_uuid.get('entity_uuid')
-        # self.logger.info('migrate_entity()', ' LXD Plugin - Migrate a container uuid {}'.format(entity_uuid))
-        # entity = self.current_fdus.get(entity_uuid, None)
-        # if entity is None or entity.get_instance(instance_uuid) is None:
-        #     if dst is True:
-        #         self.logger.info('migrate_entity()', ' LXD Plugin - I\'m the Destination Node')
-        #         self.before_migrate_entity_actions(entity_uuid, True, instance_uuid)
+        record = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid)
+        destination = record.get('migration_properties').get('destination')
+        if destination != self.node:
+            self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Source Node preparation...')
+            fdu = self.current_fdus.get(fdu_uuid, None)
+            if fdu_uuid is None:
+                self.logger.error('migrate_fdu','LXD not in Runtime!!')
+                return
 
-        #         uri_instance = '{}/{}/{}/{}/{}'.format(self.agent.dhome, self.HOME_ENTITY, entity_uuid, self.INSTANCE, instance_uuid)
-        #         instance_info = json.loads(self.agent.dstore.get(uri_instance))
+            self.logger.info('migrate_fdu()', '[ DONE ] KVM Plugin - Source Node wait destination...')
+            self.wait_destination_ready(fdu_uuid, destination)
 
-        #         while True:
-        #             try:
-        #                 c = self.conn.containers.get(instance_info.get('name'))
-        #                 if c.status.upper() == 'running'.upper():
-        #                     break
-        #                 else:
-        #                     self.logger.info('migrate_entity()', ' LXD Plugin - Container in this host but not running')
-        #             except Exception as e:
-        #                 self.logger.info('migrate_entity()', ' LXD Plugin - Container not already in this host')
-        #             time.sleep(2)
+            self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Migrating...')
 
-        #         self.after_migrate_entity_actions(entity_uuid, True, instance_uuid)
-        #         self.logger.info('migrate_entity()', '[ DONE ] LXD Plugin - Migrate a Container uuid {}'.format(entity_uuid))
-        #         return True
+            # ACTUAL MIGRATION #
+            #
+            dst_ip = self.get_destination_node_mgmt_net(destination).get('ipv4_address')
 
-        #     else:
-        #         self.logger.error('migrate_entity()', 'LXD Plugin - FDU not exists')
-        #         raise FDUNotExistingException('FDU not existing',
-        #                                          'FDU {} not in runtime {}'.format(entity_uuid, self.uuid))
-        # elif entity.get_state() != State.DEFINED:
-        #     self.logger.error('migrate_entity()', 'LXD Plugin - FDU state is wrong, or transition not allowed')
-        #     raise StateTransitionNotAllowedException('FDU is not in DEFINED state',
-        #                                              'FDU {} is not in DEFINED state'.format(entity_uuid))
-        # else:
+            path_cert = os.path.join(self.DIR, 'templates', 'lxd.crt')
+            path_key = os.path.join(self.DIR, 'templates', 'lxd.key')
 
-        #     instance = entity.get_instance(instance_uuid)
-        #     if instance.get_state() not in [State.RUNNING, State.TAKING_OFF]:
-        #         self.logger.error('clean_fdu()', 'LXD Plugin - Instance state is wrong, or transition not allowed')
-        #         # self.__write_error_instance(entity_uuid, instance_uuid, 'FDU Instance not exist')
-        #         raise StateTransitionNotAllowedException('Instance is not in RUNNING state', 'Instance {} is not in RUNNING state'.format(entity_uuid))
+            remote_client = Client(endpoint='https://{}:8443'.format(dst_ip), cert=(path_cert, path_key), verify=False)
+            local_client = Client(endpoint='https://{}:8443'.format(local_ip), cert=(path_cert, path_key), verify=False)
 
-        #     self.logger.info('migrate_entity()', ' LXD Plugin - I\'m the Source Node')
-        #     res = self.before_migrate_entity_actions(entity_uuid, instance_uuid=instance_uuid)
-        #     if not res:
-        #         self.logger.error('migrate_entity()', ' LXD Plugin - Error source node before migration, aborting')
-        #         # self.__write_error_instance(entity_uuid, instance_uuid, 'FDU Instance migration error on source')
-        #         return
+            remote_client.authenticate('fog')
+            local_client.authenticate('fog')
 
-        #     self.before_migrate_entity_actions(entity_uuid, False, instance_uuid)
+            cont = local_client.containers.get(instance_info.get('name'))
 
-        #     uri_instance = '{}/{}/{}/{}/{}'.format(self.agent.dhome, self.HOME_ENTITY, entity_uuid, self.INSTANCE, instance_uuid)
-        #     instance_info = json.loads(self.agent.dstore.get(uri_instance))
-        #     name = instance_info.get('entity_data').get('name')
-        #     # destination node uuid
-        #     destination_node_uuid = instance_info.get('dst')
-        #     uri = '{}/{}'.format(self.agent.aroot, destination_node_uuid)
+            try:
+                cont.migrate(remote_client, wait=True)
+            except LXDAPIException as e:
+                self.agent.logger.info('migrate_fdu()', ' LXD Plugin - LXD error {}'.format(e))
+                cont.delete()
 
-        #     while True:
-        #         dst_node_info = self.agent.astore.get(uri)  # TODO: solve this ASAP
-        #         if dst_node_info is not None:
-        #             if isinstance(dst_node_info, tuple):
-        #                 dst_node_info = dst_node_info[0]
-        #             dst_node_info = dst_node_info.replace("'", '"')
-        #             break
+            self.logger.info('migrate_fdu()', ' LXD Plugin - Migration Source: Migration succeeds')
+            remote_client = None
+            local_client = None
+            fdu.on_stop()
+            self.current_fdus.update({fdu_uuid: fdu})
+            self.clean_fdu(fdu_uuid)
+            self.undefine_fdu(fdu_uuid)
+            self.logger.info('migrate_fdu()', ' LXD Plugin - Source is Clean')
 
-        #     while True:
-        #         luri = self.agent.ahome
-        #         local_node_info = self.agent.astore.get(luri)  # TODO: solve this ASAP
-        #         if local_node_info is not None:
-        #             if isinstance(local_node_info, tuple):
-        #                 local_node_info = local_node_info[0]
-        #             local_node_info = local_node_info.replace("'", '"')
-        #             break
-        #     # print(dst_node_info)
-        #     dst_node_info = json.loads(dst_node_info)
-        #     local_node_info = json.loads(local_node_info)
+            #
+            #
+        else:
+            record.update({'status': 'DEFINE'})
+            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
+            descriptor = self.get_fdu_descriptor(fdu_uuid)
+            fdu = LXDFDU.from_descriptor(descriptor)
+            image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
 
-        #     nw = dst_node_info.get('network')
-        #     dst_hostname = dst_node_info.get('name')
-        #     dst_ip = [x for x in nw if x.get('default_gw') is True]
-        #     # TODO: or x.get('inft_configuration').get('ipv6_gateway') for ip_v6
-        #     if len(dst_ip) == 0:
-        #         return False
+            if fdu.get_image_uri().startswith('http'):
+                image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
+                self.call_os_plugin_function('download_file',{'url':fdu.get_image_uri(),'file_path':image_name})
+            elif fdu.get_image_uri().startswith('file://'):
+                image_name = os.path.join(
+                    self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
+                cmd = 'cp {} {}'.format(fdu.get_image_uri()[len('file://'):], image_name)
+                self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
 
-        #     nw_local = local_node_info.get('network')
-        #     local_ip = [x for x in nw_local if x.get('default_gw') is True]
-        #     if len(local_ip) == 0:
-        #         return False
+            self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Destination Node creating image and flavor...')
+            self.logger.info('migrate_fdu()', '[ INFO ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name)))
 
-        #     dst_ip = dst_ip[0].get('inft_configuration').get('ipv4_address')  # TODO: as on search should use ipv6
-        #     local_ip = local_ip[0].get('inft_configuration').get('ipv4_address')  # TODO: as on search should use ipv6
+            image_data = self.read_binary_file(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name))
 
-        #     path_cert = os.path.join(self.DIR, 'templates', 'lxd.crt')
-        #     path_key = os.path.join(self.DIR, 'templates', 'lxd.key')
+            self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name)))
 
-        #     remote_client = Client(endpoint='https://{}:8443'.format(dst_ip), cert=(path_cert, path_key), verify=False)
-        #     local_client = Client(endpoint='https://{}:8443'.format(local_ip), cert=(path_cert, path_key), verify=False)
+            img_info = {}
+            try:
+                self.logger.info(
+                    'migrate_fdu()', '[ INFO ] LXD Plugin - Creating image with alias {}'.format(fdu_uuid))
+                try:
+                    img = self.conn.images.create(image_data, public=True, wait=True)
+                    img.add_alias(fdu_uuid, description=fdu.name)
+                except LXDAPIException as e:
+                    # TODO: check this error with errno
+                    if '{}'.format(e) == 'Image with same fingerprint already exists':
+                        self.logger.info('migrate_fdu()', '[ INFO ] LXD Plugin - Image with same fingerprint already exists')
+                        pass
 
-        #     # remote_client = Client(endpoint='https://{}:8443'.format(dst_ip), verify=False)
-        #     # local_client = Client(endpoint='https://{}:8443'.format(local_ip), verify=False)
+                self.logger.info(
+                    'migrate_fdu()', '[ DONE ] LXD Plugin - Created image with alias {}'.format(fdu_uuid))
+                img_info = {}
+                img_info.update({'uuid': fdu_uuid})
+                img_info.update({'name': '{}_img'.format(fdu.name)})
+                img_info.update({'base_image': image_name})
+                img_info.update({'type': 'lxd'})
+                img_info.update({'format': fdu.get_image_format()})
 
-        #     remote_client.authenticate('fog')
-        #     local_client.authenticate('fog')
+                fdu.image.update({'file': image_name})
+                fdu.image.update({'uuid': fdu_uuid})
 
-        #     cont = local_client.containers.get(instance_info.get('name'))
+                self.images.update({fdu_uuid: img_info})
+                self.connector.loc.actual.add_node_image(self.node, self.uuid, fdu_uuid, img_info)
 
-        #     try:
-        #         cont.migrate(remote_client, wait=True)
-        #     except LXDAPIException as e:
-        #         self.logger.info('migrate_entity()', ' LXD Plugin - LXD error {}'.format(e))
-        #         cont.delete()
-        #     instance.on_stop()
+            except LXDAPIException as e:
+                self.logger.error('define_fdu()', 'Error {}'.format(e))
+                self.current_fdus.update({fdu_uuid: fdu})
+                lxd_info = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid)
 
-        #     self.current_fdus.update({entity_uuid: entity})
-        #    self.after_migrate_entity_actions(entity_uuid, False, instance_uuid)
+                self.logger.info('migrate_fdu()', '[ ERRO ] LXD Plugin - Container uuid: {}'.format(fdu_uuid))
+
+            cpu = fdu.comp_requirements.get('cpu_min_count')
+            mem = fdu.comp_requirements.get('ram_size_mb')
+            disk_size = fdu.comp_requirements.get('storage_size_gb')
+            flavor = {
+                'name': '{}_flavor'.format(fdu.name),
+                'uuid': fdu_uuid,
+                'cpu': cpu,
+                'memory': mem,
+                'disk_size': disk_size,
+                'type':'kvm'
+                }
+            fdu.comp_requirements.update({'uuid': fdu_uuid})
+
+            fl_uuid  = flavor.get('uuid')
+            self.flavors.update({fl_uuid: flavor})
+            self.connector.loc.actual.add_node_flavor(self.node, self.uuid, fl_uuid, flavor)
+
+            # vNetwork configurations
+            for cp in fdu.get_connection_points():
+                cp_id = cp.get('uuid')
+                cp_record = {
+                    'cp_uuid':cp_id,
+                    'status':'CREATE'}
+                self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id,cp_record)
+                res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
+                while res is None:
+                    res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
+            i = 0
+            for intf in fdu.get_interfaces():
+                intf_name = intf.get('name')
+                mac = intf.get('mac_address')
+                if intf.get('virtual_interface').get('intf_type').upper() in ['PHYSICAL','BRIDGED']:
+                    real_intf_name = intf.get('virtual_interface').get('vpci')
+                    if self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['ethernet']:
+                    self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
+                    elif self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['wireless']:
+                        self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
+                    else:
+                        pass
+                else:
+                    intf_id = 'lxd-{}-{}'.format(fdu.get_short_id(), i)
+                    intf_data = self.call_nw_plugin_function('create_virtual_interface', {'intf_id':intf_id, 'descriptor': intf})
+                    self.logger.info('migrate_fdu()','LXD Plugin - Interface info {}'.format(intf_data))
+                i += 1
+
+            record.update({'status': 'LAND'})
+            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
+            self.logger.info('migrate_fdu()', '[ DONE ] KVM Plugin - Destination Node is ready for {}'.format(fdu_uuid))
+
+            # DESTINATION IS READY WAINING CONTAINER
+
+            while True:
+                try:
+                    c = self.conn.containers.get(instance_info.get('name'))
+                    if c.status.upper() == 'running'.upper():
+                        break
+                    else:
+                        self.agent.logger.info('migrate_fdu()',  ' LXD Plugin - Container in this host but not running')
+                except Exception as e:
+                    self.agent.logger.info('migrate_fdu()', ' LXD Plugin - Container not already in this host')
+                time.sleep(2)
+
+            fdu.on_start()
+            self.current_fdus.update({fdu_uuid: fdu})
+            record.pop('migration_properties')
+            record.update({'status': 'RUN'})
+            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
+            self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Migrate a Container uuid {}'.format(fdu_uuid))
+
+
 
     def before_migrate_entity_actions(self, fdu_uuid, dst=False):
-        raise NotImplementedError("TBD")
-        # if dst is True:
-        #     self.logger.info('before_migrate_entity_actions()', ' LXD Plugin - Before Migration Destination')
-        #     uri = '{}/{}/{}/{}/{}'.format(self.agent.dhome, self.HOME_ENTITY, entity_uuid, self.INSTANCE, instance_uuid)
-        #     instance_info = json.loads(self.agent.dstore.get(uri))
-        #     lxc_info = instance_info.get('entity_data')
-
-        #     self.logger.info('before_migrate_entity_actions()', ' LXD Plugin - Waiting image')
-        #     while True:
-        #         base_image = lxc_info.get('base_image')
-        #         if base_image in self.images.keys():
-        #             break
-
-        #     self.logger.info('before_migrate_entity_actions()', ' LXD Plugin - Waiting entity')
-        #     while True:
-        #         if entity_uuid in self.current_fdus.keys():
-        #             break
-        #     self.logger.info('before_migrate_entity_actions()', ' FDU {} defined!!!'.format(entity_uuid))
-
-        #     img_info = self.images.get(base_image)
-        #     entity = self.current_fdus.get(entity_uuid)
-
-        #     name = lxc_info.get('name')
-        #     # disk_path = '{}.{}'.format(instance_uuid, img_info.get('format'))
-        #     # cdrom_path = '{}_config.iso'.format(instance_uuid)
-        #     # disk_path = os.path.join(self.BASE_DIR, self.DISK_DIR, disk_path)
-        #     # cdrom_path = os.path.join(self.BASE_DIR, self.DISK_DIR, cdrom_path)
-
-        #     instance = LXDFDUInstance(instance_uuid, name, entity.networks, entity.image,
-        #                                  entity.user_file, entity.ssh_key, entity.storage, entity.profiles,
-        #                                  entity_uuid)
-
-        #     instance.state = State.LANDING
-        #     lxc_info.update({'name': name})
-
-        #     instance_info.update({'entity_data': lxc_info})
-        #     instance_info.update({'status': 'landing'})
-
-        #     entity.add_instance(instance)
-        #     self.current_fdus.update({entity_uuid: entity})
-
-        #     self.__update_actual_store_instance(entity_uuid, instance_uuid, instance_info)
-
-        #     return True
-
-        # else:
-        #     self.logger.info('before_migrate_entity_actions()', ' LXD Plugin - Before Migration Source: get information about destination node')
-
-        #     local_var = MVar()
-        #     def cb(key, value, v):
-        #         local_var.put(value)
-
-
-        #     entity = self.current_fdus.get(entity_uuid, None)
-        #     instance = entity.get_instance(instance_uuid)
-
-        #     uri_entity = '{}/{}/{}'.format(self.agent.ahome, self.HOME_ENTITY, entity_uuid)
-        #     entity_info = json.loads(self.agent.astore.get(uri_entity))
-        #     entity_info.update({'status': 'define'})
-
-        #     # reading instance info
-        #     uri_instance = '{}/{}/{}/{}/{}'.format(self.agent.dhome, self.HOME_ENTITY, entity_uuid, self.INSTANCE, instance_uuid)
-        #     instance_info = json.loads(self.agent.dstore.get(uri_instance))
-        #     lxc_info = instance_info.get('entity_data')
-        #     # destination node uuid
-        #     destination_node_uuid = instance_info.get('dst')
-
-        #     # flavor and image information
-        #     flavor_info = self.flavors.get(lxc_info.get('flavor_id'))
-        #     img_info = self.images.get(lxc_info.get('base_image'))
-
-        #     # getting same plugin in destination node
-        #     uri = '{}/{}/plugins'.format(self.agent.aroot, destination_node_uuid)
-        #     all_plugins = json.loads(self.agent.astore.get(uri)).get('plugins')  # TODO: solve this ASAP
-
-        #     runtimes = [x for x in all_plugins if x.get('type') == 'runtime']
-        #     search = [x for x in runtimes if 'LXD' in x.get('name')]
-        #     if len(search) == 0:
-        #         self.logger.error('before_migrate_entity_actions()', 'LXD Plugin - Before Migration Source: No LXD Plugin, Aborting!!!')
-        #         # self.__write_error_instance(entity_uuid, instance_uuid, 'FDU Instance Migration error')
-        #         return False
-        #     else:
-        #         lxd_uuid = search[0].get('uuid')
-
-        #     # self.logger.info('before_migrate_entity_actions()', 'LXD Plugin - check if image is present on destination')
-        #     # uri_img = '{}/{}/runtime/{}/image/{}'.format(self.agent.aroot, destination_node_uuid, lxd_uuid, img_info)
-        #     # if self.agent.astore.get(uri_img) is None:
-        #     #     self.logger.info('before_migrate_entity_actions()', 'LXD Plugin - sending image to destination')
-        #     #     uri_img = '{}/{}/runtime/{}/image/{}'.format(self.agent.droot, destination_node_uuid, lxd_uuid, img_info)
-        #     #     self.agent.dstore.put(uri_img, json.dumps(img_info))
-
-        #     self.logger.info('before_migrate_entity_actions()', 'LXD Plugin - check if entity is present on destination')
-        #     uri_entity = '{}/{}/runtime/{}/entity/{}'.format(self.agent.aroot, destination_node_uuid, lxd_uuid, entity_uuid)
-        #     if self.agent.astore.get(uri_entity) is None:
-        #         self.logger.info('before_migrate_entity_actions()', 'LXD Plugin - sending entity to destination')
-        #         uri_entity = '{}/{}/runtime/{}/entity/{}'.format(self.agent.droot, destination_node_uuid, lxd_uuid, entity_uuid)
-        #         self.agent.dstore.put(uri_entity, json.dumps(entity_info))
-        #         self.logger.info('before_migrate_entity_actions()', 'LXD Plugin - Waiting entity in destination')
-
-
-        #         uri_entity = '{}/{}/runtime/{}/entity/{}'.format(self.agent.aroot, destination_node_uuid, lxd_uuid, entity_uuid)
-        #         subid = self.agent.astore.observe(uri_entity, cb)
-        #         entity_info = json.loads(local_var.get())
-        #         es = entity_info.get('status')
-        #         while es not in ['defined','error']:
-        #             entity_info = json.loads(local_var.get())
-        #             es = entity_info.get('status')
-        #         self.agent.astore.overlook(subid)
-        #         self.logger.info('before_migrate_entity_actions()', 'LXD Plugin - FDU in destination!')
-
-        #         # while True:
-        #         #     uri_entity = '{}/{}/runtime/{}/entity/{}'.format(self.agent.aroot, destination_node_uuid, lxd_uuid, entity_uuid)
-        #         #     jdata = self.agent.astore.get(uri_entity)
-        #         #     # print('{}'.format(jdata))
-        #         #     if jdata is not None:
-        #         #         self.logger.info('before_migrate_entity_actions()', 'LXD Plugin - FDU in destination!')
-        #         #         entity_info = json.loads(jdata)
-        #         #         if entity_info is not None and entity_info.get('status') == 'defined':
-        #         #             break
-
-        #     self.logger.info('before_migrate_entity_actions()', ' LXD Plugin - Before Migration Source: Waiting destination to be ready')
-        #     uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.agent.aroot, destination_node_uuid, lxd_uuid, entity_uuid, instance_uuid)
-        #     subid = self.agent.astore.observe(uri, cb)
-        #     self.logger.info('before_migrate_entity_actions()', 'KVM Plugin - FDU in destination!')
-        #     entity_info = json.loads(local_var.get())
-        #     es = entity_info.get('status')
-        #     while es not in ['landing','error']:
-        #         entity_info = json.loads(local_var.get())
-        #         es = entity_info.get('status')
-        #     self.agent.astore.overlook(subid)
-        #     # while True:
-        #     #     # self.logger.info('before_migrate_entity_actions()', ' LXD Plugin - Before Migration Source: Waiting destination to be ready')
-        #     #     uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.agent.aroot, destination_node_uuid, lxd_uuid, entity_uuid, instance_uuid)
-        #     #     lxc_info = self.agent.astore.get(uri)
-        #     #     if lxc_info is not None:
-        #     #         lxc_info = json.loads(lxc_info)
-        #     #         if lxc_info is not None and lxc_info.get('status') == 'landing':
-        #     #             break
-        #     self.logger.info('before_migrate_entity_actions()', ' LXD Plugin - Before Migration Source: Destination is ready!')
-
-        #     instance.state = State.TAKING_OFF
-        #     instance_info.update({'status': 'taking_off'})
-        #     self.__update_actual_store_instance(entity_uuid, instance_uuid, instance_info)
-        #     self.current_fdus.update({entity_uuid: entity})
-        #     return True
+        pass
 
     def after_migrate_entity_actions(self, fdu_uuid, dst=False):
-        raise NotImplementedError("TBD")
-        # if type(entity_uuid) == dict:
-        #     entity_uuid = entity_uuid.get('entity_uuid')
-        # entity = self.current_fdus.get(entity_uuid, None)
-        # if entity is None:
-        #     self.logger.error('after_migrate_entity_actions()', 'LXD Plugin - FDU not exists')
-        #     raise FDUNotExistingException('FDU not existing',
-        #                                      'FDU {} not in runtime {}'.format(entity_uuid, self.uuid))
-        # elif entity.get_state() != State.DEFINED:
-        #     self.logger.error('after_migrate_entity_actions()', 'LXD Plugin - FDU state is wrong, or transition not allowed')
-        #     raise StateTransitionNotAllowedException('FDU is not in correct state',
-        #                                              'FDU {} is not in correct state'.format(entity.get_state()))
-        # else:
-        #     if dst is True:
-        #         '''
-        #         Here the plugin also update to the current status, and remove unused keys
-        #         '''
-        #         instance = entity.get_instance(instance_uuid)
-        #         '''
-        #         Here the plugin also update to the current status, and remove unused keys
-        #         '''
-        #         self.logger.info('after_migrate_entity_actions()', ' LXD Plugin - After Migration Destination: Updating state')
-        #         instance.on_start()
-        #         self.current_fdus.update({entity_uuid: entity})
-
-        #         uri = '{}/{}/{}/{}/{}'.format(self.agent.dhome, self.HOME_ENTITY, entity_uuid, self.INSTANCE, instance_uuid)
-        #         lxc_info = json.loads(self.agent.dstore.get(uri))
-        #         lxc_info.pop('dst')
-        #         lxc_info.update({'status': 'run'})
-
-        #         self.__update_actual_store_instance(entity_uuid, instance_uuid, lxc_info)
-        #         self.current_fdus.update({entity_uuid: entity})
-
-        #         return True
-        #     else:
-        #         '''
-        #         Source node destroys all information about vm
-        #         '''
-        #         self.logger.info('afterMigrateFDUActions()', ' LXD Plugin - After Migration Source: Updating state, destroy container')
-        #         self.__force_entity_instance_termination(entity_uuid, instance_uuid)
-        #         return True
+        pass
 
     def __generate_custom_profile_userdata_configuration(self, userdata):
         userdata = {'user.user-data': userdata}
