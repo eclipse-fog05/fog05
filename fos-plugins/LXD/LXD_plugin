@@ -665,7 +665,7 @@ class LXD(RuntimePluginFDU):
                 if intf.get('virtual_interface').get('intf_type').upper() in ['PHYSICAL','BRIDGED']:
                     real_intf_name = intf.get('virtual_interface').get('vpci')
                     if self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['ethernet']:
-                    self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
+                        self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
                     elif self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['wireless']:
                         self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
                     else:
