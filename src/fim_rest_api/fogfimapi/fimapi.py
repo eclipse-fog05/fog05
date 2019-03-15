@@ -100,7 +100,7 @@ class FIMAPI(object):
 
         def list(self):
             url = '{}/network/list'.format(self.base_url)
-            return json.loads(str(requests.post(url).content))
+            return json.loads(str(requests.get(url).content))
 
 
     class FDU(object):
