@@ -146,11 +146,11 @@ class FIMAPI(object):
             url = '{}/fdu/stop/{}/{}'.format(self.base_url, fduid, node_uuid)
             return json.loads(str(requests.post(url).content))
 
-        def pause(self, fduid, node_uuid, instance_uuid):
+        def pause(self, fduid, node_uuid):
             url = '{}/fdu/pause/{}/{}'.format(self.base_url, fduid, node_uuid)
             return json.loads(str(requests.post(url).content))
 
-        def resume(self, fduid, node_uuid, instance_uuid):
+        def resume(self, fduid, node_uuid):
             url = '{}/fdu/resume/{}/{}'.format(self.base_url, fduid, node_uuid)
             return json.loads(str(requests.post(url).content))
 
