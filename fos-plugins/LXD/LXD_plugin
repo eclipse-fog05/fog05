@@ -251,7 +251,7 @@ class LXD(RuntimePluginFDU):
         else:
             try:
 
-                c = self.conn.containers.get(fdu.name)
+                c = self.conn.containers.get(fdu.name.replace('_','-')[:63])
                 c.delete()
 
                 time.sleep(2)
@@ -417,7 +417,7 @@ class LXD(RuntimePluginFDU):
             self.current_fdus.update({fdu_uuid: fdu})
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, container_info)
 
-            c = self.conn.containers.get(fdu.name)
+            c = self.conn.containers.get(fdu.name.replace('_','-')[:63])
             c.start()
             while c.status != 'Running':
                 try:
@@ -463,7 +463,7 @@ class LXD(RuntimePluginFDU):
                                                      'FDU {} is not in RUNNING state'.format(fdu_uuid))
         else:
 
-            c = self.conn.containers.get(fdu.name)
+            c = self.conn.containers.get(fdu.name.replace('_','-')[:63])
             # self.mon_th.pop(fdu_uuid)
             c.stop(force=False, wait=True)
             c.sync()
@@ -492,7 +492,7 @@ class LXD(RuntimePluginFDU):
                                                      'FDU {} is not in RUNNING state'.format(fdu_uuid))
         else:
 
-            c = self.conn.containers.get(fdu.name)
+            c = self.conn.containers.get(fdu.name.replace('_','-')[:63])
             c.freeze()
 
             fdu.on_pause()
@@ -514,7 +514,7 @@ class LXD(RuntimePluginFDU):
             raise StateTransitionNotAllowedException('FDU is not in PAUSED state',
                                                      'FDU {} is not in PAUSED state'.format(fdu_uuid))
         else:
-            c = self.conn.containers.get(fdu.name)
+            c = self.conn.containers.get(fdu.name.replace('_','-')[:63])
             c.unfreeze()
 
             fdu.on_resume()
