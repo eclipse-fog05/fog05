@@ -176,12 +176,11 @@ class GAD(object):
              'flavor', flavorid, 'info'
         ])
 
-    def get_all_flavor_image_selector(self, sysid, tenantid, nodeid):
+    def get_all_node_flavor_selector(self, sysid, tenantid, nodeid):
         return Constants.create_path([
             self.prefix, sysid, 'tenants', tenantid, 'nodes', nodeid,
             'flavor', '*', 'info'
         ])
-
 
 
     def extract_userid_from_path(self, path):

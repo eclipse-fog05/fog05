@@ -160,6 +160,31 @@ module MakeGAD(P: sig val prefix: string end) = struct
   let get_network_ports_selector sysid tenantid  =
     create_selector [P.prefix; sysid; "tenants"; tenantid; "networks"; "ports"; "*"; "info"]
 
+  let get_image_info_path sysid tenantid imageid =
+    create_path [P.prefix; sysid; "tenants"; tenantid; "image"; imageid; "info"]
+
+  let get_all_image_selector sysid tenantid =
+    create_selector [P.prefix; sysid; "tenants"; tenantid; "image"; "*"; "info"]
+
+  let get_node_image_info_path sysid tenantid nodeid imageid =
+    create_path [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid; "image"; imageid; "info"]
+
+  let get_all_node_image_selector sysid tenantid nodeid =
+    create_selector [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid; "image"; "*"; "info"]
+
+  let get_flavor_info_path sysid tenantid flavorid =
+    create_path [P.prefix; sysid; "tenants"; tenantid; "flavor"; flavorid; "info"]
+
+  let get_all_flavor_selector sysid tenantid =
+    create_selector [P.prefix; sysid; "tenants"; tenantid; "flavor"; "*"; "info"]
+
+  let get_node_flavor_info_path sysid tenantid nodeid flavorid =
+    create_path [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid; "flavor"; flavorid; "info"]
+
+  let get_all_node_flavor_selector sysid tenantid nodeid =
+    create_selector [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid; "flavor"; "*"; "info"]
+
+
   let extract_userid_from_path path =
     let ps = Yaks.Path.to_string path in
     List.nth (String.split_on_char '/' ps) 4
@@ -643,10 +668,201 @@ module MakeGAD(P: sig val prefix: string end) = struct
     Yaks.Workspace.get s connector.ws
     >>= fun kvs ->
     match kvs with
-    | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("get_all_node_ports received empty data!!") ))
+    | [] -> Lwt.return []
     | _ ->
       Lwt_list.map_p (
         fun (_,v )-> Lwt.return  @@ FTypesRecord.connection_point_of_string (Yaks.Value.to_string v)) kvs
+
+  (* Global Images *)
+
+  let add_image sysid tenantid imageid imageinfo connector =
+    let p = get_image_info_path sysid tenantid imageid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.put p (Yaks.Value.StringValue (FTypes.string_of_image imageinfo)) connector.ws
+
+  let remove_image sysid tenantid imageid connector =
+    let p = get_image_info_path sysid tenantid imageid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.remove p connector.ws
+
+  let get_image sysid tenantid imageid connector =
+    let s = Yaks.Selector.of_path @@ get_image_info_path sysid tenantid imageid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.get s connector.ws
+    >>= fun kvs ->
+    match kvs with
+    | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("get_image received empty data!!") ))
+    | _ -> let _,v = List.hd kvs in
+      Lwt.return @@ FTypes.image_of_string (Yaks.Value.to_string v )
+
+  let get_all_images sysid tenantid connector =
+    let s = get_all_image_selector sysid tenantid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.get s connector.ws
+    >>= fun kvs ->
+    match kvs with
+    | [] -> Lwt.return []
+    | _ -> Lwt_list.map_p(fun (_,v) ->
+        Lwt.return @@ FTypes.image_of_string (Yaks.Value.to_string v)
+      ) kvs
+
+  let observe_images sysid tenantid callback connector =
+    let s = get_all_image_selector sysid tenantid in
+    MVar.guarded connector @@ fun connector ->
+    let cb data =
+      match data with
+      | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("Listener received empty data!!") ))
+      | _ ->
+        let _,v = List.hd data in
+        callback @@ FTypes.image_of_string (Yaks.Value.to_string v)
+    in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:cb s connector.ws in
+    let ls = List.append connector.listeners [subid] in
+    MVar.return subid {connector with listeners = ls}
+
+  (* Node Images *)
+
+  let add_node_image sysid tenantid  nodeid imageid imageinfo connector =
+    let p = get_node_image_info_path sysid tenantid nodeid imageid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.put p (Yaks.Value.StringValue (FTypes.string_of_image imageinfo)) connector.ws
+
+  let remove__node_image sysid tenantid nodeid imageid connector =
+    let p = get_node_image_info_path sysid tenantid nodeid imageid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.remove p connector.ws
+
+  let get_node_image sysid tenantid nodeid imageid connector =
+    let s = Yaks.Selector.of_path @@ get_node_image_info_path sysid tenantid nodeid imageid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.get s connector.ws
+    >>= fun kvs ->
+    match kvs with
+    | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("get_node_image received empty data!!") ))
+    | _ -> let _,v = List.hd kvs in
+      Lwt.return @@ FTypes.image_of_string (Yaks.Value.to_string v )
+
+  let get_all_node_images sysid tenantid nodeid connector =
+    let s = get_all_node_image_selector sysid tenantid nodeid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.get s connector.ws
+    >>= fun kvs ->
+    match kvs with
+    | [] -> Lwt.return []
+    | _ -> Lwt_list.map_p(fun (_,v) ->
+        Lwt.return @@ FTypes.image_of_string (Yaks.Value.to_string v)
+      ) kvs
+
+  let observe_node_images sysid tenantid nodeid callback connector =
+    let s = get_all_node_image_selector sysid tenantid nodeid in
+    MVar.guarded connector @@ fun connector ->
+    let cb data =
+      match data with
+      | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("Listener received empty data!!") ))
+      | _ ->
+        let _,v = List.hd data in
+        callback @@ FTypes.image_of_string (Yaks.Value.to_string v)
+    in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:cb s connector.ws in
+    let ls = List.append connector.listeners [subid] in
+    MVar.return subid {connector with listeners = ls}
+
+  (* Global Flavors *)
+
+  let add_flavor sysid tenantid flavorid flavorinfo connector =
+    let p = get_flavor_info_path sysid tenantid flavorid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.put p (Yaks.Value.StringValue (FTypes.string_of_computational_requirements flavorinfo)) connector.ws
+
+  let remove_flavor sysid tenantid flavorid connector =
+    let p = get_flavor_info_path sysid tenantid flavorid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.remove p connector.ws
+
+  let get_flavor sysid tenantid flavorid connector =
+    let s = Yaks.Selector.of_path @@ get_flavor_info_path sysid tenantid flavorid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.get s connector.ws
+    >>= fun kvs ->
+    match kvs with
+    | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("get_flavor received empty data!!") ))
+    | _ -> let _,v = List.hd kvs in
+      Lwt.return @@ FTypes.computational_requirements_of_string (Yaks.Value.to_string v )
+
+  let get_all_flavors sysid tenantid connector =
+    let s = get_all_flavor_selector sysid tenantid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.get s connector.ws
+    >>= fun kvs ->
+    match kvs with
+    | [] -> Lwt.return []
+    | _ -> Lwt_list.map_p(fun (_,v) ->
+        Lwt.return @@ FTypes.computational_requirements_of_string (Yaks.Value.to_string v)
+      ) kvs
+
+  let observe_flavors sysid tenantid callback connector =
+    let s = get_all_flavor_selector sysid tenantid in
+    MVar.guarded connector @@ fun connector ->
+    let cb data =
+      match data with
+      | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("Listener received empty data!!") ))
+      | _ ->
+        let _,v = List.hd data in
+        callback @@ FTypes.computational_requirements_of_string (Yaks.Value.to_string v)
+    in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:cb s connector.ws in
+    let ls = List.append connector.listeners [subid] in
+    MVar.return subid {connector with listeners = ls}
+
+  (* Node Flavors *)
+
+  let add_node_flavor sysid tenantid nodeid flavorid flavorinfo connector =
+    let p = get_node_flavor_info_path sysid tenantid nodeid flavorid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.put p (Yaks.Value.StringValue (FTypes.string_of_computational_requirements flavorinfo)) connector.ws
+
+  let remove_node_flavor sysid tenantid nodeid flavorid connector =
+    let p = get_node_flavor_info_path sysid tenantid flavorid nodeid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.remove p connector.ws
+
+  let get_node_flavor sysid tenantid nodeid flavorid connector =
+    let s = Yaks.Selector.of_path @@ get_node_flavor_info_path sysid tenantid nodeid flavorid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.get s connector.ws
+    >>= fun kvs ->
+    match kvs with
+    | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("get_node_flavor received empty data!!") ))
+    | _ -> let _,v = List.hd kvs in
+      Lwt.return @@ FTypes.computational_requirements_of_string (Yaks.Value.to_string v )
+
+  let get_all_node_flavors sysid tenantid nodeid connector =
+    let s = get_all_node_flavor_selector sysid tenantid nodeid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.get s connector.ws
+    >>= fun kvs ->
+    match kvs with
+    | [] -> Lwt.return []
+    | _ -> Lwt_list.map_p(fun (_,v) ->
+        Lwt.return @@ FTypes.computational_requirements_of_string (Yaks.Value.to_string v)
+      ) kvs
+
+  let observe_node_flavors sysid tenantid nodeid callback connector =
+    let s = get_all_node_flavor_selector sysid tenantid nodeid in
+    MVar.guarded connector @@ fun connector ->
+    let cb data =
+      match data with
+      | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("Listener received empty data!!") ))
+      | _ ->
+        let _,v = List.hd data in
+        callback @@ FTypes.computational_requirements_of_string (Yaks.Value.to_string v)
+    in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:cb s connector.ws in
+    let ls = List.append connector.listeners [subid] in
+    MVar.return subid {connector with listeners = ls}
+
+
+
 end
 
 
