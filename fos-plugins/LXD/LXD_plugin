@@ -789,9 +789,10 @@ class LXD(RuntimePluginFDU):
         self.logger.info('__generate_custom_profile_devices_configuration()', 'LXD Plugin - Container Devices {}'.format(devices))
         return devices
 
-    def __generate_container_dict(self, instance):
-        conf = {'name': instance.name, 'profiles': instance.profiles,
-                'source': {'type': 'image', 'alias': instance.image.get('uuid')}}
+    def __generate_container_dict(self, fdu):
+        valid_host_name = fdu.name.replace('_','-')[:63]
+        conf = {'name': valid_host_name, 'profiles': fdu.profiles,
+                'source': {'type': 'image', 'alias': fdu.image.get('uuid')}}
         self.logger.info('__generate_container_dict()', 'LXD Plugin - Container Configuration {}'.format(conf))
         return conf
 
@@ -823,7 +824,8 @@ class LXD(RuntimePluginFDU):
             time.sleep(2)
             container_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
             try:
-                c = self.conn.containers.get(name)
+                valid_hostname = name.replace('_','-')[:63]
+                c = self.conn.containers.get(valid_hostname)
                 cs = c.state()
                 detailed_state = {}
                 detailed_state.update({'network':cs.network})
