@@ -863,9 +863,9 @@ class FIMAPIv2(object):
             return self.connector.glob.desired.add_image(self.sysid,
              self.tenantid,img_id, descriptor)
 
-        def get(self, iamge_uuid):
+        def get(self, image_uuid):
             return self.connector.glob.desired.get_image(self.sysid,
-             self.tenantid,iamge_uuid, descriptor)
+             self.tenantid,image_uuid)
 
         def remove(self, image_uuid):
             '''
@@ -991,7 +991,7 @@ class FIMAPIv2(object):
             # else:
             #     return False
             return self.connector.glob.desired.get_flavor(self.sysid,
-             self.tenantid,flavor_uuid, descriptor)
+             self.tenantid,flavor_uuid)
 
         def remove(self, flavor_uuid):
             '''
