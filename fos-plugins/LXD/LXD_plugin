@@ -425,7 +425,7 @@ class LXD(RuntimePluginFDU):
             container_info.update({'status': 'STARTING'})
             self.current_fdus.update({fdu_uuid: fdu})
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, container_info)
-            self.logger.info('undefine_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(fdu.name.replace('_','-')[:63]))
+            self.logger.info('run_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(fdu.name.replace('_','-')[:63]))
             c = self.conn.containers.get(fdu.name.replace('_','-')[:63])
             c.start()
             while c.status != 'Running':
