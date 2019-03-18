@@ -116,7 +116,7 @@ class Linux(OSPlugin):
             'set_interface_unaviable': self.set_interface_unaviable,
             'set_interface_available': self.set_interface_available,
             'get_network_informations':self.get_network_informations,
-            'calculate_checksum':self.checksum,
+            'checksum':self.checksum,
          }
 
         for k in d:
