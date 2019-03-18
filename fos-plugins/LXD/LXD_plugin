@@ -672,7 +672,7 @@ class LXD(RuntimePluginFDU):
             i = 0
             for intf in fdu.get_interfaces():
                 intf_name = intf.get('name')
-                mac = intf.get('mac_address')
+                mac = intf.get('mac_address', self.__generate_random_mac())
                 if intf.get('virtual_interface').get('intf_type').upper() in ['PHYSICAL','BRIDGED']:
                     real_intf_name = intf.get('virtual_interface').get('vpci')
                     if self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['ethernet']:
@@ -758,7 +758,7 @@ class LXD(RuntimePluginFDU):
         i = 0
         for intf in fdu.get_interfaces():
             intf_name = intf.get('name')
-            mac = intf.get('mac_address')
+            mac = intf.get('mac_address', g)
             if intf.get('virtual_interface').get('intf_type').upper() in ['PHYSICAL','BRIDGED']:
                 real_intf_name = intf.get('virtual_interface').get('vpci')
                 if self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['ethernet']:
@@ -919,6 +919,14 @@ class LXD(RuntimePluginFDU):
             react_func(fdu_uuid)
         else:
             self.logger.info('__fdu_observer()', ' LXD Plugin - Action not recognized : {}'.format(action))
+
+    def __generate_random_mac(self):
+        d = [ 0x00, 0x16,
+            random.randint(0x00, 0x7f),
+            random.randint(0x00, 0x7f),
+            random.randint(0x00, 0xff),
+            random.randint(0x00, 0xff) ]
+        return ':'.join(map(lambda x: "%02x" % x, d))
 
     def __react(self, action):
         r = {
