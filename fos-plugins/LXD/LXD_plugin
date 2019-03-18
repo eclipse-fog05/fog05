@@ -210,14 +210,14 @@ class LXD(RuntimePluginFDU):
                         if '{}'.format(e) == 'Image with same fingerprint already exists':
                             self.logger.info('define_fdu()', '[ INFO ] LXD Plugin - Image with same fingerprint already exists')
                             pass
-                        self.logger.info('define_fdu()', '[ DONE ] LXD Plugin - Created image with alias {}'.format(fdu_uuid))
-                        img_info.update({'uuid': fdu_uuid})
-                        img_info.update({'name': '{}_img'.format(fdu.name)})
-                        img_info.update({'base_image': image_name})
-                        img_info.update({'type': 'lxd'})
-                        img_info.update({'format': fdu.get_image_format()})
-                        self.images.update({fdu_uuid: img_info})
-                        self.connector.loc.actual.add_node_image(self.node, self.uuid, fdu_uuid, img_info)
+                    self.logger.info('define_fdu()', '[ DONE ] LXD Plugin - Created image with alias {}'.format(fdu_uuid))
+                    img_info.update({'uuid': fdu_uuid})
+                    img_info.update({'name': '{}_img'.format(fdu.name)})
+                    img_info.update({'base_image': image_name})
+                    img_info.update({'type': 'lxd'})
+                    img_info.update({'format': fdu.get_image_format()})
+                    self.images.update({fdu_uuid: img_info})
+                    self.connector.loc.actual.add_node_image(self.node, self.uuid, fdu_uuid, img_info)
 
                 fdu.image.update({'file': image_name})
                 fdu.image.update({'uuid': img_info.get('uuid')})
