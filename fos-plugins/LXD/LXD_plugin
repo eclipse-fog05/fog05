@@ -169,52 +169,60 @@ class LXD(RuntimePluginFDU):
             fdu.image.update({'uuid':img_info.get('uuid')})
 
         else:
-            if fdu.get_image_uri().startswith('http'):
-                image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
-                self.call_os_plugin_function('download_file',{'url':fdu.get_image_uri(),'file_path':image_name})
-            elif fdu.get_image_uri().startswith('file://'):
-                image_name = os.path.join(
-                    self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
-                cmd = 'cp {} {}'.format(fdu.get_image_uri()[len('file://'):], image_name)
-                self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
+            image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
+
+            if not self.call_os_plugin_function('file_exists',{'file_path':image_name}):
+                if fdu.get_image_uri().startswith('http'):
+                    self.call_os_plugin_function('download_file',{'url':fdu.get_image_uri(),'file_path':image_name})
+                elif fdu.get_image_uri().startswith('file://'):
+                    cmd = 'cp {} {}'.format(fdu.get_image_uri()[len('file://'):], image_name)
+                    self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
 
             # TODO verify IMAGE CHECKSUM
-
-            self.logger.info('define_fdu()', '[ INFO ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name)))
-
-            # TODO: this should some how pass through YAKS, at this time the LXD plugin will read
-            # the file from the disk
-            # self.call_os_plugin_function('execute_command',{'file_path':os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name)})
-            image_data = self.read_binary_file(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name))
-
-            self.logger.info('define_fdu()', '[ DONE ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name)))
             img_info = {}
             try:
-                self.logger.info(
-                    'define_fdu()', '[ INFO ] LXD Plugin - Creating image with alias {}'.format(fdu_uuid))
-                try:
-                    img = self.conn.images.create(image_data, public=True, wait=True)
-                    img.add_alias(fdu_uuid, description=fdu.name)
-                except LXDAPIException as e:
-                    # TODO: check this error with errno
-                    if '{}'.format(e) == 'Image with same fingerprint already exists':
-                        self.logger.info('define_fdu()', '[ INFO ] LXD Plugin - Image with same fingerprint already exists')
-                        pass
+                # TODO: this should some how pass through YAKS, at this time the LXD plugin will read
+                # the file from the disk
+                # self.call_os_plugin_function('execute_command',{'file_path':os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name)})
 
-                self.logger.info(
-                    'define_fdu()', '[ DONE ] LXD Plugin - Created image with alias {}'.format(fdu_uuid))
-                img_info = {}
-                img_info.update({'uuid': fdu_uuid})
-                img_info.update({'name': '{}_img'.format(fdu.name)})
-                img_info.update({'base_image': image_name})
-                img_info.update({'type': 'lxd'})
-                img_info.update({'format': fdu.get_image_format()})
+                # check first if image is already in LXD if not we add it, if yes, we use the image for the container
+                img_sum = self.call_os_plugin_function('checksum',{'file_path':image_name})
+                if self.conn.images.exists(img_sum):
+                    self.logger.info('define_fdu()', '[ INFO ] LXD Plugin - Image with this fingerprint already exists, attaching it to container')
+                    img =  self.conn.images.get(img_sum)
+                    img_uuid = img.aliases[0].get('name')
+                    img_info.update({'uuid': img_uuid})
+                    img_info.update({'name': '{}_img'.format(fdu.name)})
+                    img_info.update({'base_image': image_name})
+                    img_info.update({'type': 'lxd'})
+                    img_info.update({'format': fdu.get_image_format()})
+                else:
+                    self.logger.info('define_fdu()', '[ INFO ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name)))
+                    image_data = self.read_binary_file(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name))
+                    self.logger.info('define_fdu()', '[ DONE ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name)))
+
+                    self.logger.info('define_fdu()', '[ INFO ] LXD Plugin - Creating image with alias {}'.format(fdu_uuid))
+                    try:
+                        img = self.conn.images.create(image_data, public=True, wait=True)
+                        img.add_alias(fdu_uuid, description=fdu.name)
+                    except LXDAPIException as e:
+                        # TODO: check this error with errno
+                        if '{}'.format(e) == 'Image with same fingerprint already exists':
+                            self.logger.info('define_fdu()', '[ INFO ] LXD Plugin - Image with same fingerprint already exists')
+                            pass
+                        self.logger.info('define_fdu()', '[ DONE ] LXD Plugin - Created image with alias {}'.format(fdu_uuid))
+                        img_info.update({'uuid': fdu_uuid})
+                        img_info.update({'name': '{}_img'.format(fdu.name)})
+                        img_info.update({'base_image': image_name})
+                        img_info.update({'type': 'lxd'})
+                        img_info.update({'format': fdu.get_image_format()})
+                        self.images.update({fdu_uuid: img_info})
+                        self.connector.loc.actual.add_node_image(self.node, self.uuid, fdu_uuid, img_info)
 
                 fdu.image.update({'file': image_name})
-                fdu.image.update({'uuid': fdu_uuid})
+                fdu.image.update({'uuid': img_info.get('uuid')})
 
-                self.images.update({fdu_uuid: img_info})
-                self.connector.loc.actual.add_node_image(self.node, self.uuid, fdu_uuid, img_info)
+
 
             except LXDAPIException as e:
                 self.logger.error('define_fdu()', 'Error {}'.format(e))
@@ -591,6 +599,7 @@ class LXD(RuntimePluginFDU):
                 cmd = 'cp {} {}'.format(fdu.get_image_uri()[len('file://'):], image_name)
                 self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
 
+
             self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Destination Node creating image and flavor...')
             self.logger.info('migrate_fdu()', '[ INFO ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name)))
 
@@ -786,8 +795,8 @@ class LXD(RuntimePluginFDU):
 
         # devices = Environment().from_string(template)
         # devices = devices.render(networks=entity.networks)
-        mid = {'machine-id': {'path': '/etc/machine-id', 'source': '/etc/machine-id', 'type': 'disk'}}
-        devices.update(mid)
+        # mid = {'machine-id': {'path': '/etc/machine-id', 'source': '/etc/machine-id', 'type': 'disk'}}
+        # devices.update(mid)
         self.logger.info('__generate_custom_profile_devices_configuration()', 'LXD Plugin - Container Devices {}'.format(devices))
         return devices
 

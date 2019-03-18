@@ -30,6 +30,7 @@ import json
 import signal
 import time
 import base64
+import hashlib
 from mvar import MVar
 from fog05.interfaces.OSPlugin import OSPlugin
 from fog05 import Yaks_Connector
@@ -115,6 +116,7 @@ class Linux(OSPlugin):
             'set_interface_unaviable': self.set_interface_unaviable,
             'set_interface_available': self.set_interface_available,
             'get_network_informations':self.get_network_informations,
+            'calculate_checksum':self.checksum,
          }
 
         for k in d:
@@ -167,6 +169,21 @@ class Linux(OSPlugin):
             # for line in p.stdout:
             #     self.logger.debug('executeCommand()', str(line))
         return True
+
+    def checksum(self, file_path):
+        self.logger.error('checksum()', 'Calculating SHA256 of {}'.format(file_path))
+        try:
+            m = hashlib.sha256()
+            with open(file_path, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                m.update(chunk)
+            res = {'result':m.hexdigest().lower()}
+        except:
+            self.logger.error('checksum()', 'Exception!!')
+            res = {'error': -1}
+        finally:
+            return res
+
 
     def execute_command(self, command, blocking=False, external=False):
         if isinstance(blocking, str):
