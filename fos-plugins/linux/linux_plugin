@@ -175,8 +175,8 @@ class Linux(OSPlugin):
         try:
             m = hashlib.sha256()
             with open(file_path, "rb") as f:
-            for chunk in iter(lambda: f.read(4096), b""):
-                m.update(chunk)
+                for chunk in iter(lambda: f.read(4096), b""):
+                    m.update(chunk)
             res = {'result':m.hexdigest().lower()}
         except:
             self.logger.error('checksum()', 'Exception!!')
