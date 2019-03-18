@@ -758,7 +758,7 @@ class LXD(RuntimePluginFDU):
         i = 0
         for intf in fdu.get_interfaces():
             intf_name = intf.get('name')
-            mac = intf.get('mac_address', g)
+            mac = intf.get('mac_address', self.__generate_random_mac())
             if intf.get('virtual_interface').get('intf_type').upper() in ['PHYSICAL','BRIDGED']:
                 real_intf_name = intf.get('virtual_interface').get('vpci')
                 if self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['ethernet']:
