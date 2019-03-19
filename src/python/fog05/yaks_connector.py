@@ -507,7 +507,7 @@ class GAD(object):
         v = Value(json.dumps(flvinfo), encoding=Encoding.STRING)
         return self.ws.put(p, v)
 
-    def remove_flavor(self, sysid, tenatid, flavorid):
+    def remove_flavor(self, sysid, tenantid, flavorid):
         p = self.get_flavor_info_path(sysid, tenantid, flavorid)
         return self.ws.remove(p)
 
