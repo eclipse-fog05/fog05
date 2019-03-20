@@ -656,7 +656,7 @@ class LXD(RuntimePluginFDU):
                 'cpu': cpu,
                 'memory': mem,
                 'disk_size': disk_size,
-                'type':'kvm'
+                'type':'lxd'
                 }
             fdu.comp_requirements.update({'uuid': fdu_uuid})
 
