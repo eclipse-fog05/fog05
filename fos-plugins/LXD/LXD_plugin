@@ -704,7 +704,7 @@ class LXD(RuntimePluginFDU):
                     if c.status.upper() == 'running'.upper():
                         break
                     else:
-                       self.logger.info('migrate_fdu()',  ' LXD Plugin - Container in this host but not running')
+                        self.logger.info('migrate_fdu()',  ' LXD Plugin - Container in this host but not running')
                 except Exception as e:
                    self.logger.info('migrate_fdu()', ' LXD Plugin - Container not already in this host')
                 time.sleep(2)
@@ -725,7 +725,7 @@ class LXD(RuntimePluginFDU):
         pass
 
     def __monitor_instance(self, fdu_uuid, instance_name):
-       self.logger.info('__monitor_fdu()','[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(instance_id))
+        self.logger.info('__monitor_fdu()','[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(instance_id))
         time.sleep(2)
         while True:
             time.sleep(2)
@@ -747,7 +747,7 @@ class LXD(RuntimePluginFDU):
                 #    self.logger.info('__monitor_instance()','[ INFO ] LXD Plugin - Stopping monitoring of Container uuid {}'.format(fdu_uuid))
                 #     return
             except Exception as e:
-               self.logger.error('__monitor_instance()', '[ ERROR ] LXD Plugin - Stopping monitoring of Container uuid {} Error {}'.format(fdu_uuid, e))
+                self.logger.error('__monitor_instance()', '[ ERROR ] LXD Plugin - Stopping monitoring of Container uuid {} Error {}'.format(fdu_uuid, e))
                 return
 
     def __generate_custom_profile_userdata_configuration(self, userdata):
