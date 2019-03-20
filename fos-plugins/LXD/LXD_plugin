@@ -725,7 +725,7 @@ class LXD(RuntimePluginFDU):
         pass
 
     def __monitor_instance(self, fdu_uuid, instance_name):
-        self.logger.info('__monitor_fdu()','[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(instance_id))
+        self.logger.info('__monitor_fdu()','[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(fdu_uuid))
         time.sleep(2)
         while True:
             time.sleep(2)
