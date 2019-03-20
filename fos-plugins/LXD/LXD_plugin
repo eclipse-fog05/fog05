@@ -574,7 +574,7 @@ class LXD(RuntimePluginFDU):
             try:
                 cont.migrate(remote_client, wait=True)
             except LXDAPIException as e:
-                self.agent.logger.info('migrate_fdu()', ' LXD Plugin - LXD error {}'.format(e))
+                self.logger.info('migrate_fdu()', ' LXD Plugin - LXD error {}'.format(e))
                 cont.delete()
 
             self.logger.info('migrate_fdu()', ' LXD Plugin - Migration Source: Migration succeeds')
@@ -704,9 +704,9 @@ class LXD(RuntimePluginFDU):
                     if c.status.upper() == 'running'.upper():
                         break
                     else:
-                        self.agent.logger.info('migrate_fdu()',  ' LXD Plugin - Container in this host but not running')
+                       self.logger.info('migrate_fdu()',  ' LXD Plugin - Container in this host but not running')
                 except Exception as e:
-                    self.agent.logger.info('migrate_fdu()', ' LXD Plugin - Container not already in this host')
+                   self.logger.info('migrate_fdu()', ' LXD Plugin - Container not already in this host')
                 time.sleep(2)
 
             fdu.on_start()
@@ -725,7 +725,7 @@ class LXD(RuntimePluginFDU):
         pass
 
     def __monitor_instance(self, fdu_uuid, instance_name):
-        self.agent.logger.info('__monitor_fdu()','[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(instance_id))
+       self.logger.info('__monitor_fdu()','[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(instance_id))
         time.sleep(2)
         while True:
             time.sleep(2)
@@ -744,10 +744,10 @@ class LXD(RuntimePluginFDU):
                 self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
 
                 # if c.status == 'Stopped':
-                #     self.agent.logger.info('__monitor_instance()','[ INFO ] LXD Plugin - Stopping monitoring of Container uuid {}'.format(fdu_uuid))
+                #    self.logger.info('__monitor_instance()','[ INFO ] LXD Plugin - Stopping monitoring of Container uuid {}'.format(fdu_uuid))
                 #     return
             except Exception as e:
-                self.agent.logger.error('__monitor_instance()', '[ ERROR ] LXD Plugin - Stopping monitoring of Container uuid {} Error {}'.format(fdu_uuid, e))
+               self.logger.error('__monitor_instance()', '[ ERROR ] LXD Plugin - Stopping monitoring of Container uuid {} Error {}'.format(fdu_uuid, e))
                 return
 
     def __generate_custom_profile_userdata_configuration(self, userdata):
