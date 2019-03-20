@@ -1,5 +1,5 @@
 (*********************************************************************************
- * Copyright (c) 2018 ADLINK Technology Inc. 
+ * Copyright (c) 2018 ADLINK Technology Inc.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License 2.0 which is available at
@@ -17,12 +17,13 @@ let read_json = Yojson.Safe.read_json
 let to_string = Yojson.Safe.to_string
 let of_string = Yojson.Safe.from_string
 let validate_json = Yojson.Safe.validate_json
+let create_empty () = Yojson.Safe.from_string "{}"
 
 (* type role =  Admin
             |Operator
 
-   let role_of_string = function 
+   let role_of_string = function
     | Admin -> "admin" | Operator -> "operator"
 
-   let string_of_role = function 
+   let string_of_role = function
     | "admin" -> Admin | "operator" -> Operator *)

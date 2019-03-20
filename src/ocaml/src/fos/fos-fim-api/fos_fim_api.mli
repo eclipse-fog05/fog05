@@ -56,6 +56,7 @@ module FDU : sig
   val info_node : string -> string -> api -> FTypesRecord.fdu  Lwt.t
   val list_node : string -> api -> (FTypesRecord.fdu list) Lwt.t
   val info : string -> api -> FTypes.fdu Lwt.t
+  val instance_info : string -> string -> api -> FTypesRecord.fdu Lwt.t
   val list : api -> (FTypes.fdu list) Lwt.t
 
 end

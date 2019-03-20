@@ -303,6 +303,8 @@ class LXD(RuntimePluginFDU):
                                                      'FDU {} is not in DEFINED state'.format(fdu_uuid))
         else:
 
+            record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
+
             self.logger.info('configure_fdu()', '[ INFO ] LXD Plugin - Creating profile...')
             try:
 
@@ -328,7 +330,9 @@ class LXD(RuntimePluginFDU):
                     res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
                     while res is None:
                         res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
-                dev = self.__generate_custom_profile_devices_configuration(fdu)
+                    record.get('connection_points').append(cp_id)
+                dev, interfaces = self.__generate_custom_profile_devices_configuration(fdu)
+                record.update({'interfaces':interfaces})
                 self.logger.info('configure_fdu()', '[ INFO ] Profile devices {}'.format(dev))
                 # if fdu.devices:
                 #     for d in fdu.devices:
@@ -364,10 +368,16 @@ class LXD(RuntimePluginFDU):
 
             self.current_fdus.update({fdu_uuid: fdu})
 
-            container_info =self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            container_info.update({'status': 'CONFIGURE'})
-            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid,container_info)
+            record =self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
+            record.update({'status': 'CONFIGURE'})
+            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid,record)
             self.logger.info('configure_fdu()', '[ DONE ] LXD Plugin - Configure a Container uuid {}'.format(fdu_uuid))
+
+            # TODO: monitoring TBA
+            mt = threading.Thread(target=self.__monitor_instance, args=(fdu_uuid, fdu.name.replace('_','-')[:63]),daemon=True)
+            mt.start()
+            self.mon_th.update({fdu_uuid:mt})
+            self.logger.info('run_fdu()', '[ DONE ] LXD Plugin - Starting a Monitoring of {}'.format(fdu_uuid))
 
     def clean_fdu(self, fdu_uuid):
 
@@ -421,10 +431,10 @@ class LXD(RuntimePluginFDU):
             raise StateTransitionNotAllowedException('FDU is not in CONFIGURED state',
                                                      'FDU {} is not in CONFIGURED state'.format(fdu_uuid))
         else:
-            container_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            container_info.update({'status': 'STARTING'})
+            record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
+            record.update({'status': 'STARTING'})
             self.current_fdus.update({fdu_uuid: fdu})
-            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, container_info)
+            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
             self.logger.info('run_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(fdu.name.replace('_','-')[:63]))
             c = self.conn.containers.get(fdu.name.replace('_','-')[:63])
             c.start()
@@ -433,11 +443,10 @@ class LXD(RuntimePluginFDU):
                     c.sync()
                 except Exception as e:
                     self.logger.info('run_fdu()', '[ ERR ] LXD Plugin - {}'.format(e))
-                    container_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-                    container_info.update({'status': 'ERROR'})
-                    container_info.update({'error_code': 4})
+                    record.update({'status': 'ERROR'})
+                    record.update({'error_code': 4})
                     self.current_fdus.update({fdu_uuid: fdu})
-                    self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, container_info)
+                    self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
                     return
 
             fm = c.FilesManager(self.conn, c)
@@ -447,17 +456,13 @@ class LXD(RuntimePluginFDU):
             fm.put('/etc/profile.d/99-fos', envs, mode="0644")
             fdu.on_start()
 
-            container_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            container_info.update({'status': 'RUN'})
+
+            record.update({'status': 'RUN'})
             self.current_fdus.update({fdu_uuid: fdu})
-            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, container_info)
+            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
             self.logger.info('run_fdu()', '[ DONE ] LXD Plugin - Starting a Container uuid {}'.format(fdu_uuid))
 
-            # TODO: monitoring TBD
-            # mt = threading.Thread(target=self.__monitor_instance, args=(fdu_uuid, instance.name),daemon=True)
-            # mt.start()
-            # self.mon_th.update({fdu_uuid:mt})
-            # self.logger.info('run_fdu()', '[ DONE ] LXD Plugin - Starting a Monitoring of {}'.format(fdu_uuid))
+
 
     def stop_fdu(self, fdu_uuid):
         self.logger.info('stop_fdu()', ' LXD Plugin - Stop a Container uuid {}'.format(fdu_uuid))
@@ -719,6 +724,32 @@ class LXD(RuntimePluginFDU):
     def after_migrate_entity_actions(self, fdu_uuid, dst=False):
         pass
 
+    def __monitor_instance(self, fdu_uuid, instance_name):
+        self.agent.logger.info('__monitor_fdu()','[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(instance_id))
+        time.sleep(2)
+        while True:
+            time.sleep(2)
+            record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
+            try:
+                c = self.conn.containers.get(instance_name)
+                cs = c.state()
+                detailed_state = {}
+                detailed_state.update({'network': cs.network})
+                detailed_state.update({'cpu': cs.cpu})
+                detailed_state.update({'memory': cs.memory})
+                detailed_state.update({'disk': cs.disk})
+                detailed_state.update({'processes': cs.processes})
+                detailed_state.update({'pid': cs.pid})
+                record.update({'hypervisor_info': detailed_state})
+                self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
+
+                # if c.status == 'Stopped':
+                #     self.agent.logger.info('__monitor_instance()','[ INFO ] LXD Plugin - Stopping monitoring of Container uuid {}'.format(fdu_uuid))
+                #     return
+            except Exception as e:
+                self.agent.logger.error('__monitor_instance()', '[ ERROR ] LXD Plugin - Stopping monitoring of Container uuid {} Error {}'.format(fdu_uuid, e))
+                return
+
     def __generate_custom_profile_userdata_configuration(self, userdata):
         userdata = {'user.user-data': userdata}
         return userdata
@@ -756,6 +787,7 @@ class LXD(RuntimePluginFDU):
         template_disk = '{"path":"%s","type":"disk","pool":"%s"}'
 
         i = 0
+        interfaces = []
         for intf in fdu.get_interfaces():
             intf_name = intf.get('name')
             mac = intf.get('mac_address', self.__generate_random_mac())
@@ -776,6 +808,7 @@ class LXD(RuntimePluginFDU):
                 dev_name = intf_data.get('int_name')
                 nw_v = json.loads(str(template_vintf % (intf_name, dev_name, mac)))
             devices.update({intf_name: nw_v})
+            interfaces.append(intf_id)
             i += 1
 
         lxd_version = self.conn.host_info['environment']['server_version']
@@ -798,7 +831,7 @@ class LXD(RuntimePluginFDU):
         # mid = {'machine-id': {'path': '/etc/machine-id', 'source': '/etc/machine-id', 'type': 'disk'}}
         # devices.update(mid)
         self.logger.info('__generate_custom_profile_devices_configuration()', 'LXD Plugin - Container Devices {}'.format(devices))
-        return devices
+        return devices, interfaces
 
     def __generate_container_dict(self, fdu):
         valid_host_name = fdu.name.replace('_','-')[:63]
@@ -827,33 +860,6 @@ class LXD(RuntimePluginFDU):
                 self.undefine_fdu(fdu_uuid)
             if fdu.get_state() == State.DEFINED:
                 self.undefine_fdu(fdu_uuid)
-
-    def __monitor_instance(self, fdu_uuid, name):
-        self.logger.info('__monitor_instance()', '[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(fdu_uuid))
-        time.sleep(2)
-        while True:
-            time.sleep(2)
-            container_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-            try:
-                valid_hostname = name.replace('_','-')[:63]
-                c = self.conn.containers.get(valid_hostname)
-                cs = c.state()
-                detailed_state = {}
-                detailed_state.update({'network':cs.network})
-                detailed_state.update({'cpu':cs.cpu})
-                detailed_state.update({'memory':cs.memory})
-                detailed_state.update({'disk':cs.disk})
-                detailed_state.update({'processes':cs.processes})
-                detailed_state.update({'pid':cs.pid})
-                container_info.update({'detailed_state': detailed_state})
-                self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, container_info)
-
-                if c.status == 'Stopped':
-                    self.logger.info('__monitor_instance()', '[ INFO ] LXD Plugin - Stopping monitoring of Container uuid {}'.format(fdu_uuid))
-                    return
-            except Exception as e:
-                self.logger.error('__monitor_instance()', '[ ERROR ] LXD Plugin - Stopping monitoring of Container uuid {} Error {}'.format(fdu_uuid, e))
-                return
 
     def __get_bridge_names_from_instance_networks(self, instance_networks):
         return [network['br_name'] for network in instance_networks]

@@ -71,6 +71,8 @@ type fdu = {
   connection_points : connection_point list;
   ?error_code : int option;
   ?migration_properties : migration_properties option;
+  hypervisor_info : json;
+
 }
 
 

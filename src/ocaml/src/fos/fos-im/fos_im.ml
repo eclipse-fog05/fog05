@@ -22,6 +22,8 @@ module FAgentTypesValidator = Agent_types_v
 module FTypes = Fos_types
 module FTypesRecord = Fos_records_types
 module FTypesValidator = Fos_types_v
+module JSON = Abs_json
+
 
 
 module ConstraintMap = Map.Make(String)

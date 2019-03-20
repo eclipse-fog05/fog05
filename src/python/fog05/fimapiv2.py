@@ -474,6 +474,7 @@ class FIMAPIv2(object):
                       'status': 'DEFINE',
                       'interfaces': [],
                       'connection_points': []
+                      'hypervisor_info' : {}
                       }
             res = self.connector.glob.desired.add_node_fdu(
                 self.sysid, self.tenantid, node_uuid, fduid, record)
