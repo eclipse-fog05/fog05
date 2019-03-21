@@ -17,7 +17,7 @@ all:
 install:
 
 	make -C src/api/python/api install
-	make -C src/api/ocaml/api; make -C src/api/ocaml install
+	make -C src/api/ocaml/api; make -C src/api/ocaml/api install
 ifeq "$(wildcard $(ETC_FOS_DIR))" ""
 	sudo mkdir -p /etc/fos/plugins
 endif
