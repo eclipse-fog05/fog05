@@ -10,11 +10,14 @@ LINUX_PLUGIN_CONFFILE = /etc/fos/plugins/linux/linux_plugin.json
 all:
 
 
-	cd src/ocaml; make
+	make -C src/im/ocaml; make -C src/im/ocaml install
+	make -C src/core/ocaml; make -C src/core/ocaml install
+	make -C src/agent/;
 
 install:
 
-	cd src/python; sudo python3 setup.py install
+	make -C src/api/pyhton/api install
+	make -C src/api/ocaml/api; make -C src/api/ocaml install
 ifeq "$(wildcard $(ETC_FOS_DIR))" ""
 	sudo mkdir -p /etc/fos/plugins
 endif
@@ -36,7 +39,7 @@ ifeq "$(wildcard $(VAR_FOS_DIR))" ""
 endif
 
 	echo "fos      ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers > /dev/null
-	sudo cp src/ocaml/_build/default/src/fos/fos-agent/fos_agent.exe /etc/fos/agent
+	sudo cp src/agent/_build/default/fos-agent/fos_agent.exe /etc/fos/agent
 
 ifeq "$(wildcard $(LINUX_PLUGIN_DIR))" ""
 	sudo cp -r fos-plugins/linux /etc/fos/plugins/
@@ -78,7 +81,10 @@ uninstall:
 	sudo pip3 uninstall fog05 -y
 
 clean:
-	cd src/ocaml; make clean
+	make -C src/im/ocaml clean
+	make -C src/core/ocaml clean
+	make -C src/agent clean
+	make -C src/api/ocaml/api clean
 	sudo rm -rf src/pyhton/fog05.egg-info
 	sudo rm -rf src/pyhton/build
 	sudo rm -rf src/pyhton/dist

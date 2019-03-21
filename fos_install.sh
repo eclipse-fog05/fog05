@@ -10,7 +10,7 @@ sudo pip3 install jsonschema
 
 mkdir -p src/ocaml/_build/default/src/fos/fos-agent/
 curl -L -o /tmp/fos.tar.gz https://www.dropbox.com/s/yxmcomji7pezq8h/fos.tar.gz
-tar -xzvf /tmp/fos.tar.gz -C src/ocaml/_build/default/src/fos/fos-agent/
+tar -xzvf /tmp/fos.tar.gz -C src/agent/_build/default/fos-agent
 rm -rf /tmp/fos.tar.gz
 
 sudo make install
