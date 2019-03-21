@@ -1,0 +1,14 @@
+[unit]
+Description = Eclipse fog05 LinuxBridge Plugin
+After=network.target
+
+
+[Service]
+Type=simple
+PIDFile=/var/fos/linuxbridge.pid
+ExecStart = /etc/fos/plugins/linuxbridge/linuxbridge_plugin /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json
+KillMode=process
+Restart=on-failure
+User=fos
+[Install]
+WantedBy=multi-user.target

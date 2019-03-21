@@ -1,0 +1,15 @@
+{
+      "name": "native",
+      "version": 1,
+      "uuid": "809839f2-b511-489d-a8cf-8c80d714893e",
+      "type": "runtime",
+      "requirements": [
+            "psutil",
+            "jinja2"
+      ],
+      "description": "native fdu plugin",
+      "configuration": {
+            "ylocator": "tcp/127.0.0.1:7887",
+            "nodeid": "e0e442af51d14802a9bc71b5e634440e"
+      }
+}

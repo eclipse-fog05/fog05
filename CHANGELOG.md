@@ -1,8 +1,20 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] - 2019-01-21
 
-## [Unreleased] - 2019-01-xx
+### Changed
+- **Agent** OCaml implementation with new tree or resources
+- **FIM** Level API
+- Updated to YAKS API 0.2.1
+- Native, Linux and macOS plugin for OCaml agent
+- Repository reorganization
+
+
+
+
+
+## [Unreleased] - 2019-01-10
 
 ### Changed
 - **Docker** plugin, support for already present docker images
@@ -16,7 +28,7 @@ All notable changes to this project will be documented in this file.
 - CHANGELOG.md
 ### Changed
 - Bugfixes
-- Updated to YAKS API 0.1.0 
+- Updated to YAKS API 0.1.0
 
 ### Removed
 - Unused dependencies

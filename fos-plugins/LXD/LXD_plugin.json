@@ -1,0 +1,16 @@
+{
+      "name": "LXD",
+      "version": 1,
+      "uuid": "892ae9fe-9d1b-4dc6-87a3-66f5695a9971",
+      "type": "runtime",
+      "requirements": [
+            "pylxd",
+            "jinja2",
+            "packaging"
+      ],
+      "description": "lxd fdu plugin",
+      "configuration": {
+            "ylocator": "tcp/127.0.0.1:7887",
+            "nodeid": "e0e442af51d14802a9bc71b5e634440e"
+      }
+}

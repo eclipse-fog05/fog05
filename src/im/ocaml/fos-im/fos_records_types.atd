@@ -1,0 +1,101 @@
+(*********************************************************************************
+ * Copyright (c) 2018 ADLINK Technology Inc.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0, or the Apache Software License 2.0
+ * which is available at https://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
+ * Contributors: 1
+ *   Gabriele Baldoni (gabriele (dot) baldoni (at) adlinktech (dot) com ) - OCaml implementation
+ *********************************************************************************)
+
+type json <ocaml module="Abs_json"> = abstract
+(* Atomit Entity Manifest *)
+
+
+
+
+type fdu_state = [
+  | DEFINE
+  | CONFIGURE
+  | CLEAN
+  | RUN
+  | STARTING
+  | STOP
+  | RESUME
+  | PAUSE
+  | SCALE
+  | TAKE_OFF
+  | LAND
+  | MIGRATE
+  | UNDEFINE
+  | ERROR
+]
+
+
+(*
+type error_code = [
+  | DEFINE_ERROR of 1
+  | CONFIGURE_ERROR of 2
+  | CLEAN_ERROR of 3
+  | RUN_ERROR of 4
+  | STOP_ERROR of 5
+  | PAUSE_ERROR of 6
+  | SCALE_ERROR of 7
+  | TAKE_OFF_ERROR of 8
+  | LAND_ERROR of 9
+  | MIGRATE_ERROR of 10
+  | UNDEFINE_ERROR of 0
+]
+*)
+
+type net_state = [
+  | CREATE
+  | CONNECT
+  | DISCONNECT
+  | DESTROY
+]
+
+
+type migration_properties = {
+  destination : string;
+  source : string;
+}
+
+type fdu = {
+  fdu_uuid : string;
+  status : fdu_state;
+  interfaces : interface list;
+  connection_points : connection_point list;
+  ?error_code : int option;
+  ?migration_properties : migration_properties option;
+  hypervisor_info : json;
+
+}
+
+
+type interface = {
+  vintf_name : string;
+  status : net_state;
+  ?properties : json option;
+}
+
+type connection_point = {
+  cp_uuid: string;
+  status : net_state;
+  ?properties : json option;
+}
+
+
+type virtual_network = {
+  uuid : string;
+  status: net_state;
+  ?properties : json option;
+  }
+
+
+
+
+
