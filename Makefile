@@ -10,14 +10,14 @@ LINUX_PLUGIN_CONFFILE = /etc/fos/plugins/linux/linux_plugin.json
 all:
 
 
-	make -C src/im/ocaml; make -C src/im/ocaml install
-	make -C src/core/ocaml; make -C src/core/ocaml install
+	make -C src/im/ocaml install
+	make -C src/core/ocaml install
 	make -C src/agent/;
 
 install:
 
 	make -C src/api/python/api install
-	make -C src/api/ocaml/api; make -C src/api/ocaml/api install
+	make -C src/api/ocaml/api install
 ifeq "$(wildcard $(ETC_FOS_DIR))" ""
 	sudo mkdir -p /etc/fos/plugins
 endif
