@@ -23,11 +23,11 @@ depends: [
   "re"
   "yojson"
   "logs"
-  "atdgen"
   "lwt"
   "lwt_ppx"
   "apero-core"
   "apero-net"
   "yaks-common"
   "yaks-ocaml"
+  "fos-im"
 ]

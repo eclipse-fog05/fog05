@@ -20,5 +20,7 @@ install: [
 
 depends: [
   "dune"
+  "atdgen"
+  "yojson"
   "apero-core"
 ]
