@@ -1,0 +1,14 @@
+[unit]
+Description = Eclipse fog05 Constraint Node Example
+After=network.target
+
+
+[Service]
+Type=simple
+PIDFile=/var/fos/fos_constraint.pid
+ExecStart = /etc/fos/plugins/constraint/constraint_plugin /etc/fos/plugins/constraint/constraint_plugin.json
+KillMode=process
+Restart=on-failure
+User=fos
+[Install]
+WantedBy=multi-user.target

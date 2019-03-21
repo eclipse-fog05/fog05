@@ -1,0 +1,15 @@
+{
+      "name": "KVM",
+      "version": 1,
+      "uuid": "8fb33188-846c-45f8-83df-2a25e6b78049",
+      "type": "runtime",
+      "requirements": [
+            "libvirt-python",
+            "jinja2"
+      ],
+      "description": "kvm fdu plugin",
+      "configuration": {
+            "ylocator": "tcp/127.0.0.1:7887",
+            "nodeid": "e0e442af51d14802a9bc71b5e634440e"
+      }
+}

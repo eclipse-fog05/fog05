@@ -1,0 +1,15 @@
+{
+      "name": "linuxbridge",
+      "version": 1,
+      "uuid": "d42b4163-af35-423a-acb4-a228290cf0be",
+      "type": "network",
+      "requirements": [
+            "jinja2"
+      ],
+      "description": "linux Bridge network plugin",
+      "configuration": {
+            "ylocator": "tcp/127.0.0.1:7887",
+            "nodeid": "e0e442af51d14802a9bc71b5e634440e",
+            "dataplane_interface": "ens4"
+      }
+}

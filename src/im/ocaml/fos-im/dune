@@ -1,0 +1,7 @@
+(library
+  (name            fos_im)
+  (public_name     fos-im)
+  (wrapped     false)
+  (libraries      atdgen apero-core)
+  (preprocess
+    (pps ppx_deriving.show ppx_deriving.ord lwt_ppx ppx_cstruct)))

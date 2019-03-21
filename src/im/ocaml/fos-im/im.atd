@@ -1,0 +1,273 @@
+(*********************************************************************************
+ * Copyright (c) 2018 ADLINK Technology Inc.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0, or the Apache Software License 2.0
+ * which is available at https://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
+ * Contributors: 1
+ *   Gabriele Baldoni (gabriele (dot) baldoni (at) adlinktech (dot) com ) - OCaml implementation
+ *********************************************************************************)
+
+(* type json <ocaml module="Yaks_Core.Abs_json"> = abstract *)
+
+(* MEAO Types
+ *  These types are the atd version of the YANG models for
+ *  MEC, the mapping should be 1:1
+*)
+
+(* type role <ocaml module="Abs_json"> = abstract *)
+
+
+type serializer_types = [
+  | JSON
+  | XML
+  | PROTOBUF3
+]
+
+type transport_types = [
+  | REST_HTTP
+  | MB_TOPIC_BASED
+  | MB_ROUTING
+  | MB_PUBSUB
+  | RPC
+  | RPC_STREAMING
+  | WEBSOCKET
+]
+
+type tunnel_types = [
+  | GTP_U
+  | GRE
+]
+
+type interface_types = [
+  | MAC
+  | TUNNEL
+  | IP
+]
+
+type grant_types = [
+  | OAUTH2_AUTORIZATION_CODE
+  | OAUTH2_IMPLICIT_GRANT
+  | OAUTH2_RESOURCE_OWNER
+  | OAUTH2_CLIENT_CREDENTIALS
+]
+
+type filter_types = [
+  | FLOW
+  | PACKET
+]
+
+type ip_address_types = [
+  | IP_V4
+  | IP_V6
+]
+
+
+type filter_action_types = [
+  | DROP
+  | FORWARD_DECAPSULATED
+  | FORWARD_AS_IS
+  | PASSTHROUGH
+  | DUPLICATE_DECAPSULATED
+  | DUPLICATE_AS_IS
+]
+
+
+type tunnel_info_type = {
+  tunnel_type : tunnel_types;
+  tunnel_dst_address : string;
+  tunnel_src_address : string;
+}
+
+type interface_descriptor = {
+  interface_type : interface_types;
+  tunnel_info : tunnel_info_type;
+  src_mac_address : string;
+  dst_mac_address : string;
+  dst_ip_address  : string;
+}
+
+type traffic_filter_type = {
+  src_address : string list;
+  dst_addresses : string list;
+  src_port : string;
+  dst_port : string;
+  protocol : string;
+  token : string;
+  src_tunnel_address : string;
+  tgt_tunnel_address : string;
+  dst_tunnel_port : string;
+  qci : int;
+  dscp : int;
+  tc : int
+}
+
+type security_info_type = {
+  oauth2_info : string;
+  grants : grant_types list;
+  token_endpoint : string;
+}
+
+type transport_descriptor = {
+  transport_type : transport_types;
+  protocol : string;
+  version : string;
+  security : security_info_type;
+}
+
+type transport_dependency = {
+  labels : string list;
+  serializers : serializer_types list;
+  transport : transport_descriptor;
+}
+
+type category_ref = {
+  href : string;
+  id : string;
+  name : string;
+  version : string;
+}
+
+type service_dependency = {
+  ser_name : string;
+  ser_category : category_ref;
+  ser_transport_dependency : transport_dependency list;
+}
+
+type service_descriptor = {
+  ser_name : string;
+  ser_category : category_ref;
+  version : string;
+  transport_supported : (transport_descriptor * serializer_types list) list
+}
+
+type feature_dependency = {
+  feature_name : string;
+  version : string;
+}
+
+type traffic_rule_descriptor = {
+  traffic_rule_id : string;
+  filter_type : filter_types;
+  priority : int;
+  traffic_filter : traffic_filter_type list;
+  action : filter_action_types;
+  dst_interface : interface_descriptor list;
+}
+
+type dns_rule_descriptor = {
+  dns_rule_id : string;
+  domain_name : string;
+  ip_address_type : ip_address_types;
+  ip_addresses : string;
+  ttl : int;
+}
+
+type latency_descriptor = {
+  time_unit : int;
+  latency : string;
+}
+
+
+(*
+ * AppD Base types
+ *
+ *)
+
+
+type appd_descriptor = {
+  id : string;
+  name : string;
+  vendor : string;
+  soft_version : string;
+  mec_version : string list;
+  description : string;
+  service_required : service_dependency list;
+  service_optional : service_dependency list;
+  service_produces : service_descriptor list;
+  feature_required : feature_dependency list;
+  feature_optional : feature_dependency list;
+  transport_dependencies : transport_dependency list;
+  traffic_rules: traffic_rule_descriptor list;
+  dns_rules : dns_rule_descriptor list;
+  latency : latency_descriptor;
+}
+
+(* type plugin_type = {
+   name : string;
+   version : int;
+   uuid : string;
+   description : string;
+   ?url : string option;
+   ?configuration : json option;
+   ?requirements : string list option;
+   ?status : string option;
+   pl_type <json name="type"> : string;
+   }
+
+
+   type plugins_type = {
+   plugins : plugin_type list;
+   }
+
+   type plugin_pid = {
+   pid : int
+   }
+
+   type node_info = {
+   uuid : string;
+   name : string;
+   os : string;
+   cpu : json;
+   ram : json;
+   disks : json;
+   network : json;
+   io : json;
+   accelerator : json;
+   }
+
+   type quota_type = {
+   max_vcpu : int;
+   current_vcpu : int;
+   max_vdisk : int;
+   current_vdisk : int;
+   max_vnetwork : int;
+   current_vnetwork: int;
+   max_instances : int;
+   current_instances: int;
+   }
+
+   type tenant_type = {
+   name : string;
+   uuid : string;
+   quotas : quota_type;
+   users : string list;
+   nodes : string list;
+   }
+
+
+   type tenants = {
+   tenants:tenant_type list;
+   }
+
+   type user_type = {
+   uuid : string;
+   name : string;
+   access : string;
+   role : string;
+   }
+
+   type users = { users : user_type list }
+
+   type network_type = {
+   uuid : string;
+   nodes : string list;
+   manifest : json;
+   }
+
+   type entities = { entities : string list}
+
+   type networks = { networks : network_type list } *)
