@@ -1,9 +1,0 @@
-{
-      "name": "brctl",
-      "version": 1,
-      "uuid": "d42b4163-af35-423a-acb4-a228290cf0be",
-      "type": "network",
-      "configuration":{
-            "data_subnet":"192.168.0.1/24"
-      }
-}
