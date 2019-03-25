@@ -181,7 +181,7 @@ class Linux(OSPlugin):
             status.update({'disk':disks_status})
             status.update({'neighbors':[]})
             if self.node_conf.get('agent').get('enable_lldp', False) is True:
-                status.update({'neighbors':self.get_neighbors})
+                status.update({'neighbors':self.get_neighbors()})
             self.connector.loc.actual.add_node_status(self.node_id, status)
             time.sleep(self.update_interval)
 
