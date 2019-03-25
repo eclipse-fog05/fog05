@@ -1169,7 +1169,7 @@ class CLAD(object):
             if len(kvs) == 0:
                 raise ValueError('Listener received empty data')
             else:
-               v = kvs[0][1].get_value()
+                v = kvs[0][1].get_value()
                 if v is not None:
                     callback(json.loads(v.value))
         subid = self.ws.subscribe(s, cb)
