@@ -82,6 +82,7 @@ uninstall:
 	sudo pip3 uninstall fog05 -y
 
 clean:
+	opam remove fos-im
 	make -C src/im/ocaml clean
 	make -C src/core/ocaml clean
 	make -C src/agent clean
