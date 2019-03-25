@@ -485,8 +485,8 @@ class GAD(object):
         v = Value(json.dumps(netinfo), encoding=Encoding.STRING)
         return self.ws.put(p, v)
 
-    def remove_network(self, sysid, tenantid, portid):
-        p = self.get_network_port_info_path(sysid, tenantid, portid)
+    def remove_network(self, sysid, tenantid, netid):
+        p = self.get_network_info_path(sysid, tenantid, netid)
         return self.ws.remove(p)
 
     def add_image(self, sysid, tenantid, imageid, imginfo):

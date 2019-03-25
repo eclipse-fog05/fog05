@@ -380,7 +380,9 @@ let agent verbose_flag debug_flag configuration =
          let net_info = {net_info with status = `DESTROY} in
          let%lwt _ = Yaks_connector.Local.Desired.add_node_network (Apero.Option.get self.configuration.agent.uuid) net_p netid net_info self.yaks in
          Yaks_connector.Global.Actual.remove_network sys_id Yaks_connector.default_tenant_id netid self.yaks >>= Lwt.return
-       | None -> Lwt.return_unit)
+       | None ->
+         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - vNET NO UUID!!!!") in
+         Lwt.return_unit)
 
   in
   let cb_gd_cp self (cp:FTypes.connection_point option) (is_remove:bool) (uuid:string option) =
