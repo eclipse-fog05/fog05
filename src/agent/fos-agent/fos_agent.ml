@@ -422,7 +422,7 @@ let agent verbose_flag debug_flag configuration =
       (match uuid with
        | Some netid ->
          MVar.read self >>= fun self ->
-         Yaks_connector.Local.Actual.remove_node_network (Apero.Option.get self.configuration.agent.uuid) net_p netid self.yaks >>= Lwt.return
+         Yaks_connector.Local.Desired.remove_node_network (Apero.Option.get self.configuration.agent.uuid) net_p netid self.yaks >>= Lwt.return
        | None -> Lwt.return_unit)
   in
   let cb_la_cp self (cp:FTypesRecord.connection_point option) (is_remove:bool) (uuid:string option) =
@@ -444,7 +444,7 @@ let agent verbose_flag debug_flag configuration =
       (match uuid with
        | Some cpid ->
          MVar.read self >>= fun self ->
-         Yaks_connector.Local.Actual.remove_node_port (Apero.Option.get self.configuration.agent.uuid) net_p cpid self.yaks >>= Lwt.return
+         Yaks_connector.Local.Desired.remove_node_port (Apero.Option.get self.configuration.agent.uuid) net_p cpid self.yaks >>= Lwt.return
        | None -> Lwt.return_unit)
 
   in
@@ -483,6 +483,22 @@ let agent verbose_flag debug_flag configuration =
          Yaks_connector.Global.Actual.remove_node_info sys_id Yaks_connector.default_tenant_id nid self.yaks >>= Lwt.return
        | None -> Lwt.return_unit)
 
+  in
+  let cb_la_ns self (ns:FTypes.node_status option) (is_remove:bool) (uuid:string option) =
+    match is_remove with
+    | false ->
+      (match ns with
+       | Some ns ->
+         MVar.read self >>= fun self ->
+         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-NI - ##############") in
+         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-NI - Updated node info advertising of GA") in
+         Yaks_connector.Global.Actual.add_node_status sys_id Yaks_connector.default_tenant_id (Apero.Option.get self.configuration.agent.uuid) ns self.yaks >>= Lwt.return
+       | None -> Lwt.return_unit)
+    | true ->
+      (match uuid with
+       | Some nid -> MVar.read self >>= fun self ->
+         Yaks_connector.Global.Actual.remove_node_status sys_id Yaks_connector.default_tenant_id nid self.yaks >>= Lwt.return
+       | None -> Lwt.return_unit)
   in
   let cb_la_node_fdu self (fdu:FTypesRecord.fdu option) (is_remove:bool) (uuid:string option) =
     match is_remove with
@@ -530,7 +546,7 @@ let agent verbose_flag debug_flag configuration =
     | true ->
       (match uuid with
        | Some fduid -> MVar.read self >>= fun self ->
-         Yaks_connector.Global.Actual.remove_node_fdu sys_id Yaks_connector.default_tenant_id nodeid fduid self.yaks >>= Lwt.return
+         Yaks_connector.Global.Desired.remove_node_fdu sys_id Yaks_connector.default_tenant_id nodeid fduid self.yaks >>= Lwt.return
        | None -> Lwt.return_unit)
   in
   (* Constrained Nodes Local *)
@@ -621,6 +637,7 @@ let agent verbose_flag debug_flag configuration =
   let%lwt _ = Yaks_connector.Global.Desired.observe_flavors sys_id Yaks_connector.default_tenant_id (cb_gd_flavor state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.observe_node_plugins uuid (cb_la_plugin state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.observe_node_info uuid (cb_la_ni state) yaks in
+  let%lwt _ = Yaks_connector.Local.Actual.observe_node_status uuid (cb_la_ns state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.observe_node_fdu uuid (cb_la_node_fdu state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.observe_node_network uuid (cb_la_net state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.observe_node_port uuid (cb_la_cp state) yaks in

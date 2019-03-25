@@ -18,7 +18,7 @@ all:
 install:
 
 	make -C src/api/python/api install
-	make -C src/api/ocaml/api install
+	# make -C src/api/ocaml/api install
 ifeq "$(wildcard $(ETC_FOS_DIR))" ""
 	sudo mkdir -p /etc/fos/plugins
 endif
@@ -82,7 +82,7 @@ uninstall:
 	sudo pip3 uninstall fog05 -y
 
 clean:
-	opam remove fos-im
+	opam remove fos-im -y
 	make -C src/im/ocaml clean
 	make -C src/core/ocaml clean
 	make -C src/agent clean
