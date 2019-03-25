@@ -31,6 +31,7 @@ import signal
 import time
 import base64
 import hashlib
+import threading
 from mvar import MVar
 from fog05.interfaces.OSPlugin import OSPlugin
 from fog05 import Yaks_Connector
