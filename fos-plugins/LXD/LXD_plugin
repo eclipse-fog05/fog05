@@ -741,8 +741,8 @@ class LXD(RuntimePluginFDU):
         self.logger.info('__monitor_fdu()','[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(fdu_uuid))
         while True:
             time.sleep(self.update_interval)
-            record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
             try:
+                record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
                 c = self.conn.containers.get(instance_name)
                 cs = c.state()
                 detailed_state = {}

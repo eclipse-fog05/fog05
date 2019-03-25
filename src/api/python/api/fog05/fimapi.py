@@ -317,8 +317,8 @@ class FIMAPI(object):
             manifest = self.connector.glob.actual.get_network(
                 self.sysid, self.tenantid, net_uuid)
             manifest.update({'status': 'remove'})
-            self.connector.glob.desired.add_network(
-                self.sysid, self.tenantid, net_uuid, manifest)
+            self.connector.glob.desired.remove_network(
+                self.sysid, self.tenantid, net_uuid)
 
         def add_connection_point(self, cp_descriptor):
             cp_descriptor.update({'status': 'add'})

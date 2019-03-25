@@ -374,9 +374,11 @@ let agent verbose_flag debug_flag configuration =
     | true ->
       (match uuid with
        | Some netid -> MVar.read self >>= fun self ->
+         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - ##############") in
+         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - vNET Removed!") in
          let%lwt net_info = Yaks_connector.Local.Actual.get_node_network (Apero.Option.get self.configuration.agent.uuid) net_p netid self.yaks in
          let net_info = {net_info with status = `DESTROY} in
-         let%lwt _ = Yaks_connector.Local.Actual.add_node_network (Apero.Option.get self.configuration.agent.uuid) net_p netid net_info self.yaks in
+         let%lwt _ = Yaks_connector.Local.Desired.add_node_network (Apero.Option.get self.configuration.agent.uuid) net_p netid net_info self.yaks in
          Yaks_connector.Global.Actual.remove_network sys_id Yaks_connector.default_tenant_id netid self.yaks >>= Lwt.return
        | None -> Lwt.return_unit)
 
