@@ -265,7 +265,7 @@ class GAD(object):
         return self.ws.put(p, v)
 
     def get_node_status(self, sysid, tenantid, nodeid):
-        p = self.get_node_status_path(sysid, tenantid, nodeid)
+        s = self.get_node_status_path(sysid, tenantid, nodeid)
         res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty message list on get_node_status')

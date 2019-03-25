@@ -62,6 +62,7 @@ class LXD(RuntimePluginFDU):
 
         file_dir = os.path.dirname(__file__)
         self.DIR = os.path.abspath(file_dir)
+        self.update_interval =  manifest.get('configuration').get('update_interval', 10)
         self.conn = None
         self.images = {}
         self.flavors = {}
@@ -738,9 +739,8 @@ class LXD(RuntimePluginFDU):
 
     def __monitor_instance(self, fdu_uuid, instance_name):
         self.logger.info('__monitor_fdu()','[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(fdu_uuid))
-        time.sleep(2)
         while True:
-            time.sleep(2)
+            time.sleep(self.update_interval)
             record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
             try:
                 c = self.conn.containers.get(instance_name)
