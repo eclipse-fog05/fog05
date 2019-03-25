@@ -58,6 +58,7 @@ class Linux(OSPlugin):
         self.logger.info('__init__()', ' Hello from GNU\Linux Plugin')
         loc = manifest.get('configuration').get('ylocator').split('/')[1]
         self.connector = Yaks_Connector(loc)
+        self.node_conf = self.connector.loc.actual.get_node_configuration(self.node_id)
         file_dir = os.path.dirname(__file__)
         self.DIR = os.path.abspath(file_dir)
         self.distro = self.__check_distro()
@@ -149,6 +150,70 @@ class Linux(OSPlugin):
         node_info.update({'accelerator': self.get_accelerators_informations()})
 
         self.connector.loc.actual.add_node_information(self.node_id, node_info)
+
+    def __populate_node_status(self):
+        status = {}
+        mem = psutil.virtual_memory()
+        ram_status = {'free':mem.free/(1024*1024),
+                         'total':mem.total/(1024*1024)}
+        disks_status = []
+        disks = self.get_disks_information()
+        for d in disks:
+            mp = d.get('mount_point')
+            disk = psutil.disk_usage(mp)
+            stat = {
+                'free':disk.free/(1024*1024*1024),
+                'total': disk.total/(1024*1024*1024),
+                'mount_point':mp
+            }
+            disks_status.append(stat)
+        status.update({'uuid':self.node_id})
+        status.update({'ram':ram_status})
+        status.update({'disk':disks_status})
+        status.update({'neighbors':[]})
+        if self.node_conf.get('agent').get('enable_lldp', False) is True:
+            status.update({'neighbors':self.get_neighbors})
+
+
+        self.connector.loc.actual.add_node_status(self.node_id, status)
+
+    def get_neighbors(self):
+        res = ''
+        cmd_split = 'lldpcli show neighbors -f json'.split()
+        p = psutil.Popen(cmd_split, stdout=PIPE)
+        jcont = json.loads(p.stdout.read().decode())
+
+        faces = jcont.get('lldp').get('interface', [])
+        if isinstance(faces, dict):
+            faces = [faces]
+        res = []
+        for curr in faces:
+            k = list(curr.keys())[0]
+            hs = list(curr[k]['chassis'].keys())[0]
+            r = {
+                'src': {
+                    'node': {
+                        'name': self.get_hostname(),
+                        'id': self.get_uuid()
+                    },
+                    'port': {
+                        'name': k,
+                        'id': [x['intf_mac_address'] for x in self.nw_devices if x['intf_name'] == k][0]
+                    }
+                },
+                'dst': {
+                    'node': {
+                        'name': hs,
+                        'id': curr[k]['chassis'][hs]['id']['value']
+                    },
+                    'port': {
+                        'id': curr[k]['port']['id']['value'],
+                        'name': curr[k]['port']['descr']
+                    }
+                }
+            }
+            res.append(r)
+        return res
 
     def get_base_path(self):
         node_conf = self.connector.loc.actual.get_node_configuration(
@@ -582,44 +647,6 @@ class Linux(OSPlugin):
             line = line.decode()
             res = res + '{}'.format(line)
         return res.strip()
-
-    def get_neighbors(self):
-        res = ''
-        cmd_split = 'lldpcli show neighbors -f json'.split()
-        p = psutil.Popen(cmd_split, stdout=PIPE)
-        jcont = json.loads(p.stdout.read().decode())
-
-        faces = jcont.get('lldp').get('interface', [])
-        if isinstance(faces, dict):
-            faces = [faces]
-        res = []
-        for curr in faces:
-            k = list(curr.keys())[0]
-            hs = list(curr[k]['chassis'].keys())[0]
-            r = {
-                'src': {
-                    'node': {
-                        'name': self.get_hostname(),
-                        'id': self.get_uuid()
-                    },
-                    'port': {
-                        'name': k,
-                        'id': [x['intf_mac_address'] for x in self.nw_devices if x['intf_name'] == k][0]
-                    }
-                },
-                'dst': {
-                    'node': {
-                        'name': hs,
-                        'id': curr[k]['chassis'][hs]['id']['value']
-                    },
-                    'port': {
-                        'id': curr[k]['port']['id']['value'],
-                        'name': curr[k]['port']['descr']
-                    }
-                }
-            }
-            res.append(r)
-        return res
 
     def get_position_information(self):
         raise NotImplementedError

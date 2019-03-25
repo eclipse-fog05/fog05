@@ -150,6 +150,18 @@ class FIMAPI(object):
                 self.sysid, self.tenantid, node_uuid)
             return node_info
 
+        def status(self, node_uuid):
+            if node_uuid is None:
+                return None
+            node_status = self.connector.glob.actual.get_node_status(
+                self.sysid, self.tenantid, node_uuid)
+            return node_status
+
+        def neighbours(self, node_uuid):
+            if node_uuid is None:
+                return None
+            return []
+
         def plugins(self, node_uuid):
             '''
 

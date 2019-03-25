@@ -425,6 +425,49 @@ type pos_spec_type = {
   lon : float;
 }
 
+(* NODE STATUS *)
+
+type node_status = {
+  uuid : string;
+  ram : ram_status;
+  disk : disk_status list;
+  neighbors : neighbor list;
+  (* number_of_fdus: int; *)
+  (* Network Statistics *)
+}
+
+type ram_status = {
+  total : float;
+  free : float;
+}
+
+
+type disk_status = {
+  mount_point : string;
+  total : float;
+  free : float;
+}
+
+(* NEIGHBOR INFO *)
+
+type neighbor_peer_info = {
+  name : string;
+  id : string;
+}
+
+type neighbor_info = {
+  node : neighbor_peer_info;
+  port : neighbor_peer_info;
+}
+
+type neighbor = {
+  src : neighbor_info;
+  dst : neighbor_info;
+}
+
+
+
+
 
 (* PLUGINS INFO*)
 
