@@ -499,7 +499,7 @@ let agent verbose_flag debug_flag configuration =
        | None -> Lwt.return_unit)
     | true ->
       (match uuid with
-       | Some fduid ->
+       | Some _ ->
          Lwt.return_unit
        (* MVar.read self >>= fun self ->
           Yaks_connector.Global.Actual.remove_node_fdu sys_id Yaks_connector.default_tenant_id (Apero.Option.get self.configuration.agent.uuid) fduid self.yaks >>= Lwt.return *)
