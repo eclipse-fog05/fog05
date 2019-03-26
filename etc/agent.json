@@ -7,7 +7,8 @@
         "path": "/var/fos",
         "enable_lldp": false,
         "enable_spawner": false,
-        "mgmt_interface": "ens4.1"
+        "mgmt_interface": "ens4",
+        "lldp_conf": "/etc/fos/lldpd/lldpd.conf"
     },
     "plugins": {
         "plugin_path": "/etc/fos/plugins",
