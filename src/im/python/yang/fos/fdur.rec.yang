@@ -1,0 +1,129 @@
+module fdur.rec {
+    namespace "urn:fog05:im:fim:fdu";
+    prefix "fdur";
+
+    typedef fdu_state {
+        type enumeration {
+            enum DEFINE;
+            enum CONFIGURE;
+            enum CLEAN;
+            enum RUN;
+            enum STARTING;
+            enum STOP;
+            enum RESUME;
+            enum PAUSE;
+            enum SCALE;
+            enum TAKE_OFF;
+            enum LAND;
+            enum MIGRATE;
+            enum UNDEFINE;
+            enum ERROR;
+        }
+    }
+
+
+    typedef net_state {
+        type enumeration {
+            enum CREATE;
+            enum CONNECT;
+            enum DISCONNECT;
+            enum DESTROY;
+        }
+    }
+
+    grouping migration_properties {
+        leaf destination {
+            type string;
+        }
+
+        leaf source {
+            type string;
+        }
+    }
+
+
+
+    grouping interface {
+        leaf vintf_name {
+            description
+              "Name of the virtual interface";
+            type string;
+        }
+
+        leaf status {
+            description
+              "True if the int64erface is a management one";
+            type net_state;
+        }
+
+        leaf properties {
+            type string;
+            // This should be a JSON
+        }
+
+    }
+
+    grouping connection_point {
+        leaf cp_uuid {
+            description
+              "Unique UUID for this CP";
+            type string;
+        }
+
+       leaf status {
+            description
+              "True if the int64erface is a management one";
+            type net_state;
+        }
+
+        leaf properties {
+            type string;
+            // This should be a JSON
+        }
+    }
+
+    grouping record {
+        leaf fdu_uuid {
+            description
+              "UUID of the VDU";
+            type string;
+        }
+
+        leaf status {
+            type fdu_state;
+        }
+
+        list interfaces {
+            description
+              "List of virtual intefaces used by this VDU";
+            key "vintf_name";
+            uses interface;
+        }
+
+         list connection_points {
+            description
+              "Internal connection points definited by this VDU";
+            key "cp_uuid";
+            uses connection_point;
+        }
+
+
+        leaf error_code {
+            type int64;
+        }
+
+        container migration_properties {
+            uses migration_properties;
+        }
+
+        leaf hypervisor_info {
+            type string;
+            // Should be JSON
+        }
+       
+    }
+
+    container fdu_record {
+        uses record;
+    }
+}

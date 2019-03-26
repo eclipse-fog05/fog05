@@ -24,12 +24,11 @@ let ytenant = Apero.Option.get_or_default (Sys.getenv_opt "FOS_TENANT_ID") "0"
 let yapi u = FIMAPI.connect ~locator:yaksserver ~sysid:ysystem ~tenantid:ytenant u
 
 
-let check_descriptor descriptor parser validator =
+let check_descriptor descriptor parser =
   let res =
     try
-      let n = parser descriptor in
-      ignore @@ validator [] n;
-      Ok true
+      let d = parser descriptor in
+      Ok d
     with
     | e -> Error e
   in res

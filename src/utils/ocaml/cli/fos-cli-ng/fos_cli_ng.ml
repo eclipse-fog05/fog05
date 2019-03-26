@@ -57,9 +57,9 @@ let plugin_cmd action nodeid _ descriptor =
   match action with
   | "list" -> (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= plugin_list nodeid
   | "add" -> (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= plugin_add nodeid descriptor
-  | "remove" -> Lwt_io.printf "Not implemented"
+  | "remove" -> Lwt_io.printf "Not implemented\n"
   (* Missing parameter is pluginid *)
-  | _ -> Lwt_io.printf "%s action not recognized!!" action
+  | _ -> Lwt_io.printf "%s action not recognized!!\n" action
 
 (* Node commands *)
 let node_cmd api action nodeid =
@@ -76,7 +76,15 @@ let node_cmd api action nodeid =
          Lwt_io.printf "Node ID: %s Info: %s\n" n.uuid (FTypes.string_of_node_info n)
        in
        Node.info nid api >>= print_node
-     | None -> Lwt_io.print "Missing Node UUID paratemer!")
+     | None -> Lwt_io.print "Missing Node UUID paratemer!\n")
+  | "status" ->
+    (match nodeid with
+     | Some nid ->
+       let print_node (n:FTypes.node_status) =
+         Lwt_io.printf "Node ID: %s Status: %s\n" n.uuid (FTypes.string_of_node_status n)
+       in
+       Node.status nid api >>= print_node
+     | None -> Lwt_io.print "Missing Node UUID paratemer!\n")
   | "plugins" ->
     (match nodeid with
      | Some nid ->
@@ -85,52 +93,76 @@ let node_cmd api action nodeid =
        in
        Lwt_io.printf "Node ID: %s" nid >>= fun _ ->
        Node.plugins nid api >>= Lwt_list.iter_p print_plugin
-     | None -> Lwt_io.print "Missing Node UUID paratemer!")
-  | _ -> Lwt_io.printf "Action %s not recognized" action
+     | None -> Lwt_io.print "Missing Node UUID paratemer!\n")
+  | _ -> Lwt_io.printf "Action %s not recognized\n" action
 
 
 (* Network commands *)
 
-let network_add nodeid descriptor =
-  match nodeid with
-  | Some _ ->
-    (match descriptor with
-     | Some path ->
-       let _ = read_file path in
-       (* let res = Cli_helper.check_descriptor cont FTypes.network_of_string Types_v.validate_network  in
-          (match res with
-          | Ok _ -> *)
-       Lwt.return_unit
-     (* let descriptor = Cli_helper.load_descriptor cont FTypes.network_of_string in
-        (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= Cli_helper.send_add_network_node descriptor id  >>= fun _ ->
-        Lwt_io.printf "Atomic Entity Defined\n"; *)
-     (* | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e)) *)
-     |None  -> Lwt_io.printf "Manifest parameter missing!!\n")
-  | None ->  Lwt_io.printf "Node uuid parameter missing!!\n"
+let network_add api descriptor =
+  match descriptor with
+  | Some path ->
+    let cont = read_file path in
+    let res = Cli_helper.check_descriptor cont FTypes.virtual_network_of_string  in
+    (match res with
+     | Ok descriptor ->
+       Network.add_network descriptor api
+       >>= fun _-> Lwt_io.printf "%s\n" descriptor.uuid
+     | Error e -> Lwt_io.printf "Desriptor has errors: %s\n" (Printexc.to_string e))
+  |None  -> Lwt_io.printf "Desriptor parameter missing!!\n"
 
 
-let network_remove nodeid netid =
-  match nodeid with
-  | Some _ ->
-    (match netid with
-     | Some _ ->
-       Lwt.return_unit
-     (* (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= Cli_helper.send_remove_network_node net_uuid node_uuid >>= fun _ ->
-        Lwt_io.printf "Removed network %s from node  %s\n" net_uuid node_uuid *)
-     | None -> Lwt_io.printf "Atomic Entity uuid parameter missing!!\n")
-  | None ->  Lwt_io.printf "Node uuid parameter missing!!\n"
+let network_remove api netid =
+  match netid with
+  | Some netid ->
+    Network.remove_network netid api
+    >>= fun _ -> Lwt_io.printf "%s\n" netid
+  | None -> Lwt_io.printf "Network uuid parameter missing!!\n"
 
-let network_list () =
-  Lwt.return_unit
-(*
-  (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= Cli_helper.get_all_networks  >>= Cli_printing.print_networks *)
+let network_list api =
+  Network.list_networks api >>= Cli_printing.print_networks
 
-let network_cmd action descriptor netid nodeid =
+
+let network_cmd api action descriptor netid =
   match action with
-  | "add" -> network_add nodeid descriptor
-  | "list" -> network_list ()
-  | "remove" -> network_remove nodeid netid
+  | "add" -> network_add api descriptor
+  | "list" -> network_list api
+  | "remove" -> network_remove api netid
   | _ -> Lwt_io.printf "%s action not recognized!!" action
+
+
+(* Image commands *)
+
+let image_add api descriptor =
+  match descriptor with
+  | Some path ->
+    let cont = read_file path in
+    let res = Cli_helper.check_descriptor cont FTypes.image_of_string  in
+    (match res with
+     | Ok descriptor ->
+       Image.add descriptor api >>= Lwt_io.printf "%s\n"
+     | Error e -> Lwt_io.printf "Desriptor has errors: %s\n" (Printexc.to_string e))
+  |None  -> Lwt_io.printf "Desriptor parameter missing!!\n"
+
+
+let image_remove api imgid =
+  match imgid with
+  | Some imgid ->
+    Image.remove imgid api
+    >>= fun _ -> Lwt_io.printf "%s\n" imgid
+  | None -> Lwt_io.printf "Image uuid parameter missing!!\n"
+
+let image_list api =
+  Image.list api >>= Cli_printing.print_images
+
+
+let image_cmd api action descriptor imgid =
+  match action with
+  | "add" -> image_add api descriptor
+  | "list" -> image_list api
+  | "remove" -> image_remove api imgid
+  | _ -> Lwt_io.printf "%s action not recognized!!" action
+
 
 (* Manifest commands *)
 
@@ -138,60 +170,44 @@ let descriptor_image descriptor =
   match descriptor with
   | Some path ->
     let _ = Lwt_io.printf "Check descriptor %s\n" path in
-    let _ = read_file path in
-    (* let res = Cli_helper.check_descriptor cont FTypes.image_of_string Types_v.validate_image  in
-       (match res with
-       | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
-       | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e)) *)
-    Lwt.return_unit
+    let cont = read_file path in
+    let res = Cli_helper.check_descriptor cont FTypes.image_of_string  in
+    (match res with
+     | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
+     | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
   | None -> Lwt_io.printf "Manifest parameter is missing!!\n"
 
 let descriptor_flavor descriptor =
   match descriptor with
   | Some path ->
     let _ = Lwt_io.printf "Check descriptor %s\n" path in
-    (* let cont = read_file path in
-       let res = Cli_helper.check_descriptor cont FTypes.flavor_of_string Types_v.validate_flavor  in
-       (match res with
-       | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
-       | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e)) *)
-    Lwt.return_unit
+    let cont = read_file path in
+    let res = Cli_helper.check_descriptor cont FTypes.computational_requirements_of_string  in
+    (match res with
+     | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
+     | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
   | None -> Lwt_io.printf "Manifest parameter is missing!!\n"
-
-let descriptor_plugin descriptor =
-  match descriptor with
-  | Some path ->
-    let _ = Lwt_io.printf "Check descriptor %s\n" path in
-    (* let cont = read_file path in
-       let res = Cli_helper.check_descriptor cont FTypes.plugin_of_string Types_v.validate_plugin  in
-       (match res with
-       | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
-       | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e)) *)
-    Lwt.return_unit
-  | None -> Lwt_io.printf"Manifest parameter is missing!!\n"
 
 let descriptor_fdu descriptor =
   match descriptor with
   | Some path ->
     let _ = Lwt_io.printf "Check descriptor %s\n" path in
-    (* let cont = read_file path in
-       let res = Cli_helper.check_descriptor cont Fos_im.FTypes.fdu_of_string Fos_im.FTypesValidator.validate_fdu  in
-       (match res with
-       | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
-       | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e)) *)
-    Lwt.return_unit
+    let cont = read_file path in
+    let res = Cli_helper.check_descriptor cont Fos_im.FTypes.fdu_of_string  in
+    (match res with
+     | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
+     | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
   | None -> Lwt_io.printf "Manifest parameter is missing!!\n"
 
 let descriptor_network descriptor =
   match descriptor with
-  | Some _ ->
-    (* let _ = Lwt_io.printf "Check descriptor %s\n" path in
-       let cont = read_file path in
-       let res = Cli_helper.check_descriptor cont FTypes.network_of_string Types_v.validate_network  in
-       (match res with
-       | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
-       | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e)) *)
-    Lwt.return_unit
+  | Some path ->
+    let _ = Lwt_io.printf "Check descriptor %s\n" path in
+    let cont = read_file path in
+    let res = Cli_helper.check_descriptor cont FTypes.network_of_string  in
+    (match res with
+     | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
+     | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
   | None -> Lwt_io.printf "Manifest parameter is missing!!\n"
 
 let descriptor_cmd action descriptor =
@@ -351,7 +367,7 @@ let fdu_cmd api action nodeid fduid destid descriptor =
 
 
 
-let parser component cmd action netid nodeid fduid destid descriptor =
+let parser component cmd action netid imgid nodeid fduid destid descriptor =
   let%lwt fimapi = Cli_helper.yapi () in
   match String.lowercase_ascii component with
   | "fim" ->
@@ -359,9 +375,13 @@ let parser component cmd action netid nodeid fduid destid descriptor =
      | "fdu" ->
        fdu_cmd fimapi action nodeid fduid destid descriptor
      | "network" ->
-       network_cmd action descriptor netid nodeid
+       network_cmd fimapi action descriptor netid
      | "plugin" ->
        plugin_cmd action nodeid None descriptor
+     | "image" ->
+       image_cmd fimapi action descriptor imgid
+     | "flavor" ->
+       Lwt.return_unit
      | "descriptor" ->
        descriptor_cmd action descriptor
      | "node" ->
@@ -370,15 +390,16 @@ let parser component cmd action netid nodeid fduid destid descriptor =
   | _ -> Lwt_io.printf "%s not implemented\n" component
 
 
-let p1 component cmd action netid nodeid fduid destid descriptor =
-  Lwt_main.run @@ parser component cmd action netid nodeid fduid destid descriptor
+let p1 component cmd action netid imgid nodeid fduid destid descriptor =
+  Lwt_main.run @@ parser component cmd action netid imgid nodeid fduid destid descriptor
 
-let usage = "usage: " ^ Sys.argv.(0) ^ " [node|network|descriptor|entity] "
+let usage = "usage: " ^ Sys.argv.(0) ^ " [fim|faem|feo] "
 
 let node_uuid_par = Arg.(value & opt (some string) None & info ["nu"] ~docv:"node uuid")
 let fdu_uuid_par = Arg.(value & opt (some string) None & info ["fu"] ~docv:"entity uuid")
 let dest_node_uuid_par = Arg.(value & opt (some string) None & info ["du"] ~docv:"destination uuid")
 let net_uuid_par = Arg.(value & opt (some string) None & info ["net"] ~docv:"network uuid")
+let img_uuid_par = Arg.(value & opt (some string) None & info ["img"] ~docv:"image uuid")
 let descriptor_par = Arg.(value & opt (some string) None & info ["d";"descriptor"] ~docv:"descriptor file")
 
 let act_t = Arg.(required & pos 2 (some string) None & info [] ~docv:"action")
@@ -387,7 +408,7 @@ let component_t = Arg.(required & pos 0 (some string) None & info [] ~docv:"comp
 
 let fos_t =
   Term.(
-    const p1 $ component_t $ cmd_t $ act_t $ net_uuid_par
+    const p1 $ component_t $ cmd_t $ act_t $ net_uuid_par $ img_uuid_par
     $ node_uuid_par $ fdu_uuid_par  $ dest_node_uuid_par $ descriptor_par)
 
 
