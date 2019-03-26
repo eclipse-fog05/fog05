@@ -215,6 +215,7 @@ class Linux(OSPlugin):
         for curr in faces:
             k = list(curr.keys())[0]
             hs = list(curr[k]['chassis'].keys())[0]
+            print('####### {}'.format([x['intf_mac_address'] for x in self.nw_devices if x['intf_name'] == k]))
             r = {
                 'src': {
                     'node': {
