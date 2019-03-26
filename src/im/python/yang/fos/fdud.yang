@@ -1,0 +1,428 @@
+module fdud {
+    namespace "urn:fog05:im:fim:fdu";
+    prefix "fdud";
+
+    typedef migr_kind {
+        type enumeration {
+            enum LIVE;
+            enum COLD;
+        }
+    }
+
+    typedef io_kind {
+        type enumeration {
+            enum I2C;
+            enum GPIO;
+            enum CAN;
+            enum BUS;
+            enum SERIAL;
+        }
+    }
+
+    typedef vintf_t {
+        type enumeration {
+            enum PARAVIRT;
+            enum FOS_MGMT;
+            enum PCI_PASSTHROUGH;
+            enum SR_IOV;
+            enum VIRTIO;
+            enum E1000;
+            enum RTL8139;
+            enum PCNET;
+            enum PHYSICAL;
+            enum BRIDGED;
+        }
+    }
+
+    typedef intf_t {
+        type enumeration {
+            enum INTERNAL;
+            enum EXTERNAL;
+            enum WLAN;
+            enum BLUETOOTH;
+        }
+    }
+
+    typedef conf_types {
+        type enumeration {
+            enum CLOUD_INIT;
+            enum SCRIPT;
+        }
+    }
+
+    typedef hv_kind {
+        type enumeration {
+            enum BARE;
+            enum LXD;
+            enum KVM;
+            enum KVM_UK;
+            enum XEN;
+            enum XEN_UK;
+            enum MCU;
+            enum DOCKER;
+        }
+    }
+
+    grouping position {
+        leaf lat {
+            description
+              "Latitude";
+            type string;
+        }
+
+        leaf lon {
+            description
+              "Longitude";
+            type string;
+        }
+
+        leaf radius {
+            description
+              "Radius in meter";
+            type decimal64 {
+                fraction-digits 2;
+            }
+        }
+    }
+
+    grouping image {
+
+        leaf uuid {
+            description
+                "UUID for the image";
+            type string;
+        }
+
+        leaf name {
+            description
+                "Name of the image";
+            type string;
+        }
+
+        leaf uri {
+            description
+              "The URI for the image";
+            type string;
+        }
+
+        leaf checksum {
+            description
+              "SHA1 checksum of the image file";
+            type string;
+        }
+
+        leaf format {
+            description
+              "The format of the image";
+            type string;
+        }
+    }
+
+    grouping command {
+        leaf binary {
+            description
+              "Path to the binary to be started";
+            type string;
+        }
+
+        leaf-list args {
+            description
+              "List of arguments passed to the binary";
+            type string;
+            min-elements 0;
+        }
+    }
+
+    grouping proximity {
+        leaf neighbour {
+            type string;
+        }
+
+        leaf radius {
+             type decimal64 {
+                fraction-digits 3;
+            }
+        }
+    }
+
+    grouping vif_type {
+        leaf intf_type {
+            type vintf_t;
+        }
+
+        leaf vpci {
+            type string;
+        }
+
+        leaf bandwidth {
+            type int64;
+        }
+    }
+
+
+    grouping geographical_requirements {
+        container position {
+            description
+              "Postion requirement for this VDU";
+            uses position;
+        }
+
+        list proximity {
+            key "neighbour";
+            uses proximity;
+        }
+    }
+
+
+    grouping computational_requirements {
+
+        leaf uuid {
+            type string;
+        }
+
+        leaf name {
+            type string;
+        }
+
+        leaf cpu_arch {
+            description
+              "CPU architecture needed by this VDU";
+            type string;
+        }
+
+        leaf cpu_min_freq {
+            description
+              "Minumum CPU freq needed";
+            type decimal64 {
+                fraction-digits 3;
+            }
+        }
+
+        leaf cpu_min_count {
+            description
+              "Minumum number of vCPU needed";
+            type int64;
+        }
+
+        leaf ram_size_mb {
+            description
+              "RAM needed";
+             type decimal64 {
+                fraction-digits 3;
+            }
+        }
+
+        leaf storage_size_gb {
+            description
+              "Root disk size needed";
+            type decimal64 {
+                fraction-digits 3;
+            }
+        }
+
+        leaf gpu_min_count {
+            description
+              "Minumum number of GPU needed";
+            type int64;
+        }
+
+        leaf fpga_min_count {
+            description
+              "Minimum number of FPGA needed";
+            type int64;
+        }
+
+        leaf duty_cycle {
+             type decimal64 {
+                fraction-digits 3;
+            }
+        }
+
+        // leaf min_running_time_minutes {
+        //     description
+        //       "Minimum running time in minutes in an hour";
+        //     type int64;
+        // }
+
+        // leaf max_running_time_minutes {
+        //     description
+        //       "Maximun running time in minutes in an hour";
+        //     type int64;
+        // }
+
+    }
+
+    grouping configuration {
+        leaf conf_type {
+            description
+              "Configuration script type";
+            type conf_types;
+        }
+
+        leaf script {
+            description
+              "Configuration script";
+            type string;
+        }
+
+        leaf-list ssh-keys {
+            type string;
+        }
+    }
+
+    grouping interface {
+        leaf name {
+            description
+              "Name of the virtual int64eface";
+            type string;
+        }
+
+        leaf is_mgmt {
+            description
+              "True if the int64erface is a management one";
+            type boolean;
+        }
+
+        leaf mac_address {
+            description
+              "MAC Address of the int64erface (AA:BB:CC:DD:EE:FF)";
+            type string;
+        }
+
+        leaf cp_id {
+            description
+              "Reference to an internal connection point connected to this interface";
+            type string;
+        }
+
+        leaf if_type {
+            description
+              "Type of the virtualised interface";
+            type intf_t;
+        }
+
+        container virtual_interface {
+            uses vif_type;
+        }
+
+    }
+
+    grouping connection_point {
+        leaf uuid {
+            description
+              "Unique UUID for this CP";
+            type string;
+        }
+
+        leaf pair_id {
+            description
+              "Reference to the VL this CP is connected";
+            type string;
+        }
+    }
+
+    grouping io_port {
+        leaf name {
+            description
+              "Name of the IO port";
+            type string;
+        }
+
+        leaf min_io_ports {
+            description
+              "Minumum number of IO ports needed";
+            type int64;
+        }
+
+        leaf io_type {
+            description
+              "Type of the IO ports";
+            type io_kind;
+        }
+    }
+
+    grouping descriptor {
+        leaf uuid {
+            description
+              "UUID of the VDU";
+            type string;
+        }
+
+        leaf name {
+            description
+              "Unique name of the VDU";
+            type string;
+        }
+
+        leaf description {
+            description
+                "VDU Description";
+            type string;
+        }
+
+        container image {
+            description
+              "Imange used when instatiating the VDU";
+            uses image;
+        }
+
+        container command {
+            description
+              "Command used for start the BARE VDU";
+            uses command;
+        }
+
+        container computational_requirements {
+            description
+              "Computation requirement for this VDU";
+            uses computational_requirements;
+        }
+
+        container configuration {
+            description
+              "Configuration script for this VDU";
+            uses configuration;
+        }
+
+        list interfaces {
+            description
+              "List of virtual intefaces used by this VDU";
+            key "name";
+            uses interface;
+        }
+
+        leaf hypervisor {
+            description
+              "Type of hypervisor needed by this VDU";
+            type hv_kind;
+        }
+
+        leaf migration_kind {
+            description
+                "Kind of migration supported by the FDU";
+            type migr_kind;
+        }
+
+        list connection_points {
+            description
+              "Internal connection points definited by this VDU";
+            key "uuid";
+            uses connection_point;
+        }
+
+        list io_ports {
+            description
+              "I/O ports needed by this VDU";
+            key "name";
+            uses io_port;
+        }
+
+        leaf-list depends_on {
+            type string;
+        }
+    }
+
+    container fdu_descriptor {
+        uses descriptor;
+    }
+}

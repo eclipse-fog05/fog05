@@ -77,15 +77,22 @@ let print_node_info (node_info: FTypes.node_info) =
       printf "+-------------------------------------------------------+\n";
   ) ios
 
-let print_networks netlist =
+let print_networks (netlist:FTypes.virtual_network list) =
   let _ = printf "+-------------------------------------------------------+\n" in
   Lwt_list.iter_p (
-    fun (nid, nodes, (manifest:FTypes.network) ) ->
-      let _ = printf "| Name: %s \n| UUID: %s\n| Type: %s\n" manifest.name nid manifest.network_type in
-      let _ = printf "| Nodes: " in
-      let _ = Lwt_list.iter_p (fun e -> printf " %s " e ) nodes in
-      printf "\n+-------------------------------------------------------+\n";
+    fun (manifest:FTypes.virtual_network) ->
+      printf "| Name: %s \n| UUID: %s\n| Mgmt: %b\n" manifest.name manifest.uuid manifest.is_mgmt
   ) netlist
+
+let print_images (imglist:FTypes.image list) =
+  let _ = printf "+-------------------------------------------------------+\n" in
+  Lwt_list.iter_p (
+    fun (descr:FTypes.image) ->
+      printf "| Name: %s \n| UUID: %s\n| URI: %s\n| Checksum: %s\n| Format: %s\n"
+        (Apero.Option.get_or_default descr.name "ND") (Apero.Option.get_or_default descr.uuid "ND")
+        descr.uri descr.checksum descr.format
+
+  ) imglist
 
 let print_fdus aelist =
   let _ = printf "+-------------------------------------------------------+\n" in

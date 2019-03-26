@@ -28,6 +28,7 @@ module Node : sig
 
   val list : api -> (FTypes.node_info list) Lwt.t
   val info : string -> api -> FTypes.node_info Lwt.t
+  val status : string -> api -> FTypes.node_status Lwt.t
   val plugins : string  -> api -> (FTypes.plugin list) Lwt.t
 
 end
@@ -35,9 +36,12 @@ end
 
 module Network : sig
 
-  val add : FTypes.virtual_network -> api -> bool Lwt.t
-  val remove : string -> api -> bool Lwt.t
-  val list : api -> (FTypes.virtual_network list) Lwt.t
+  val add_network : FTypes.virtual_network -> api -> bool Lwt.t
+  val remove_network : string -> api -> bool Lwt.t
+  val add_connection_point : FTypes.connection_point -> api -> bool Lwt.t
+  val remove_connection_point : string -> api -> bool Lwt.t
+  val list_networks : api -> (FTypes.virtual_network list) Lwt.t
+  val list_connection_points : api -> (FTypes.connection_point list) Lwt.t
 
 end
 
@@ -61,15 +65,15 @@ module FDU : sig
 
 end
 
-(* module Image : sig
+module Image : sig
 
-   val add : FTypes.image_type -> api -> bool Lwt.t
-   val remove : string -> api -> bool Lwt.t
-   val list : api -> (FTypes.image_type list) Lwt.t
+  val add : FTypes.image -> api -> string Lwt.t
+  val remove : string -> api -> bool Lwt.t
+  val list : api -> (FTypes.image list) Lwt.t
 
-   end
+end
 
-
+(*
    module Flavor : sig
    val add : FTypes.computational_requirements_type -> api -> bool Lwt.t
    val remove : string -> api -> bool Lwt.t

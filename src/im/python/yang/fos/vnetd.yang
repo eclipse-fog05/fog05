@@ -1,0 +1,39 @@
+module vnetd {
+    namespace "urn:fog05:im:fim:vnet";
+    prefix "vnetd";
+
+    typedef vn_type {
+        type enumeration {
+            enum ELINE;
+            enum ELAN;
+        }
+    }
+
+
+  grouping descriptor {
+    leaf uuid {
+      description "UUID of the Virtual Link";
+      type string;
+    }
+
+    leaf name {
+      description "Unique name of the Virtual Link";
+      type string;
+    }
+
+    leaf is_mgmt {
+      description "True if this virtual link is used for management";
+      type boolean;
+    }
+
+    leaf net_type {
+      description "Type of the virtual link";
+      type vn_type;
+    }
+
+}
+
+  container vnet_descriptor {
+    uses descriptor;
+  }
+}

@@ -53,6 +53,10 @@ class FIMAPI(object):
             url = '{}/node/info/{}'.format(self.base_url, node_uuid)
             return json.loads(str(requests.get(url).content))
 
+        def status(self, node_uuid):
+            url = '{}/node/status/{}'.format(self.base_url, node_uuid)
+            return json.loads(str(requests.get(url).content))
+
         def plugins(self, node_uuid):
             url = '{}/node/plugins/{}'.format(self.base_url, node_uuid)
             return json.loads(str(requests.get(url).content))
