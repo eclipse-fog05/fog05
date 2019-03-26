@@ -90,7 +90,7 @@ uninstall:
 	sudo pip3 uninstall fog05 -y
 
 clean:
-	rm -rf lldpd
+	sudo rm -rf lldpd
 	opam remove fos-im -y
 	make -C src/im/ocaml clean
 	make -C src/core/ocaml clean

@@ -2,7 +2,7 @@
 
 FILE="lldpd.conf"
 
-DIR="$/etc/fos/lldpd/"
+DIR="/etc/fos/lldpd/"
 cd $DIR
 
 if [ -f "$FILE" ]; then
