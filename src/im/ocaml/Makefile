@@ -26,6 +26,6 @@ clean:
 
 
 install:
-	opam install .
+	opam install . --working-dir
 uninstall:
 	opam remove fos-im

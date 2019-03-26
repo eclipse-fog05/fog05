@@ -150,6 +150,13 @@ class FIMAPI(object):
                 self.sysid, self.tenantid, node_uuid)
             return node_info
 
+        def status(self, node_uuid):
+            if node_uuid is None:
+                return None
+            node_status = self.connector.glob.actual.get_node_status(
+                self.sysid, self.tenantid, node_uuid)
+            return node_status
+
         def plugins(self, node_uuid):
             '''
 
@@ -310,8 +317,8 @@ class FIMAPI(object):
             manifest = self.connector.glob.actual.get_network(
                 self.sysid, self.tenantid, net_uuid)
             manifest.update({'status': 'remove'})
-            self.connector.glob.desired.add_network(
-                self.sysid, self.tenantid, net_uuid, manifest)
+            self.connector.glob.desired.remove_network(
+                self.sysid, self.tenantid, net_uuid)
 
         def add_connection_point(self, cp_descriptor):
             cp_descriptor.update({'status': 'add'})
