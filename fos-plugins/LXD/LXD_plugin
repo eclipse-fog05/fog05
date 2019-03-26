@@ -543,7 +543,7 @@ class LXD(RuntimePluginFDU):
             self.logger.info('resume_fdu()', '[ DONE ] LXD Plugin - Resume a Container uuid {}'.format(fdu_uuid))
 
 
-    def migrate_fdu(self, fdu_uuid, dst=False):
+    def migrate_fdu(self, fdu_uuid):
         record = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid)
         destination = record.get('migration_properties').get('destination')
         if destination != self.node:
@@ -956,8 +956,8 @@ class LXD(RuntimePluginFDU):
             'RESUME': self.resume_fdu,
             'RUN': self.run_fdu,
             'CLEAN': self.clean_fdu,
-            # 'landing': self.migrate_entity,
-            # 'taking_off': self.migrate_entity
+            'LAND': self.migrate_fdu,
+            'TAKE_OFF': self.migrate_fdu
         }
 
         return r.get(action, None)
