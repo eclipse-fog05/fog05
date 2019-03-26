@@ -69,6 +69,7 @@ class Linux(OSPlugin):
         self.accelerator_devices = []
         self.up_th  = None
         self.running = True
+        self.lldp_proc = None
         self.update_interval =  manifest.get('configuration').get('update_interval', 10)
         if self.distro == '':
             self.logger.warning(
@@ -137,10 +138,26 @@ class Linux(OSPlugin):
         self.connector.loc.actual.add_node_os_info(self.node_id, manifest)
         self.up_th = threading.Thread(target=self.__populate_node_status,daemon=True)
         self.up_th.start()
+
+        if self.node_conf.get('agent').get('enable_lldp', False) is True:
+            lldpd_conf_file = self.node_conf.get('agent').get('lldp_conf', None )
+            if lldpd_conf_file is not None:
+                if self.__file_exists(lldpd_conf_file):
+                    command = 'sudo lldpd -d -k -O {}'.format(lldpd_conf_file)
+                    cmd_splitted = command.split()
+                    self.lldp_proc = psutil.Popen(cmd_splitted, stdout=PIPE)
+                else:
+                    self.logger.warning('__init__()', '[ INIT ] LLDP Conf file does not exist')
+            else:
+                self.logger.warning('__init__()', '[ INIT ] LLDP Conf file is None!!')
+
+
         self.logger.info('__init__()', '[ RUN ] OS Plugin - Running...')
 
         r = self.var.get()
         self.running = False
+        if self.lldp_proc is not None:
+            self.send_sig_int(self.lldp_proc.pid)
         self.connector.close()
 
         exit(0)
@@ -198,29 +215,31 @@ class Linux(OSPlugin):
         for curr in faces:
             k = list(curr.keys())[0]
             hs = list(curr[k]['chassis'].keys())[0]
-            r = {
-                'src': {
-                    'node': {
-                        'name': self.get_hostname(),
-                        'id': self.get_uuid()
+            matching_if = [x['intf_mac_address'] for x in self.nw_devices if x['intf_name'] == k]
+            if len(matching_if) == 1:
+                r = {
+                    'src': {
+                        'node': {
+                            'name': self.get_hostname(),
+                            'id': self.get_uuid()
+                        },
+                        'port': {
+                            'name': k,
+                            'id': matching_if[0]
+                        }
                     },
-                    'port': {
-                        'name': k,
-                        'id': [x['intf_mac_address'] for x in self.nw_devices if x['intf_name'] == k][0]
-                    }
-                },
-                'dst': {
-                    'node': {
-                        'name': hs,
-                        'id': curr[k]['chassis'][hs]['id']['value']
-                    },
-                    'port': {
-                        'id': curr[k]['port']['id']['value'],
-                        'name': curr[k]['port']['descr']
+                    'dst': {
+                        'node': {
+                            'name': hs,
+                            'id': curr[k]['chassis'][hs]['id']['value']
+                        },
+                        'port': {
+                            'id': curr[k]['port']['id']['value'],
+                            'name': curr[k]['port']['descr']
+                        }
                     }
                 }
-            }
-            res.append(r)
+                res.append(r)
         return res
 
     def get_base_path(self):

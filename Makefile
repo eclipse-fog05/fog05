@@ -64,6 +64,14 @@ endif
 	sudo ln -sf /etc/fos/agent /usr/bin/fagent
 	sudo ln -sf /etc/fos/plugins/linux/linux_plugin /usr/bin/fos_linux
 
+lldp:
+	sudo mkdir -p /etc/fos/lldpd
+	sudo ./etc/lldp/build.sh
+	sudo ./etc/lldp/config.sh
+	sudo cp ./etc/lldp/run.sh /etc/fos/lldpd/run.sh
+	sudo systemctl disable lldpd
+	sudo systemctl stop lldpd
+
 uninstall:
 	sudo systemctl stop fos_agent
 	sudo systemctl disable fos_agent
@@ -82,6 +90,7 @@ uninstall:
 	sudo pip3 uninstall fog05 -y
 
 clean:
+	sudo rm -rf lldpd
 	opam remove fos-im -y
 	make -C src/im/ocaml clean
 	make -C src/core/ocaml clean
