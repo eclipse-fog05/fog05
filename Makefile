@@ -64,6 +64,14 @@ endif
 	sudo ln -sf /etc/fos/agent /usr/bin/fagent
 	sudo ln -sf /etc/fos/plugins/linux/linux_plugin /usr/bin/fos_linux
 
+lldp:
+	sudo mkdir -P /etc/fos/lldpd
+	sudo ./etc/lldp/build.sh
+	sudo ./etc/lldp/config.sh
+	cp ./etc/lldp/run.sh /etc/fos/lldpd/run.sh
+	sudo systemctl disable lldpd
+	sudo systemctl stop lldpd
+
 uninstall:
 	sudo systemctl stop fos_agent
 	sudo systemctl disable fos_agent
