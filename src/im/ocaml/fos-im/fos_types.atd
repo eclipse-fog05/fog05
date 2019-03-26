@@ -41,7 +41,7 @@ type image = {
   ?uuid : string option;
   ?name : string option;
   uri : string;
-  checksum : string;
+  checksum : string; (* SHA1SUM *)
   format : string;
 
 }

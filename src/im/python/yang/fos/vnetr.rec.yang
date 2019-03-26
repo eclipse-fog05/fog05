@@ -1,0 +1,34 @@
+module vnetr.rec {
+    namespace "urn:fog05:im:fim:vnet";
+    prefix "vnetr";
+
+    typedef net_state {
+        type enumeration {
+            enum CREATE;
+            enum CONNECT;
+            enum DISCONNECT;
+            enum DESTROY;
+        }
+    }
+
+
+  grouping record {
+    leaf uuid {
+      type string;
+    }
+
+    leaf status {
+      type net_state;
+    }
+
+    leaf properites {
+      type string;
+      // should be json
+    }
+
+}
+
+  container vnet_record {
+    uses record;
+  }
+}

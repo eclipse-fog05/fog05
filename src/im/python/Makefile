@@ -20,8 +20,8 @@ PYANG:= pyang
 PYBINDPLUGIN:=$(shell /usr/bin/env python3 -c \
 	            'import pyangbind; import os; print("{}/plugin".format(os.path.dirname(pyangbind.__file__)))')
 
-YANG_DESC_MODELS := meccatalog appd
-YANG_RECORD_MODELS := appr
+YANG_DESC_MODELS := fdud vnetd
+YANG_RECORD_MODELS := fdur vnetr
 PYTHON_MODELS := $(addsuffix .py, $(YANG_DESC_MODELS))
 PYTHON_JSONSCHEMAS := $(addsuffix .jsonschema, $(YANG_DESC_MODELS))
 YANG_DESC_TREES := $(addsuffix .tree.txt, $(YANG_DESC_MODELS))
@@ -29,16 +29,15 @@ YANG_DESC_JSTREES := $(addsuffix .html, $(YANG_DESC_MODELS))
 YANG_RECORD_TREES := $(addsuffix .rec.tree.txt, $(YANG_RECORD_MODELS))
 YANG_RECORD_JSTREES := $(addsuffix .rec.html, $(YANG_RECORD_MODELS))
 
-OUT_DIR := mec_im
-#TREES_DIR := osm_im_trees
-MODEL_DIR := yang/mec
+OUT_DIR := fos_im
+TREES_DIR := fos_im_trees
+MODEL_DIR := yang/fos
 RW_PB_EXT := build/yang/rw-pb-ext.yang
 Q?=@
 
 PYANG_OPTIONS := -Werror
 
-all: $(PYTHON_MODELS) pyang-json-schema-plugin $(PYTHON_JSONSCHEMAS) clean-plugin
- #pyang-json-schema-plugin $(PYTHON_JSONSCHEMAS) trees
+all: $(PYTHON_MODELS) pyang-json-schema-plugin $(PYTHON_JSONSCHEMAS) clean-plugin pyang-json-schema-plugin $(PYTHON_JSONSCHEMAS) trees
 
 trees: $(YANG_DESC_TREES) $(YANG_DESC_JSTREES) $(YANG_RECORD_TREES) $(YANG_RECORD_JSTREES)
 
@@ -66,8 +65,8 @@ $(TREES_DIR):
 %.html: $(TREES_DIR)
 	$(Q)echo generating $@ from $*.yang
 	$(Q)pyang $(PYANG_OPTIONS) --path build/yang --path $(MODEL_DIR) -f jstree -o $(TREES_DIR)/$@ $(MODEL_DIR)/$*.yang
-	$(Q)sed -r -i 's|data\:image/gif\;base64,R0lGODlhS.*RCAA7|https://osm.etsi.org/images/OSM-logo.png\" width=\"175\" height=\"60|g' $(TREES_DIR)/$@
-	$(Q)sed -r -i 's|<a href=\"http://www.tail-f.com">|<a href="http://osm.etsi.org">|g' $(TREES_DIR)/$@
+	# $(Q)sed -i 's|data\:image/gif\;base64,R0lGODlhS.*RCAA7|https://osm.etsi.org/images/OSM-logo.png\" width=\"175\" height=\"60|g' $(TREES_DIR)/$@
+	# $(Q)sed -i 's|<a href=\"http://www.tail-f.com">|<a href="http://osm.etsi.org">|g' $(TREES_DIR)/$@
 
 %.rec.tree.txt: $(TREES_DIR)
 	$(Q)echo generating $@ from $*.yang
@@ -77,8 +76,8 @@ $(TREES_DIR):
 %.rec.html: $(TREES_DIR)
 	$(Q)echo generating $@ from $*.yang
 	$(Q)pyang $(PYANG_OPTIONS) --path build/yang --path $(MODEL_DIR) -f jstree -o $(TREES_DIR)/$@ $(MODEL_DIR)/rw-project.yang $(MODEL_DIR)/$*.yang
-	$(Q)sed -r -i 's|data\:image/gif\;base64,R0lGODlhS.*RCAA7|https://osm.etsi.org/images/OSM-logo.png\" width=\"175\" height=\"60|g' $(TREES_DIR)/$@
-	$(Q)sed -r -i 's|<a href=\"http://www.tail-f.com">|<a href="http://osm.etsi.org">|g' $(TREES_DIR)/$@
+	# $(Q)sed -i 's|data\:image/gif\;base64,R0lGODlhS.*RCAA7|https://osm.etsi.org/images/OSM-logo.png\" width=\"175\" height=\"60|g' $(TREES_DIR)/$@
+	# $(Q)sed -i 's|<a href=\"http://www.tail-f.com">|<a href="http://osm.etsi.org">|g' $(TREES_DIR)/$@
 	$(Q)mv $(TREES_DIR)/$@ $(TREES_DIR)/$*.html
 
 $(RW_PB_EXT):
