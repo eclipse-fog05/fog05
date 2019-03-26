@@ -151,6 +151,13 @@ class FIMAPI(object):
             return node_info
 
         def status(self, node_uuid):
+            """
+            Provide all status information about a specific node,
+            including network neighbors
+
+            :param node_uuid: the uuid of the node you want info
+            :return: a dictionary with all information about the node
+            """
             if node_uuid is None:
                 return None
             node_status = self.connector.glob.actual.get_node_status(
