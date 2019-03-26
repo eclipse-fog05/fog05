@@ -187,7 +187,7 @@ class Linux(OSPlugin):
 
     def get_neighbors(self):
         res = ''
-        cmd_split = 'lldpcli show neighbors -f json'.split()
+        cmd_split = 'sudo lldpcli show neighbors -f json'.split()
         p = psutil.Popen(cmd_split, stdout=PIPE)
         jcont = json.loads(p.stdout.read().decode())
 
