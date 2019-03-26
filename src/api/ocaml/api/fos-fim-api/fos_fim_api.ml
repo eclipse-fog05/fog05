@@ -49,6 +49,9 @@ module Node = struct
   let info nodeid api =
     Yaks_connector.Global.Actual.get_node_info api.sysid api.tenantid nodeid api.yconnector
 
+  let status nodeid api =
+    Yaks_connector.Global.Actual.get_node_status api.sysid api.tenantid nodeid api.yconnector
+
   let plugins nodeid api =
     Yaks_connector.Global.Actual.get_node_plugins api.sysid api.tenantid nodeid api.yconnector
 
@@ -57,16 +60,27 @@ end
 
 module Network = struct
 
-  let add descriptor api =
-    let netid = "descriptor.uuid" in
-    Yaks_connector.Global.Actual.add_network api.sysid api.tenantid netid descriptor api.yconnector
+  let add_network (descriptor:FTypes.virtual_network) api =
+    let netid = descriptor.uuid in
+    Yaks_connector.Global.Desired.add_network api.sysid api.tenantid netid descriptor api.yconnector
     >>= fun _ -> Lwt.return true
-  let remove netid  api =
-    Yaks_connector.Global.Actual.remove_network api.sysid api.tenantid netid api.yconnector
+  let remove_network netid  api =
+    Yaks_connector.Global.Desired.remove_network api.sysid api.tenantid netid api.yconnector
     >>= fun _ -> Lwt.return true
 
-  let list api =
+  let list_networks api =
     Yaks_connector.Global.Actual.get_all_networks api.sysid api.tenantid api.yconnector
+
+  let add_connection_point (descriptor:FTypes.connection_point) api =
+    let cpid = descriptor.uuid in
+    Yaks_connector.Global.Desired.add_port api.sysid api.tenantid cpid descriptor api.yconnector
+    >>= fun _ -> Lwt.return true
+
+  let remove_connection_point cpid api =
+    Yaks_connector.Global.Desired.remove_port api.sysid api.tenantid cpid api.yconnector
+    >>= fun _ -> Lwt.return true
+  let list_connection_points api =
+    Yaks_connector.Global.Actual.get_all_ports api.sysid api.tenantid api.yconnector
 
 end
 
@@ -158,22 +172,25 @@ module FDU = struct
       )
 
 end
-(*
+
 module Image = struct
 
-  let add descriptor api =
-    ignore [descriptor; api];
-    Lwt.return true
-  let remove descriptor api =
-    ignore [descriptor; api];
-    Lwt.return true
+  let add (descriptor:FTypes.image) api =
+    let imgid = (match descriptor.uuid with
+        | Some id -> id
+        | None -> Apero.Uuid.to_string (Apero.Uuid.make ()) ) in
+    let descriptor = {descriptor with uuid = Some imgid} in
+    Yaks_connector.Global.Desired.add_image api.sysid api.tenantid imgid descriptor api.yconnector
+    >>= fun _ -> Lwt.return imgid
+  let remove imgid api =
+    Yaks_connector.Global.Desired.remove_image api.sysid api.tenantid imgid api.yconnector
+    >>= fun _ -> Lwt.return true
   let list api =
-    ignore api;
-    Lwt.return []
+    Yaks_connector.Global.Actual.get_all_images api.sysid api.tenantid api.yconnector
 
 end
 
-
+(*
 module Flavor = struct
   let add descriptor api =
     ignore [descriptor; api];

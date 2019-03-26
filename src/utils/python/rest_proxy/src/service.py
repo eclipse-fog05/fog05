@@ -27,6 +27,10 @@ def node_list():
 def node_info(uuid):
     return json.dumps(fos_api.node.info(uuid))
 
+@app.route('/node/status/<uuid>', methods=['GET'])
+def node_info(uuid):
+    return json.dumps(fos_api.node.status(uuid))
+
 
 @app.route('/node/plugins/<uuid>', methods=['GET'])
 def node_plugins(uuid):
