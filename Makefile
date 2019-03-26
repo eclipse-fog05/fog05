@@ -68,7 +68,7 @@ lldp:
 	sudo mkdir -p /etc/fos/lldpd
 	sudo ./etc/lldp/build.sh
 	sudo ./etc/lldp/config.sh
-	cp ./etc/lldp/run.sh /etc/fos/lldpd/run.sh
+	sudo cp ./etc/lldp/run.sh /etc/fos/lldpd/run.sh
 	sudo systemctl disable lldpd
 	sudo systemctl stop lldpd
 
@@ -90,6 +90,7 @@ uninstall:
 	sudo pip3 uninstall fog05 -y
 
 clean:
+	rm -rf lldpd
 	opam remove fos-im -y
 	make -C src/im/ocaml clean
 	make -C src/core/ocaml clean
