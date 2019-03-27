@@ -724,8 +724,11 @@ class LAD(object):
         func_name])
 
     def get_agent_exec_path_with_params(self, nodeid, func_name, params):
-        p = self.dict2args(params)
-        f = func_name + '?' + p
+        if len(par) > 0:
+            p = self.dict2args(params)
+            f = func_name + '?' + p
+        else:
+            f = func_name
         return Constants.create_path([self.prefix, nodeid, 'agent', 'exec',
         f])
 
