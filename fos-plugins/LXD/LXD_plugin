@@ -747,20 +747,21 @@ class LXD(RuntimePluginFDU):
             time.sleep(self.update_interval)
             try:
                 record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-                c = self.conn.containers.get(instance_name)
-                cs = c.state()
-                detailed_state = {}
-                c_net = cs.network
-                if c_net is None:
-                    c_net = []
-                detailed_state.update({'network': c_net})
-                detailed_state.update({'cpu': cs.cpu})
-                detailed_state.update({'memory': cs.memory})
-                detailed_state.update({'disk': cs.disk})
-                detailed_state.update({'processes': cs.processes})
-                detailed_state.update({'pid': cs.pid})
-                record.update({'hypervisor_info': detailed_state})
-                self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
+                if record.get('status') not in ['LAND', 'TAKE_OFF','MIGRATE']:
+                    c = self.conn.containers.get(instance_name)
+                    cs = c.state()
+                    detailed_state = {}
+                    c_net = cs.network
+                    if c_net is None:
+                        c_net = []
+                    detailed_state.update({'network': c_net})
+                    detailed_state.update({'cpu': cs.cpu})
+                    detailed_state.update({'memory': cs.memory})
+                    detailed_state.update({'disk': cs.disk})
+                    detailed_state.update({'processes': cs.processes})
+                    detailed_state.update({'pid': cs.pid})
+                    record.update({'hypervisor_info': detailed_state})
+                    self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
 
                 # if c.status == 'Stopped':
                 #    self.logger.info('__monitor_instance()','[ INFO ] LXD Plugin - Stopping monitoring of Container uuid {}'.format(fdu_uuid))
