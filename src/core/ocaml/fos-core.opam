@@ -25,6 +25,7 @@ depends: [
   "logs"
   "lwt"
   "lwt_ppx"
+  "logs-syslog"
   "apero-core"
   "apero-net"
   "yaks-common"
