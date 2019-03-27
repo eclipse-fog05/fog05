@@ -58,7 +58,9 @@ class RuntimePluginFDU(Plugin):
         while not flag:
             try:
                 res = self.call_agent_function(fname, parameter)
+                print('## RES: {}'.format(res))
                 while res.get('status') != 'LAND':
+                    print('## RES: {}'.format(res))
                     res = self.call_agent_function(fname, parameter)
                 flag = True
             except:
