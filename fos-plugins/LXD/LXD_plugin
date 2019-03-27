@@ -572,8 +572,9 @@ class LXD(RuntimePluginFDU):
 
             remote_client.authenticate('fos')
             local_client.authenticate('fos')
+            # TODO this should go in the plugin configuration, same for certificate and key
 
-            cont = local_client.containers.get(instance_info.get('name'))
+            cont = local_client.containers.get(fdu.name.replace('_','-')[:63])
 
             try:
                 cont.migrate(remote_client, wait=True)
