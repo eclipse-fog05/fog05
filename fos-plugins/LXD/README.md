@@ -58,3 +58,9 @@ export LXD_DIR=/var/snap/lxd/common/lxd/
 
 
 
+## LIVE MIGRATION:
+In order to perform live migration of lxd container you need CRIU installed and configured
+
+    $ sudo apt install criu
+    $ sudo snap set lxd criu.enable=true
+
