@@ -570,8 +570,8 @@ class LXD(RuntimePluginFDU):
             remote_client = Client(endpoint='https://{}:8443'.format(dst_ip), cert=(path_cert, path_key), verify=False)
             local_client = Client(endpoint='https://{}:8443'.format(local_ip), cert=(path_cert, path_key), verify=False)
 
-            remote_client.authenticate('fog')
-            local_client.authenticate('fog')
+            remote_client.authenticate('fos')
+            local_client.authenticate('fos')
 
             cont = local_client.containers.get(instance_info.get('name'))
 
