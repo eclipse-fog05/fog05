@@ -264,7 +264,7 @@ class LXD(RuntimePluginFDU):
                 c = self.conn.containers.get(fdu.name.replace('_','-')[:63])
                 c.delete()
              except Exception as e:
-                        self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Undefine a Container Exception raised {}'.format(e))
+                self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Undefine a Container Exception raised {}'.format(e))
 
             try:
                 time.sleep(2)
@@ -277,7 +277,7 @@ class LXD(RuntimePluginFDU):
                     time.sleep(1)
                 profile.delete()
              except Exception as e:
-                        self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Undefine a Container Exception raised {}'.format(e))
+                self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Undefine a Container Exception raised {}'.format(e))
 
             try:
                 img = self.conn.images.get_by_alias(fdu_uuid)
@@ -286,7 +286,7 @@ class LXD(RuntimePluginFDU):
                 image_name = fdu.image.get('file')
                 self.call_os_plugin_function('remove_file',{'file_path':image_name})
             except Exception as e:
-                        self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Undefine a Container Exception raised {}'.format(e))
+                self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Undefine a Container Exception raised {}'.format(e))
 
 
 
