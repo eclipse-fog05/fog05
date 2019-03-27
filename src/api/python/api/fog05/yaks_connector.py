@@ -724,7 +724,7 @@ class LAD(object):
         func_name])
 
     def get_agent_exec_path_with_params(self, nodeid, func_name, params):
-        if len(par) > 0:
+        if len(params) > 0:
             p = self.dict2args(params)
             f = func_name + '?' + p
         else:
