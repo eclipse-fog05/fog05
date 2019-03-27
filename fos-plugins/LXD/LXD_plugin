@@ -749,6 +749,7 @@ class LXD(RuntimePluginFDU):
             try:
                 record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
                 if record.get('status') not in ['LAND', 'TAKE_OFF','MIGRATE']:
+                    self.logger.info('__monitor_fdu()','[ INFO ] LXD Plugin - Updating status of {}'.format(fdu_uuid))
                     c = self.conn.containers.get(instance_name)
                     cs = c.state()
                     detailed_state = {}
