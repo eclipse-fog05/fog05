@@ -15,6 +15,7 @@
 
 
 import uuid
+import time
 from fog05.interfaces.Plugin import Plugin
 
 
@@ -59,6 +60,7 @@ class RuntimePluginFDU(Plugin):
             try:
                 res = self.call_agent_function(fname, parameter)
                 while res.get('status') != 'LAND':
+                    time.sleep(0.250)
                     res = self.call_agent_function(fname, parameter)
                 flag = True
             except:
@@ -72,6 +74,11 @@ class RuntimePluginFDU(Plugin):
         }
         fname = 'get_node_mgmt_address'
         return self.call_agent_function(fname, parameters)
+
+
+    def get_local_mgmt_address(self):
+        fname = 'local_mgmt_address'
+        return self.call_os_plugin_function(fname,{})
 
     def start_runtime(self):
         '''
