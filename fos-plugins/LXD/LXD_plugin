@@ -552,7 +552,7 @@ class LXD(RuntimePluginFDU):
             if fdu_uuid is None:
                 self.logger.error('migrate_fdu','LXD not in Runtime!!')
                 return
-
+            record = self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
             self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Source Node wait destination...')
             self.wait_destination_ready(fdu_uuid, destination)
 
