@@ -263,7 +263,7 @@ class LXD(RuntimePluginFDU):
                 self.logger.info('undefine_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(fdu.name.replace('_','-')[:63]))
                 c = self.conn.containers.get(fdu.name.replace('_','-')[:63])
                 c.delete()
-             except Exception as e:
+            except Exception as e:
                 self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Undefine a Container Exception raised {}'.format(e))
 
             try:
@@ -276,7 +276,7 @@ class LXD(RuntimePluginFDU):
                     profile.sync()
                     time.sleep(1)
                 profile.delete()
-             except Exception as e:
+            except Exception as e:
                 self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Undefine a Container Exception raised {}'.format(e))
 
             try:
