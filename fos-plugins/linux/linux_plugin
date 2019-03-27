@@ -123,6 +123,7 @@ class Linux(OSPlugin):
             'set_interface_available': self.set_interface_available,
             'get_network_informations':self.get_network_informations,
             'checksum':self.checksum,
+            'local_mgmt_address': self.local_mgmt_address,
          }
 
         for k in d:
@@ -158,6 +159,9 @@ class Linux(OSPlugin):
         self.running = False
         if self.lldp_proc is not None:
             self.send_sig_int(self.lldp_proc.pid)
+
+        self.connector.loc.actual.remove_node_status(self.node_id)
+        self.connector.loc.actual.remove_node_information(self.node_id)
         self.connector.close()
 
         exit(0)
@@ -261,6 +265,23 @@ class Linux(OSPlugin):
             # for line in p.stdout:
             #     self.logger.debug('executeCommand()', str(line))
         return True
+
+    def local_mgmt_address(self):
+        self.logger.error('local_mgmt_address()', 'Entering function...')
+        mgmt_intf = self.node_conf.get('agent').get('mgmt_interface')
+        self.logger.error('local_mgmt_address()', 'MGMT Interface is {}'.format(mgmt_intf))
+        matching_if = [x['inft_configuration'] for x in self.nw_devices if x['intf_name'] == mgmt_intf]
+        if len(matching_if) == 1:
+            if_conf = matching_if[0]
+            res = {
+                'result':{
+                    'v4':if_conf.get('ipv4_address'),
+                    'v6':if_conf.get('ipv6_address')
+                }
+            }
+        else:
+            res = {'error': -1}
+        return res
 
     def checksum(self, file_path):
         self.logger.error('checksum()', 'Calculating SHA256 of {}'.format(file_path))

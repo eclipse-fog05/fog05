@@ -264,6 +264,10 @@ class GAD(object):
         v = Value(json.dumps(nodeinfo), encoding=Encoding.STRING)
         return self.ws.put(p, v)
 
+    def remove_node_info(self, sysid, tenantid, nodeid):
+        p = self.get_node_info_path(sysid, tenantid, nodeid)
+        self.ws.remove(p)
+
     def get_node_status(self, sysid, tenantid, nodeid):
         s = self.get_node_status_path(sysid, tenantid, nodeid)
         res = self.ws.get(s)
@@ -720,8 +724,11 @@ class LAD(object):
         func_name])
 
     def get_agent_exec_path_with_params(self, nodeid, func_name, params):
-        p = self.dict2args(params)
-        f = func_name + '?' + p
+        if len(params) > 0:
+            p = self.dict2args(params)
+            f = func_name + '?' + p
+        else:
+            f = func_name
         return Constants.create_path([self.prefix, nodeid, 'agent', 'exec',
         f])
 
@@ -743,8 +750,11 @@ class LAD(object):
             net_manager_uuid , 'exec', f])
 
     def get_node_os_exec_path_with_params(self, nodeid, func_name, params):
-        p = self.dict2args(params)
-        f = func_name + '?' + p
+        if len(params) > 0:
+            p = self.dict2args(params)
+            f = func_name + '?' + p
+        else:
+            f = func_name
         return Constants.create_path(
             [self.prefix, nodeid, 'os', 'exec', f])
 
@@ -861,6 +871,10 @@ class LAD(object):
         p = self.get_node_info_path(nodeid)
         v = Value(json.dumps(nodeinfo), encoding=Encoding.STRING)
         return self.ws.put(p, v)
+
+    def remove_node_information(self, nodeid):
+        p = self.get_node_info_path(nodeid)
+        self.ws.remove(p)
 
     def get_node_status(self, nodeid):
         p = self.get_node_status_path(nodeid)

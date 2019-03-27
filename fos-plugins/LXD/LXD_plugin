@@ -263,7 +263,10 @@ class LXD(RuntimePluginFDU):
                 self.logger.info('undefine_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(fdu.name.replace('_','-')[:63]))
                 c = self.conn.containers.get(fdu.name.replace('_','-')[:63])
                 c.delete()
+            except Exception as e:
+                self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Undefine a Container Exception raised {}'.format(e))
 
+            try:
                 time.sleep(2)
                 profile = self.conn.profiles.get(fdu_uuid)
                 profile.sync()
@@ -273,17 +276,20 @@ class LXD(RuntimePluginFDU):
                     profile.sync()
                     time.sleep(1)
                 profile.delete()
+            except Exception as e:
+                self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Undefine a Container Exception raised {}'.format(e))
 
+            try:
                 img = self.conn.images.get_by_alias(fdu_uuid)
                 img.delete()
                 self.images.pop
                 image_name = fdu.image.get('file')
                 self.call_os_plugin_function('remove_file',{'file_path':image_name})
-
-
-
             except Exception as e:
-                        self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Undefine a Container Exception raised {}'.format(e))
+                self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Undefine a Container Exception raised {}'.format(e))
+
+
+
 
 
             self.current_fdus.pop(fdu_uuid, None)
@@ -543,7 +549,7 @@ class LXD(RuntimePluginFDU):
             self.logger.info('resume_fdu()', '[ DONE ] LXD Plugin - Resume a Container uuid {}'.format(fdu_uuid))
 
 
-    def migrate_fdu(self, fdu_uuid, dst=False):
+    def migrate_fdu(self, fdu_uuid):
         record = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid)
         destination = record.get('migration_properties').get('destination')
         if destination != self.node:
@@ -552,8 +558,8 @@ class LXD(RuntimePluginFDU):
             if fdu_uuid is None:
                 self.logger.error('migrate_fdu','LXD not in Runtime!!')
                 return
-
-            self.logger.info('migrate_fdu()', '[ DONE ] KVM Plugin - Source Node wait destination...')
+            record = self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
+            self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Source Node wait destination...')
             self.wait_destination_ready(fdu_uuid, destination)
 
             self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Migrating...')
@@ -561,6 +567,8 @@ class LXD(RuntimePluginFDU):
             # ACTUAL MIGRATION #
             #
             dst_ip = self.get_destination_node_mgmt_net(destination).get('ipv4_address')
+            # this can also be v6 both information are available
+            local_ip = self.get_local_mgmt_address().get('v4')
 
             path_cert = os.path.join(self.DIR, 'templates', 'lxd.crt')
             path_key = os.path.join(self.DIR, 'templates', 'lxd.key')
@@ -568,12 +576,15 @@ class LXD(RuntimePluginFDU):
             remote_client = Client(endpoint='https://{}:8443'.format(dst_ip), cert=(path_cert, path_key), verify=False)
             local_client = Client(endpoint='https://{}:8443'.format(local_ip), cert=(path_cert, path_key), verify=False)
 
-            remote_client.authenticate('fog')
-            local_client.authenticate('fog')
+            remote_client.authenticate('fos')
+            local_client.authenticate('fos')
+            # TODO this should go in the plugin configuration, same for certificate and key
 
-            cont = local_client.containers.get(instance_info.get('name'))
+            cont = local_client.containers.get(fdu.name.replace('_','-')[:63])
 
             try:
+                cont.stop(force=False, wait=True)
+                cont.sync()
                 cont.migrate(remote_client, wait=True)
             except LXDAPIException as e:
                 self.logger.info('migrate_fdu()', ' LXD Plugin - LXD error {}'.format(e))
@@ -706,17 +717,20 @@ class LXD(RuntimePluginFDU):
                 i += 1
 
             record.update({'status': 'LAND'})
+            self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Record {}'.format(record))
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
-            self.logger.info('migrate_fdu()', '[ DONE ] KVM Plugin - Destination Node is ready for {}'.format(fdu_uuid))
+            self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Destination Node is ready for {}'.format(fdu_uuid))
 
             # DESTINATION IS READY WAINING CONTAINER
 
             while True:
                 try:
-                    c = self.conn.containers.get(instance_info.get('name'))
+                    c = self.conn.containers.get(fdu.name.replace('_','-')[:63])
+                    c.start()
                     if c.status.upper() == 'running'.upper():
                         break
                     else:
+                        c.sync()
                         self.logger.info('migrate_fdu()',  ' LXD Plugin - Container in this host but not running')
                 except Exception as e:
                    self.logger.info('migrate_fdu()', ' LXD Plugin - Container not already in this host')
@@ -726,6 +740,7 @@ class LXD(RuntimePluginFDU):
             self.current_fdus.update({fdu_uuid: fdu})
             record.pop('migration_properties')
             record.update({'status': 'RUN'})
+            self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Record {}'.format(record))
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
             self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Migrate a Container uuid {}'.format(fdu_uuid))
 
@@ -743,20 +758,22 @@ class LXD(RuntimePluginFDU):
             time.sleep(self.update_interval)
             try:
                 record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid)
-                c = self.conn.containers.get(instance_name)
-                cs = c.state()
-                detailed_state = {}
-                c_net = cs.network
-                if c_net is None:
-                    c_net = []
-                detailed_state.update({'network': c_net})
-                detailed_state.update({'cpu': cs.cpu})
-                detailed_state.update({'memory': cs.memory})
-                detailed_state.update({'disk': cs.disk})
-                detailed_state.update({'processes': cs.processes})
-                detailed_state.update({'pid': cs.pid})
-                record.update({'hypervisor_info': detailed_state})
-                self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
+                if record.get('status') not in ['LAND', 'TAKE_OFF','MIGRATE']:
+                    self.logger.info('__monitor_fdu()','[ INFO ] LXD Plugin - Updating status of {}'.format(fdu_uuid))
+                    c = self.conn.containers.get(instance_name)
+                    cs = c.state()
+                    detailed_state = {}
+                    c_net = cs.network
+                    if c_net is None:
+                        c_net = []
+                    detailed_state.update({'network': c_net})
+                    detailed_state.update({'cpu': cs.cpu})
+                    detailed_state.update({'memory': cs.memory})
+                    detailed_state.update({'disk': cs.disk})
+                    detailed_state.update({'processes': cs.processes})
+                    detailed_state.update({'pid': cs.pid})
+                    record.update({'hypervisor_info': detailed_state})
+                    self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
 
                 # if c.status == 'Stopped':
                 #    self.logger.info('__monitor_instance()','[ INFO ] LXD Plugin - Stopping monitoring of Container uuid {}'.format(fdu_uuid))
@@ -956,8 +973,8 @@ class LXD(RuntimePluginFDU):
             'RESUME': self.resume_fdu,
             'RUN': self.run_fdu,
             'CLEAN': self.clean_fdu,
-            # 'landing': self.migrate_entity,
-            # 'taking_off': self.migrate_entity
+            'LAND': self.migrate_fdu,
+            'TAKE_OFF': self.migrate_fdu
         }
 
         return r.get(action, None)
