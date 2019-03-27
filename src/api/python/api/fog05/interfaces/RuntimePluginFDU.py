@@ -73,6 +73,11 @@ class RuntimePluginFDU(Plugin):
         fname = 'get_node_mgmt_address'
         return self.call_agent_function(fname, parameters)
 
+
+    def get_local_mgmt_address(self):
+        fname = 'local_mgmt_address'
+        return self.call_agent_function(fname,{})
+
     def start_runtime(self):
         '''
         start the runtime

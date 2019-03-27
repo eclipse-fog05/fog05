@@ -561,6 +561,8 @@ class LXD(RuntimePluginFDU):
             # ACTUAL MIGRATION #
             #
             dst_ip = self.get_destination_node_mgmt_net(destination).get('ipv4_address')
+            # this can also be v6 both information are available
+            local_ip = self.get_local_mgmt_address().get('v4')
 
             path_cert = os.path.join(self.DIR, 'templates', 'lxd.crt')
             path_key = os.path.join(self.DIR, 'templates', 'lxd.key')

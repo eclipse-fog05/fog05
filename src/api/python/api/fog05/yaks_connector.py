@@ -264,6 +264,10 @@ class GAD(object):
         v = Value(json.dumps(nodeinfo), encoding=Encoding.STRING)
         return self.ws.put(p, v)
 
+    def remove_node_info(self, sysid, tenantid, nodeid):
+        p = self.get_node_info_path(sysid, tenantid, nodeid)
+        self.ws.remove(p)
+
     def get_node_status(self, sysid, tenantid, nodeid):
         s = self.get_node_status_path(sysid, tenantid, nodeid)
         res = self.ws.get(s)
@@ -861,6 +865,10 @@ class LAD(object):
         p = self.get_node_info_path(nodeid)
         v = Value(json.dumps(nodeinfo), encoding=Encoding.STRING)
         return self.ws.put(p, v)
+
+    def remove_node_information(self, nodeid):
+        p = self.get_node_info_path(nodeid)
+        self.ws.remove(p)
 
     def get_node_status(self, nodeid):
         p = self.get_node_status_path(nodeid)
