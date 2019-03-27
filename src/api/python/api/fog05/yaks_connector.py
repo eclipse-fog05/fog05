@@ -726,9 +726,9 @@ class LAD(object):
     def get_agent_exec_path_with_params(self, nodeid, func_name, params):
         if len(params) > 0:
             p = self.dict2args(params)
+            f = func_name + '?' + p
         else:
-            p = '()'
-        f = func_name + '?' + p
+            f = func_name
         return Constants.create_path([self.prefix, nodeid, 'agent', 'exec',
         f])
 
@@ -750,8 +750,11 @@ class LAD(object):
             net_manager_uuid , 'exec', f])
 
     def get_node_os_exec_path_with_params(self, nodeid, func_name, params):
-        p = self.dict2args(params)
-        f = func_name + '?' + p
+        if len(params) > 0:
+            p = self.dict2args(params)
+            f = func_name + '?' + p
+        else:
+            f = func_name
         return Constants.create_path(
             [self.prefix, nodeid, 'os', 'exec', f])
 
