@@ -577,6 +577,8 @@ class LXD(RuntimePluginFDU):
             cont = local_client.containers.get(fdu.name.replace('_','-')[:63])
 
             try:
+                cont.stop(force=False, wait=True)
+                cont.sync()
                 cont.migrate(remote_client, wait=True)
             except LXDAPIException as e:
                 self.logger.info('migrate_fdu()', ' LXD Plugin - LXD error {}'.format(e))
@@ -717,10 +719,12 @@ class LXD(RuntimePluginFDU):
 
             while True:
                 try:
-                    c = self.conn.containers.get(instance_info.get('name'))
+                    c = self.conn.containers.get(fdu.name.replace('_','-')[:63])
+                    c.start()
                     if c.status.upper() == 'running'.upper():
                         break
                     else:
+                        c.sync()
                         self.logger.info('migrate_fdu()',  ' LXD Plugin - Container in this host but not running')
                 except Exception as e:
                    self.logger.info('migrate_fdu()', ' LXD Plugin - Container not already in this host')
