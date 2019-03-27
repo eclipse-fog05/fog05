@@ -269,7 +269,7 @@ class Linux(OSPlugin):
     def local_mgmt_address(self):
         self.logger.error('local_mgmt_address()', 'Entering function...')
         mgmt_intf = self.node_conf.get('agent').get('mgmt_interface')
-        self.logger.error('local_mgmt_address()', 'MGMT Interface is {}'.format(mgmt_intf)))
+        self.logger.error('local_mgmt_address()', 'MGMT Interface is {}'.format(mgmt_intf))
         matching_if = [x['inft_configuration'] for x in self.nw_devices if x['intf_name'] == mgmt_intf]
         if len(matching_if) == 1:
             if_conf = matching_if[0]
