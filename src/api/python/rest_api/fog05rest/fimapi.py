@@ -31,6 +31,11 @@ class FIMAPI(object):
         self.image = self.Image(self.base_url)
         self.flavor = self.Flavor(self.base_url)
 
+
+    def check(self):
+        url = '{}'.format(self.base_url)
+        return json.loads(str(requests.get(url).content))
+
     def close(self):
         pass
 
