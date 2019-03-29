@@ -28,7 +28,7 @@ def node_info(uuid):
     return json.dumps(fos_api.node.info(uuid))
 
 @app.route('/node/status/<uuid>', methods=['GET'])
-def node_info(uuid):
+def node_status(uuid):
     return json.dumps(fos_api.node.status(uuid))
 
 
