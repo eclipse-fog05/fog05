@@ -200,7 +200,7 @@ class LXD(RuntimePluginFDU):
                 else:
                     self.logger.info('define_fdu()', '[ INFO ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name)))
                     image_data = self.read_binary_file(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name))
-                    self.logger.info('define_fdu()', '[ DONE ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name)))
+                    self.logger.info('define_fdu()', '[ DONE ] LXD Plugin - Loaded image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name)))
 
                     self.logger.info('define_fdu()', '[ INFO ] LXD Plugin - Creating image with alias {}'.format(fdu_uuid))
                     try:
