@@ -1,11 +1,5 @@
 # Eclipse fog05 FIM installation.
 
-### IMPORTANT
-Current know limitations:
-- no migration of LXDs
-- there is a bug in the Linux Bridge plugin that does not allow to create VxLAN
-
-
 ---
 
 In order to run install Eclipse fog05 as FIM (Fog Infrastrucutre Manager)
