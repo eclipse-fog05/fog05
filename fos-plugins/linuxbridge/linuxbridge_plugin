@@ -687,7 +687,7 @@ class LinuxBridge(NetworkPlugin):
 
         template_conf = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'dnsmasq.conf'), 'root':False})
 
-        dhcp_intf = 'dhcp-{}-e'.format(n_small_id)
+        dhcp_intf = 'dhcp-{}-i'.format(n_small_id)
         lease_file = os.path.join(path,'net_{}_leases'.format(n_small_id))
         pid_file =  os.path.join(path,'net_{}.pid'.format(n_small_id))
         conf = 'net_{}.conf'.format(n_small_id)
@@ -712,7 +712,7 @@ class LinuxBridge(NetworkPlugin):
         template_start = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'dnsmasq.sh'), 'root':False})
         dnsmasq_sh = Environment().from_string(template_start)
         addrs = self.__cird2block(address_info.get('subnet'))
-        dnsmasq_sh = dnsmasq_sh.render(netid=n_small_id, dhcp_conf_path=conf, ip=addrs[0], mask=addrs[-1])
+        dnsmasq_sh = dnsmasq_sh.render(netid=n_small_id, dhcp_conf_path=os.path.join(path, conf), ip=addrs[0], mask=addrs[-1])
         dnsmasq_sh = binascii.hexlify(base64.b64encode(bytes(dnsmasq_sh,'utf-8'))).decode()
         self.call_os_plugin_function('store_file',{'content':dnsmasq_sh, 'file_path':path, 'filename':start_file})
 
