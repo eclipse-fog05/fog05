@@ -21,4 +21,5 @@ sudo ip link set dhcp-{{ netid }}-e master br-{{ netid }}
 sudo ip link set dhcp-{{ netid }}-e up
 sudo ip link set dhcp-{{ netid }}-i up
 # sudo ip netns exec {{ vnetns }} dnsmasq --no-hosts --no-resolv --stri-order --interface=dhcp-{{ netid }}-i --bind-interfaces --dhcp-range={{ dhcp_start }},{{ dhcp_end }}  -x  {{ pid_path }} --except-interface=lo
-sudo ip netns exec {{ vnetns }} dnsmasq -C {{ dhcp_conf_path }}
+sudo ip netns exec fosns-{{ netid }} ifconfig dhcp-{{ netid }}-i {{ ip }} netmask {{ mask }}
+sudo ip netns exec fosns-{{ netid }} dnsmasq -C {{ dhcp_conf_path }}

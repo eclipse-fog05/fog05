@@ -534,7 +534,7 @@ class LinuxBridge(NetworkPlugin):
 
     def __cird2block(self, cird):
         '''
-            Convert cird subnet to first address (for router), dhcp avaiable range, netmask
+            Convert cird subnet to first address (for router), first dhcp, last dhcp, netmask
 
         :param cird:
         :return:
@@ -674,7 +674,7 @@ class LinuxBridge(NetworkPlugin):
 
  def __generate_dnsmaq_script(self, descriptor):
         net_uuid = descriptor.get('uuid')
-        address_info = descriptor.get('address_info')
+        address_info = descriptor.get('ip_configuration')
         n_small_id = net_uuid.split('-')[0]
         vdev_name = 'br-{}'.format(n_small_id)
         netns_name = 'fosns-{}'.format(n_small_id)
@@ -712,7 +712,8 @@ class LinuxBridge(NetworkPlugin):
 
         template_start = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'dnsmasq.sh'), 'root':False})
         dnsmasq_sh = Environment().from_string(template_start)
-        dnsmasq_sh = dnsmasq_conf.render(netid=n_small_id, dhcp_conf_path=conf)
+        addrs = self.__cird2block(address_info.get('subnet'))
+        dnsmasq_sh = dnsmasq_conf.render(netid=n_small_id, dhcp_conf_path=conf, ip=addrs[0], mask=addrs[-1])
         dnsmasq_sh = binascii.hexlify(base64.b64encode(bytes(dnsmasq_sh,'utf-8'))).decode()
         self.call_os_plugin_function('store_file',{'content':dnsmasq_sh, 'file_path':path, 'filename':start_file})
 
