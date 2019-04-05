@@ -192,8 +192,8 @@ type virtual_network = {
   uuid : string;
   name : string;
   net_type : vn_type;
-  is_mgmt : bool
-  ?ip_configuration : address_information option?
+  is_mgmt : bool;
+  ?ip_configuration : address_information option;
 }
 
 
