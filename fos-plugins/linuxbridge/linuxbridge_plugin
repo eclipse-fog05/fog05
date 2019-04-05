@@ -496,12 +496,13 @@ class LinuxBridge(NetworkPlugin):
         #     self.BASE_DIR, self.DHCP_DIR, 'br-{}_dnsmasq.sh'.format(network_uuid.split('-')[0]))
 
         if net.get('ip_configuration') is not None:
+            n_small_id = network_uuid.split('-')[0]
             path = os.path.join(self.BASE_DIR, self.DHCP_DIR)
             pid_file =  os.path.join(path,'net_{}.pid'.format(n_small_id))
             conf = os.path.join(path,'net_{}.conf'.format(n_small_id))
             start_file = conf = os.path.join(path,'dhcp_{}.sh'.format(n_small_id))
             pid = int(self.call_os_plugin_function('read_file',{'file_path':path, 'root':False}))
-            n_small_id = net_uuid.split('-')[0]
+
             dhcp_intf = 'dhcp-{}-e'.format(n_small_id)
             self.call_os_plugin_function('send_sig_int',{'pid':pid})
             self.call_os_plugin_function('remove_file',{'file_path':pid_file})
