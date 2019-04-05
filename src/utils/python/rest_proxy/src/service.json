@@ -1,8 +1,9 @@
 {
-    "host": "0.0.0.0",
+    "host": "127.0.0.1",
     "port": 8080,
     "debug": true,
-    "yaks": "10.100.1.221",
+    "yaks": "127.0.0.1",
     "sysid": "0",
-    "tenantid": "0"
+    "tenantid": "0",
+    "image_path": "imgs"
 }

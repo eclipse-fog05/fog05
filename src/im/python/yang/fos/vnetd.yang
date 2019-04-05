@@ -9,31 +9,67 @@ module vnetd {
         }
     }
 
-
-  grouping descriptor {
-    leaf uuid {
-      description "UUID of the Virtual Link";
-      type string;
+    typedef ip_kind {
+        type enumeration {
+            enum IPV4;
+            enum IPV6;
+        }
     }
 
-    leaf name {
-      description "Unique name of the Virtual Link";
-      type string;
+    grouping address_inforamtion {
+
+        leaf ip_version {
+            type ip_kind;
+        }
+
+        leaf gateway {
+            type string;
+        }
+
+        leaf dhcp_enable {
+            type boolean;
+        }
+
+        leaf dhcp_range {
+            type string;
+        }
+
+        leaf dns {
+            type string;
+        }
     }
 
-    leaf is_mgmt {
-      description "True if this virtual link is used for management";
-      type boolean;
+    grouping descriptor {
+        leaf uuid {
+            description
+              "UUID of the Virtual Link";
+            type string;
+        }
+
+        leaf name {
+            description
+              "Unique name of the Virtual Link";
+            type string;
+        }
+
+        leaf is_mgmt {
+            description
+              "True if this virtual link is used for management";
+            type boolean;
+        }
+
+        leaf net_type {
+            description
+              "Type of the virtual link";
+            type vn_type;
+        }
+
+        leaf ip_configuration {
+            uses address_information;
+        }
     }
 
-    leaf net_type {
-      description "Type of the virtual link";
-      type vn_type;
+    container vnet_descriptor {
+        uses descriptor;
     }
-
-}
-
-  container vnet_descriptor {
-    uses descriptor;
-  }
 }

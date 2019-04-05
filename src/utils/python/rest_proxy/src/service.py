@@ -2,7 +2,7 @@
 import json
 import sys
 import os
-from flask import Flask, request
+from flask import Flask, request, abort, send_from_directory, url_for
 from fog05 import FIMAPI
 
 
@@ -129,7 +129,24 @@ def fdu_list():
 
 @app.route('/image/add', methods=['POST'])
 def image_add():
-    descriptor = json.loads(request.data)
+    if 'descriptor' not in request.files:
+        abort(403)
+    if 'image' not in request.files:
+        abort(403)
+
+    desc_file = request.files['descriptor']
+    desc_filename = desc_file.filename
+    desc_path = os.path.join(conf.get('image_path'), desc_filename)
+    desc_file.save(desc_path)
+    descriptor = json.loads(read_file(desc_path))
+
+    img_file = request.files['image']
+    img_filename = img_file.filename
+    img_path = os.path.join(conf.get('image_path'), img_filename)
+    img_file.save(img_path)
+    img_dict.update({descriptor.get('uuid'):img_filename})
+    uri = 'http://{}:{}{}'.format( conf['host'], conf['port'],url_for('get_image_file',fname=img_filename))
+    descriptor.update({'uri':uri})
     return json.dumps({'result':fos_api.image.add(descriptor)})
 
 @app.route('/image/<img_id>', methods=['GET'])
@@ -142,9 +159,19 @@ def image_list():
 
 @app.route('/image/remove/<img_id>', methods=['DELETE'])
 def image_remove(img_id):
-    return json.dumps({'result':fos_api.image.remove(img_id)})
+    if img_id not in img_dict:
+        abort(404)
+    else:
+        f_name = img_dict.pop(img_id)
+        if os.path.isfile(os.path.join(conf.get('image_path'), img_filename)):
+            os.remove(os.path.join(conf.get('image_path'), img_filename))
+        return json.dumps({'result':fos_api.image.remove(img_id)})
 
-# FLAVOR
+@app.route('/image/file/<fname>', methods=['GET'])
+def get_image_file(fname):
+    return send_from_directory(conf.get('image_path'), fname)
+
+#FLAVOR
 
 
 @app.route('/flavor/add', methods=['POST'])
@@ -185,4 +212,6 @@ if __name__ == '__main__':
     conf = cfg
     global fos_api
     fos_api = FIMAPI(locator=conf.get('yaks'), sysid=conf.get('sysid'), tenantid=conf.get('tenantid'))
+    global img_dict
+    img_dict = {}
     app.run(host=conf.get('host'),port=conf.get('port'),debug=conf.get('debug'))
