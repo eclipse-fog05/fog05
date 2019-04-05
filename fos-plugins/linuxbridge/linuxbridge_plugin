@@ -346,7 +346,7 @@ class LinuxBridge(NetworkPlugin):
         if manifest.get('ip_configuration') is not None:
             self.logger.info('create_virtual_network()','Networks as address informations: {}'.format(manifest.get('ip_configuration')))
             dhcp_file = self.__generate_dnsmaq_script(manifest)
-            self.call_os_plugin_function('execute_command',{'command':os.path.join(self.BASE_DIR, dhcp_file),'blocking':True, 'external':True})
+            self.call_os_plugin_function('execute_command',{'command':os.path.join(self.BASE_DIR, self.DHCP_DIR, dhcp_file),'blocking':True, 'external':True})
 
         # self.agent.getOSPlugin().executeCommand(brcmd)
 
