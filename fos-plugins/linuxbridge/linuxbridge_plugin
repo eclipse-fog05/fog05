@@ -326,7 +326,7 @@ class LinuxBridge(NetworkPlugin):
 
 
 
-         properties = {}
+        properties = {}
         if self.use_vlan:
             properties.update({'vlan_id': self.__get_vlan_id(net_uuid)})
 
