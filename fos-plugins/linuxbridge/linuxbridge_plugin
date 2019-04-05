@@ -705,7 +705,6 @@ class LinuxBridge(NetworkPlugin):
         if address_info.get('dns') is not None:
             dnsmasq_conf = dnsmasq_conf+'\ndhcp-option=6,{}'.format(address_info.get('dns'))
 
-        file_name = '{}_dnsmasq.sh'.format(n_small_id)
         dnsmasq_conf = binascii.hexlify(base64.b64encode(bytes(dnsmasq_conf,'utf-8'))).decode()
         self.call_os_plugin_function('store_file',{'content':dnsmasq_conf, 'file_path':path, 'filename':conf})
 
@@ -718,7 +717,7 @@ class LinuxBridge(NetworkPlugin):
 
         chmod_cmd = 'chmod +x {}'.format(os.path.join(path, start_file))
         self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
-        return file_name
+        return start_file
 
 
     def __generate_vxlan_shutdown_script(self, net_uuid):
