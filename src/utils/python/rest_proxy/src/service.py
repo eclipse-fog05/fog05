@@ -165,6 +165,8 @@ def image_remove(img_id):
         f_name = img_dict.pop(img_id)
         if os.path.isfile(os.path.join(conf.get('image_path'), f_name)):
             os.remove(os.path.join(conf.get('image_path'), f_name))
+        if os.path.isfile(os.path.join(conf.get('image_path'), '{}.json'.format(img_id))):
+            os.remove(os.path.join(conf.get('image_path'), '{}.json'.format(img_id)))
         return json.dumps({'result':fos_api.image.remove(img_id)})
 
 @app.route('/image/file/<fname>', methods=['GET'])
