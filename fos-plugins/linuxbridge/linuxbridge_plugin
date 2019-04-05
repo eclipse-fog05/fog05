@@ -651,6 +651,7 @@ class LinuxBridge(NetworkPlugin):
 
         template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vnet_create.sh'), 'root':False})
         net_sh = Environment().from_string(template_sh)
+        overlay_interface = self.overlay_interface
         net_sh = net_sh.render(net_id=netid, group_id=vxlan_id, mcast_group_address=mcast_addr, wan=overlay_interface)
         net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
         f_name = 'start_{}.sh'.format(netid)
