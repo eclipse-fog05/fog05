@@ -488,10 +488,7 @@ class LinuxBridge(NetworkPlugin):
         #         '{} has pending interfaces'.format(network_uuid))
 
 
-        start_file, shutdown_file = self.net_files.get(network_uuid)
 
-        shutdown_file = os.path.join(self.BASE_DIR, shutdown_file)
-        start_file = os.path.join(self.BASE_DIR, start_file)
         # dnsmasq_file = os.path.join(
         #     self.BASE_DIR, self.DHCP_DIR, 'br-{}_dnsmasq.sh'.format(network_uuid.split('-')[0]))
 
@@ -515,6 +512,9 @@ class LinuxBridge(NetworkPlugin):
 
 
 
+        start_file, shutdown_file = self.net_files.get(network_uuid)
+        shutdown_file = os.path.join(self.BASE_DIR, shutdown_file)
+        start_file = os.path.join(self.BASE_DIR, start_file)
         self.call_os_plugin_function('execute_command',{'command':'sudo {}'.format(shutdown_file),'blocking':True, 'external':True})
         self.call_os_plugin_function('remove_file',{'file_path':shutdown_file})
         self.call_os_plugin_function('remove_file',{'file_path':start_file})
