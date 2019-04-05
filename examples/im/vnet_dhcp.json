@@ -1,0 +1,14 @@
+{
+    "uuid": "6cc2aa30-1dcf-4c93-a57e-433fd0bd498e",
+    "name": "net1",
+    "net_type": "ELAN",
+    "is_mgmt": false,
+    "ip_configuration": {
+        "ip_version": "IPV4",
+        "subnet": "192.168.234.0/24",
+        "gateway": "192.168.234.1",
+        "dhcp_enable": true,
+        "dhcp_range": "192.168.234.2,192.168.234.100",
+        "dns": "8.8.8.8,8.8.4.4"
+    }
+}

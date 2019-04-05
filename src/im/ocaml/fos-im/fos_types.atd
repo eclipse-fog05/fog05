@@ -174,11 +174,26 @@ type connection_point = {
 }
 
 
+type ip_kind = [
+  | IPV4
+  | IPV6
+]
+
+type address_information = {
+  ip_version : ip_kind;
+  subnet : string;   (*  X.X.X.X/Y*)
+  ?gateway : string option; (* X.X.X.X *)
+  dhcp_enable :  bool;
+  ?dhcp_range : string option; (* X.X.X.X,X.X.X.Z *)
+  ?dns : string option; (* X.X.X.X,X.X.X.Z,.... *)
+}
+
 type virtual_network = {
   uuid : string;
   name : string;
   net_type : vn_type;
-  is_mgmt : bool
+  is_mgmt : bool;
+  ?ip_configuration : address_information option;
 }
 
 

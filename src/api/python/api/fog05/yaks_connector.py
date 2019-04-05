@@ -498,7 +498,7 @@ class GAD(object):
         v = Value(json.dumps(imginfo), encoding=Encoding.STRING)
         return self.ws.put(p, v)
 
-    def remove_image(self, sysid, tenatid, imageid):
+    def remove_image(self, sysid, tenantid, imageid):
         p = self.get_image_info_path(sysid, tenantid, imageid)
         return self.ws.remove(p)
 

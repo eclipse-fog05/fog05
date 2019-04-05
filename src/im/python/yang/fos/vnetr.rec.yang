@@ -11,24 +11,56 @@ module vnetr.rec {
         }
     }
 
-
-  grouping record {
-    leaf uuid {
-      type string;
+    typedef ip_kind {
+        type enumeration {
+            enum IPV4;
+            enum IPV6;
+        }
     }
 
-    leaf status {
-      type net_state;
+    grouping address_inforamtion {
+
+        leaf ip_version {
+            type ip_kind;
+        }
+
+        leaf gateway {
+            type string;
+        }
+
+        leaf dhcp_enable {
+            type boolean;
+        }
+
+        leaf dhcp_range {
+            type string;
+        }
+
+        leaf dns {
+            type string;
+        }
     }
 
-    leaf properites {
-      type string;
-      // should be json
+    grouping record {
+        leaf uuid {
+            type string;
+        }
+
+        leaf status {
+            type net_state;
+        }
+
+        leaf properites {
+            type string;
+        // should be json
+        }
+
+        leaf ip_configuration {
+            uses address_information;
+        }
     }
 
-}
-
-  container vnet_record {
-    uses record;
-  }
+    container vnet_record {
+        uses record;
+    }
 }

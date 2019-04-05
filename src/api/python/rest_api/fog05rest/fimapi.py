@@ -14,6 +14,18 @@
 
 import requests
 import json
+import os
+import tempfile
+
+
+def save_file(content, filename):
+    full_path = os.path.join(tempfile.gettempdir(), filename)
+    f = open(full_path, 'w')
+    f.write(content)
+    f.flush()
+    f.close()
+    return full_path
+
 
 class FIMAPI(object):
     '''
@@ -190,9 +202,20 @@ class FIMAPI(object):
         def __init__(self, base_url):
             self.base_url = base_url
 
-        def add(self, descriptor):
+        def add(self, descriptor, image_path):
+            img_id = descriptor.get('uuid', None)
+            if  img_id is None:
+                img_id =  '{}'.format(uuid.uuid4())
+                descriptor.update({'uuid':img_id})
             url = '{}/image/add'.format(self.base_url)
-            return json.loads(str(requests.post(url, data=json.dumps(descriptor)).content))
+            desc_filename = '{}.json'.format(descriptor['uuid'])
+            temp_desc_file = save_file(json.dumps(descriptor),desc_filename)
+            files = {'descriptor': open(temp_desc_file, 'rb'), 'image': open(image_path, 'rb')}
+            res = json.loads(str(requests.post(url, files=files).content))
+            os.remove(temp_desc_file)
+            if res.get('result') == True:
+                return img_id
+            return res
 
         def get(self, image_uuid):
             url = '{}/image/{}'.format(self.base_url, image_uuid)

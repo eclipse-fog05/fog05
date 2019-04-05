@@ -23,6 +23,10 @@ setup(
     python_requires='>=3',
     author='ADLINK',
     packages=['fog05','fog05.interfaces'],
+    description='Python 3 API fog05 YAKS Client',
+    url='https://github.com/eclipse/fog05',
+    authon_email='gabriele.baldoni@adlinktech.com',
+    license='Apache 2.O or EPL 2.0',
     install_requires=['yaks==0.2.6', 'jsonschema','mvar'],
     scripts=[],
     include_package_data=True

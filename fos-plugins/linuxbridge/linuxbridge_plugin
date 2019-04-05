@@ -29,12 +29,15 @@ import socket
 import signal
 import base64
 import binascii
+import hashlib
 from jinja2 import Environment
 from fog05.interfaces.NetworkPlugin import *
 from fog05 import Yaks_Connector
 from mvar import MVar
 from fog05.DLogger import DLogger
 
+VNI_LIMIT = 16777215
+VLAN_LIMIT = 4095
 
 class LinuxBridge(NetworkPlugin):
 
@@ -50,8 +53,10 @@ class LinuxBridge(NetworkPlugin):
         self.configuration = manifest.get('configuration', {})
         self.pid = os.getpid()
         self.var = MVar()
-        self.agent_conf = \
-            self.connector.loc.actual.get_node_configuration(self.node)
+        self.agent_conf = self.connector.loc.actual.get_node_configuration(self.node)
+        self.use_vlan = self.configuration.get('use_vlan', False)
+        self.vlan_range = self.configuration.get('vlan_range', [0, VLAN_LIMIT])
+
         self.logger.info('__init__()', ' Hello from Linux Bridge Plugin')
 
         self.BASE_DIR = os.path.join(
@@ -314,15 +319,14 @@ class LinuxBridge(NetworkPlugin):
             return None
 
         n_small_id = net_uuid.split('-')[0]
-        start_file  = self.__generate_vnet_start_script(n_small_id)
+        start_file  = self.__generate_vnet_start_script(n_small_id, net_uuid)
         shutdown_file = self.__generate_vnet_stop_script(n_small_id)
         vdev_name = 'br-{}'.format(n_small_id)
         netns_name = 'fosns-{}'.format(n_small_id)
 
-        hx = bytes.fromhex(n_small_id)
-        vals = struct.unpack('<{}B'.format(len(hx)), hx)
-        vxlan_id = sum(vals)
-        mcast_addr = '239.245.{}.{}'.format(vals[0], vals[1])
+        vxlan_id = self.__get_vni(net_uuid)
+        mcast_addr = self.__get_mcast_addr(net_uuid)
+
 
         self.call_os_plugin_function('execute_command',{'command':os.path.join(self.BASE_DIR, start_file),'blocking':True, 'external':True})
         properties = {}
@@ -331,6 +335,8 @@ class LinuxBridge(NetworkPlugin):
         properties.update({'vxlan_id': vxlan_id})
         properties.update({'mcast_addr': mcast_addr})
         properties.update({'manager':self.uuid})
+        if self.use_vlan:
+            properties.update({'vlan_id': self.__get_vlan_id(net_uuid)})
 
 
         # self.agent.getOSPlugin().executeCommand(brcmd)
@@ -616,16 +622,18 @@ class LinuxBridge(NetworkPlugin):
         self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
         return f_name
 
-    def __generate_vnet_start_script(self, netid):
+    def __generate_vnet_start_script(self, netid, net_uuid):
 
-        hx = bytes.fromhex(netid)
-        vals = struct.unpack('<{}B'.format(len(hx)), hx)
-        vxlan_id = sum(vals)
-        mcast_addr = '239.245.{}.{}'.format(vals[0], vals[1])
+        vxlan_id = self.__get_vni(net_uuid)
+        mcast_addr = self.__get_mcast_addr(net_uuid)
 
         template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vnet_create.sh'), 'root':False})
         net_sh = Environment().from_string(template_sh)
-        net_sh = net_sh.render(net_id=netid, group_id=vxlan_id, mcast_group_address=mcast_addr, wan=self.overlay_interface)
+        if self.use_vlan:
+            overlay_interface = '{}.{}'.format(self.overlay_interface, self.__get_vlan_id(net_uuid))
+        else:
+            overlay_interface = self.overlay_interface
+        net_sh = net_sh.render(net_id=netid, group_id=vxlan_id, mcast_group_address=mcast_addr, wan=overlay_interface)
         net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
         f_name = 'start_{}.sh'.format(netid)
         self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
@@ -707,6 +715,25 @@ class LinuxBridge(NetworkPlugin):
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
         self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
         return f_name, vxlan_name, vxlan_id, mcast_addr
+
+    def __get_mcast_addr(self, net_id):
+        hashdata = hashlib.sha512(net_id.encode('utf8')).digest()
+        return '239.245.{}.{}'.format(hashdata[0],hashdata[-1])
+
+    def __get_vni(self, net_id):
+        hashdata = hashlib.sha512(net_id.encode('utf8')).digest()
+        vni = 0
+        for x in hashdata:
+            vni += x
+        return vni % VNI_LIMIT
+
+    def __get_vlan_id(self, net_id, min_id=0, max_id=VLAN_LIMIT)
+        hashdata = hashlib.sha512(net_id.encode('utf8')).digest()
+        vlid = 0
+        for x in hashdata:
+            vlid += x
+        return (vlid % max_id) + min_id
+
 
 def read_file(file_path):
     data = ''

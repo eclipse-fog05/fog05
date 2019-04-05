@@ -10,7 +10,7 @@ atd:
 	atdgen -v fos-im/fos_types.atd
 	atdgen -t fos-im/fos_records_types.atd
 	atdgen -j-std fos-im/fos_records_types.atd
-	atdgen -v fos-im/fos_records_types.atd
+	# atdgen -v fos-im/fos_records_types.atd
 	atdgen -t fos-im/im.atd
 	atdgen -j-std fos-im/im.atd
 	atdgen -v fos-im/im.atd

@@ -96,12 +96,12 @@ uninstall:
 	sudo pip3 uninstall fog05 -y
 
 clean:
-	sudo rm -rf lldpd
 	opam remove fos-im -y
 	make -C src/im/ocaml clean
 	make -C src/core/ocaml clean
 	make -C src/agent clean
 	make -C src/api/ocaml/api clean
+	sudo rm -rf lldpd
 	sudo rm -rf src/pyhton/fog05.egg-info
 	sudo rm -rf src/pyhton/build
 	sudo rm -rf src/pyhton/dist

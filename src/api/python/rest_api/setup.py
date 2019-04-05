@@ -23,5 +23,17 @@ setup(
     author='ADLINK',
     packages=['fog05rest',],
     install_requires=['requests'],
-    include_package_data=True
+    include_package_data=True,
+    description='Python 2 API fog05 REST Client',
+    url='https://github.com/eclipse/fog05',
+    authon_email='gabriele.baldoni@adlinktech.com',
+    license='Apache 2.O or EPL 2.0',
+    classifiers=[
+          'Development Status :: 2 - Pre-Alpha',
+          'Intended Audience :: Developers',
+          'Intended Audience :: Telecommunications Industry',
+          'License :: OSI Approved :: Apache Software License',
+          'License :: OSI Approved :: Eclipse Public License 2.0 (EPL-2.0)',
+          'Programming Language :: Python :: 2'
+    ],
 )
