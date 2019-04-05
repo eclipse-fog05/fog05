@@ -691,7 +691,7 @@ class LinuxBridge(NetworkPlugin):
 
 
         dnsmasq_conf = Environment().from_string(template_conf)
-        dnsmasq_conf = dnsmasq_conf.render(dhcpinterface=dhcp_intf, lease_file=start_addr,dhcppid=pid_file)
+        dnsmasq_conf = dnsmasq_conf.render(dhcpinterface=dhcp_intf, lease_file=lease_file,dhcppid=pid_file)
         if address_info.get('dhcp_range') is not None and address_info.get('dhcp_enable') :
             r = '{},{}'.format(address_info.get('dhcp_range')[0],address_info.get('dhcp_range')[1])
             dnsmasq_conf = dnsmasq_conf+'\ndhcp-range={},86400s'.format(r)
