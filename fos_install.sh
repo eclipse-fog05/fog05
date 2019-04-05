@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
-git clone https://github.com/eclipse/fog05
-cd fog05
-git checkout 0.2-devel
+# git clone https://github.com/eclipse/fog05
+# cd fog05
+# git checkout 0.2-devel
 
 sudo apt update -qq
-sudo apt install libev4 libdev-dev libssl1.0.0 pyhton3-pip python3-dev -y
+sudo apt install libev4 libev-dev libssl1.0.0 python3-pip python3-dev curl -y
 sudo pip3 install jsonschema
 
-mkdir -p src/ocaml/_build/default/src/fos/fos-agent/
+mkdir -p src/agent/_build/default/fos-agent
 curl -L -o /tmp/fos.tar.gz https://www.dropbox.com/s/yxmcomji7pezq8h/fos.tar.gz
 tar -xzvf /tmp/fos.tar.gz -C src/agent/_build/default/fos-agent
 rm -rf /tmp/fos.tar.gz

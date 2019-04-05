@@ -671,8 +671,7 @@ class LinuxBridge(NetworkPlugin):
         return f_name
 
 
-
- def __generate_dnsmaq_script(self, descriptor):
+    def __generate_dnsmaq_script(self, descriptor):
         net_uuid = descriptor.get('uuid')
         address_info = descriptor.get('ip_configuration')
         n_small_id = net_uuid.split('-')[0]
