@@ -105,8 +105,8 @@ Open another shell (or use another machine that has the fog05 api installed)
 and execute:
 
     python3
-    >>> from fog05 import FIMAPIv2
-    >>> api = FIMAPIv2(locator='127.0.0.1') # or locator='IP of the YAKS server'
+    >>> from fog05 import FIMAPI
+    >>> api = FIMAPI(locator='127.0.0.1') # or locator='IP of the YAKS server'
     >>> api.node.list()
     >>> ['your node uuid',...]
     >>> api.close()

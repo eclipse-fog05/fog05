@@ -10,7 +10,9 @@ dist
 fog05.egg-info
 
 nohup.out
-
+.merlin
+*.install
+dune-project
 _build
 .idea/
 .vscode/

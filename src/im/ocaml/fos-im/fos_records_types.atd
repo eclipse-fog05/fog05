@@ -14,7 +14,7 @@
 type json <ocaml module="Abs_json"> = abstract
 (* Atomit Entity Manifest *)
 
-
+type address_information <ocaml module="Fos_types"> = abstract
 
 
 type fdu_state = [
@@ -93,6 +93,7 @@ type virtual_network = {
   uuid : string;
   status: net_state;
   ?properties : json option;
+  ?ip_configuration : address_information option;
   }
 
 
