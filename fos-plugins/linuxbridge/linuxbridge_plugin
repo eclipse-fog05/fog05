@@ -311,7 +311,7 @@ class LinuxBridge(NetworkPlugin):
         net_uuid = manifest.get('uuid')
         descriptor = self.get_network_descriptor(net_uuid)
         self.logger.info('create_virtual_network()','Creating Network with UUID: {}'.format(net_uuid))
-
+        self.logger.info('create_virtual_network()','Creating Network: {}'.format(manifest))
         net = self.networks.get(net_uuid, None)
         if net is not None:
             self.logger.error(
