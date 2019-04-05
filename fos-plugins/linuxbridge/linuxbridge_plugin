@@ -693,18 +693,13 @@ class LinuxBridge(NetworkPlugin):
         dnsmasq_conf = Environment().from_string(template_conf)
         dnsmasq_conf = dnsmasq_conf.render(dhcpinterface=dhcp_intf, lease_file=lease_file,dhcppid=pid_file)
         if address_info.get('dhcp_range') is not None and address_info.get('dhcp_enable') :
-            r = '{},{}'.format(address_info.get('dhcp_range')[0],address_info.get('dhcp_range')[1])
-            dnsmasq_conf = dnsmasq_conf+'\ndhcp-range={},86400s'.format(r)
+            dnsmasq_conf = dnsmasq_conf+'\ndhcp-range={},86400s'.format(address_info.get('dhcp_range'))
         else:
             dnsmasq_conf = dnsmasq_conf+'\ndhcp-range={},static,86400s'.format(address_info.get('subnet').split('/')[0])
         if address_info.get('gateway') is not None:
             dnsmasq_conf = dnsmasq_conf+'\ndhcp-option=3,{}'.format(address_info.get('gateway'))
         if address_info.get('dns') is not None:
-            dns = ''
-            for i in address_info.get('dns'):
-                dns += i+','
-            dns[0:-1]
-            dnsmasq_conf = dnsmasq_conf+'\ndhcp-option=6,{}'.format(dns)
+            dnsmasq_conf = dnsmasq_conf+'\ndhcp-option=6,{}'.format(address_info.get('dns'))
 
         file_name = '{}_dnsmasq.sh'.format(n_small_id)
         dnsmasq_conf = binascii.hexlify(base64.b64encode(bytes(dnsmasq_conf,'utf-8'))).decode()
