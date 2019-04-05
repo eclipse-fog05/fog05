@@ -784,7 +784,7 @@ class LinuxBridge(NetworkPlugin):
             vni += x
         return vni % VNI_LIMIT
 
-    def __get_vlan_id(self, net_id, min_id=0, max_id=VLAN_LIMIT)
+    def __get_vlan_id(self, net_id, min_id=0, max_id=VLAN_LIMIT):
         hashdata = hashlib.sha512(net_id.encode('utf8')).digest()
         vlid = 0
         for x in hashdata:
