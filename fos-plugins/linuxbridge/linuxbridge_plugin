@@ -319,25 +319,34 @@ class LinuxBridge(NetworkPlugin):
             return None
 
         n_small_id = net_uuid.split('-')[0]
-        start_file  = self.__generate_vnet_start_script(n_small_id, net_uuid)
-        shutdown_file = self.__generate_vnet_stop_script(n_small_id)
         vdev_name = 'br-{}'.format(n_small_id)
         netns_name = 'fosns-{}'.format(n_small_id)
 
-        vxlan_id = self.__get_vni(net_uuid)
-        mcast_addr = self.__get_mcast_addr(net_uuid)
 
 
-        self.call_os_plugin_function('execute_command',{'command':os.path.join(self.BASE_DIR, start_file),'blocking':True, 'external':True})
-        properties = {}
-        properties.update({'virtual_device': vdev_name})
-        properties.update({'net_ns': netns_name})
-        properties.update({'vxlan_id': vxlan_id})
-        properties.update({'mcast_addr': mcast_addr})
-        properties.update({'manager':self.uuid})
+
+
+         properties = {}
         if self.use_vlan:
             properties.update({'vlan_id': self.__get_vlan_id(net_uuid)})
 
+        else:
+            vxlan_id = self.__get_vni(net_uuid)
+            mcast_addr = self.__get_mcast_addr(net_uuid)
+            start_file  = self.__generate_vnet_start_script(n_small_id, net_uuid)
+            shutdown_file = self.__generate_vnet_stop_script(n_small_id)
+            self.call_os_plugin_function('execute_command',{'command':os.path.join(self.BASE_DIR, start_file),'blocking':True, 'external':True})
+            properties.update({'vxlan_id': vxlan_id})
+            properties.update({'mcast_addr': mcast_addr})
+
+            properties.update({'virtual_device': vdev_name})
+            properties.update({'net_ns': netns_name})
+            properties.update({'manager':self.uuid})
+
+        if manifest.get('ip_configuration') is not None:
+            self.logger.info('create_virtual_network()','Networks as address informations: {}'.format(manifest.get('ip_configuration')))
+            dhcp_file = self.__generate_dnsmaq_script(manifest)
+            self.call_os_plugin_function('execute_command',{'command':os.path.join(self.BASE_DIR, dhcp_file),'blocking':True, 'external':True})
 
         # self.agent.getOSPlugin().executeCommand(brcmd)
 
@@ -486,6 +495,19 @@ class LinuxBridge(NetworkPlugin):
         # dnsmasq_file = os.path.join(
         #     self.BASE_DIR, self.DHCP_DIR, 'br-{}_dnsmasq.sh'.format(network_uuid.split('-')[0]))
 
+        if net.get('ip_configuration') is not None:
+            path = os.path.join(self.BASE_DIR, self.DHCP_DIR)
+            pid_file =  os.path.join(path,'net_{}.pid'.format(n_small_id))
+            conf = os.path.join(path,'net_{}.conf'.format(n_small_id))
+            start_file = conf = os.path.join(path,'dhcp_{}.sh'.format(n_small_id))
+            pid = int(self.call_os_plugin_function('read_file',{'file_path':path, 'root':False}))
+            self.call_os_plugin_function('send_sig_int',{'pid':pid})
+            self.call_os_plugin_function('remove_file',{'file_path':pid_file})
+            self.call_os_plugin_function('remove_file',{'file_path':conf})
+            self.call_os_plugin_function('remove_file',{'file_path':start_file})
+
+
+
         self.call_os_plugin_function('execute_command',{'command':'sudo {}'.format(shutdown_file),'blocking':True, 'external':True})
         self.call_os_plugin_function('remove_file',{'file_path':shutdown_file})
         self.call_os_plugin_function('remove_file',{'file_path':start_file})
@@ -629,10 +651,6 @@ class LinuxBridge(NetworkPlugin):
 
         template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vnet_create.sh'), 'root':False})
         net_sh = Environment().from_string(template_sh)
-        if self.use_vlan:
-            overlay_interface = '{}.{}'.format(self.overlay_interface, self.__get_vlan_id(net_uuid))
-        else:
-            overlay_interface = self.overlay_interface
         net_sh = net_sh.render(net_id=netid, group_id=vxlan_id, mcast_group_address=mcast_addr, wan=overlay_interface)
         net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
         f_name = 'start_{}.sh'.format(netid)
@@ -654,6 +672,55 @@ class LinuxBridge(NetworkPlugin):
 
 
 
+ def __generate_dnsmaq_script(self, descriptor):
+        net_uuid = descriptor.get('uuid')
+        address_info = descriptor.get('address_info')
+        n_small_id = net_uuid.split('-')[0]
+        vdev_name = 'br-{}'.format(n_small_id)
+        netns_name = 'fosns-{}'.format(n_small_id)
+        path = os.path.join(self.BASE_DIR, self.DHCP_DIR)
+
+        template_conf = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'dnsmasq.conf'), 'root':False})
+
+        dhcp_intf = 'dhcp-{}-e'.format(n_small_id)
+        lease_file = os.path.join(path,'net_{}_leases'.format(n_small_id))
+        pid_file =  os.path.join(path,'net_{}.pid'.format(n_small_id))
+        conf = 'net_{}.conf'.format(n_small_id)
+        start_file = 'dhcp_{}.sh'.format(n_small_id)
+
+
+
+        dnsmasq_conf = Environment().from_string(template_conf)
+        dnsmasq_conf = dnsmasq_conf.render(dhcpinterface=dhcp_intf, lease_file=start_addr,dhcppid=pid_file)
+        if address_info.get('dhcp_range') is not None and address_info.get('dhcp_enable') :
+            r = '{},{}'.format(address_info.get('dhcp_range')[0],address_info.get('dhcp_range')[1])
+            dnsmasq_conf = dnsmasq_conf+'\ndhcp-range={},86400s'.format(r)
+        else:
+            dnsmasq_conf = dnsmasq_conf+'\ndhcp-range={},static,86400s'.format(address_info.get('subnet').split('/')[0])
+        if address_info.get('gateway') is not None:
+            dnsmasq_conf = dnsmasq_conf+'\ndhcp-option=3,{}'.format(address_info.get('gateway'))
+        if address_info.get('dns') is not None:
+            dns = ''
+            for i in address_info.get('dns'):
+                dns += i+','
+            dns[0:-1]
+            dnsmasq_conf = dnsmasq_conf+'\ndhcp-option=6,{}'.format(dns)
+
+        file_name = '{}_dnsmasq.sh'.format(n_small_id)
+        dnsmasq_conf = binascii.hexlify(base64.b64encode(bytes(dnsmasq_conf,'utf-8'))).decode()
+        self.call_os_plugin_function('store_file',{'content':dnsmasq_conf, 'file_path':path, 'filename':conf})
+
+        template_start = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'dnsmasq.sh'), 'root':False})
+        dnsmasq_sh = Environment().from_string(template_start)
+        dnsmasq_sh = dnsmasq_conf.render(netid=n_small_id, dhcp_conf_path=conf)
+        dnsmasq_sh = binascii.hexlify(base64.b64encode(bytes(dnsmasq_sh,'utf-8'))).decode()
+        self.call_os_plugin_function('store_file',{'content':dnsmasq_sh, 'file_path':path, 'filename':start_file})
+
+        chmod_cmd = 'chmod +x {}'.format(os.path.join(path, start_file))
+        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        return file_name
+
+
     def __generate_vxlan_shutdown_script(self, net_uuid):
         template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vxlan_destroy.sh'), 'root':False})
         br_name = 'br-{}'.format(net_uuid.split('-')[0])
@@ -671,17 +738,7 @@ class LinuxBridge(NetworkPlugin):
         self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
 
         return file_name
-    def __generate_dnsmaq_script(self, br_name, start_addr, end_addr, listen_addr, pid_file):
-        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'dnsmasq.sh'), 'root':False})
-        dnsmasq_sh = Environment().from_string(template_sh)
-        dnsmasq_sh = dnsmasq_sh.render(bridge_name=br_name, dhcp_start=start_addr,
-                                       dhcp_end=end_addr, listen_addr=listen_addr, pid_path=pid_file)
-        file_name = '{}_dnsmasq.sh'.format(br_name)
-        path = os.path.join(self.BASE_DIR, self.DHCP_DIR)
-        self.call_os_plugin_function('store_file',{'content':dnsmasq_sh, 'file_path':path, 'filename':file_name})
-        chmod_cmd = 'chmod +x {}'.format(os.path.join(path, file_name))
-        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
-        return file_name
+
 
     def __generate_vxlan_script(self, net_uuid, manifest=None):
         if not self.overlay_interface:
