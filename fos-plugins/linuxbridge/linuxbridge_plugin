@@ -348,7 +348,7 @@ class LinuxBridge(NetworkPlugin):
             properties.update({'vlan_id': self.__get_vlan_id(net_uuid)})
             vlan_id = self.__get_vlan_id(net_uuid, self.vlan_range[0], self.vlan_range[1])
             start_file = self.__generate_vnet_vlan_start_script(n_small_id, net_uuid)
-            shutdown_file = self.__generate_vnet_vlan_stop_script(n_small_id, net_uuid)
+            shutdown_file = self.__generate_vnet_vlan_stop_script(n_small_id)
             self.call_os_plugin_function('execute_command',{'command':os.path.join(self.BASE_DIR, start_file),'blocking':True, 'external':True})
             properties.update({'vlan_id': vlan_id})
 
