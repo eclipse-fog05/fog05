@@ -72,7 +72,7 @@ class LinuxBridge(NetworkPlugin):
         if self.overlay_interface is None:
             self.agent_conf.get('agent').get('mgmt_interface')
 
-         if self.vlan_face is None:
+        if self.vlan_face is None:
             self.vlan_face = self.overlay_interface
 
         self.networks = {}
