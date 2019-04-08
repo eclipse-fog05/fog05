@@ -198,7 +198,7 @@ class LinuxBridge(NetworkPlugin):
 
     def create_vlan_interface(self, iface, vlanid):
         cmd = 'sudo ip link add {} name {}.{} type vlan {}'.format(iface, iface, vlanid, vlanid)
-        self.call_os_plugin_function('execute_command',{'command':cmd_start,'blocking':True, 'external':True})
+        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':True})
 
     # this is an eval
     def create_virtual_interface(self,intf_id, descriptor):
