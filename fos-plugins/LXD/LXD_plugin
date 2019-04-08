@@ -833,14 +833,15 @@ class LXD(RuntimePluginFDU):
                     self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
                 else:
                     nw_v = json.loads(str(template_value_bridge_mac % (intf_name, real_intf_name, mac)))
+                interfaces.append(real_intf_name)
             else:
                 intf_id = 'lxd-{}-{}'.format(fdu.get_short_id(), i)
                 intf_data = self.call_nw_plugin_function('create_virtual_interface', {'intf_id':intf_id, 'descriptor': intf})
                 self.logger.info('__generate_custom_profile_userdata_configuration()','LXD Plugin - Interface info {}'.format(intf_data))
                 dev_name = intf_data.get('int_name')
                 nw_v = json.loads(str(template_vintf % (intf_name, dev_name, mac)))
+                interfaces.append(intf_id)
             devices.update({intf_name: nw_v})
-            interfaces.append(intf_id)
             i += 1
 
         lxd_version = self.conn.host_info['environment']['server_version']
