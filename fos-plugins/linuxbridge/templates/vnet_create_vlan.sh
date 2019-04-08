@@ -20,7 +20,7 @@
 sudo ip netns add fosns-{{ net_id }}
 sudo ip link add br-{{ net_id }} type bridge
 sudo ip link set dev {{ vlan_intf }}  master br-{{ net_id }}
-sudo ip link set br-{{ net_id }} netns fosns-{{ net_id }}
+# sudo ip link set br-{{ net_id }} netns fosns-{{ net_id }}
 sudo ip link set up dev br-{{ net_id }}
 sudo ip link set up dev {{ vlan_intf }}
 sudo ethtool --offload br-{{ net_id }} rx off tx off

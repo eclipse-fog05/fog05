@@ -750,6 +750,49 @@ class LinuxBridge(NetworkPlugin):
         self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
         return start_file
 
+    def __generate_dnsmaq_script(self, descriptor):
+        net_uuid = descriptor.get('uuid')
+        address_info = descriptor.get('ip_configuration')
+        n_small_id = net_uuid.split('-')[0]
+        vdev_name = 'br-{}'.format(n_small_id)
+        netns_name = 'fosns-{}'.format(n_small_id)
+        path = os.path.join(self.BASE_DIR, self.DHCP_DIR)
+
+        template_conf = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'dnsmasq.conf'), 'root':False})
+
+        dhcp_intf = 'dhcp-{}-i'.format(n_small_id)
+        lease_file = os.path.join(path,'net_{}_leases'.format(n_small_id))
+        pid_file =  os.path.join(path,'net_{}.pid'.format(n_small_id))
+        conf = 'net_{}.conf'.format(n_small_id)
+        start_file = 'dhcp_{}.sh'.format(n_small_id)
+
+
+
+        dnsmasq_conf = Environment().from_string(template_conf)
+        dnsmasq_conf = dnsmasq_conf.render(dhcpinterface=dhcp_intf, lease_file=lease_file,dhcppid=pid_file)
+        if address_info.get('dhcp_range') is not None and address_info.get('dhcp_enable') :
+            dnsmasq_conf = dnsmasq_conf+'\ndhcp-range={},86400s'.format(address_info.get('dhcp_range'))
+        else:
+            dnsmasq_conf = dnsmasq_conf+'\ndhcp-range={},static,86400s'.format(address_info.get('subnet').split('/')[0])
+        if address_info.get('gateway') is not None:
+            dnsmasq_conf = dnsmasq_conf+'\ndhcp-option=3,{}'.format(address_info.get('gateway'))
+        if address_info.get('dns') is not None:
+            dnsmasq_conf = dnsmasq_conf+'\ndhcp-option=6,{}'.format(address_info.get('dns'))
+
+        dnsmasq_conf = binascii.hexlify(base64.b64encode(bytes(dnsmasq_conf,'utf-8'))).decode()
+        self.call_os_plugin_function('store_file',{'content':dnsmasq_conf, 'file_path':path, 'filename':conf})
+
+        template_start = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'dnsmasq.sh'), 'root':False})
+        dnsmasq_sh = Environment().from_string(template_start)
+        addrs = self.__cird2block(address_info.get('subnet'))
+        dnsmasq_sh = dnsmasq_sh.render(netid=n_small_id, dhcp_conf_path=os.path.join(path, conf), ip=addrs[0], mask=addrs[-1])
+        dnsmasq_sh = binascii.hexlify(base64.b64encode(bytes(dnsmasq_sh,'utf-8'))).decode()
+        self.call_os_plugin_function('store_file',{'content':dnsmasq_sh, 'file_path':path, 'filename':start_file})
+
+        chmod_cmd = 'chmod +x {}'.format(os.path.join(path, start_file))
+        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        return start_file
+
 
     def __generate_vxlan_shutdown_script(self, net_uuid):
         template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vxlan_destroy.sh'), 'root':False})
