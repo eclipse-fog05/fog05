@@ -72,7 +72,15 @@ class RuntimePluginFDU(Plugin):
         parameters = {
             'node_uuid': destinationid
         }
-        fname = 'get_node_mgmt_address'
+        fname = 'get_image_info'
+        return self.call_agent_function(fname, parameters)
+
+
+    def get_image_info(self, imageid):
+        parameters = {
+            'image_uuid': imageid
+        }
+        fname = 'get_image_info'
         return self.call_agent_function(fname, parameters)
 
 

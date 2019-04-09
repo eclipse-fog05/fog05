@@ -148,41 +148,40 @@ class KVM(RuntimePluginFDU):
         fdu = KVMFDU.from_descriptor(descriptor)
 
         if self.is_uuid(fdu.get_image_uri()):
-            img = self.images.get(fdu.get_image_uri(), None)
+            img = self.get_image_info(fdu.get_image_uri())
+            self.logger.info('define_fdu()', '[ INFO ] LXD Plugin - Img info: {}'.format(img))
             if img is None:
                 self.logger.error('define_fdu()', '[ ERRO ] KVM Plugin - Cannot find image {}'.format(fdu.get_image_uri()))
                 # TODO write error using Yaks_connector
                 return
-            else:
-                fdu.image.update({'file':img.get('base_image')})
-                fdu.image.update({'uuid':img.get('uuid')})
+            fdu.image.update({'uri':img.get('uri')})
+            fdu.image.update({'uuid':img.get('uuid')})
 
-        else:
-            self.logger.warning('define_fdu()', '[ WARN ] KVM Plugin - No image id specified defining from manifest information new image id uuid:{}'.format(fdu_uuid))
-            if fdu.get_image_uri().startswith('http'):
-                image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
-                self.call_os_plugin_function('download_file',{'url':fdu.get_image_uri(),'file_path':image_name})
-            elif fdu.get_image_uri().startswith('file://'):
-                image_name = os.path.join(
-                    self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
-                cmd = 'cp {} {}'.format(fdu.get_image_uri()[len('file://'):], image_name)
-                self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
+        #self.logger.warning('define_fdu()', '[ WARN ] KVM Plugin - No image id specified defining from manifest information new image id uuid:{}'.format(fdu_uuid))
+        if fdu.get_image_uri().startswith('http'):
+            image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
+            self.call_os_plugin_function('download_file',{'url':fdu.get_image_uri(),'file_path':image_name})
+        elif fdu.get_image_uri().startswith('file://'):
+            image_name = os.path.join(
+                self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
+            cmd = 'cp {} {}'.format(fdu.get_image_uri()[len('file://'):], image_name)
+            self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
 
 
-            img_info = {}
-            img_info.update({'uuid': fdu_uuid})
-            img_info.update({'name': '{}_img'.format(fdu.name)})
-            img_info.update({'base_image': image_name})
-            img_info.update({'type':'kvm'})
-            img_info.update({'format': fdu.get_image_format()})
+        img_info = {}
+        img_info.update({'uuid': fdu_uuid})
+        img_info.update({'name': '{}_img'.format(fdu.name)})
+        img_info.update({'base_image': image_name})
+        img_info.update({'type':'kvm'})
+        img_info.update({'format': fdu.get_image_format()})
 
-            fdu.image.update({'file': image_name})
-            fdu.image.update({'uuid': fdu_uuid})
+        fdu.image.update({'file': image_name})
+        fdu.image.update({'uuid': fdu_uuid})
 
-            self.__add_image(img_info)
-            img = self.images.get(fdu_uuid, None)
-            if img is None:
-                self.logger.error('define_fdu()', '[ ERRO ] KVM Plugin - Cannot find image {}'.format(fdu_uuid))
+        self.__add_image(img_info)
+        img = self.images.get(fdu_uuid, None)
+        if img is None:
+            self.logger.error('define_fdu()', '[ ERRO ] KVM Plugin - Cannot find image {}'.format(fdu_uuid))
 
         self.logger.info('define_fdu()', '[ WARN ] KVM Plugin - New flavor uuid:{}'.format(fdu_uuid))
         cpu = fdu.comp_requirements.get('cpu_min_count')
