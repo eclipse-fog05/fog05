@@ -53,7 +53,7 @@ class NetworkPlugin(Plugin):
         while os is None:
             try:
                 os = self.get_os_plugin()
-            except ValueError:
+            except RuntimeError:
                 time.sleep(1)
         return
 
