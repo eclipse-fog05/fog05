@@ -161,6 +161,7 @@ class LXD(RuntimePluginFDU):
 
         if self.is_uuid(fdu.get_image_uri()):
             img_info = self.get_image_info(fdu.get_image_uri())
+            self.logger.info('define_fdu()', '[ INFO ] LXD Plugin - Img info: {}'.format(img_info))
             # img_info = self.images.get(fdu.get_image_uri(), None)
             if img_info is None:
                 self.logger.error(
