@@ -81,13 +81,13 @@ class RuntimePluginFDU(Plugin):
         while os is None:
             try:
                 os = self.get_os_plugin()
-            except RuntimeError:
+            except (RuntimeError, ValueError):
                 time.sleep(1)
         nm = None
         while nm is None:
             try:
                 nm = self.get_nm_plugin()
-            except RuntimeError:
+            except (RuntimeError, ValueError):
                 time.sleep(1)
         return
 
