@@ -165,7 +165,7 @@ class LXD(RuntimePluginFDU):
             if img_info is None:
                 self.logger.error(
                     'define_fdu()', '[ ERRO ] LXD Plugin - Cannot find image {}'.format(fdu.get_image_uri()))
-                    break
+                return
                 # self.__write_error_entity(fdu_uuid, 'Image not found!')
 
             fdu.image.update({'uri':img_info.get('uri')})
