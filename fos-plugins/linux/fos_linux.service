@@ -1,6 +1,6 @@
 [unit]
 Description = Eclipse fog05 Linux Plugin
-After=network.target
+After=fos_agent.target
 
 
 [Service]
