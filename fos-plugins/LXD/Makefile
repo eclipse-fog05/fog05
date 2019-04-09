@@ -22,9 +22,9 @@ else
 	sudo cp ../LXD/LXD_plugin.json /etc/fos/plugins/LXD/
 	sudo cp ../LXD/LXDFDU.py /etc/fos/plugins/LXD/
 	sudo cp ../LXD/README.md /etc/fos/plugins/LXD/
-	sudo cp /etc/fos/plugins/LXD/fos_lxd.service /lib/systemd/system/
 	sudo ln -sf /etc/fos/plugins/LXD/LXD_plugin /usr/bin/fos_lxd
 endif
+	sudo cp /etc/fos/plugins/LXD/fos_lxd.service /lib/systemd/system/
 
 
 uninstall:

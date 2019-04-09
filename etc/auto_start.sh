@@ -13,9 +13,9 @@ screen -S lxdp -dm bash -c 'sudo -u fos /etc/fos/plugins/LXD/LXD_plugin  /etc/fo
 read -n 1 -s -r -p "Press any key to destroy..."
 
 screen -S lxdp -X quit
-sleep 5
+sleep 1
 screen -S netp -X quit
-sleep 3
+sleep 1
 screen -S linuxp -X quit
 sleep 1
 screen -S agent -X quit
