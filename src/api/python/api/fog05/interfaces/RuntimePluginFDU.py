@@ -35,6 +35,14 @@ class RuntimePluginFDU(Plugin):
         nm = nms[0]
         return nm
 
+    def get_os_plugin(self):
+        pls = self.connector.loc.actual.get_all_plugins(self.node)
+        os = [x for x in pls if x.get('type') == 'os']
+        if len(os) == 0:
+            raise RuntimeError('No os plugin present in the node!!')
+        os = os[0]
+        return os
+
     def call_nw_plugin_function(self, fname, fparameters):
         nm = self.get_nm_plugin().get('uuid')
         res = self.connector.loc.actual.exec_nw_eval(
@@ -66,6 +74,23 @@ class RuntimePluginFDU(Plugin):
             except:
                 pass
         return flag
+
+
+    def wait_dependencies(self):
+        os = None
+        while os is None:
+            try:
+                os = self.get_os_plugin()
+            except ValueError:
+                time.sleep(1)
+        nm = None
+        while nm is None:
+            try:
+                nm = self.get_nm_plugin()
+            except ValueError:
+                time.sleep(1)
+        return
+
 
 
     def get_destination_node_mgmt_net(self, destinationid):

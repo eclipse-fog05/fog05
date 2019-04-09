@@ -13,6 +13,7 @@
 # Contributors: Gabriele Baldoni, ADLINK Technology Inc.
 # Initial implementation and API
 
+import time
 from fog05.interfaces.Plugin import Plugin
 
 
@@ -37,6 +38,24 @@ class NetworkPlugin(Plugin):
         parameters = {'cp_uuid': fduid}
         fname = 'get_port_info'
         return self.call_agent_function(fname, parameters)
+
+    def get_os_plugin(self):
+        pls = self.connector.loc.actual.get_all_plugins(self.node)
+        os = [x for x in pls if x.get('type') == 'os']
+        if len(os) == 0:
+            raise RuntimeError('No os plugin present in the node!!')
+        os = os[0]
+        return os
+
+
+    def wait_dependencies(self):
+        os = None
+        while os is None:
+            try:
+                os = self.get_os_plugin()
+            except ValueError:
+                time.sleep(1)
+        return
 
     def create_virtual_interface(self, name, uuid):
         '''
