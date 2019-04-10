@@ -152,6 +152,9 @@ class LinuxBridge(NetworkPlugin):
             self.node, self.uuid, self.manifest)
 
         self.logger.info('start_runtime()', 'Linux Bridge Plugin - Data Plane (VxLAN) Interface {}'.format(self.overlay_interface))
+        if self.use_vlan:
+            self.logger.info('start_runtime()', 'Linux Bridge Plugin - VLAN Interface {}'.format(self.vlan_face))
+            self.logger.info('start_runtime()', 'Linux Bridge Plugin - VLAN Range {}'.format(self.vlan_range))
         self.logger.info('start_runtime()', 'Linux Bridge Plugin - Started...')
 
         r = self.var.get()
