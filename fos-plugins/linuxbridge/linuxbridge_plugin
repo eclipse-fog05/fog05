@@ -351,7 +351,7 @@ class LinuxBridge(NetworkPlugin):
 
         properties = {}
         if self.use_vlan:
-            properties.update({'vlan_id': self.__get_vlan_id(net_uuid)})
+            properties.update({'vlan_id': self.__get_vlan_id(net_uuid, self.vlan_range[0], self.vlan_range[1])})
             vlan_id = self.__get_vlan_id(net_uuid, self.vlan_range[0], self.vlan_range[1])
             start_file = self.__generate_vnet_vlan_start_script(n_small_id, net_uuid)
             shutdown_file = self.__generate_vnet_vlan_stop_script(n_small_id)
@@ -684,7 +684,7 @@ class LinuxBridge(NetworkPlugin):
 
     def __generate_vnet_vlan_start_script(self, netid, net_uuid):
 
-        vlan_id = self.__get_vlan_id(net_uuid)
+        vlan_id = self.__get_vlan_id(net_uuid, self.vlan_range[0], self.vlan_range[1])
         mcast_addr = self.__get_mcast_addr(net_uuid)
         vintf = '{}.{}'.format(self.vlan_face, vlan_id)
         if not self.check_if_interface_exists(vintf):
