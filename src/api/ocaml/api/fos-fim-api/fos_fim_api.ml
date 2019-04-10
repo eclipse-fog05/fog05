@@ -159,6 +159,9 @@ module FDU = struct
     Yaks_connector.Global.Actual.get_node_fdus api.sysid api.tenantid nodeid api.yconnector >>=
     Lwt_list.map_p (fun (_,_,f) -> Lwt.return f)
 
+  let get_nodes fduid api =
+    Yaks_connector.Global.Actual.get_fdu_nodes api.sysid api.tenantid fduid api.yconnector
+
   let info fduid api =
     Yaks_connector.Global.Actual.get_fdu_info api.sysid api.tenantid fduid api.yconnector
 
