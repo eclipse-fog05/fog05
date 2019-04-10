@@ -57,7 +57,23 @@ update the nodeid parameter with the content of `/etc/machine-id`
 this is used to identify the node and to make the plugin connect the right agent.
 
 
-## Start Eclipse fog05 FIM
+# Start Eclipse fog05
+
+There are two ways to start fog05, the first one using systemd and the second one by hand,
+the second one is the one to be used during development.
+
+## Start Eclipse fog05 FIM using systemd
+
+In order to start Eclipse fog05 FIM using systemd you have to first enable it
+by using the script present under `etc/systemd/enable.sh` this will enable autostart of the fog05 Node
+
+    $ cd fog05
+    $ ./etc/systemd/enable
+    $ ./etc/systemd/start
+
+This will start all the component for an all-in-one fog05 installation.
+
+## Start Eclipse fog05 FIM by hand
 
 As this version is still under development you have to start all the components by hand
 (even if a systemd service is provided and installed, but start manually is more safe at the moment)
