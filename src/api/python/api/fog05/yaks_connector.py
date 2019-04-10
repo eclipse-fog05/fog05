@@ -445,6 +445,15 @@ class GAD(object):
         p = self.get_node_fdu_info_path(sysid, tenantid, nodeid, fduid)
         return self.ws.remove(p)
 
+    def get_fdu_nodes(self, sysid, tenantid, fduid):
+        s = self.get_node_fdu_info_path(sysid, tenantid, "*", fduid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            return []
+        else:
+            xs = map(lambda x: self.extract_nodeid_from_path(x[0]), res)
+            return list(xs)
+
     def get_network_port(self, sysid, tenantid, portid):
         s = self.get_network_port_info_path(sysid, tenantid, portid)
         kvs = self.ws.get(s)

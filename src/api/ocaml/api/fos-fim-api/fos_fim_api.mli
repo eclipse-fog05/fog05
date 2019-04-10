@@ -59,6 +59,7 @@ module FDU : sig
   val migrate : string -> string -> string -> ?wait:bool -> api -> bool Lwt.t
   val info_node : string -> string -> api -> FTypesRecord.fdu  Lwt.t
   val list_node : string -> api -> (FTypesRecord.fdu list) Lwt.t
+  val get_nodes : string -> api -> (string list) Lwt.t
   val info : string -> api -> FTypes.fdu Lwt.t
   val instance_info : string -> string -> api -> FTypesRecord.fdu Lwt.t
   val list : api -> (FTypes.fdu list) Lwt.t

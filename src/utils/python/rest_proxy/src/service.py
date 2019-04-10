@@ -113,6 +113,17 @@ def fdu_pause(fdu_id, node_id):
 def fdu_resume(fdu_id, node_id):
     return json.dumps({'result':fos_api.fdu.resume(fdu_id, node_id, wait=True)})
 
+
+@app.route('/fdu/get_nodes/<fdu_id>', methods=['GET'])
+def fdu_get_nodes(fdu_id):
+    return json.dumps(fos_api.fdu.get_nodes(fdu_id))
+
+
+@app.route('/fdu/list_node/<node_id>', methods=['GET'])
+def fdu_node_list(node_id):
+    return json.dumps(fos_api.fdu.node_id(node_id))
+
+
 @app.route('/fdu/info/<fdu_id>', methods=['GET'])
 def fdu_info(fdu_id):
     return json.dumps(fos_api.fdu.info(fdu_id))
