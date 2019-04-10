@@ -868,7 +868,9 @@ class LinuxBridge(NetworkPlugin):
         vlid = 0
         for x in hashdata:
             vlid += x
-        return (vlid % max_id) + min_id
+        vlanid = (vlid % max_id) + min_id
+        self.logger.info('__get_vlan_id()', 'Range : {} - {} ID: {}'.format(min_id, max_id, vlanid))
+        return vlanid
 
 
 def read_file(file_path):
