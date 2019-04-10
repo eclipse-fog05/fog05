@@ -744,6 +744,26 @@ class FIMAPI(object):
         def instance_info(self, fdu_uuid, node_uuid):
             return self.connector.glob.actual.get_node_fdu(self.sysid, self.tenantid, node_uuid, fdu_uuid)
 
+        def get_nodes(self, fdu_uuid):
+            '''
+
+                List of nodes where the fdu is running
+                :param fdu_uuid fdu you want to find the nodes
+                :return: node_uuid list
+
+            '''
+            return self.connector.glob.actual.get_fdu_nodes(self.sysid, self.tenantid, fdu_uuid)
+
+        def list_node(self, node_uuid):
+            '''
+
+                List of fdu in the node
+                :param node_uuid node you want to list the fdus
+                :return: fdu_uuid list
+
+            '''
+            return self.connector.glob.actual.get_node_fdus(self.sysid, self.tenantid, node_uuid)
+
         def list(self, node_uuid='*'):
             '''
 

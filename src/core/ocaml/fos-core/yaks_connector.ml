@@ -557,6 +557,16 @@ module MakeGAD(P: sig val prefix: string end) = struct
       let _,v = List.hd kvs in
       Lwt.return @@ Fos_im.FTypesRecord.fdu_of_string (Yaks.Value.to_string v)
 
+  let get_fdu_nodes sysid tenantid fduid connector =
+    MVar.read connector >>= fun connector ->
+    let s = Yaks.Selector.of_path @@ get_node_fdu_info_path sysid tenantid "*" fduid in
+    Yaks.Workspace.get s connector.ws
+    >>= fun kvs ->
+    match kvs with
+    | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("get_node_fdu_info received empty data!!") ))
+    | _ ->
+      Lwt_list.map_p (fun (k,_) -> Lwt.return (extract_nodeid_from_path k)) kvs
+
   (* Global Network descriptors *)
   let add_network sysid tenantid netid net_info connector =
     let p = get_network_info_path sysid tenantid netid in

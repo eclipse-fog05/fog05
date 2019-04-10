@@ -178,6 +178,15 @@ class FIMAPI(object):
         def migrate(self, fduid, node_uuid, destination_node_uuid):
             pass
 
+        def get_nodes(self, fdu_uuid, node_uuid):
+            url = '{}/fdu/get_nodes/{}'.format(self.base_url, fdu_uuid)
+            return json.loads(str(requests.get(url).content))
+
+        def list_node(self, node_uuid):
+            url = '{}/fdu/list_node/{}'.format(self.base_url, node_uuid)
+            return json.loads(str(requests.get(url).content))
+
+
         def info(self, fdu_uuid):
             url = '{}/fdu/info/{}'.format(self.base_url, fdu_uuid)
             return json.loads(str(requests.get(url).content))
