@@ -59,7 +59,10 @@ class LinuxBridge(NetworkPlugin):
         self.vlan_face = self.configuration.get('vlan_interface', None)
         self.vlan_range = self.configuration.get('vlan_range', [0, VLAN_LIMIT])
 
+        self.wait_dependencies()
         self.logger.info('__init__()', ' Hello from Linux Bridge Plugin')
+
+
 
         self.BASE_DIR = os.path.join(
             self.agent_conf.get('agent').get('path'), 'linuxbridge')

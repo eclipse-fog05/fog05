@@ -6,10 +6,13 @@ After=yaks.target
 [Service]
 Type=simple
 PIDFile=/var/fos/agent.pid
-ExecStart = /etc/fos/agent -c /etc/fos/agent.json
+ExecStart = /etc/fos/agent -c /etc/fos/agent.json -v
 KillMode=process
 Restart=on-failure
 User=fos
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=fos_agent
 [Install]
 WantedBy=multi-user.target
 Alias=fogagent.service

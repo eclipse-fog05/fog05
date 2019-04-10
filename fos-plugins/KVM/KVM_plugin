@@ -49,6 +49,9 @@ class KVM(RuntimePluginFDU):
         self.configuration = manifest.get('configuration',{})
         self.pid = os.getpid()
         self.var = MVar()
+
+        self.wait_dependencies()
+
         self.agent_conf = \
             self.connector.loc.actual.get_node_configuration(self.node)
 

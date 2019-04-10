@@ -16,9 +16,9 @@ else
 	sudo cp ../linuxbridge/__init__.py /etc/fos/plugins/linuxbridge/
 	sudo cp ../linuxbridge/linuxbridge_plugin /etc/fos/plugins/linuxbridge/
 	sudo cp ../linuxbridge/README.md /etc/fos/plugins/linuxbridge/
-	sudo cp /etc/fos/plugins/linuxbridge/fos_linuxbridge.service /lib/systemd/system/
 	sudo ln -sf /etc/fos/plugins/linuxbridge/linuxbridge_plugin /usr/bin/fos_linuxbridge
 endif
+	sudo cp /etc/fos/plugins/linuxbridge/fos_linuxbridge.service /lib/systemd/system/
 
 
 uninstall:

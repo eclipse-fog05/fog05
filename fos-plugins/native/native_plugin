@@ -45,6 +45,8 @@ class Native(RuntimePluginFDU):
         self.pid = os.getpid()
         self.var = MVar()
 
+        self.wait_dependencies()
+
         osinfo = self.connector.loc.actual.get_node_os_info(self.node)
         self.operating_system = osinfo.get('name')
 
