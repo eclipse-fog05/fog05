@@ -10,6 +10,9 @@ ExecStart = /etc/fos/plugins/linux/linux_plugin /etc/fos/plugins/linux/linux_plu
 KillMode=process
 Restart=on-failure
 User=fos
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=fos_linux
 [Install]
 WantedBy=multi-user.target
 Alias=linuxplugin.Service
