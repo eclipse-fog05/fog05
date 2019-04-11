@@ -152,6 +152,9 @@ class LinuxBridge(NetworkPlugin):
             self.node, self.uuid, self.manifest)
 
         self.logger.info('start_runtime()', 'Linux Bridge Plugin - Data Plane (VxLAN) Interface {}'.format(self.overlay_interface))
+        if self.use_vlan:
+            self.logger.info('start_runtime()', 'Linux Bridge Plugin - VLAN Interface {}'.format(self.vlan_face))
+            self.logger.info('start_runtime()', 'Linux Bridge Plugin - VLAN Range {}'.format(self.vlan_range))
         self.logger.info('start_runtime()', 'Linux Bridge Plugin - Started...')
 
         r = self.var.get()
@@ -348,7 +351,7 @@ class LinuxBridge(NetworkPlugin):
 
         properties = {}
         if self.use_vlan:
-            properties.update({'vlan_id': self.__get_vlan_id(net_uuid)})
+            properties.update({'vlan_id': self.__get_vlan_id(net_uuid, self.vlan_range[0], self.vlan_range[1])})
             vlan_id = self.__get_vlan_id(net_uuid, self.vlan_range[0], self.vlan_range[1])
             start_file = self.__generate_vnet_vlan_start_script(n_small_id, net_uuid)
             shutdown_file = self.__generate_vnet_vlan_stop_script(n_small_id)
@@ -503,7 +506,8 @@ class LinuxBridge(NetworkPlugin):
             pid = int(self.call_os_plugin_function('read_file',{'file_path':pid_file, 'root':False}))
 
             dhcp_intf = 'dhcp-{}-e'.format(n_small_id)
-            self.call_os_plugin_function('send_sig_int',{'pid':pid})
+            killcmd = 'sudo kill -9 {}'.format(pid)
+            self.call_os_plugin_function('execute_command',{'command':killcmd,'blocking':True, 'external':True})
             # self.call_os_plugin_function('remove_file',{'file_path':pid_file})
             self.call_os_plugin_function('remove_file',{'file_path':conf})
             self.call_os_plugin_function('remove_file',{'file_path':start_file})
@@ -681,7 +685,7 @@ class LinuxBridge(NetworkPlugin):
 
     def __generate_vnet_vlan_start_script(self, netid, net_uuid):
 
-        vlan_id = self.__get_vlan_id(net_uuid)
+        vlan_id = self.__get_vlan_id(net_uuid, self.vlan_range[0], self.vlan_range[1])
         mcast_addr = self.__get_mcast_addr(net_uuid)
         vintf = '{}.{}'.format(self.vlan_face, vlan_id)
         if not self.check_if_interface_exists(vintf):
@@ -865,7 +869,9 @@ class LinuxBridge(NetworkPlugin):
         vlid = 0
         for x in hashdata:
             vlid += x
-        return (vlid % max_id) + min_id
+        vlanid = (vlid % max_id) + min_id
+        self.logger.info('__get_vlan_id()', 'Range : {} - {} ID: {}'.format(min_id, max_id, vlanid))
+        return vlanid
 
 
 def read_file(file_path):
