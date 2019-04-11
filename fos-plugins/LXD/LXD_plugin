@@ -332,7 +332,7 @@ class LXD(RuntimePluginFDU):
 
                 conf = {'environment.FOSUUID': fdu_uuid,
                         'environment.FOSNODEUUID': self.node,
-                        'limits.cpu': fdu.comp_requirements.get('cpu_min_count'),
+                        'limits.cpu': str(fdu.comp_requirements.get('cpu_min_count')),
                         'limits.memory':'{}MB'.format(int(fdu.comp_requirements.get('ram_size_mb')))
                         }
                 for cp in fdu.get_connection_points():
