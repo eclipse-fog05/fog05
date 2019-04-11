@@ -566,6 +566,7 @@ class Linux(OSPlugin):
     def send_sig_int(self, pid):
         if isinstance(pid, str):
             pid = int(pid)
+        self.logger.error('send_sig_int()', 'OS SIGINT to {}'.format(pid))
         try:
             if self.__check_if_pid_exists(pid) is False:
                 self.logger.error(
@@ -586,6 +587,7 @@ class Linux(OSPlugin):
     def send_sig_kill(self, pid):
         if isinstance(pid, str):
             pid = int(pid)
+        self.logger.error('send_sig_int()', 'OS SIGKILL to {}'.format(pid))
         try:
             if self.__check_if_pid_exists(pid) is False:
                 self.logger.error(

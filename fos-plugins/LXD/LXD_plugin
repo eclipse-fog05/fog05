@@ -331,7 +331,9 @@ class LXD(RuntimePluginFDU):
                         custom_profile_for_fdu.config = user_data
 
                 conf = {'environment.FOSUUID': fdu_uuid,
-                        'environment.FOSNODEUUID': self.node
+                        'environment.FOSNODEUUID': self.node,
+                        'limits.cpu': str(fdu.comp_requirements.get('cpu_min_count')),
+                        'limits.memory':'{}MB'.format(int(fdu.comp_requirements.get('ram_size_mb')))
                         }
                 for cp in fdu.get_connection_points():
                     cp_id = cp.get('uuid')
@@ -821,7 +823,7 @@ class LXD(RuntimePluginFDU):
 
         '''
 
-        template_disk = '{"path":"%s","type":"disk","pool":"%s"}'
+        template_disk = '{"path":"%s","type":"disk","pool":"%s", "size":"%sGB"}'
 
         i = 0
         interfaces = []
@@ -852,7 +854,7 @@ class LXD(RuntimePluginFDU):
         lxd_version = self.conn.host_info['environment']['server_version']
         if version.parse(lxd_version) >= version.parse('2.20'):
             st_n = 'root'
-            st_v = json.loads(str(template_disk % ('/', 'default')))
+            st_v = json.loads(str(template_disk % ('/', 'default', int(fdu.comp_requirements.get('storage_size_gb')))))
             devices.update({st_n: st_v})
             # if fdu.storage is None or len(fdu.storage) == 0:
             #     st_n = 'root'
