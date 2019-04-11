@@ -168,7 +168,7 @@ let agent verbose_flag debug_flag configuration =
     let fdu_uuid = Apero.Option.get @@ Apero.Properties.get "fdu_uuid" props in
     try%lwt
       let%lwt descriptor = Yaks_connector.Global.Actual.get_fdu_info sys_id Yaks_connector.default_tenant_id fdu_uuid state.yaks in
-      let js = FAgentTypes.json_of_string @@ FTypes.string_of_fdu descriptor in
+      let js = FAgentTypes.json_of_string @@ FDU.string_of_descriptor descriptor in
       let eval_res = FAgentTypes.{result = Some js ; error=None} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
@@ -193,7 +193,7 @@ let agent verbose_flag debug_flag configuration =
     let node_uuid = Apero.Option.get @@ Apero.Properties.get "node_uuid" props in
     try%lwt
       let%lwt descriptor = Yaks_connector.Global.Actual.get_node_fdu_info sys_id Yaks_connector.default_tenant_id node_uuid fdu_uuid state.yaks in
-      let js = FAgentTypes.json_of_string @@ FTypesRecord.string_of_fdu descriptor in
+      let js = FAgentTypes.json_of_string @@ FDU.string_of_record descriptor in
       let eval_res = FAgentTypes.{result = Some js ; error=None} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
@@ -227,7 +227,7 @@ let agent verbose_flag debug_flag configuration =
       let%lwt fdu_ids = Yaks_connector.Global.Actual.get_all_fdus sys_id Yaks_connector.default_tenant_id state.yaks in
       let%lwt cps = Lwt_list.filter_map_p (fun e ->
           let%lwt fdu = Yaks_connector.Global.Actual.get_fdu_info sys_id Yaks_connector.default_tenant_id e state.yaks in
-          let%lwt c = Lwt_list.filter_map_p (fun (cp:FTypes.connection_point) ->
+          let%lwt c = Lwt_list.filter_map_p (fun (cp:FDU.connection_point) ->
               let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - eval_get_port_info - %s == %s ? %d " cp.uuid cp_uuid (String.compare cp.uuid  cp_uuid)) in
               if (String.compare cp.uuid cp_uuid) == 0 then  Lwt.return @@ Some cp
               else Lwt.return None
@@ -237,7 +237,7 @@ let agent verbose_flag debug_flag configuration =
       in
       try%lwt
         let cp = List.hd cps in
-        let js = FAgentTypes.json_of_string @@ FTypes.string_of_connection_point cp in
+        let js = FAgentTypes.json_of_string @@ FDU.string_of_connection_point cp in
         let eval_res = FAgentTypes.{result = Some js ; error=None} in
         Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
       with
@@ -288,7 +288,7 @@ let agent verbose_flag debug_flag configuration =
          Yaks_connector.Local.Desired.remove_node_plugin (Apero.Option.get self.configuration.agent.uuid) plid self.yaks >>= Lwt.return
        | None -> Lwt.return_unit)
   in
-  let cb_gd_fdu self (fdu:FTypes.fdu option) (is_remove:bool) (uuid:string option) =
+  let cb_gd_fdu self (fdu:FDU.descriptor option) (is_remove:bool) (uuid:string option) =
     match is_remove with
     | false ->
       (match fdu with
@@ -341,7 +341,7 @@ let agent verbose_flag debug_flag configuration =
          Yaks_connector.Global.Actual.remove_flavor sys_id Yaks_connector.default_tenant_id flvid self.yaks >>= Lwt.return
        | None -> Lwt.return_unit)
   in
-  let cb_gd_node_fdu self (fdu:FTypesRecord.fdu option) (is_remove:bool) (uuid:string option) =
+  let cb_gd_node_fdu self (fdu:FDU.record option) (is_remove:bool) (uuid:string option) =
     match is_remove with
     | false ->
       (match fdu with
@@ -516,7 +516,7 @@ let agent verbose_flag debug_flag configuration =
          Yaks_connector.Global.Actual.remove_node_status sys_id Yaks_connector.default_tenant_id nid self.yaks >>= Lwt.return
        | None -> Lwt.return_unit)
   in
-  let cb_la_node_fdu self (fdu:FTypesRecord.fdu option) (is_remove:bool) (uuid:string option) =
+  let cb_la_node_fdu self (fdu:FDU.record option) (is_remove:bool) (uuid:string option) =
     match is_remove with
     | false ->
       (match fdu with
@@ -537,7 +537,7 @@ let agent verbose_flag debug_flag configuration =
        | None -> Lwt.return_unit)
   in
   (* Constrained Nodes Global *)
-  let cb_gd_cnode_fdu self nodeid (fdu:FTypesRecord.fdu option) (is_remove:bool) (uuid:string option) =
+  let cb_gd_cnode_fdu self nodeid (fdu:FDU.record option) (is_remove:bool) (uuid:string option) =
     match is_remove with
     | false ->
       (match fdu with
@@ -565,7 +565,7 @@ let agent verbose_flag debug_flag configuration =
        | None -> Lwt.return_unit)
   in
   (* Constrained Nodes Local *)
-  let cb_lac_node_fdu self nodeid (fdu:FTypesRecord.fdu option) (is_remove:bool) (uuid:string option) =
+  let cb_lac_node_fdu self nodeid (fdu:FDU.record option) (is_remove:bool) (uuid:string option) =
     match is_remove with
     | false ->
       (match fdu with

@@ -424,7 +424,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     | _ ->
       let _,v = (List.hd res) in
       try
-        Lwt.return @@ FTypes.fdu_of_string (Yaks.Value.to_string v)
+        Lwt.return @@ FDU.descriptor_of_string (Yaks.Value.to_string v)
       with
       | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _ ->
         Lwt.fail @@ FException (`InternalError (`Msg ("Value is not well formatted in get_fdu_info") ))
@@ -433,7 +433,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
   let add_fdu_info sysid tenantid fduid fduinfo connector =
     MVar.read connector >>= fun connector ->
     let p = get_fdu_info_path sysid tenantid fduid in
-    let value = Yaks.Value.StringValue (FTypes.string_of_fdu fduinfo )in
+    let value = Yaks.Value.StringValue (FDU.string_of_descriptor fduinfo )in
     Yaks.Workspace.put p value connector.ws
 
   let remove_fdu_info sysid tenantid fduid connector =
@@ -444,7 +444,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
   let observe_fdu sysid tenantid callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = get_all_fdu_selector sysid tenantid in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback FTypes.fdu_of_string extract_fduid_from_path) s connector.ws in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback FDU.descriptor_of_string extract_fduid_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
@@ -518,14 +518,14 @@ module MakeGAD(P: sig val prefix: string end) = struct
   let observe_node_fdu sysid tenantid nodeid callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = get_node_fdu_selector sysid tenantid nodeid in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback FTypesRecord.fdu_of_string extract_node_fduid_from_path) s connector.ws in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback FDU.record_of_string extract_node_fduid_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
-  let add_node_fdu sysid tenantid nodeid fduid (fduinfo:FTypesRecord.fdu) connector =
+  let add_node_fdu sysid tenantid nodeid fduid (fduinfo:FDU.record) connector =
     MVar.read connector >>= fun connector ->
     let p = get_node_fdu_info_path sysid tenantid nodeid fduid in
-    let value = Yaks.Value.StringValue (Fos_im.FTypesRecord.string_of_fdu fduinfo) in
+    let value = Yaks.Value.StringValue (FDU.string_of_record fduinfo) in
     Yaks.Workspace.put p value connector.ws
 
   let get_node_fdus sysid tenantid nodeid connector =
@@ -539,7 +539,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
       Lwt_list.map_p (fun (k,v) -> Lwt.return (
           extract_nodeid_from_path k,
           extract_node_fduid_from_path k,
-          Fos_im.FTypesRecord.fdu_of_string (Yaks.Value.to_string v) )) kvs
+          FDU.record_of_string (Yaks.Value.to_string v) )) kvs
 
   let remove_node_fdu sysid tenantid nodeid fduid connector =
     MVar.read connector >>= fun connector ->
@@ -555,7 +555,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     | [] -> Lwt.fail @@ FException (`InternalError (`Msg ("get_node_fdu_info received empty data!!") ))
     | _ ->
       let _,v = List.hd kvs in
-      Lwt.return @@ Fos_im.FTypesRecord.fdu_of_string (Yaks.Value.to_string v)
+      Lwt.return @@ FDU.record_of_string (Yaks.Value.to_string v)
 
   let get_fdu_nodes sysid tenantid fduid connector =
     MVar.read connector >>= fun connector ->
@@ -1137,21 +1137,21 @@ module MakeLAD(P: sig val prefix: string end) = struct
   let observe_node_runtime_fdu nodeid pluginid callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = get_node_runtime_fdus_selector nodeid pluginid in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback FTypesRecord.fdu_of_string extract_fduid_from_path)  s connector.ws in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback FDU.record_of_string extract_fduid_from_path)  s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
   let observe_node_fdu nodeid callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = get_node_fdus_selector nodeid in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback FTypesRecord.fdu_of_string extract_fduid_from_path) s connector.ws in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback FDU.record_of_string extract_fduid_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
   let add_node_fdu nodeid pluginid fduid fduinfo connector =
     MVar.read connector >>= fun connector ->
     let p = get_node_fdu_info_path nodeid pluginid fduid in
-    let value = Yaks.Value.StringValue (FTypesRecord.string_of_fdu fduinfo) in
+    let value = Yaks.Value.StringValue (FDU.string_of_record fduinfo) in
     Yaks.Workspace.put p value connector.ws
 
   let remove_node_fdu nodeid pluginid fduid connector =
@@ -1439,21 +1439,21 @@ module MakeCLAD(P: sig val prefix: string end) = struct
   let observe_node_runtime_fdu nodeid pluginid callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = get_node_runtime_fdus_selector nodeid pluginid in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback FTypesRecord.fdu_of_string extract_fduid_from_path) s connector.ws in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback FDU.record_of_string extract_fduid_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
   let observe_node_fdu nodeid callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = get_node_fdus_selector nodeid in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback FTypesRecord.fdu_of_string extract_fduid_from_path) s connector.ws in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback FDU.record_of_string extract_fduid_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
   let add_node_fdu nodeid pluginid fduid fduinfo connector =
     MVar.read connector >>= fun connector ->
     let p = get_node_fdu_info_path nodeid pluginid fduid in
-    let value = Yaks.Value.StringValue (Fos_im.FTypesRecord.string_of_fdu fduinfo) in
+    let value = Yaks.Value.StringValue (FDU.string_of_record fduinfo) in
     Yaks.Workspace.put p value connector.ws
 
   let remove_node_fdu nodeid pluginid fduid connector =

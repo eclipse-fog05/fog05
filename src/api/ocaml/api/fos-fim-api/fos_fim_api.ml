@@ -86,7 +86,7 @@ end
 
 module FDU = struct
 
-  let onboard (fdu:FTypes.fdu) ?(wait=true) api =
+  let onboard (fdu:FDU.descriptor) ?(wait=true) api =
     ignore wait;
     let fduid = fdu.uuid in
     Yaks_connector.Global.Desired.add_fdu_info api.sysid api.tenantid fduid fdu api.yconnector
@@ -100,7 +100,8 @@ module FDU = struct
   let define fduid nodeid ?(wait=true) api =
     ignore wait;
     let%lwt _ = Yaks_connector.Global.Actual.get_fdu_info api.sysid api.tenantid fduid api.yconnector in
-    let record = Fos_im.FTypesRecord.{ fdu_uuid = fduid;  status = `DEFINE; interfaces =  []; connection_points = []; error_code = None; migration_properties = None; hypervisor_info = Fos_im.JSON.create_empty () } in
+    let ar = FDU.{fpga = []; gpu= []} in
+    let record = FDU.{ fdu_uuid = fduid; node = nodeid; uuid= None; status = `DEFINE; interfaces =  []; connection_points = []; error_code = None; migration_properties = None; hypervisor_info = Fos_im.JSON.create_empty (); accelerators = ar; io_ports = [] } in
     Yaks_connector.Global.Desired.add_node_fdu api.sysid api.tenantid nodeid fduid record api.yconnector
     >>= fun _ -> Lwt.return_true
 
