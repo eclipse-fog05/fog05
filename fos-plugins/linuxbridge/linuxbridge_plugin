@@ -506,7 +506,7 @@ class LinuxBridge(NetworkPlugin):
             pid = int(self.call_os_plugin_function('read_file',{'file_path':pid_file, 'root':False}))
 
             dhcp_intf = 'dhcp-{}-e'.format(n_small_id)
-            self.call_os_plugin_function('send_sig_int',{'pid':pid})
+            self.call_os_plugin_function('send_sig_kill',{'pid':pid})
             # self.call_os_plugin_function('remove_file',{'file_path':pid_file})
             self.call_os_plugin_function('remove_file',{'file_path':conf})
             self.call_os_plugin_function('remove_file',{'file_path':start_file})
