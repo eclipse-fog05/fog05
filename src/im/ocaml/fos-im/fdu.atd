@@ -19,7 +19,7 @@ type address_information <ocaml module="Fos_types"> = abstract
 (* Descriptor Related Types *)
 
 type descriptor = {
-  uuid : string;
+  ?uuid : string option;
   name : string;
   ?description : string option;
   ?image : image option;
