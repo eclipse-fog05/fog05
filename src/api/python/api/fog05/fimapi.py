@@ -407,12 +407,10 @@ class FIMAPI(object):
             fdu_info = self.connector.glob.actual.get_node_fdu_instance(
                 self.sysid, self.tenantid, '*', instanceid)
             while fdu_info is None:
-                    time.sleep(4)
                     fdu_info = self.connector.glob.actual.get_node_fdu_instance(
                 self.sysid, self.tenantid, '*', instanceid)
             es = fdu_info.get('status')
             while es.upper() not in [state, 'ERROR']:
-                time.sleep(4)
                 fdu_info = self.connector.glob.actual.get_node_fdu_instance(
                 self.sysid, self.tenantid, '*', instanceid)
                 es = fdu_info.get('status')

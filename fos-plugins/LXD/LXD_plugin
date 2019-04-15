@@ -282,8 +282,8 @@ class LXD(RuntimePluginFDU):
                                                      'FDU {} is not in DEFINED state'.format(instance_uuid))
         else:
             try:
-                self.logger.info('undefine_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(fdu.name.replace('_','-')[:63]))
-                c = self.conn.containers.get(fdu.name.replace('_','-')[:63])
+                self.logger.info('undefine_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(instance_uuid))
+                c = self.conn.containers.get(instance_uuid)
                 c.delete()
             except Exception as e:
                 self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Undefine a Container Exception raised {}'.format(e))
@@ -406,7 +406,7 @@ class LXD(RuntimePluginFDU):
             self.logger.info('configure_fdu()', '[ DONE ] LXD Plugin - Configure a Container uuid {}'.format(instance_uuid))
 
             # TODO: monitoring TBA
-            mt = threading.Thread(target=self.__monitor_instance, args=(fdu_uuid, fdu.uuid),daemon=True)
+            mt = threading.Thread(target=self.__monitor_instance, args=(fdu_uuid, instance_uuid, fdu.uuid),daemon=True)
             mt.start()
             self.mon_th.update({instance_uuid:mt})
             self.logger.info('run_fdu()', '[ DONE ] LXD Plugin - Starting a Monitoring of {}'.format(instance_uuid))
