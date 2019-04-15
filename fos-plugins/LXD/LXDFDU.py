@@ -73,6 +73,7 @@ class LXDFDU(FDU):
         self.conf = None
         self.profiles = None
         self.configuration = None
+        self.name = 'c{}'.format(uuid)
 
     @staticmethod
     def from_record(record):

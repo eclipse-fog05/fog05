@@ -283,7 +283,7 @@ class LXD(RuntimePluginFDU):
         else:
             try:
                 self.logger.info('undefine_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(instance_uuid))
-                c = self.conn.containers.get(instance_uuid)
+                c = self.conn.containers.get(fdu.name)
                 c.delete()
             except Exception as e:
                 self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Undefine a Container Exception raised {}'.format(e))
@@ -416,7 +416,7 @@ class LXD(RuntimePluginFDU):
             self.logger.info('configure_fdu()', '[ DONE ] LXD Plugin - Configure a Container uuid {}'.format(instance_uuid))
 
             # TODO: monitoring TBA
-            mt = threading.Thread(target=self.__monitor_instance, args=(fdu_uuid, instance_uuid, fdu.uuid),daemon=True)
+            mt = threading.Thread(target=self.__monitor_instance, args=(fdu_uuid, instance_uuid, fdu.name),daemon=True)
             mt.start()
             self.mon_th.update({instance_uuid:mt})
             self.logger.info('run_fdu()', '[ DONE ] LXD Plugin - Starting a Monitoring of {}'.format(instance_uuid))
@@ -479,7 +479,7 @@ class LXD(RuntimePluginFDU):
             self.current_fdus.update({instance_uuid: fdu})
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid, record)
             self.logger.info('run_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(instance_uuid))
-            c = self.conn.containers.get(instance_uuid)
+            c = self.conn.containers.get(fdu.name)
             c.start()
             while c.status != 'Running':
                 try:
@@ -553,7 +553,7 @@ class LXD(RuntimePluginFDU):
         else:
             fdu_uuid = fdu.fdu_uuid
             self.logger.info('undefine_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(instance_uuid))
-            c = self.conn.containers.get(instance_uuid)
+            c = self.conn.containers.get(fdu.name)
             c.freeze()
 
             fdu.on_pause()
@@ -577,7 +577,7 @@ class LXD(RuntimePluginFDU):
         else:
             fdu_uuid = fdu.fdu_uuid
             self.logger.info('undefine_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(fdu.name.replace('_','-')[:63]))
-            c = self.conn.containers.get(fdu.name.replace('_','-')[:63])
+            c = self.conn.containers.get(fdu.name)
             c.unfreeze()
 
             fdu.on_resume()
@@ -767,7 +767,7 @@ class LXD(RuntimePluginFDU):
 
         #     while True:
         #         try:
-        #             c = self.conn.containers.get(fdu.name.replace('_','-')[:63])
+        #             c = self.conn.containers.get(fdu.name)
         #             c.start()
         #             if c.status.upper() == 'running'.upper():
         #                 break
@@ -802,7 +802,7 @@ class LXD(RuntimePluginFDU):
                 record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_id)
                 if record.get('status') not in ['LAND', 'TAKE_OFF','MIGRATE']:
                     self.logger.info('__monitor_fdu()','[ INFO ] LXD Plugin - Updating status of {}'.format(fdu_uuid))
-                    c = self.conn.containers.get(instance_name)
+                    c = self.conn.containers.get(fdu.name)
                     cs = c.state()
                     detailed_state = {}
                     c_net = cs.network
@@ -910,7 +910,7 @@ class LXD(RuntimePluginFDU):
 
     def __generate_container_dict(self, fdu):
         # valid_host_name = fdu.name.replace('_','-')[:63]
-        conf = {'name': fdu.uuid, 'profiles': fdu.profiles,
+        conf = {'name': fdu.name, 'profiles': fdu.profiles,
                 'source': {'type': 'image', 'alias': fdu.image.get('uuid')}}
         self.logger.info('__generate_container_dict()', 'LXD Plugin - Container Configuration {}'.format(conf))
         return conf
