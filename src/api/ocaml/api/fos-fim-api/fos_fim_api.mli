@@ -53,12 +53,13 @@ module FDU : sig
 
   (* FDU instances *)
   val define : string-> string -> ?wait:bool -> api -> string Lwt.t
-  val undeifne : string -> ?wait:bool -> api -> string Lwt.t
+  val undefine : string -> ?wait:bool -> api -> string Lwt.t
   val configure : string -> ?wait:bool -> api -> string Lwt.t
   val clean : string -> ?wait:bool -> api -> string Lwt.t
   val start : string -> ?wait:bool -> api -> string Lwt.t
   val stop : string -> ?wait:bool -> api -> string Lwt.t
   val pause : string -> ?wait:bool -> api -> string Lwt.t
+  val resume : string -> ?wait:bool -> api -> string Lwt.t
   val migrate : string -> string -> ?wait:bool -> api -> string Lwt.t
   (*  All-in-one functions  *)
   val instantiate : string -> string -> ?wait:bool -> api -> string Lwt.t

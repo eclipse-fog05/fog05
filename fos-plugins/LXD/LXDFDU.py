@@ -20,33 +20,74 @@ from fog05.interfaces.FDU import FDU
 
 class LXDFDU(FDU):
 
-    def __init__(self, uuid, name, interfaces, connection_points, image,
-                 comp_requirements, configuration, ssh_keys):
+    # def __init__(self, uuid,fdu_uuid,node, name, interfaces, connection_points, image,
+    #              comp_requirements, configuration, ssh_keys):
 
+    #     super(LXDFDU, self).__init__()
+    #     self.uuid = uuid
+    #     self.fdu_uuid = fdu_uuid
+    #     self.node = node
+    #     self.name = name
+    #     self.interfaces = interfaces
+    #     self.cps = connection_points
+    #     self.image = image
+    #     self.configuration = configuration
+    #     self.ssh_key = ssh_keys
+    #     self.comp_requirements = comp_requirements
+    #     self.devices = None
+    #     self.conf = None
+    #     self.profiles = None
+
+    # @staticmethod
+    # def from_descriptor(desciptor):
+    #     fdu = LXDFDU(desciptor.get('uuid'),
+    #                  desciptor.get('fdu_uuid'),
+    #                  desciptor.get('node'),
+    #                  desciptor.get('name'),
+    #                  desciptor.get('interfaces'),
+    #                  desciptor.get('connection_points'),
+    #                  desciptor.get('image'),
+    #                  desciptor.get('computation_requirements'),
+    #                  desciptor.get('configuration'),
+    #                  desciptor.get('ssh-key'))
+    #     return fdu
+
+    def __init__(self, uuid,fdu_uuid,node, status, accelerators, io_ports,
+                 interfaces, connection_points, hypervisor_info):
         super(LXDFDU, self).__init__()
         self.uuid = uuid
-        self.name = name
+        self.fdu_uuid = fdu_uuid
+        self.node = node
+        self.status = status
+        self.accelerators = accelerators
+        self.io_ports = io_ports
         self.interfaces = interfaces
         self.cps = connection_points
-        self.image = image
-        self.configuration = configuration
-        self.ssh_key = ssh_keys
-        self.comp_requirements = comp_requirements
+        self.hv_info = hypervisor_info
+        self.error_code = 0
+        self.error_msg = ''
+        self.migration_properties = None
+        self.image = None
+        self.comp_requirements = None
         self.devices = None
         self.conf = None
         self.profiles = None
+        self.configuration = None
 
     @staticmethod
-    def from_descriptor(desciptor):
-        fdu = LXDFDU(desciptor.get('uuid'),
-                     desciptor.get('name'),
-                     desciptor.get('interfaces'),
-                     desciptor.get('connection_points'),
-                     desciptor.get('image'),
-                     desciptor.get('computation_requirements'),
-                     desciptor.get('configuration'),
-                     desciptor.get('ssh-key'))
+    def from_record(record):
+        fdu = LXDFDU(record.get('uuid'),
+                     record.get('fdu_uuid'),
+                     record.get('node'),
+                     record.get('status'),
+                     record.get('accelerators'),
+                     record.get('io_ports'),
+                     record.get('interfaces'),
+                     record.get('connection_points'),
+                     record.get('hypervisor_info'))
         return fdu
+
+
 
     def on_defined(self):
         self.state = State.DEFINED

@@ -232,6 +232,7 @@ type record = {
   interfaces : interface_record list; (* List of interfaces *)
   connection_points : connection_point_record list; (* List of connection points *)
   ?error_code : int option;  (* To be filled is status is error *)
+  ?error_msg : string option;
   ?migration_properties : migration_properties option; (* Information to be used during migartion process *)
   hypervisor_info : json; (* This depends on the HV used *)
   accelerators : accelerators_record; (* Infomation about the accelerators used by this instance *)

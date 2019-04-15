@@ -26,6 +26,14 @@ type api = {
 }
 
 
+let rec remove_duplicates nl ol =
+  match ol with
+  | [] -> nl
+  | hd::tl ->
+    (match List.mem hd nl with
+     | false -> remove_duplicates (nl@[hd]) tl
+     | true -> remove_duplicates nl tl)
+
 
 module Manifest = struct
 
@@ -173,7 +181,7 @@ module FDU = struct
     let%lwt _ = Yaks_connector.Global.Actual.get_fdu_info api.sysid api.tenantid fduid api.yconnector in
     let ar = FDU.{fpga = []; gpu= []} in
     let instance_uuid = Apero.Uuid.to_string @@ Apero.Uuid.make () in
-    let record = FDU.{uuid = Some instance_uuid; fdu_uuid = fduid; node = nodeid; status = `DEFINE; interfaces =  []; connection_points = []; error_code = None; migration_properties = None; hypervisor_info = Fos_im.JSON.create_empty (); accelerators = ar; io_ports = [] } in
+    let record = FDU.{uuid = Some instance_uuid; fdu_uuid = fduid; node = nodeid; status = `DEFINE; interfaces =  []; connection_points = []; error_code = None; error_msg = None; migration_properties = None; hypervisor_info = Fos_im.JSON.create_empty (); accelerators = ar; io_ports = [] } in
     let%lwt _ = Yaks_connector.Global.Desired.add_node_fdu api.sysid api.tenantid nodeid fduid instance_uuid record api.yconnector in
     match wait with
     | true ->
@@ -181,7 +189,7 @@ module FDU = struct
       Lwt.return instance_uuid
     | false -> Lwt.return instance_uuid
 
-  let undeifne instanceid ?(wait=true) api =
+  let undefine instanceid ?(wait=true) api =
     let%lwt nodeid = Yaks_connector.Global.Actual.get_fdu_instance_node api.sysid api.tenantid "*" instanceid api.yconnector in
     let nodeid =
       match nodeid with
@@ -216,6 +224,9 @@ module FDU = struct
   let pause instanceid ?(wait=true) api =
     change_fdu_instance_state instanceid `PAUSE `PAUSE wait api
 
+  let resume instanceid ?(wait=true) api =
+    change_fdu_instance_state instanceid `RESUME `RUN wait api
+
   let migrate insanceid destination ?(wait=true) api =
     Printf.printf "%s %s %b" insanceid destination wait;
     ignore api.yconnector;
@@ -229,15 +240,16 @@ module FDU = struct
 
 
   let instantiate fduid nodeid ?(wait=true) api =
-    ignore nodeid;
-    ignore wait;
-    ignore api;
-    Lwt.return fduid
+    define fduid nodeid ~wait:true api
+    >>= fun instanceid -> configure instanceid ~wait:true api
+    >>= fun instanceid -> start instanceid ~wait:wait api
+    >>= Lwt.return
 
   let terminate instanceid ?(wait=true) api =
-    ignore wait;
-    ignore api;
-    Lwt.return instanceid
+    stop instanceid ~wait:true api
+    >>= fun instanceid -> clean instanceid ~wait:true api
+    >>= fun instanceid -> undefine instanceid ~wait:wait api
+    >>= Lwt.return
 
 
   let get_nodes fduid api =
@@ -268,8 +280,7 @@ module FDU = struct
   let instance_list fduid ?(nodeid="*") api =
     Yaks_connector.Global.Actual.get_node_fdu_instances api.sysid api.tenantid nodeid fduid api.yconnector
     >>= fun res ->
-    let nids = res |> List.map (fun  (n,_,_,_ )-> n) in
-    let nids = List.filter (fun n -> List.mem n nids ) nids in
+    let nids = res |> List.map (fun  (n,_,_,_ )-> n) |> remove_duplicates [] in
     Lwt.return @@ List.map (fun nid ->
         let iids = (List.filter (fun (n,_,_,_) -> n == nid) res ) |> List.map (fun (_,_,iid,_) -> iid ) in
         (nid, iids)
