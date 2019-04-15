@@ -701,7 +701,8 @@ class LAD(object):
 
     def get_node_runtime_fdus_subscriber_selector(self, nodeid, pluginid):
         return Constants.create_path(
-            [self.prefix, nodeid, 'runtimes', pluginid, 'fdu', '**'])
+            [self.prefix, nodeid, 'runtimes', pluginid, 'fdu', '*',
+            'instances','*','info'])
 
     def get_node_fdu_info_path(self, nodeid, pluginid, fduid, instanceid):
         return Constants.create_path(
