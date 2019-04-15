@@ -311,7 +311,7 @@ class LXD(RuntimePluginFDU):
                 self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Undefine a Container Exception raised {}'.format(e))
 
             self.current_fdus.pop(instance_uuid, None)
-            fdu_uuid  = fdu.get('fdu_uuid')
+            fdu_uuid  = fdu.fdu_uuid
             self.connector.loc.actual.remove_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
             self.logger.info('undefine_fdu()', '[ DONE ] LXD Plugin - Undefine a Container uuid {}'.format(instance_uuid))
             return True
