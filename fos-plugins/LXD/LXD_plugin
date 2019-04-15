@@ -392,7 +392,17 @@ class LXD(RuntimePluginFDU):
             self.logger.info('configure_fdu()', '[ DONE ] LXD Plugin - Generating container configuration...')
 
             self.logger.info('configure_fdu()', '[ INFO ] LXD Plugin - Creating Container...')
-            self.conn.containers.create(config, wait=True)
+            try:
+                self.conn.containers.create(config, wait=True)
+            except LXDAPIException as e:
+                self.logger.error('configure_fdu()', 'Error {}'.format(e))
+                self.logger.error('configure_fdu()', 'Config {}'.format(config))
+                container_info =self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
+                container_info.update({'status': 'ERROR'})
+                container_info.update({'error_code': 2})
+                container_info.update({'error_msg': '{}'.format(e)})
+                self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid, container_info)
+                return
             self.logger.info('undefine_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(fdu.uuid))
             self.logger.info('configure_fdu()', '[ DONE ] LXD Plugin - Creating Container...')
 
