@@ -523,7 +523,7 @@ class LXD(RuntimePluginFDU):
         else:
             fdu_uuid = fdu.fdu_uuid
             self.logger.info('undefine_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(instance_uuid))
-            c = self.conn.containers.get(instance_uuid)
+            c = self.conn.containers.get(fdu.name)
             # self.mon_th.pop(fdu_uuid)
             c.stop(force=False, wait=True)
             c.sync()
