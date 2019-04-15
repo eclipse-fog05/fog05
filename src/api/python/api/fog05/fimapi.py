@@ -824,7 +824,7 @@ class FIMAPI(object):
             #     elist = self.list(node_id)
             #     entities.update({node_id: elist.get(node_id)})
             # return entities
-            return self.connector.glob.actual.get_node_fdus(self.sysid, self.tenantid, node_uuid)
+            return self.connector.glob.actual.get_all_fdus(self.sysid, self.tenantid)
 
 
     class Image(object):

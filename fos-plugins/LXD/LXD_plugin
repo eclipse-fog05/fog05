@@ -525,11 +525,21 @@ class LXD(RuntimePluginFDU):
             self.logger.info('undefine_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(instance_uuid))
             c = self.conn.containers.get(fdu.name)
             # self.mon_th.pop(fdu_uuid)
-            c.stop(force=False, wait=True)
-            c.sync()
-
-            while c.status != 'Stopped':
+            try:
+                c.stop(force=True, wait=True)
                 c.sync()
+
+                while c.status != 'Stopped':
+                    c.sync()
+            except Exception as e:
+                    record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
+                    self.logger.info('run_fdu()', '[ ERR ] LXD Plugin - {}'.format(e))
+                    record.update({'status': 'ERROR'})
+                    record.update({'error_code': 4})
+                    record.update({'error_msg': '{}'.format(e)})
+                    self.current_fdus.update({instance_uuid: fdu})
+                    self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid, record)
+                    return
 
             fdu.on_stop()
             self.current_fdus.update({instance_uuid: fdu})
