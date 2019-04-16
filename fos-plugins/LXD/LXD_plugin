@@ -437,8 +437,8 @@ class LXD(RuntimePluginFDU):
             fdu_uuid = fdu.fdu_uuid
             i = 0
             for intf in fdu.get_interfaces():
-                intf_name = intf.get('name')
-                if intf.get('virtual_interface').get('intf_type').upper() not in ['PHYSICAL','BRIDGED']:
+                intf_name = intf.get('vintf_name')
+                if intf.get('if_type').upper() not in ['PHYSICAL','BRIDGED']:
                     intf_id = 'lxd-{}-{}'.format(fdu.get_short_id(), i)
                     self.call_nw_plugin_function('delete_virtual_interface',{'intf_id':intf_id})
                 else:
@@ -750,9 +750,9 @@ class LXD(RuntimePluginFDU):
         #             res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
         #     i = 0
         #     for intf in fdu.get_interfaces():
-        #         intf_name = intf.get('name')
+        #         intf_name = intf.get('vintf_name')
         #         mac = intf.get('mac_address', self.__generate_random_mac())
-        #         if intf.get('virtual_interface').get('intf_type').upper() in ['PHYSICAL','BRIDGED']:
+        #         if intf.get('if_type').upper() in ['PHYSICAL','BRIDGED']:
         #             real_intf_name = intf.get('virtual_interface').get('vpci')
         #             if self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['ethernet']:
         #                 self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
