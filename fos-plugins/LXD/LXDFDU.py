@@ -20,38 +20,6 @@ from fog05.interfaces.FDU import FDU
 
 class LXDFDU(FDU):
 
-    # def __init__(self, uuid,fdu_uuid,node, name, interfaces, connection_points, image,
-    #              comp_requirements, configuration, ssh_keys):
-
-    #     super(LXDFDU, self).__init__()
-    #     self.uuid = uuid
-    #     self.fdu_uuid = fdu_uuid
-    #     self.node = node
-    #     self.name = name
-    #     self.interfaces = interfaces
-    #     self.cps = connection_points
-    #     self.image = image
-    #     self.configuration = configuration
-    #     self.ssh_key = ssh_keys
-    #     self.comp_requirements = comp_requirements
-    #     self.devices = None
-    #     self.conf = None
-    #     self.profiles = None
-
-    # @staticmethod
-    # def from_descriptor(desciptor):
-    #     fdu = LXDFDU(desciptor.get('uuid'),
-    #                  desciptor.get('fdu_uuid'),
-    #                  desciptor.get('node'),
-    #                  desciptor.get('name'),
-    #                  desciptor.get('interfaces'),
-    #                  desciptor.get('connection_points'),
-    #                  desciptor.get('image'),
-    #                  desciptor.get('computation_requirements'),
-    #                  desciptor.get('configuration'),
-    #                  desciptor.get('ssh-key'))
-    #     return fdu
-
     def __init__(self, uuid,fdu_uuid,node, status, accelerators, io_ports,
                  interfaces, connection_points, hypervisor_info):
         super(LXDFDU, self).__init__()
