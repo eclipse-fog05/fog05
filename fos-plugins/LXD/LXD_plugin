@@ -789,7 +789,7 @@ class LXD(RuntimePluginFDU):
             record.update({'status': 'LAND'})
             self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Record {}'.format(record))
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid, record)
-            self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Destination Node is ready for {}'.format(fdu_uuid))
+            self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Destination Node is ready for {}'.format(instance_uuid))
 
             # DESTINATION IS READY WAINING CONTAINER
 
@@ -807,12 +807,12 @@ class LXD(RuntimePluginFDU):
                 time.sleep(2)
 
             fdu.on_start()
-            self.current_fdus.update({fdu_uuid: fdu})
+            self.current_fdus.update({instance_uuid: fdu})
             record.pop('migration_properties')
             record.update({'status': 'RUN'})
             self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Record {}'.format(record))
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid,record)
-            self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Migrate a Container uuid {}'.format(fdu_uuid))
+            self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Migrate a Container uuid {}'.format(instance_uuid))
 
 
 
