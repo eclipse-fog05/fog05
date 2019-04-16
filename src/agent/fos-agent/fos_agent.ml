@@ -200,8 +200,10 @@ let agent verbose_flag debug_flag configuration =
     let node_uuid = Apero.Option.get @@ Apero.Properties.get "node_uuid" props in
     let instanceid = Apero.Option.get @@ Apero.Properties.get "instance_uuid" props in
     try%lwt
+      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - eval_get_node_fdu_info - Search for FDU Info") in
       let%lwt descriptor = Yaks_connector.Global.Actual.get_node_fdu_info sys_id Yaks_connector.default_tenant_id node_uuid fdu_uuid instanceid state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
       let js = FAgentTypes.json_of_string @@ FDU.string_of_record  descriptor in
+      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - eval_get_node_fdu_info - INFO %s" (FAgentTypes.string_of_json js)) in
       let eval_res = FAgentTypes.{result = Some js ; error=None} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
