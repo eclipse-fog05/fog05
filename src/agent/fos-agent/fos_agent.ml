@@ -377,6 +377,26 @@ let agent verbose_flag debug_flag configuration =
           | _ ->
             let pl = List.hd matching_plugins in
             let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-FDU - Calling %s plugin" pl.name) in
+            (* Here we should at least update the record interfaces and connection points *)
+            let%lwt ncpids = Lwt_list.map_p (fun (e:FDU.connection_point) -> Lwt.return (e.uuid, Apero.Uuid.to_string @@ Apero.Uuid.make ())) fdu_d.connection_points in
+            let%lwt rcps = Lwt_list.map_p (fun (e:FDU.connection_point) ->
+                let rcpid = List.assoc e.uuid ncpids in
+                let cpr = FDU.{uuid =  rcpid; status = `CREATE; cp_uuid = e.uuid; veth_face_name = None; br_name = None; properties = None } in
+                Lwt.return cpr
+              ) fdu_d.connection_points
+            in
+            let%lwt rfaces = Lwt_list.map_p (fun (e:FDU.interface) ->
+                let facer = FDU.{vintf_name = e.name; status = `CREATE; if_type = e.virtual_interface.intf_type; phy_face = None; cp_id = None; veth_face_name=None; properties=None} in
+                let facer = match e.cp_id with
+                  | Some cpid ->
+                    let ncpid = List.assoc cpid ncpids in
+                    {facer with cp_id = Some ncpid}
+                  | None -> facer
+                in
+                Lwt.return facer
+              ) fdu_d.interfaces
+            in
+            let fdu = {fdu with interfaces = rfaces; connection_points = rcps} in
             Yaks_connector.Local.Desired.add_node_fdu (Apero.Option.get self.configuration.agent.uuid) pl.uuid fdu.fdu_uuid (Apero.Option.get fdu.uuid) fdu self.yaks >>= Lwt.return
          )
 
@@ -426,7 +446,7 @@ let agent verbose_flag debug_flag configuration =
           let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-CP - ##############") in
           let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-CP - CP Updated! Agent will update actual store and call the right plugin!") in
           let%lwt _ = Yaks_connector.Global.Actual.add_port sys_id Yaks_connector.default_tenant_id cp.uuid cp self.yaks in
-          let record = FDU.{cp_uuid = cp.uuid; status = `CREATE; properties = None; veth_face_name = None; br_name = None} in
+          let record = FDU.{cp_uuid = cp.uuid; uuid = cp.uuid; status = `CREATE; properties = None; veth_face_name = None; br_name = None} in
           Yaks_connector.Local.Desired.add_node_port (Apero.Option.get self.configuration.agent.uuid) net_p record.cp_uuid record self.yaks
           >>= Lwt.return
         | None -> Lwt.return_unit)

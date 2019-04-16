@@ -785,7 +785,7 @@ class FIMAPI(object):
                 insts = []
                 for ii in infos:
                     if ii[0] == n:
-                        insts.append(ii[3])
+                        insts.append(ii[2])
                 res.update({n:insts})
             return res
 

@@ -247,18 +247,20 @@ type accelerators_record = {
 type interface_record = {
   vintf_name : string;
   status : net_state;
-  ?phy_face : string option;
   if_type : vintf_t;
+  ?phy_face : string option;
   ?cp_id : string option;
   ?veth_face_name: string option;
   ?properties : json option;
 }
 
 type connection_point_record = {
-  cp_uuid: string;
+
+  uuid: string;
+  status : net_state;
+  cp_uuid : string; (* Reference to CP uuid inside descriptor *)
   ?veth_face_name : string option;
   ?br_name : string option;
-  status : net_state;
   ?properties : json option;
 }
 

@@ -166,8 +166,6 @@ class LXD(RuntimePluginFDU):
         # TODO this as to be fixed
         fdu.comp_requirements = descriptor.get('computation_requirements')
         fdu.image = descriptor.get('image')
-        fdu.cps = descriptor.get('connection_points')
-        fdu.interfaces = descriptor.get('interfaces')
         ####
 
         if self.is_uuid(fdu.get_image_uri()):
@@ -177,11 +175,10 @@ class LXD(RuntimePluginFDU):
             if img_info is None:
                 self.logger.error(
                     'define_fdu()', '[ ERRO ] LXD Plugin - Cannot find image {}'.format(fdu.get_image_uri()))
-                self.logger.error('define_fdu()', 'Error {}'.format(e))
                 self.current_fdus.update({instance_id: fdu})
                 lxd_info = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_id)
                 lxd_info.update({'status': 'ERROR'})
-                lxd_info.update({'error_msg':'{}'.format(e)})
+                lxd_info.update({'error_msg':'cannot find image'})
                 lxd_info.update({'error_code':0})
                 self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_id, lxd_info)
                 self.logger.info('define_fdu()', '[ ERRO ] LXD Plugin - Container uuid: {}'.format(fdu_uuid))
@@ -353,15 +350,16 @@ class LXD(RuntimePluginFDU):
                         }
                 for cp in fdu.get_connection_points():
                     cp_id = cp.get('uuid')
-                    cp_record = {
-                        'cp_uuid':cp_id,
-                        'status':'CREATE'
-                    }
-                    self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id,cp_record)
+                    # cp_record = {
+                    #     'cp_uuid':cp_id,
+                    #     'status':'CREATE'
+                    # }
+                    self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id, cp)
                     res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
                     while res is None:
                         res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
-                    record.get('connection_points').append(cp_id)
+                    cp.update({'status':'CONNECTED'})
+                    # record.get('connection_points').append(cp_id)
                 dev, interfaces = self.__generate_custom_profile_devices_configuration(fdu)
                 record.update({'interfaces':interfaces})
                 self.logger.info('configure_fdu()', '[ INFO ] Profile devices {}'.format(dev))

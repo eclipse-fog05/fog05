@@ -434,7 +434,7 @@ class GAD(object):
         kvs = self.ws.get(p)
         if len(kvs) == 0:
             return []
-        xs = map(lambda x: (self.extract_node_fduid_from_path(x[0]),
+        xs = map(lambda x: (self.extract_nodeid_from_path(x[0]),
                     self.extract_node_fduid_from_path(x[0]),
                     self.extract_node_instanceid_from_path(x[0]),
                     json.loads(kvs[0][1].get_value())), kvs)
