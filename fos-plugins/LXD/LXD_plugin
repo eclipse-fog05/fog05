@@ -181,7 +181,7 @@ class LXD(RuntimePluginFDU):
                 lxd_info.update({'error_msg':'cannot find image'})
                 lxd_info.update({'error_code':0})
                 self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_id, lxd_info)
-                self.logger.info('define_fdu()', '[ ERRO ] LXD Plugin - Container uuid: {}'.format(fdu_uuid))
+                self.logger.info('define_fdu()', '[ ERRO ] LXD Plugin - Container uuid: {}'.format(instance_id))
                 # self.__write_error_entity(fdu_uuid, 'Image not found!')
 
             fdu.image.update({'uri':img_info.get('uri')})
@@ -298,6 +298,7 @@ class LXD(RuntimePluginFDU):
             except Exception as e:
                 self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Undefine a Container Exception raised {}'.format(e))
 
+            # TODO check if other instance for the same FDU are present before removing image
             try:
                 img = self.conn.images.get_by_alias(instance_uuid)
                 img.delete()
@@ -773,7 +774,7 @@ class LXD(RuntimePluginFDU):
                 intf_name = intf.get('vintf_name')
                 mac = intf.get('mac_address', self.__generate_random_mac())
                 if intf.get('if_type').upper() in ['PHYSICAL','BRIDGED']:
-                    real_intf_name = intf.get('virtual_interface').get('vpci')
+                    real_intf_name = intf.get('phy_face')
                     if self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['ethernet']:
                         self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
                     elif self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['wireless']:
