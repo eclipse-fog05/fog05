@@ -618,7 +618,7 @@ class LXD(RuntimePluginFDU):
             self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Source Node wait destination...')
             self.wait_destination_ready(fdu_uuid, instance_uuid, destination)
 
-            self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Migrating...')
+            self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Start Migrating...')
 
             # ACTUAL MIGRATION #
             #
@@ -627,6 +627,8 @@ class LXD(RuntimePluginFDU):
             local_ip = self.get_local_mgmt_address().get('v4')
 
             self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Local IP {} Destination IP {}'.format(dst_ip,local_ip))
+
+             self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Migrating...')
 
             path_cert = os.path.join(self.DIR, 'templates', 'lxd.crt')
             path_key = os.path.join(self.DIR, 'templates', 'lxd.key')
