@@ -57,9 +57,10 @@ class RuntimePluginFDU(Plugin):
         fname = 'get_fdu_info'
         return self.call_agent_function(fname, parameters)
 
-    def wait_destination_ready(self, fduid, destinationid):
+    def wait_destination_ready(self, fduid, instanceid, destinationid):
         parameter = {
             'fdu_uuid':fduid,
+            'instance_uuid':instanceid,
             'node_uuid':destinationid
         }
         fname = 'get_node_fdu_info'

@@ -597,202 +597,218 @@ class LXD(RuntimePluginFDU):
             self.logger.info('resume_fdu()', '[ DONE ] LXD Plugin - Resume a Container uuid {}'.format(instance_uuid))
 
 
-    # TODO fix this with correct ids...
-    def migrate_fdu(self, fdu_uuid):
-        pass
-        # record = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid)
-        # destination = record.get('migration_properties').get('destination')
-        # if destination != self.node:
-        #     self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Source Node preparation...')
-        #     fdu = self.current_fdus.get(fdu_uuid, None)
-        #     if fdu_uuid is None:
-        #         self.logger.error('migrate_fdu','LXD not in Runtime!!')
-        #         return
-        #     record = self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
-        #     self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Source Node wait destination...')
-        #     self.wait_destination_ready(fdu_uuid, destination)
 
-        #     self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Migrating...')
+    def migrate_fdu(self, instance_uuid):
+        record = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, '*', instance_uuid)
+        fdu_uuid = record.get('fdu_uuid')
+        destination = record.get('migration_properties').get('destination')
+        if destination != self.node:
+            self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Source Node preparation...')
+            fdu = self.current_fdus.get(instance_uuid, None)
+            if fdu is None:
+                self.logger.error('migrate_fdu','LXD not in Runtime!!')
+                record.update({'status': 'ERROR'})
+                record.update({'error_code': 4})
+                record.update({'error_msg': 'FDU instance not present'})
+                self.current_fdus.update({instance_uuid: fdu})
+                self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid, record)
+                return
 
-        #     # ACTUAL MIGRATION #
-        #     #
-        #     dst_ip = self.get_destination_node_mgmt_net(destination).get('ipv4_address')
-        #     # this can also be v6 both information are available
-        #     local_ip = self.get_local_mgmt_address().get('v4')
+            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid, record)
+            self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Source Node wait destination...')
+            self.wait_destination_ready(fdu_uuid, instance_uuid, destination)
 
-        #     path_cert = os.path.join(self.DIR, 'templates', 'lxd.crt')
-        #     path_key = os.path.join(self.DIR, 'templates', 'lxd.key')
+            self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Migrating...')
 
-        #     remote_client = Client(endpoint='https://{}:8443'.format(dst_ip), cert=(path_cert, path_key), verify=False)
-        #     local_client = Client(endpoint='https://{}:8443'.format(local_ip), cert=(path_cert, path_key), verify=False)
+            # ACTUAL MIGRATION #
+            #
+            dst_ip = self.get_destination_node_mgmt_net(destination).get('ipv4_address')
+            # this can also be v6 both information are available
+            local_ip = self.get_local_mgmt_address().get('v4')
 
-        #     remote_client.authenticate('fos')
-        #     local_client.authenticate('fos')
-        #     # TODO this should go in the plugin configuration, same for certificate and key
+            path_cert = os.path.join(self.DIR, 'templates', 'lxd.crt')
+            path_key = os.path.join(self.DIR, 'templates', 'lxd.key')
 
-        #     cont = local_client.containers.get(fdu.name.replace('_','-')[:63])
+            remote_client = Client(endpoint='https://{}:8443'.format(dst_ip), cert=(path_cert, path_key), verify=False)
+            local_client = Client(endpoint='https://{}:8443'.format(local_ip), cert=(path_cert, path_key), verify=False)
 
-        #     try:
-        #         cont.stop(force=False, wait=True)
-        #         cont.sync()
-        #         cont.migrate(remote_client, wait=True)
-        #     except LXDAPIException as e:
-        #         self.logger.info('migrate_fdu()', ' LXD Plugin - LXD error {}'.format(e))
-        #         cont.delete()
+            remote_client.authenticate('fos')
+            local_client.authenticate('fos')
+            # TODO this should go in the plugin configuration, same for certificate and key
 
-        #     self.logger.info('migrate_fdu()', ' LXD Plugin - Migration Source: Migration succeeds')
-        #     remote_client = None
-        #     local_client = None
-        #     fdu.on_stop()
-        #     self.current_fdus.update({fdu_uuid: fdu})
-        #     self.clean_fdu(fdu_uuid)
-        #     self.undefine_fdu(fdu_uuid)
-        #     self.logger.info('migrate_fdu()', ' LXD Plugin - Source is Clean')
+            cont = local_client.containers.get(fdu.name.replace('_','-')[:63])
 
-        #     #
-        #     #
-        # else:
-        #     record.update({'status': 'DEFINE'})
-        #     self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
-        #     descriptor = self.get_fdu_descriptor(fdu_uuid)
-        #     fdu = LXDFDU.from_descriptor(descriptor)
+            try:
+                cont.stop(force=False, wait=True)
+                cont.sync()
+                cont.migrate(remote_client, wait=True)
+            except LXDAPIException as e:
+                self.logger.info('migrate_fdu()', ' LXD Plugin - LXD error {}'.format(e))
+                cont.delete()
 
-        #     self.logger.info('migrate_fdu()', '[ INFO ] LXD Plugin - Destination Node creating image and flavor...')
+            self.logger.info('migrate_fdu()', ' LXD Plugin - Migration Source: Migration succeeds')
+            remote_client = None
+            local_client = None
+            fdu.on_stop()
+            self.current_fdus.update({instance_uuid: fdu})
+            self.clean_fdu(instance_uuid)
+            self.undefine_fdu(instance_uuid)
+            self.logger.info('migrate_fdu()', ' LXD Plugin - Source is Clean')
 
-        #     if self.is_uuid(fdu.get_image_uri()):
-        #         img_info = self.images.get(fdu.get_image_uri(), None)
-        #         if img_info is None:
-        #             self.logger.error('migrate_fdu()', '[ ERRO ] LXD Plugin - Cannot find image {}'.format(fdu.get_image_uri()))
-        #         # self.__write_error_entity(fdu_uuid, 'Image not found!')
-        #         fdu.image.update({'file':img_info.get('base_image')})
-        #         fdu.image.update({'uuid':img_info.get('uuid')})
-        #     else:
-        #         image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
+            #
+            #
+        else:
+            record.update({'status': 'DEFINE'})
+            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid, record)
+            descriptor = self.get_fdu_descriptor(fdu_uuid)
+            fdu = LXDFDU.from_record(record)
 
-        #         if not self.call_os_plugin_function('file_exists',{'file_path':image_name}):
-        #             if fdu.get_image_uri().startswith('http'):
-        #                 self.call_os_plugin_function('download_file',{'url':fdu.get_image_uri(),'file_path':image_name})
-        #             elif fdu.get_image_uri().startswith('file://'):
-        #                 cmd = 'cp {} {}'.format(fdu.get_image_uri()[len('file://'):], image_name)
-        #                 self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
-        #         img_info = {}
-        #         try:
-        #             img_sum = self.call_os_plugin_function('checksum',{'file_path':image_name})
-        #             if self.conn.images.exists(img_sum):
-        #                 self.logger.info('migrate_fdu()', '[ INFO ] LXD Plugin - Image with this fingerprint already exists, attaching it to container')
-        #                 img =  self.conn.images.get(img_sum)
-        #                 img_uuid = img.aliases[0].get('name')
-        #                 img_info.update({'uuid': img_uuid})
-        #                 img_info.update({'name': '{}_img'.format(fdu.name)})
-        #                 img_info.update({'base_image': image_name})
-        #                 img_info.update({'type': 'lxd'})
-        #                 img_info.update({'format': fdu.get_image_format()})
-        #             else:
-        #                 self.logger.info('migrate_fdu()', '[ INFO ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name)))
-        #                 image_data = self.read_binary_file(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name))
-        #                 self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name)))
+            # TODO this as to be fixed
+            fdu.comp_requirements = descriptor.get('computation_requirements')
+            fdu.image = descriptor.get('image')
+            ####
 
-        #                 self.logger.info('migrate_fdu()', '[ INFO ] LXD Plugin - Creating image with alias {}'.format(fdu_uuid))
-        #                 try:
-        #                     img = self.conn.images.create(image_data, public=True, wait=True)
-        #                     img.add_alias(fdu_uuid, description=fdu.name)
-        #                 except LXDAPIException as e:
-        #                     # TODO: check this error with errno
-        #                     if '{}'.format(e) == 'Image with same fingerprint already exists':
-        #                         self.logger.info('migrate_fdu()', '[ INFO ] LXD Plugin - Image with same fingerprint already exists')
-        #                         pass
-        #                 self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Created image with alias {}'.format(fdu_uuid))
-        #                 img_info.update({'uuid': fdu_uuid})
-        #                 img_info.update({'name': '{}_img'.format(fdu.name)})
-        #                 img_info.update({'base_image': image_name})
-        #                 img_info.update({'type': 'lxd'})
-        #                 img_info.update({'format': fdu.get_image_format()})
-        #                 self.images.update({fdu_uuid: img_info})
-        #                 self.connector.loc.actual.add_node_image(self.node, self.uuid, fdu_uuid, img_info)
+            self.logger.info('migrate_fdu()', '[ INFO ] LXD Plugin - Destination Node creating image and flavor...')
 
-        #             fdu.image.update({'file': image_name})
-        #             fdu.image.update({'uuid': img_info.get('uuid')})
+            if self.is_uuid(fdu.get_image_uri()):
+                img_info = self.images.get(fdu.get_image_uri(), None)
+                if img_info is None:
+                    self.logger.error('migrate_fdu()', '[ ERRO ] LXD Plugin - Cannot find image {}'.format(fdu.get_image_uri()))
+                    # TODO write error
+
+                fdu.image.update({'file':img_info.get('base_image')})
+                fdu.image.update({'uuid':img_info.get('uuid')})
+            else:
+                image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
+
+                if not self.call_os_plugin_function('file_exists',{'file_path':image_name}):
+                    if fdu.get_image_uri().startswith('http'):
+                        self.call_os_plugin_function('download_file',{'url':fdu.get_image_uri(),'file_path':image_name})
+                    elif fdu.get_image_uri().startswith('file://'):
+                        cmd = 'cp {} {}'.format(fdu.get_image_uri()[len('file://'):], image_name)
+                        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
+                img_info = {}
+                try:
+                    img_sum = self.call_os_plugin_function('checksum',{'file_path':image_name})
+                    if self.conn.images.exists(img_sum):
+                        self.logger.info('migrate_fdu()', '[ INFO ] LXD Plugin - Image with this fingerprint already exists, attaching it to container')
+                        img =  self.conn.images.get(img_sum)
+                        img_uuid = img.aliases[0].get('name')
+                        img_info.update({'uuid': img_uuid})
+                        img_info.update({'name': '{}_img'.format(fdu.name)})
+                        img_info.update({'base_image': image_name})
+                        img_info.update({'type': 'lxd'})
+                        img_info.update({'format': fdu.get_image_format()})
+                    else:
+                        self.logger.info('migrate_fdu()', '[ INFO ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name)))
+                        image_data = self.read_binary_file(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name))
+                        self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Loading image data from: {}'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, image_name)))
+
+                        self.logger.info('migrate_fdu()', '[ INFO ] LXD Plugin - Creating image with alias {}'.format(fdu_uuid))
+                        try:
+                            img = self.conn.images.create(image_data, public=True, wait=True)
+                            img.add_alias(fdu_uuid, description=fdu.name)
+                        except LXDAPIException as e:
+                            # TODO: check this error with errno
+                            if '{}'.format(e) == 'Image with same fingerprint already exists':
+                                self.logger.info('migrate_fdu()', '[ INFO ] LXD Plugin - Image with same fingerprint already exists')
+                                pass
+                        self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Created image with alias {}'.format(fdu_uuid))
+                        img_info.update({'uuid': fdu_uuid})
+                        img_info.update({'name': '{}_img'.format(fdu.name)})
+                        img_info.update({'base_image': image_name})
+                        img_info.update({'type': 'lxd'})
+                        img_info.update({'format': fdu.get_image_format()})
+                        self.images.update({fdu_uuid: img_info})
+                        self.connector.loc.actual.add_node_image(self.node, self.uuid, fdu_uuid, img_info)
+
+                    fdu.image.update({'file': image_name})
+                    fdu.image.update({'uuid': img_info.get('uuid')})
 
 
 
-        #         except LXDAPIException as e:
-        #             self.logger.error('define_fdu()', 'Error {}'.format(e))
-        #             self.current_fdus.update({fdu_uuid: fdu})
-        #             lxd_info = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid)
-        #             self.logger.info('migrate_fdu()', '[ ERRO ] LXD Plugin - Container uuid: {}'.format(fdu_uuid))
+                except LXDAPIException as e:
+                    self.logger.error('define_fdu()', 'Error {}'.format(e))
+                    record.update({'status': 'ERROR'})
+                    record.update({'error_msg':'{}'.format(e)})
+                    record.update({'error_code':0})
+                    self.current_fdus.update({instance_uuid: fdu})
+                    self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid, record)
+                    self.logger.info('define_fdu()', '[ ERRO ] LXD Plugin - Container uuid: {}'.format(fdu_uuid))
 
-        #     cpu = fdu.comp_requirements.get('cpu_min_count')
-        #     mem = fdu.comp_requirements.get('ram_size_mb')
-        #     disk_size = fdu.comp_requirements.get('storage_size_gb')
-        #     flavor = {
-        #         'name': '{}_flavor'.format(fdu.name),
-        #         'uuid': fdu_uuid,
-        #         'cpu': cpu,
-        #         'memory': mem,
-        #         'disk_size': disk_size,
-        #         'type':'lxd'
-        #         }
-        #     fdu.comp_requirements.update({'uuid': fdu_uuid})
+            # cpu = fdu.comp_requirements.get('cpu_min_count')
+            # mem = fdu.comp_requirements.get('ram_size_mb')
+            # disk_size = fdu.comp_requirements.get('storage_size_gb')
+            # flavor = {
+            #     'name': '{}_flavor'.format(fdu.name),
+            #     'uuid': fdu_uuid,
+            #     'cpu': cpu,
+            #     'memory': mem,
+            #     'disk_size': disk_size,
+            #     'type':'lxd'
+            #     }
+            # fdu.comp_requirements.update({'uuid': fdu_uuid})
 
-        #     fl_uuid  = flavor.get('uuid')
-        #     self.flavors.update({fl_uuid: flavor})
-        #     self.connector.loc.actual.add_node_flavor(self.node, self.uuid, fl_uuid, flavor)
+            # fl_uuid  = flavor.get('uuid')
+            # self.flavors.update({fl_uuid: flavor})
+            # self.connector.loc.actual.add_node_flavor(self.node, self.uuid, fl_uuid, flavor)
 
-        #     # vNetwork configurations
-        #     for cp in fdu.get_connection_points():
-        #         cp_id = cp.get('uuid')
-        #         cp_record = {
-        #             'cp_uuid':cp_id,
-        #             'status':'CREATE'}
-        #         self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id,cp_record)
-        #         res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
-        #         while res is None:
-        #             res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
-        #     i = 0
-        #     for intf in fdu.get_interfaces():
-        #         intf_name = intf.get('vintf_name')
-        #         mac = intf.get('mac_address', self.__generate_random_mac())
-        #         if intf.get('if_type').upper() in ['PHYSICAL','BRIDGED']:
-        #             real_intf_name = intf.get('virtual_interface').get('vpci')
-        #             if self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['ethernet']:
-        #                 self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
-        #             elif self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['wireless']:
-        #                 self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
-        #             else:
-        #                 pass
-        #         else:
-        #             intf_id = 'lxd-{}-{}'.format(fdu.get_short_id(), i)
-        #             intf_data = self.call_nw_plugin_function('create_virtual_interface', {'intf_id':intf_id, 'descriptor': intf})
-        #             self.logger.info('migrate_fdu()','LXD Plugin - Interface info {}'.format(intf_data))
-        #         i += 1
+            # vNetwork configurations
+            for cp in fdu.get_connection_points():
+                cp_id = cp.get('uuid')
+                # cp_record = {
+                #     'cp_uuid':cp_id,
+                #     'status':'CREATE'}
+                self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id,cp)
+                res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
+                while res is None:
+                    res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
+                cp.update({'status':'CONNECTED'})
+            i = 0
+            for intf in fdu.get_interfaces():
+                intf_name = intf.get('vintf_name')
+                mac = intf.get('mac_address', self.__generate_random_mac())
+                if intf.get('if_type').upper() in ['PHYSICAL','BRIDGED']:
+                    real_intf_name = intf.get('virtual_interface').get('vpci')
+                    if self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['ethernet']:
+                        self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
+                    elif self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['wireless']:
+                        self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
+                    else:
+                        pass
+                else:
+                    intf_id = 'lxd-{}-{}'.format(fdu.get_short_id(), i)
+                    intf_data = self.call_nw_plugin_function('create_virtual_interface', {'intf_id':intf_id, 'descriptor': intf})
+                    self.logger.info('migrate_fdu()','LXD Plugin - Interface info {}'.format(intf_data))
+                i += 1
 
-        #     record.update({'status': 'LAND'})
-        #     self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Record {}'.format(record))
-        #     self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
-        #     self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Destination Node is ready for {}'.format(fdu_uuid))
+            record.update({'status': 'LAND'})
+            self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Record {}'.format(record))
+            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid, record)
+            self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Destination Node is ready for {}'.format(fdu_uuid))
 
-        #     # DESTINATION IS READY WAINING CONTAINER
+            # DESTINATION IS READY WAINING CONTAINER
 
-        #     while True:
-        #         try:
-        #             c = self.conn.containers.get(fdu.name)
-        #             c.start()
-        #             if c.status.upper() == 'running'.upper():
-        #                 break
-        #             else:
-        #                 c.sync()
-        #                 self.logger.info('migrate_fdu()',  ' LXD Plugin - Container in this host but not running')
-        #         except Exception as e:
-        #            self.logger.info('migrate_fdu()', ' LXD Plugin - Container not already in this host')
-        #         time.sleep(2)
+            while True:
+                try:
+                    c = self.conn.containers.get(fdu.name)
+                    c.start()
+                    if c.status.upper() == 'running'.upper():
+                        break
+                    else:
+                        c.sync()
+                        self.logger.info('migrate_fdu()',  ' LXD Plugin - Container in this host but not running')
+                except Exception as e:
+                   self.logger.info('migrate_fdu()', ' LXD Plugin - Container not already in this host')
+                time.sleep(2)
 
-        #     fdu.on_start()
-        #     self.current_fdus.update({fdu_uuid: fdu})
-        #     record.pop('migration_properties')
-        #     record.update({'status': 'RUN'})
-        #     self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Record {}'.format(record))
-        #     self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, record)
-        #     self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Migrate a Container uuid {}'.format(fdu_uuid))
+            fdu.on_start()
+            self.current_fdus.update({fdu_uuid: fdu})
+            record.pop('migration_properties')
+            record.update({'status': 'RUN'})
+            self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Record {}'.format(record))
+            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid,record)
+            self.logger.info('migrate_fdu()', '[ DONE ] LXD Plugin - Migrate a Container uuid {}'.format(fdu_uuid))
 
 
 
