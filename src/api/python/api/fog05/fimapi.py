@@ -18,13 +18,14 @@
 # import json
 # import fnmatch
 # import time
+import uuid
 from fog05.yaks_connector import Yaks_Connector
 from fog05.interfaces import Constants
 # from jsonschema import validate, ValidationError
 # from enum import Enum
 # from fog05 import Schemas
 from mvar import MVar
-
+import time
 
 class FIMAPI(object):
     '''
@@ -388,7 +389,7 @@ class FIMAPI(object):
             self.sysid = sysid
             self.tenantid = tenantid
 
-        def __wait_node_fdu_state_change(self, node_uuid, fdu_uuid, state):
+        def __wait_node_fdu_state_change(self, instanceid, state):
             '''
 
             Function used to wait if an instance changest state
@@ -403,25 +404,21 @@ class FIMAPI(object):
 
             '''
 
-            local_var = MVar()
-
-            def cb(fdu_info):
-                local_var.put(fdu_info)
-
-            subid = self.connector.glob.actual.observe_node_fdu(
-                self.sysid, self.tenantid, node_uuid, fdu_uuid, cb)
-
-            fdu_info = local_var.get()
+            fdu_info = self.connector.glob.actual.get_node_fdu_instance(
+                self.sysid, self.tenantid, '*', instanceid)
+            while fdu_info is None:
+                    fdu_info = self.connector.glob.actual.get_node_fdu_instance(
+                self.sysid, self.tenantid, '*', instanceid)
             es = fdu_info.get('status')
             while es.upper() not in [state, 'ERROR']:
-                fdu_info = local_var.get()
+                fdu_info = self.connector.glob.actual.get_node_fdu_instance(
+                self.sysid, self.tenantid, '*', instanceid)
                 es = fdu_info.get('status')
-            self.connector.glob.actual.unsubscribe(subid)
-            res = {
-                'fdu_uuid': fdu_uuid,
-                'status': es
-            }
-            return res
+
+            if es.upper() == 'ERROR':
+                raise ValueError('Unable to change state to {} for FDU Instance: {} Errno: {} Msg: {}'.format(
+                    state, instanceid,fdu_info.get('error_code'), fdu_info.get('error_msg')))
+            return fdu_info
 
         def __wait_fdu(self, fdu_uuid):
             '''
@@ -455,193 +452,227 @@ class FIMAPI(object):
             }
             return res
 
-        def onboard(self, descriptor, wait=False):
+        def onboard(self, descriptor, wait=True):
             fduid = descriptor.get('uuid')
+            if fduid is None:
+                fduid = '{}'.format(uuid.uuid4())
             res = self.connector.glob.desired.add_fdu_info(
                 self.sysid, self.tenantid, fduid, descriptor)
             if wait:
                 self.__wait_fdu(fduid)
             return res
 
-        def offload(self, fdu_uuid, wait=False):
+        def offload(self, fdu_uuid, wait=True):
             res = self.connector.glob.desired.remove_fdu_info(
                 self.sysid, self.tenantid, fdu_uuid)
 
-        def define(self, fduid, node_uuid, wait=False):
+        def define(self, fduid, node_uuid, wait=True):
             '''
 
-            Defines an atomic entity in a node, this method will check
-             the manifest before sending the definition to the node
+            Defines an FDU instance in a node, this method will check
+             the descriptor before sending the definition to the node
 
             :param manifest: dictionary representing the atomic entity manifest
             :param node_uuid: destination node uuid
             :param wait: if wait that the definition is complete before
              returning
-            :return: boolean
+            :return: instance id
             '''
             desc = self.connector.glob.actual.get_fdu_info(
                 self.sysid, self.tenantid, fduid)
             if desc is None:
                 raise ValueError('FDU with this UUID not found in the catalog')
-
+            inst_id = '{}'.format(uuid.uuid4())
             record = {'fdu_uuid': fduid,
+                      'node':node_uuid,
+                      'uuid':inst_id,
                       'status': 'DEFINE',
                       'interfaces': [],
+                      'io_ports':[],
+                      'accelerators':{'fpga':[], 'gpu':[]},
                       'connection_points': [],
                       'hypervisor_info' : {}
                       }
             res = self.connector.glob.desired.add_node_fdu(
-                self.sysid, self.tenantid, node_uuid, fduid, record)
+                self.sysid, self.tenantid, node_uuid, fduid, inst_id ,record)
             if wait:
-                self.__wait_node_fdu_state_change(node_uuid, fduid, 'DEFINE')
-            return res
+                self.__wait_node_fdu_state_change(inst_id,  'DEFINE')
+            return inst_id
 
-        def undefine(self, fdu_uuid, node_uuid, wait=False):
+
+        def undefine(self, instanceid, wait=True):
             '''
 
-            This method undefine an atomic entity in a node
+            This method undefine an FDU instance from a None
 
-            :param entity_uuid: atomic entity you want to undefine
-            :param node_uuid: destination node
+            :param instanceid: FDU instance you want to undefine
             :param wait: if wait before returning that the entity is undefined
-            :return: boolean
+            :return: instanceid
             '''
+            node = self.connector.glob.actual.get_fdu_instance_node(
+                self.sysid, self.tenantid, instanceid)
+            if node is None:
+                raise ValueError('Unable to find node for this instanceid')
 
-            record = self.connector.glob.actual.get_node_fdu(
-                self.sysid, self.tenantid, node_uuid, fdu_uuid
-            )
+            record = self.connector.glob.actual.get_node_fdu_instance(
+                self.sysid, self.tenantid, node, instanceid)
             record.update({'status': 'UNDEFINE'})
 
             fduid = record.get('fdu_uuid')
-            return self.connector.glob.desired.add_node_fdu(
-                self.sysid, self.tenantid, node_uuid, fduid, record)
+            self.connector.glob.desired.add_node_fdu(
+                self.sysid, self.tenantid, node, fduid, instanceid, record)
+            return instanceid
 
-        def configure(self, fdu_uuid, node_uuid, wait=False):
+        def configure(self, instanceid, wait=True):
             '''
 
-            Configure an atomic entity, creation of the instance
+            Configure an FDU instance
 
-            :param fdu_uuid: FDU you want to configure
-            :param node_uuid: destination node
-            :param instance_uuid: optional if present will use that uuid
-             for the atomic entity instance otherwise will generate a new one
-            :param wait: optional wait before returning
-            :return: instance uuid or none in case of error
+            :param instanceid: FDU instance you want to configure
+            :param wait: make the function blocking
+            :return: instanceid
             '''
-            record = self.connector.glob.actual.get_node_fdu(
-                self.sysid, self.tenantid, node_uuid, fdu_uuid
-            )
+            node = self.connector.glob.actual.get_fdu_instance_node(
+                self.sysid, self.tenantid, instanceid)
+            if node is None:
+                raise ValueError('Unable to find node for this instanceid')
+
+            record = self.connector.glob.actual.get_node_fdu_instance(
+                self.sysid, self.tenantid, node, instanceid)
             record.update({'status': 'CONFIGURE'})
-
+            fduid = record.get('fdu_uuid')
             res = self.connector.glob.desired.add_node_fdu(
-                self.sysid, self.tenantid, node_uuid, fdu_uuid, record)
+                self.sysid, self.tenantid, node, fduid, instanceid, record)
             if wait:
-                self.__wait_node_fdu_state_change(
-                    node_uuid, fdu_uuid, 'CONFIGURE')
+                self.__wait_node_fdu_state_change(instanceid,  'CONFIGURE')
             return res
 
-        def clean(self, fdu_uuid, node_uuid, wait=False):
+        def clean(self, instanceid, wait=True):
             '''
 
-            Clean an atomic entity instance, this will destroy the instance
+            Clean an FDU instance
 
-            :param entity_uuid: entity for which you want to clean an instance
-            :param node_uuid: destionation node
-            :param instance_uuid: instance you want to clean
-            :param wait: optional wait before returning
-            :return: boolean
-
+            :param instanceid: FDU instance you want to clean
+            :param wait: make the function blocking
+            :return: instanceid
             '''
 
-            record = self.connector.glob.actual.get_node_fdu(
-                self.sysid, self.tenantid, node_uuid, fdu_uuid
-            )
+            node = self.connector.glob.actual.get_fdu_instance_node(
+                self.sysid, self.tenantid, instanceid)
+            if node is None:
+                raise ValueError('Unable to find node for this instanceid')
+
+            record = self.connector.glob.actual.get_node_fdu_instance(
+                self.sysid, self.tenantid, node, instanceid)
             record.update({'status': 'CLEAN'})
-
+            fduid = record.get('fdu_uuid')
             res = self.connector.glob.desired.add_node_fdu(
-                self.sysid, self.tenantid, node_uuid, fdu_uuid, record)
+                self.sysid, self.tenantid, node, fduid, instanceid, record)
             if wait:
-                self.__wait_node_fdu_state_change(
-                    node_uuid, fdu_uuid, 'DEFINE')
+                self.__wait_node_fdu_state_change(instanceid,  'DEFINE')
             return res
 
-        def run(self, fdu_uuid, node_uuid, wait=False):
+        def start(self, instanceid, wait=True):
             '''
 
-            Starting and atomic entity instance
+            Start an FDU instance
 
-            :param fdu_uuid: entity for which you want to run the instance
-            :param node_uuid: destination node
-            :param instance_uuid: instance you want to start
-            :param wait: optional wait before returning
-            :return: boolean
+            :param instanceid: FDU instance you want to start
+            :param wait: make the function blocking
+            :return: instanceid
             '''
 
-            record = self.connector.glob.actual.get_node_fdu(
-                self.sysid, self.tenantid, node_uuid, fdu_uuid
-            )
+            node = self.connector.glob.actual.get_fdu_instance_node(
+                self.sysid, self.tenantid, instanceid)
+            if node is None:
+                raise ValueError('Unable to find node for this instanceid')
+
+            record = self.connector.glob.actual.get_node_fdu_instance(
+                self.sysid, self.tenantid, node, instanceid)
             record.update({'status': 'RUN'})
-
+            fduid = record.get('fdu_uuid')
             res = self.connector.glob.desired.add_node_fdu(
-                self.sysid, self.tenantid, node_uuid, fdu_uuid, record)
+                self.sysid, self.tenantid, node, fduid, instanceid, record)
             if wait:
-                self.__wait_node_fdu_state_change(node_uuid, fdu_uuid, 'RUN')
+                self.__wait_node_fdu_state_change(instanceid,  'RUN')
             return res
 
-        def stop(self, fdu_uuid, node_uuid, wait=False):
+        def stop(self, instanceid, wait=True):
             '''
 
-            Shutting down an atomic entity instance
+            Stop an FDU instance
 
-            :param entity_uuid: entity for which you want to\ shutdown the instance
-            :param node_uuid: destination node
-            :param instance_uuid: instance you want to shutdown
-            :param wait: optional wait before returning
-            :return: boolean
+            :param instanceid: FDU instance you want to stop
+            :param wait: make the function blocking
+            :return: instanceid
             '''
 
-            record = self.connector.glob.actual.get_node_fdu(
-                self.sysid, self.tenantid, node_uuid, fdu_uuid
-            )
+            node = self.connector.glob.actual.get_fdu_instance_node(
+                self.sysid, self.tenantid, instanceid)
+            if node is None:
+                raise ValueError('Unable to find node for this instanceid')
+
+            record = self.connector.glob.actual.get_node_fdu_instance(
+                self.sysid, self.tenantid, node, instanceid)
             record.update({'status': 'STOP'})
-
+            fduid = record.get('fdu_uuid')
             res = self.connector.glob.desired.add_node_fdu(
-                self.sysid, self.tenantid, node_uuid, fdu_uuid, record)
+                self.sysid, self.tenantid, node, fduid, instanceid, record)
             if wait:
-                self.__wait_node_fdu_state_change(
-                    node_uuid, fdu_uuid, 'CONFIGURE')
+                self.__wait_node_fdu_state_change(instanceid,  'CONFIGURE')
             return res
 
-        def pause(self, entity_uuid, node_uuid, instance_uuid, wait=False):
+        def pause(self, instanceid, wait=True):
             '''
 
-            Pause the exectution of an atomic entity instance
+            Pause an FDU instance
 
-            :param entity_uuid: entity for which you want to pause the instance
-            :param node_uuid: destination node
-            :param instance_uuid: instance you want to pause
-            :param wait: optional wait before returning
-            :return: boolean
+            :param instanceid: FDU instance you want to pause
+            :param wait: make the function blocking
+            :return: instanceid
             '''
 
-            pass
+            node = self.connector.glob.actual.get_fdu_instance_node(
+                self.sysid, self.tenantid, instanceid)
+            if node is None:
+                raise ValueError('Unable to find node for this instanceid')
 
-        def resume(self, entity_uuid, node_uuid, instance_uuid, wait=False):
+            record = self.connector.glob.actual.get_node_fdu_instance(
+                self.sysid, self.tenantid, node, instanceid)
+            record.update({'status': 'PAUSE'})
+            fduid = record.get('fdu_uuid')
+            res = self.connector.glob.desired.add_node_fdu(
+                self.sysid, self.tenantid, node, fduid, instanceid, record)
+            if wait:
+                self.__wait_node_fdu_state_change(instanceid,  'PAUSE')
+            return res
+
+        def resume(self, instanceid, wait=True):
             '''
 
-            Resume the exectution of an atomic entity instance
+            Resume an FDU instance
 
-            :param entity_uuid: entity for which you want to
-             resume the instance
-            :param node_uuid: destination node
-            :param instance_uuid: instance you want to resume
-            :param wait: optional wait before returning
-            :return: boolean
+            :param instanceid: FDU instance you want to resume
+            :param wait: make the function blocking
+            :return: instanceid
             '''
 
-            pass
+            node = self.connector.glob.actual.get_fdu_instance_node(
+                self.sysid, self.tenantid, instanceid)
+            if node is None:
+                raise ValueError('Unable to find node for this instanceid')
 
-        def migrate(self, fduid, node_uuid, destination_node_uuid, wait=False):
+            record = self.connector.glob.actual.get_node_fdu_instance(
+                self.sysid, self.tenantid, node, instanceid)
+            record.update({'status': 'RESUME'})
+            fduid = record.get('fdu_uuid')
+            res = self.connector.glob.desired.add_node_fdu(
+                self.sysid, self.tenantid, node, fduid, instanceid, record)
+            if wait:
+                self.__wait_node_fdu_state_change(instanceid,  'RUN')
+            return res
+
+        def migrate(self, instanceid, destination_node_uuid, wait=True):
             '''
 
             Live migrate an atomic entity instance between two nodes
@@ -650,21 +681,24 @@ class FIMAPI(object):
              there is a little overhead for the copy of the base image and the disk image
 
 
-            :param fduid: fdu you want to migrate
-            :param node_uuid: source node
+            :param instanceid: fdu you want to migrate
             :param destination_node_uuid: destination node
             :param wait: optional wait before returning
-            :return: boolean
+            :return: instanceid
             '''
 
-            record = self.connector.glob.actual.get_node_fdu(
-                self.sysid, self.tenantid, node_uuid, fduid)
-
+            node = self.connector.glob.actual.get_fdu_instance_node(
+                self.sysid, self.tenantid, instanceid)
+            if node is None:
+                raise ValueError('Unable to find node for this instanceid')
+            record = self.connector.glob.actual.get_node_fdu_instance(
+                self.sysid, self.tenantid, node, instanceid)
+            fduid = record.get('fdu_uuid')
             src_record = record.copy()
             dst_record = record.copy()
             migr_properties = {
                 'destination':destination_node_uuid,
-                'source':node_uuid
+                'source':node
             }
 
             src_record.update({'status': 'TAKE_OFF'})
@@ -674,55 +708,26 @@ class FIMAPI(object):
 
             self.connector.glob.desired.add_node_fdu(self.sysid, self.tenantid,
                                                 destination_node_uuid,
-                                                fduid, dst_record)
+                                                fduid, instanceid, dst_record)
             self.connector.glob.desired.add_node_fdu(self.sysid, self.tenantid,
-                                                node_uuid, fduid, src_record)
+                                                node, fduid, instanceid, src_record)
 
             if wait:
-                self.__wait_node_fdu_state_change(
-                    destination_node_uuid, fduid, 'RUN')
-            return True
+                self.__wait_node_fdu_state_change(instanceid, 'RUN')
+            return instanceid
 
 
-            # handler = self.__get_entity_handler_by_uuid(node_uuid, entity_uuid)
-            # uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.store.aroot, node_uuid, handler, entity_uuid, instance_uuid)
+        def instantiate(self, fduid, nodeid, wait=True):
+            instance_id = self.define(fduid, nodeid)
+            self.configure(instance_id)
+            self.start(instance_id)
+            return instance_id
 
-            # entity_info = self.store.actual.get(uri)
-            # if entity_info is None:
-            #     return False
+        def terminate(self, instanceid, wait=True):
+            self.stop(instanceid)
+            self.clean(instanceid)
+            return self.undefine(instanceid)
 
-            # entity_info = json.loads(entity_info)
-
-            # entity_info_src = entity_info.copy()
-            # entity_info_dst = entity_info.copy()
-
-            # entity_info_src.update({"status": "taking_off"})
-            # entity_info_src.update({"dst": destination_node_uuid})
-
-            # entity_info_dst.update({"status": "landing"})
-            # entity_info_dst.update({"dst": destination_node_uuid})
-
-            # destination_handler = self.__get_entity_handler_by_type(destination_node_uuid, entity_info_dst.get('type'))
-            # if destination_handler is None:
-            #     return False
-
-            # uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.store.droot, destination_node_uuid, destination_handler.get('uuid'), entity_uuid, instance_uuid)
-
-            # res = self.store.desired.put(uri, json.dumps(entity_info_dst))
-            # if res >= 0:
-            #     uri = '{}/{}/runtime/{}/entity/{}/instance/{}'.format(self.store.droot, node_uuid, handler, entity_uuid, instance_uuid)
-            #     res_dest = self.store.desired.dput(uri, json.dumps(entity_info_src))
-            #     if res_dest:
-            #         if wait:
-            #             self.__wait_atomic_entity_instance_state_change(destination_node_uuid, destination_handler.get('uuid'), entity_uuid, instance_uuid, 'run')
-            #         return True
-            #     else:
-            #         print("Error on destination node")
-            #         return False
-            # else:
-            #     print("Error on source node")
-            #     return False
-            pass
 
         def search(self, search_dict, node_uuid=None):
             pass
@@ -741,8 +746,8 @@ class FIMAPI(object):
             # return {entity_uuid: i}
             return self.connector.glob.actual.get_fdu_info(self.sysid, self.tenantid, fdu_uuid)
 
-        def instance_info(self, fdu_uuid, node_uuid):
-            return self.connector.glob.actual.get_node_fdu(self.sysid, self.tenantid, node_uuid, fdu_uuid)
+        def instance_info(self, instanceid):
+            return self.connector.glob.actual.get_node_fdu_instance(self.sysid, self.tenantid, "*", instanceid)
 
         def get_nodes(self, fdu_uuid):
             '''
@@ -763,6 +768,27 @@ class FIMAPI(object):
 
             '''
             return self.connector.glob.actual.get_node_fdus(self.sysid, self.tenantid, node_uuid)
+
+
+        def instance_list(self, fduid):
+            '''
+                List of instances for an FDU
+
+                :param fduid
+                :return dictionary of {node_id: [instances list]}
+            '''
+            infos = self.connector.glob.actual.get_node_fdu_instances(
+                self.sysid, self.tenantid, "*", fduid)
+            nodes = list(dict.fromkeys(list(map( lambda x: x[0], infos))))
+            res = {}
+            for n in nodes:
+                insts = []
+                for ii in infos:
+                    if ii[0] == n:
+                        insts.append(ii[2])
+                res.update({n:insts})
+            return res
+
 
         def list(self, node_uuid='*'):
             '''
@@ -798,7 +824,7 @@ class FIMAPI(object):
             #     elist = self.list(node_id)
             #     entities.update({node_id: elist.get(node_id)})
             # return entities
-            return self.connector.glob.actual.get_node_fdus(self.sysid, self.tenantid, node_uuid)
+            return self.connector.glob.actual.get_all_fdus(self.sysid, self.tenantid)
 
 
     class Image(object):

@@ -23,18 +23,37 @@ from fog05.interfaces.FDU import FDU
 
 
 class NativeFDU(FDU):
-    def __init__(self, uuid, name, interfaces, connection_points, image,
-                 command, computation_requirements, configuration):
+    def __init__(self, uuid,fdu_uuid,node, status, accelerators, io_ports,
+                 interfaces, connection_points, hypervisor_info, command):
         super(NativeFDU, self).__init__()
         self.uuid = uuid
-        self.name = name
+        self.fdu_uuid = fdu_uuid
+        self.node = node
+        self.status = status
+        self.accelerators = accelerators
+        self.io_ports = io_ports
         self.interfaces = interfaces
-        self.comp_requirements = computation_requirements
         self.cps = connection_points
-        self.image = image
-        self.configuration = configuration
-        self.command = command.get('binary')
-        self.args = command.get('args')
+        self.hv_info = hypervisor_info
+        self.error_code = 0
+        self.error_msg = ''
+        self.migration_properties = None
+        self.image = None
+        self.comp_requirements = None
+        self.devices = None
+        self.conf = None
+        self.profiles = None
+        self.configuration = None
+        self.name = 'n{}'.format(uuid)
+
+        self.command = None
+        self.args = None
+
+        self.command = command
+        if command is not None:
+            self.command = command.get('binary')
+            self.args = command.get('args')
+
         self.outfile = None
         self.pid = -1
         self.process = None
@@ -42,16 +61,25 @@ class NativeFDU(FDU):
         # self.outfile = ''
 
     @staticmethod
-    def from_descriptor(desciptor):
-        fdu = NativeFDU(desciptor.get('uuid'),
-                        desciptor.get('name'),
-                        desciptor.get('interfaces'),
-                        desciptor.get('connection_points'),
-                        desciptor.get('image'),
-                        desciptor.get('command'),
-                        desciptor.get('computation_requirements'),
-                        desciptor.get('configuration'))
+    def from_record(record):
+        fdu = NativeFDU(record.get('uuid'),
+                     record.get('fdu_uuid'),
+                     record.get('node'),
+                     record.get('status'),
+                     record.get('accelerators'),
+                     record.get('io_ports'),
+                     record.get('interfaces'),
+                     record.get('connection_points'),
+                     record.get('hypervisor_info'),
+                     record.get('command'))
         return fdu
+
+    def set_command(self, command):
+        self.command = command
+        if command is not None:
+            self.command = command.get('binary')
+            self.args = command.get('args')
+
 
     def on_configured(self):
         self.state = State.CONFIGURED
