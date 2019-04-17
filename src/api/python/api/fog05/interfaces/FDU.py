@@ -23,6 +23,7 @@ class FDU(object):
         self.state = State.UNDEFINED
         self.uuid = ''
         self.name = ''
+        self.fdu_uuid = ''
         self.interfaces = None
         self.image = None
         self.cps = None

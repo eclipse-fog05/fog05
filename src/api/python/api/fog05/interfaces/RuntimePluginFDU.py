@@ -17,14 +17,23 @@
 import uuid
 import time
 from fog05.interfaces.Plugin import Plugin
-
+from fog05 import Yaks_Connector
+from fog05 import Yaks_Connector
+from fog05.DLogger import DLogger
 
 class RuntimePluginFDU(Plugin):
 
-    def __init__(self, version, plugin_uuid=None):
+    def __init__(self,name, version, plugin_uuid, manifest):
         super(RuntimePluginFDU, self).__init__(version, plugin_uuid)
         self.pid = -1
-        self.name = ''
+        self.name = name
+        loc = manifest.get('configuration').get('ylocator').split('/')[1]
+        self.connector = Yaks_Connector(loc)
+        self.logger = DLogger(debug_flag=True)
+        self.node = manifest.get('configuration').get('nodeid')
+        self.manifest = manifest
+        self.configuration = manifest.get('configuration',{})
+
         self.current_fdus = {}
 
     def get_nm_plugin(self):
@@ -57,9 +66,10 @@ class RuntimePluginFDU(Plugin):
         fname = 'get_fdu_info'
         return self.call_agent_function(fname, parameters)
 
-    def wait_destination_ready(self, fduid, destinationid):
+    def wait_destination_ready(self, fduid, instanceid, destinationid):
         parameter = {
             'fdu_uuid':fduid,
+            'instance_uuid':instanceid,
             'node_uuid':destinationid
         }
         fname = 'get_node_fdu_info'
@@ -97,7 +107,7 @@ class RuntimePluginFDU(Plugin):
         parameters = {
             'node_uuid': destinationid
         }
-        fname = 'get_image_info'
+        fname = 'get_node_mgmt_address'
         return self.call_agent_function(fname, parameters)
 
 
@@ -112,6 +122,26 @@ class RuntimePluginFDU(Plugin):
     def get_local_mgmt_address(self):
         fname = 'local_mgmt_address'
         return self.call_os_plugin_function(fname,{})
+
+
+    def write_fdu_error(self, fdu_uuid, instance_uuid, errno, errmsg):
+        record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
+        if record is None:
+            record = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
+        record.update({'status': 'ERROR'})
+        record.update({'error_code': errno})
+        record.update({'error_msg': '{}'.format(errmsg)})
+        self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid, record)
+
+    def update_fdu_status(self, fdu_uuid, instance_uuid, status):
+        record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
+        if record is None:
+            record = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
+        record.update({'status': status})
+        self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid,instance_uuid, record)
+
+    def get_local_instances(self, fdu_uuid):
+        return self.connector.loc.actual.get_node_fdu_instances(self.node, fdu_uuid)
 
     def start_runtime(self):
         '''

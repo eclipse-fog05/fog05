@@ -24,11 +24,12 @@ module FTypesRecord = Fos_records_types
 module FTypesValidator = Fos_types_v
 module JSON = Abs_json
 
+module FDU = Fdu
 
 
 module ConstraintMap = Map.Make(String)
 
-let string_of_hv_type (kind:FTypes.hv_kind) =
+let string_of_hv_type (kind:Fdu.hv_kind) =
   match kind with
   | `BARE -> "native"
   | `KVM | `KVM_UK -> "kvm"
