@@ -126,6 +126,8 @@ class RuntimePluginFDU(Plugin):
 
     def write_fdu_error(self, fdu_uuid, instance_uuid, errno, errmsg):
         record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
+        if record is None:
+            record = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
         record.update({'status': 'ERROR'})
         record.update({'error_code': errno})
         record.update({'error_msg': '{}'.format(errmsg)})
