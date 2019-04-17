@@ -74,9 +74,7 @@ lldp:
 
 cli:
 	make -C src/api/ocaml/api install
-	make -C src/utils/ocaml/cli
-	sudo cp src/utils/ocaml/cli/_build/default/fos-cli-ng/fos_cli_ng.exe /etc/fos/fosclient
-	sudo ln -sf /etc/fos/fosclient /usr/bin/fos
+	make -C src/utils/ocaml/cli install
 
 uninstall:
 	sudo systemctl stop fos_agent

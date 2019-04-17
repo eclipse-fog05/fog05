@@ -5,8 +5,8 @@ clean:
 	dune clean
 	rm -rf ./_build
 
-# install:
-# 	opam install .
+install:
+	opam install .
 
 # uninstall:
 # 	opam remove fos-cli-ng

@@ -134,13 +134,13 @@ module FDU = struct
     | None -> Lwt.return_unit
 
   let change_fdu_instance_state instanceid state newstate wait api =
-    let%lwt nodeid = Yaks_connector.Global.Actual.get_fdu_instance_node api.sysid api.tenantid "*" instanceid api.yconnector in
+    let%lwt nodeid = Yaks_connector.Global.Actual.get_fdu_instance_node api.sysid api.tenantid instanceid api.yconnector in
     let nodeid =
       match nodeid with
       | Some nid -> nid
       | None ->  raise @@ FException (`InternalError (`Msg ("Unable to find nodeid for this instance id" )))
     in
-    let%lwt record = Yaks_connector.Global.Actual.get_node_fdu_info api.sysid api.tenantid nodeid "*" instanceid api.yconnector in
+    let%lwt record = Yaks_connector.Global.Actual.get_node_instance_info api.sysid api.tenantid nodeid instanceid api.yconnector in
     match record with
     | Some record ->
       let fduid =  record.fdu_uuid in
@@ -190,13 +190,13 @@ module FDU = struct
     | false -> Lwt.return instance_uuid
 
   let undefine instanceid ?(wait=true) api =
-    let%lwt nodeid = Yaks_connector.Global.Actual.get_fdu_instance_node api.sysid api.tenantid "*" instanceid api.yconnector in
+    let%lwt nodeid = Yaks_connector.Global.Actual.get_fdu_instance_node api.sysid api.tenantid instanceid api.yconnector in
     let nodeid =
       match nodeid with
       | Some nid -> nid
       | None ->  raise @@ FException (`InternalError (`Msg ("Unable to find nodeid for this instance id" ) ))
     in
-    let%lwt record = Yaks_connector.Global.Actual.get_node_fdu_info api.sysid api.tenantid nodeid "*" instanceid api.yconnector in
+    let%lwt record = Yaks_connector.Global.Actual.get_node_instance_info api.sysid api.tenantid nodeid instanceid api.yconnector in
     match record with
     | Some record ->
       let fduid =  record.fdu_uuid in
@@ -261,7 +261,7 @@ module FDU = struct
     | None -> raise @@ FException (`InternalError (`Msg ("Unable to find descriptor for this FDU" ) ))
 
   let instance_info instanceid api =
-    let%lwt nodeid = Yaks_connector.Global.Actual.get_fdu_instance_node api.sysid api.tenantid "*" instanceid api.yconnector in
+    let%lwt nodeid = Yaks_connector.Global.Actual.get_fdu_instance_node api.sysid api.tenantid instanceid api.yconnector in
     let nodeid =
       match nodeid with
       | Some nid -> nid

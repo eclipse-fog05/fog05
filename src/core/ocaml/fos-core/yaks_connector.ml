@@ -619,6 +619,18 @@ module MakeGAD(P: sig val prefix: string end) = struct
       let _,v = List.hd kvs in
       Lwt.return @@ Some (FDU.record_of_string (Yaks.Value.to_string v))
 
+  let get_node_instance_info sysid tenantid nodeid instanceid connector =
+    MVar.read connector >>= fun connector ->
+    let s = get_node_fdu_instance_selector sysid tenantid nodeid instanceid in
+    Yaks.Workspace.get s connector.ws
+    >>= fun kvs ->
+    match kvs with
+    | [] ->
+      Lwt.return None
+    | _ ->
+      let _,v = List.hd kvs in
+      Lwt.return @@ Some (FDU.record_of_string (Yaks.Value.to_string v))
+
   let get_fdu_nodes sysid tenantid fduid connector =
     MVar.read connector >>= fun connector ->
     let s = Yaks.Selector.of_path @@ get_node_fdu_info_path sysid tenantid "*" fduid "*" in
@@ -630,9 +642,9 @@ module MakeGAD(P: sig val prefix: string end) = struct
     | _ ->
       Lwt_list.map_p (fun (k,_) -> Lwt.return (extract_nodeid_from_path k)) kvs
 
-  let get_fdu_instance_node sysid tenantid fduid instanceid connector =
+  let get_fdu_instance_node sysid tenantid instanceid connector =
     MVar.read connector >>= fun connector ->
-    let s = Yaks.Selector.of_path @@ get_node_fdu_info_path sysid tenantid "*" fduid instanceid in
+    let s = get_fdu_instance_selector sysid tenantid instanceid in
     Yaks.Workspace.get s connector.ws
     >>= fun kvs ->
     match kvs with
