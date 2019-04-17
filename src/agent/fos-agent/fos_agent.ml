@@ -389,11 +389,15 @@ let agent verbose_flag debug_flag configuration =
             in
             let%lwt rfaces = Lwt_list.map_p (fun (e:FDU.interface) ->
                 let facer = FDU.{vintf_name = e.name; status = `CREATE; if_type = e.virtual_interface.intf_type; phy_face = None; cp_id = None; veth_face_name=None; properties=None} in
-                let facer = match e.cp_id with
-                  | Some cpid ->
-                    let ncpid = List.assoc cpid ncpids in
-                    {facer with cp_id = Some ncpid}
-                  | None -> facer
+                let facer =
+                  match e.if_type with
+                  | `INTERNAL -> (match e.cp_id with
+                      | Some cpid ->
+                        let ncpid = List.assoc cpid ncpids in
+                        {facer with cp_id = Some ncpid}
+                      | None -> facer)
+                  | _ ->
+                    {facer with phy_face = Some e.virtual_interface.vpci}
                 in
                 Lwt.return facer
               ) fdu_d.interfaces
