@@ -133,6 +133,8 @@ class RuntimePluginFDU(Plugin):
 
     def update_fdu_status(self, fdu_uuid, instance_uuid, status):
         record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
+        if record is None:
+            record = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
         record.update({'status': status})
         self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid,instance_uuid, record)
 
