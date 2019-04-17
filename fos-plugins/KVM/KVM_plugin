@@ -39,14 +39,7 @@ from jinja2 import Environment
 class KVM(RuntimePluginFDU):
 
     def __init__(self, name, version, plugin_uuid, manifest):
-        super(KVM, self).__init__(version, plugin_uuid)
-        self.name = name
-        loc = manifest.get('configuration').get('ylocator').split('/')[1]
-        self.connector = Yaks_Connector(loc)
-        self.logger = DLogger(debug_flag=True)
-        self.node = manifest.get('configuration').get('nodeid')
-        self.manifest = manifest
-        self.configuration = manifest.get('configuration',{})
+        super(KVM, self).__init__(name, version, plugin_uuid, manifest)
         self.pid = os.getpid()
         self.var = MVar()
 
@@ -148,6 +141,12 @@ class KVM(RuntimePluginFDU):
 
         fdu_uuid = fdu_record.get('fdu_uuid')
         instance_id = fdu_record.get('uuid')
+
+        if instance_id in self.current_fdus:
+            self.logger.error('define_fdu()', '[ ERRO ] LXD Plugin - Instance with ID {} already defined!!'.format(instance_id))
+            self.write_fdu_error(fdu_uuid, instance_id, 0, 'Instance with this ID {} already exists!'.format(instance_id))
+
+
         descriptor = self.get_fdu_descriptor(fdu_uuid)
         fdu = KVMFDU.from_record(fdu_record)
 
@@ -161,13 +160,9 @@ class KVM(RuntimePluginFDU):
             self.logger.info('define_fdu()', '[ INFO ] LXD Plugin - Img info: {}'.format(img))
             if img is None:
                 self.logger.error('define_fdu()', '[ ERRO ] KVM Plugin - Cannot find image {}'.format(fdu.get_image_uri()))
-                self.current_fdus.update({instance_id: fdu})
-                lxd_info = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_id)
-                lxd_info.update({'status': 'ERROR'})
-                lxd_info.update({'error_msg':'cannot find image'})
-                lxd_info.update({'error_code':0})
-                self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_id, lxd_info)
+                self.write_fdu_error(fdu_uuid, instance_id, 0, 'Cannot find image!')
                 self.logger.info('define_fdu()', '[ ERRO ] KVM Plugin - VM uuid: {}'.format(instance_id))
+                return
 
             fdu.image.update({'uri':img.get('uri')})
             fdu.image.update({'uuid':img.get('uuid')})
@@ -196,7 +191,9 @@ class KVM(RuntimePluginFDU):
         self.__add_image(img_info)
         img = self.images.get(fdu_uuid, None)
         if img is None:
+            self.write_fdu_error(fdu_uuid, instance_id, 0, 'Cannot find image!')
             self.logger.error('define_fdu()', '[ ERRO ] KVM Plugin - Cannot find image {}'.format(fdu_uuid))
+            return
 
         self.logger.info('define_fdu()', '[ WARN ] KVM Plugin - New flavor uuid:{}'.format(fdu_uuid))
         cpu = fdu.comp_requirements.get('cpu_min_count')
@@ -214,14 +211,14 @@ class KVM(RuntimePluginFDU):
         flavor = self.flavors.get(fdu_uuid, None)
         if flavor is None:
             self.logger.error('define_fdu()', '[ ERRO ] KVM Plugin - Cannot find flavor {}'.format(fdu_uuid))
+            self.write_fdu_error(fdu_uuid, instance_id, 0, 'Cannot find image!')
+            return
 
         fdu.on_define()
 
 
-        vm_info = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_id)
-        vm_info.update({'status': 'DEFINE'})
         self.current_fdus.update({instance_id: fdu})
-        self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_id,  vm_info)
+        self.update_fdu_status(fdu_uuid, instance_id, 'DEFINE')
         self.logger.info('define_fdu()', '[ DONE ] KVM Plugin - VM Defined uuid: {}'.format(instance_id))
 
     def undefine_fdu(self, instance_id):
@@ -240,11 +237,12 @@ class KVM(RuntimePluginFDU):
                 self.logger.warning('undefine_fdu()', 'KVM Plugin - pop from entities dict returned none')
 
             fdu_uuid = fdu.fdu_uuid
-            image_name = fdu.image.get('file')
-            self.call_os_plugin_function('remove_file',{'file_path':image_name})
-            # TODO check if other instance for the same FDU are present before removing flavor and image
-            self.images.pop(fdu_uuid)
-            self.flavors.pop(fdu_uuid)
+            if self.get_local_instances(fdu_uuid) == 1:
+                image_name = fdu.image.get('file')
+                self.call_os_plugin_function('remove_file',{'file_path':image_name})
+                self.images.pop(fdu_uuid)
+                self.flavors.pop(fdu_uuid)
+
             self.connector.loc.actual.remove_node_fdu(self.node, self.uuid, fdu_uuid, instance_id)
             self.logger.info('undefine_fdu()', '[ DONE ] KVM Plugin - Undefine a VM uuid {} '.format(instance_id))
 
@@ -267,10 +265,16 @@ class KVM(RuntimePluginFDU):
             img = self.images.get(fdu_uuid, None)
             if flavor is None:
                 self.logger.error('configure_fdu()', '[ ERRO ] KVM Plugin - Cannot find flavor {}'.format(fdu.flavor_id))
+                fdu.status = 'ERROR'
+                self.current_fdus.update({instance_uuid: fdu})
+                self.write_fdu_error(fdu_uuid, instance_uuid, 2, 'Cannot find flavor')
                 return
 
             if img is None:
                 self.logger.error('configure_fdu()', '[ ERRO ] KVM Plugin - Cannot find image {}'.format(fdu.image_id))
+                fdu.status = 'ERROR'
+                self.current_fdus.update({instance_uuid: fdu})
+                self.write_fdu_error(fdu_uuid, instance_uuid, 2, 'Cannot find image')
                 return
 
             disk_path = '{}.{}'.format(instance_uuid, img.get('format'))
@@ -381,12 +385,9 @@ class KVM(RuntimePluginFDU):
                 self.conn.defineXML(vm_xml)
 
             fdu.on_configured(vm_xml)
-            self.current_fdus.update({fdu_uuid: fdu})
 
-            vm_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
-            vm_info.update({'status': 'CONFIGURE'})
             self.current_fdus.update({instance_uuid: fdu})
-            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid,instance_uuid , vm_info)
+            self.update_fdu_status(fdu_uuid, instance_uuid, 'CONFIGURE')
             self.logger.info('configure_fdu()', '[ DONE ] KVM Plugin - Configure a VM uuid {}'.format(instance_uuid))
 
 
@@ -394,7 +395,6 @@ class KVM(RuntimePluginFDU):
 
         self.logger.info('clean_fdu()', ' KVM Plugin - Clean a VM uuid {} '.format(instance_uuid))
         fdu = self.current_fdus.get(instance_uuid, None)
-        fdu_uuid = fdu.fdu_uuid
         if fdu is None:
             self.logger.error('clean_fdu()', 'KVM Plugin - FDU not exists')
             raise FDUNotExistingException('FDU not existing', 'FDU {} not in runtime {}'.format(instance_uuid, self.uuid))
@@ -402,7 +402,7 @@ class KVM(RuntimePluginFDU):
             self.logger.error('clean_fdu()', 'KVM Plugin - FDU state is wrong, or transition not allowed')
             raise StateTransitionNotAllowedException('FDU is not in CONFIGURED state', 'FDU {} is not in CONFIGURED state'.format(instance_uuid))
         else:
-
+            fdu_uuid = fdu.fdu_uuid
             dom = self.__lookup_by_uuid(instance_uuid)
             if dom is not None:
                 dom.undefine()
@@ -434,10 +434,7 @@ class KVM(RuntimePluginFDU):
 
             fdu.on_clean()
             self.current_fdus.update({instance_uuid: fdu})
-            vm_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
-            vm_info.update({'status': 'DEFINE'})
-            # TODO: this should be an update when YAKS will implement update
-            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid, vm_info)
+            self.update_fdu_status(fdu_uuid, instance_uuid, 'DEFINE')
             self.logger.info('clean_fdu()', '[ DONE ] KVM Plugin - Clean a VM uuid {} '.format(instance_uuid))
 
 
@@ -445,7 +442,6 @@ class KVM(RuntimePluginFDU):
 
         self.logger.info('run_fdu()', 'KVM Plugin - Starting a VM uuid {}'.format(instance_uuid))
         fdu = self.current_fdus.get(instance_uuid, None)
-        fdu_uuid = fdu.fdu_uuid
         if fdu is None:
             self.logger.error('run_fdu()', 'KVM Plugin - FDU not exists')
             raise FDUNotExistingException('FDU not existing', 'FDU {} not in runtime {}'.format(instance_uuid, self.uuid))
@@ -453,9 +449,8 @@ class KVM(RuntimePluginFDU):
             self.logger.error('run_fdu()', 'KVM Plugin - FDU state is wrong, or transition not allowed')
             raise StateTransitionNotAllowedException('FDU is not in CONFIGURED state', 'FDU {} is not in CONFIGURED state'.format(instance_uuid))
         else:
-            vm_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
-            vm_info.update({'status': 'STARTING'})
-            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid, vm_info)
+            fdu_uuid = fdu.fdu_uuid
+            self.update_fdu_status(fdu_uuid, instance_uuid, 'STARTING')
 
             dom = self.__lookup_by_uuid(instance_uuid)
             dom.create()
@@ -471,10 +466,7 @@ class KVM(RuntimePluginFDU):
             #     self.__wait_boot(log_filename)
 
             self.current_fdus.update({instance_uuid: fdu})
-
-            vm_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
-            vm_info.update({'status': 'RUN'})
-            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid, vm_info)
+            self.update_fdu_status(fdu_uuid, instance_uuid, 'RUN')
 
             self.logger.info('run_fdu()', '[ DONE ] KVM Plugin - Starting a VM uuid {}'.format(instance_uuid))
 
@@ -483,7 +475,6 @@ class KVM(RuntimePluginFDU):
 
         self.logger.info('stop_fdu()', ' KVM Plugin - Stop a VM uuid {}'.format(instance_uuid))
         fdu = self.current_fdus.get(instance_uuid, None)
-        fdu_uuid = fdu.fdu_uuid
         if fdu is None:
             self.logger.error('stop_fdu()', 'KVM Plugin - FDU not exists')
             raise FDUNotExistingException('FDU not existing', 'FDU {} not in runtime {}'.format(instance_uuid, self.uuid))
@@ -491,7 +482,7 @@ class KVM(RuntimePluginFDU):
             self.logger.error('stop_fdu()', 'KVM Plugin - FDU state is wrong, or transition not allowed')
             raise StateTransitionNotAllowedException('FDU is not in RUNNING state', 'FDU {} is not in RUNNING state'.format(instance_uuid))
         else:
-
+            fdu_uuid = fdu.fdu_uuid
             dom = self.__lookup_by_uuid(instance_uuid)
             dom.shutdown()
             retries = 100
@@ -506,18 +497,14 @@ class KVM(RuntimePluginFDU):
 
             fdu.on_stop()
             self.current_fdus.update({instance_uuid: fdu})
-
-            vm_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
-            vm_info.update({'status': 'CONFIGURE'})
-            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid,instance_uuid, vm_info)
-            self.logger.info('stop_fdu()', '[ DONE ] KVM Plugin - Stop a VM uuid {}'.format(fdu_uuid))
+            self.update_fdu_status(fdu_uuid, instance_uuid, 'CONFIGURE')
+            self.logger.info('stop_fdu()', '[ DONE ] KVM Plugin - Stop a VM uuid {}'.format(instance_uuid))
 
 
     def pause_fdu(self, instance_uuid):
 
         self.logger.info('pause_fdu()', ' KVM Plugin - Pause a VM uuid {}'.format(instance_uuid))
         fdu = self.current_fdus.get(instance_uuid, None)
-        fdu_uuid = fdu.instance_uuid
         if fdu is None:
             self.logger.error('pause_fdu()', 'KVM Plugin - FDU not exists')
             raise FDUNotExistingException('FDU not existing', 'FDU {} not in runtime {}'.format(instance_uuid, self.uuid))
@@ -525,19 +512,17 @@ class KVM(RuntimePluginFDU):
             self.logger.error('pause_fdu()', 'KVM Plugin - FDU state is wrong, or transition not allowed')
             raise StateTransitionNotAllowedException('FDU is not in RUNNING state', 'FDU {} is not in RUNNING state'.format(instance_uuid))
         else:
+            fdu_uuid = fdu.fdu_uuid
             self.__lookup_by_uuid(instance_uuid).suspend()
             fdu.on_pause()
             self.current_fdus.update({instance_uuid: fdu})
-            vm_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
-            vm_info.update({'status': 'PAUSE'})
-            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid, vm_info)
+            self.update_fdu_status(fdu_uuid, instance_uuid, 'PAUSE')
             self.logger.info('pause_fdu()', '[ DONE ] KVM Plugin - Pause a VM uuid {}'.format(fdu_uuid))
 
     def resume_fdu(self, instance_uuid):
 
         self.logger.info('resume_fdu()', ' KVM Plugin - Resume a VM uuid {}'.format(instance_uuid))
         fdu = self.current_fdus.get(instance_uuid, None)
-        fdu_uuid = fdu.fdu_uuid
         if fdu is None:
             self.logger.error('resume_fdu()', 'KVM Plugin - FDU not exists')
             raise FDUNotExistingException('FDU not existing', 'FDU {} not in runtime {}'.format(instance_uuid, self.uuid))
@@ -545,14 +530,12 @@ class KVM(RuntimePluginFDU):
             self.logger.error('resume_fdu()', 'KVM Plugin - FDU state is wrong, or transition not allowed')
             raise StateTransitionNotAllowedException('FDU is not in PAUSED state', 'FDU {} is not in PAUSED state'.format(instance_uuid))
         else:
-                    self.__lookup_by_uuid(instance_uuid).resume()
-                    fdu.on_resume()
-                    self.current_fdus.update({instance_uuid: fdu})
-                    vm_info = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
-                    vm_info.update({'status': 'RUN'})
-                    self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid, vm_info)
-                    self.logger.info('resume_fdu()', '[ DONE ] KVM Plugin - Resume a VM uuid {}'.format(fdu_uuid))
-                    return True
+            fdu_uuid = fdu.fdu_uuid
+            self.__lookup_by_uuid(instance_uuid).resume()
+            fdu.on_resume()
+            self.current_fdus.update({instance_uuid: fdu})
+            self.update_fdu_status(fdu_uuid, instance_uuid, 'RUN')
+            self.logger.info('resume_fdu()', '[ DONE ] KVM Plugin - Resume a VM uuid {}'.format(fdu_uuid))
 
 
     def migrate_fdu(self, instance_uuid):
@@ -564,6 +547,9 @@ class KVM(RuntimePluginFDU):
             fdu = self.current_fdus.get(instance_uuid, None)
             if instance_uuid is None:
                 self.logger.error('migrate_fdu','FDU not in Runtime!!')
+                fdu.status = 'ERROR'
+                self.current_fdus.update({instance_uuid: fdu})
+                self.write_fdu_error(fdu_uuid, instance_uuid, 7, 'Instance not present in node')
                 return
 
             self.logger.info('migrate_fdu()', '[ DONE ] KVM Plugin - Source Node wait destination...')
@@ -923,16 +909,28 @@ class KVM(RuntimePluginFDU):
         action = fdu_info.get('status')
         fdu_uuid = fdu_info.get('fdu_uuid')
         react_func = self.__react(action)
-        if action == 'UNDEFINE':
-            self.logger.info('__fdu_observer()', ' KVM Plugin - This is a remove for : {}'.format(fdu_info))
-            self.undefine_fdu(fdu_uuid)
-        elif action == 'DEFINE':
-            self.logger.info('__fdu_observer()', ' KVM Plugin - This is a define for : {}'.format(fdu_info))
-            self.define_fdu(fdu_info)
-        elif react_func is not None:
-            react_func(fdu_uuid)
-        else:
-            self.logger.info('__fdu_observer()', ' KVM Plugin - Action not recognized : {}'.format(action))
+        try:
+            if action == 'UNDEFINE':
+                self.logger.info('__fdu_observer()', ' KVM Plugin - This is a remove for : {}'.format(fdu_info))
+                self.undefine_fdu(fdu_uuid)
+            elif action == 'DEFINE':
+                self.logger.info('__fdu_observer()', ' KVM Plugin - This is a define for : {}'.format(fdu_info))
+                self.define_fdu(fdu_info)
+            elif react_func is not None:
+                react_func(fdu_uuid)
+            else:
+                self.logger.info('__fdu_observer()', ' KVM Plugin - Action not recognized : {}'.format(action))
+        except FDUNotExistingException as nex:
+            self.write_fdu_error(fdu_info.get('fdu_uuid'), fdu_uuid, 9, nex)
+            time.sleep(10)
+            self.connector.loc.actual.remove_node_fdu(self.node, self.uuid, fdu_info.get('fdu_uuid'), fdu_uuid)
+            return
+        except StateTransitionNotAllowedException as stna:
+            self.write_fdu_error(fdu_info.get('fdu_uuid'), fdu_uuid, 10, stna)
+            time.sleep(5)
+            fdu = self.current_fdus.get(fdu_uuid)
+            self.update_fdu_status(fdu_info.get('fdu_uuid'), fdu_uuid,fdu.status)
+            return
 
 
     def __react(self, action):
