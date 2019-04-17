@@ -8,7 +8,6 @@ bug-reports:  "https://github.com/eclipse/fog05/issues/"
 dev-repo:     "https://github.com/eclipse/fog05.git"
 
 build: [
- [make "atd"]
  ["dune" "subst"] {pinned}
  ["dune" "-p" name "-j" jobs]
 ]
