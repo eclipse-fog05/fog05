@@ -817,6 +817,21 @@ class LAD(object):
             [self.prefix, nodeid, 'plugins', pluginid,
              'exec', f])
 
+
+
+    def extract_nodeid_from_path(self, path):
+        return path.split('/')[2]
+
+    def extract_plugin_from_path(self, path):
+        return path.split('/')[4]
+
+    def extract_node_fduid_from_path(self, path):
+        return path.split('/')[6]
+
+    def extract_node_instanceid_from_path(self, path):
+        return path.split('/')[8]
+
+
     def add_os_eval(self, nodeid, func_name, func):
         p = self.get_node_os_exec_path(nodeid, func_name)
 
@@ -1004,6 +1019,13 @@ class LAD(object):
     def remove_node_fdu(self, nodeid, pluginid, fduid, instanceid):
         p = self.get_node_fdu_info_path(nodeid, pluginid, fduid, instanceid)
         return self.ws.remove(p)
+
+    def get_node_fdu_instances(self, nodeid, fduid):
+        p = self.get_node_fdu_instances_selector(nodeid, fduid)
+        res = self.ws.get(p)
+        if len(res) == 0:
+            return []
+        return list(map(lambda x: self.extract_node_instanceid_from_path(x[0]), res))
 
     def add_node_image(self, nodeid, pluginid, imgid, imginfo):
         p = self.get_node_image_info_path(nodeid, pluginid, imgid)
