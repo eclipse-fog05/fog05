@@ -43,7 +43,9 @@ let get_all_nodes yconnector =
   get_all_nodes_uuid yconnector >>=
   Lwt_list.map_p (fun e -> Yaks_connector.Global.Actual.get_node_info ysystem ytenant e yconnector)
   >>=
-  Lwt_list.map_p (fun (e:FTypes.node_info) -> Lwt.return (e.uuid, e.name))
+  Lwt_list.map_p (fun (e:FTypes.node_info option) ->
+      let e  = Apero.Option.get e in
+      Lwt.return (e.uuid, e.name))
 
 let get_node_info nodeid yconnector =
   Yaks_connector.Global.Actual.get_node_info ysystem ytenant nodeid yconnector
