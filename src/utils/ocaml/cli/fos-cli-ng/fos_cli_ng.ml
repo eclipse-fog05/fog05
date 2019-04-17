@@ -334,7 +334,7 @@ let fdu_cmd api action nodeid fduid instanceid destid descriptor =
     fdu_define api fduid nodeid
   | "configure" ->
     fdu_state_change api instanceid `CONFIGURE
-  | "run" ->
+  | "start" ->
     fdu_state_change api instanceid `RUN
   | "stop" ->
     fdu_state_change api instanceid `STOP
