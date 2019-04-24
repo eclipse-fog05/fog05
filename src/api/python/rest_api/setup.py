@@ -19,7 +19,7 @@ from setuptools import setup
 
 setup(
     name='fog05rest',
-    version='0.0.1',
+    version='0.0.2',
     author='ADLINK',
     packages=['fog05rest',],
     install_requires=['requests'],

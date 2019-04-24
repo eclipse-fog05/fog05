@@ -1,0 +1,343 @@
+(*********************************************************************************
+ * Copyright (c) 2018 ADLINK Technology Inc.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0, or the Apache Software License 2.0
+ * which is available at https://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
+ * Contributors: 1
+ *   Gabriele Baldoni (gabriele (dot) baldoni (at) adlinktech (dot) com ) -
+ *********************************************************************************)
+
+(* Errors *)
+
+type problem_details = {
+  err_type <json name="type"> : string;
+  (* A URI reference according to IETF RFC 3986 that identifies the problem type *)
+  title : string;
+  status : int;
+  detail: string;
+  instance: string;
+}
+
+type error_response = {
+  problem_details <json name="ProblemDetails"> : problem_details;
+}
+
+
+(* Base Types *)
+
+type serializer_types = [
+  | JSON
+  | XML
+  | PROTOBUF3
+]
+
+type transport_types = [
+  | REST_HTTP
+  | MB_TOPIC_BASED
+  | MR_ROUTING
+  | MB_PUBSUB
+  | RPC
+  | RPC_STREAMING
+  | WEBSOCKET
+]
+
+type state_type = [
+  | ACTIVE
+  | INACTIVE
+]
+
+type oauth_grant_types = [
+  | OAUTH2_AUTHORIZATION_CODE
+  | OAUTH2_IMPLICIT_GRANT
+  | OAUTH2_RESOURCE_OWNER
+  | OAUTH2_CLIENT_CREDENTIALS
+]
+
+type interface_type = [
+  | TUNNEL
+  | MAC
+  | IP
+]
+
+
+type tunnel_type = [
+  | GTP_U
+  | GRE
+]
+
+type filter_type = [
+  | FLOW
+  | PACKET
+]
+
+type action_type = [
+  | DROP
+  | FORWARD_DECAPSULATED
+  | FORWARD_AS_IS
+  | PASSTHROUGH
+  | DUPLICATE_DECAPSULATED
+  | DUPLICATE_AS_IS
+]
+
+type ip_address_type = [
+  | IP_V6
+  | IP_V4
+]
+
+type ntp_address_type = [
+  | IP_ADDRESS
+  | DNS_NAME
+]
+
+type ntp_authentication_type = [
+  | NONE
+  | SYMMETRIC_KEY
+  | AUTO_KEY
+]
+
+type timesource_status_type = [
+  | TRACEABLE
+  | NONTRACEABLE
+]
+(* Referenced Types *)
+
+type address = {
+  host : string;
+  port : int;
+}
+
+type link_type = {
+  href : string;
+}
+
+type oauth2_info = {
+  grant_types <json name="grantTypes"> : oauth_grant_types list;
+  ?token_endpoint <json name="tokenEndpoint"> : string option;
+}
+
+
+type timestamp = {
+  seconds : int;
+  nanoseconds <json name="nanoSeconds"> : int;
+}
+
+type ntp_server = {
+  ntp_server_addr_type <json name="ntpServerAddrType"> : ntp_address_type;
+  ntp_server_addr <json name="ntpServerAddr"> : string;
+  min_polling_interval <json name="minPollingInterval"> : int;
+  max_polling_interval <json name="maxPollingInterval"> : int;
+  local_priority <json name="localPriority"> : int;
+  authentication_option <json name="authenticationOption"> : ntp_authentication_type;
+  authentication_key_num <json name="authenticationKeyNum"> : int;
+}
+
+type ptp_master = {
+  ptp_master_ip_address <json name="ptpMasterIpAddress"> : string;
+  ptp_master_local_priority <json name="ptpMasterLocalPriority"> : int;
+  delay_req_max_rate <json name="delayReqMaxRate"> : int;
+}
+
+type category_ref = {
+  href : string;
+  id : string;
+  name : string;
+  version : string;
+}
+
+type endpoint_info = {
+  uris : string list;
+  alternative : string;
+  addresses : address list;
+}
+
+type security_info = {
+  ?oauth2_info <json name="oAuth2Info"> : oauth2_info option;
+}
+
+
+type traffic_filter = {
+  src_address <json name="srcAddress"> : string list;
+  dst_address <json name="dstAddress"> : string list;
+  src_port <json name="srcPort"> : string list;
+  dst_port <json name="dstPort"> : string list;
+  protocol :  string list;
+  token : string list;
+  src__tunnel_address <json name="srcATunnelddress"> : string list;
+  dst_tunnel_address <json name="dstTunnelAddress"> : string list;
+  src_tunnel_port <json name="srcTunnelPort"> : string list;
+  dst_tunnel_port <json name="dstTunnelPort"> : string list;
+  ?qci <json name="qCI"> : int option;
+  ?dscp <json name="dSCP"> : int option;
+  ?tc <json name="tC"> : int option;
+
+}
+
+type tunnel_info = {
+  tunnel_type : tunnel_type;
+  ?tunnel_dst_address <json name="tunnelDstAddress"> : string option;
+  ?tunnel_src_address <json name="tunnelSrcAddress"> : string option;
+}
+
+type destination_interface = {
+  interface_type <json name="interfaceType"> : interface_type;
+  ?tunnel_info <json name="tunnelInfo"> : tunnel_info option;
+  ?src_mac_address <json name="srcMacAddress"> : string option;
+  ?dst_mac_address <json name="dstMacAddress"> : string option;
+  ?dst_ip_address <json name="dstIpAddress"> : string option;
+}
+
+
+
+(* Resouce Data types *)
+
+type transport_info = {
+  id : string;
+  name : string;
+  ?description :  string option;
+  transport_type <json name="type"> : transport_types;
+  protocol : string;
+  version : string;
+  endpoint : endpoint_info;
+  security :  security_info;
+  ?impl_specific_info : string option;
+}
+
+
+type service_info = {
+  ?ser_instance_id <json name="serInstanceId"> : string option;
+  ser_name <json name="serName"> : string;
+  ?ser_category <json name="serCategory"> : category_ref option;
+  version : string;
+  state : state_type;
+  ?transport_id <json name="transportId">  : string option;
+  ?transpor_info <json name="transportInfo"> : transport_info option;
+  serializer : serializer_types;
+}
+
+type traffic_rule = {
+  traffic_rule_id <json name="trafficRuleId"> : string;
+  filter_type <json name="filterType"> : filter_type list;
+  action : action_type;
+  ?dst_interface <json name="dstInterface"> : interface_type option;
+  state : state_type;
+}
+
+type dns_rule = {
+  dns_rule_id <json name="dnsRuleId"> : string;
+  domain_name  <json name="domainName"> : string;
+  ip_address_type <json name="ipAddressType"> : ip_address_type;
+  ip_address <json name="ipAddress"> : string;
+  ?ttl : int option;
+  state : state_type;
+}
+
+
+type timing_caps = {
+  ?timestamp <json name="timeStamp"> : timestamp option;
+  ntp_servers <json name="ntpServers"> : ntp_server list;
+  ptp_masters <json name="ptpMasters"> : ptp_master list;
+}
+
+type current_time = {
+  seconds : int;
+  nanoseconds <json name="nanoSeconds"> : int;
+  time_source_status <json name="timeSourceStatus"> : timesource_status_type;
+}
+
+(* Subscription Data Types *)
+
+type mp1_subscription_type = {
+  href : string;
+  rel : string;
+}
+
+type sub_link_type = {
+  self : link_type;
+}
+
+type mp1_links_type = {
+  self : link_type;
+  subscription : mp1_subscription_type list;
+}
+
+type ser_availability_notification_subscription = {
+  subscription_type  <json name="subscriptionType"> : string; (*Shall be set to "SerAvailabilityNotificationSubscription".  *)
+  callback_reference <json name="callbackReference"> : string;
+  ?links <json name="_links"> : sub_link_type option;
+  filtering_criteria  <json name="filteringCriteria"> : service_info;
+}
+
+type app_termination_notification_subscription = {
+  subscription_type  <json name="subscriptionType"> : string; (*Shall be set to "AppTerminationNotificationSubscription".  *)
+  callback_reference <json name="callbackReference"> : string;
+  ?links <json name="_links"> : sub_link_type option;
+  app_instance_id  <json name="appInstanceId"> : string;
+}
+
+type mp1_subscription_link_list = {
+  links <json name="_links"> : mp1_links_type;
+}
+
+(* Notification Data Types *)
+
+type notif_link_type = {
+  subscription :  link_type;
+}
+
+type service_availability_notification = {
+  notificaiton_type <json name="notificationType"> : string; (*Shall be set to "SerAvailabilityNotification".  *)
+  services : service_info list;
+  links <json name="_links"> : notif_link_type;
+}
+
+type app_termination_notification = {
+  notificaiton_type <json name="notificationType"> : string; (*Shall be set to "AppTerminationNotifications".  *)
+  max_graceful_timeout  <json name="maxGrecefulTimeout"> : int;
+  links <json name="_links"> : notif_link_type;
+}
+
+
+
+(* Repsonses *)
+
+type dns_rule_response = {
+  dns_rule <json name="DnsRule"> : dns_rule;
+}
+
+type mp1_subscription_response = {
+  mp1_sub_link_list <json name="Mp1SubscriptionLinkList"> : mp1_subscription_link_list;
+}
+
+
+type app_term_sub_response = {
+  app_term_sub <json name="AppTerminationNotificationSubscription"> : app_termination_notification_subscription;
+}
+
+type ser_avail_sub_response = {
+  ser_avail_sub <json name="SerAvailabilityNotificationSubscription"> : ser_availability_notification_subscription;
+}
+
+
+type traffic_rule_response = {
+  traffic_rule <json name="TrafficRule"> : traffic_rule;
+}
+
+type service_info_response = {
+  service_info <json name="ServiceInfo"> : service_info;
+}
+
+type current_time_response = {
+  current_time <json name="CurrentTime"> : current_time;
+}
+
+type timing_caps_response = {
+  timing_caps  <json name="TimingCaps"> : timing_caps;
+}
+
+type transport_info_response = {
+  transport_info <json name="TransportInfo"> : transport_info;
+}
