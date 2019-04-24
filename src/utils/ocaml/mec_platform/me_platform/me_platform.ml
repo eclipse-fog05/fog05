@@ -13,7 +13,8 @@
 
 open Cmdliner
 open Me_core
-open Rest_api
+open Mp1
+open Mm5
 (* open Lwt.Infix *)
 (* open Fos_im *)
 
@@ -47,8 +48,9 @@ let run_platform mep_id configuration_path =
   try%lwt
     ignore mep_id; ignore configuration_path;
     let%lwt core = MEC_Core.create (Apero.Option.get @@ Apero_net.Locator.of_string "tcp/127.0.0.1:7887") in
+    let%lwt mm5 = Mm5.create "127.0.0.1" "/exampleAPI/mm5/v1/" 8091 core in
     let%lwt mp1 = Mp1.create "127.0.0.1" "/exampleAPI/mp1/v1/" 8081 core in
-    Lwt.join [MEC_Core.start core; Mp1.start mp1;]
+    Lwt.join [MEC_Core.start core; Mp1.start mp1; Mm5.start mm5]
   with
   (* | YException e  ->
      Logs_lwt.err (fun m -> m "Exception %s raised:\n%s" (show_yerror e) (Printexc.get_backtrace ())) >> Lwt.return_unit *)
