@@ -2,7 +2,7 @@
     "host": "127.0.0.1",
     "port": 8080,
     "debug": true,
-    "yaks": "127.0.0.1",
+    "yaks": "10.100.1.221",
     "sysid": "0",
     "tenantid": "0",
     "image_path": "imgs"

@@ -453,18 +453,35 @@ class FIMAPI(object):
             return res
 
         def onboard(self, descriptor, wait=True):
+            '''
+
+            Onboard the FDU descriptor in the Catalog
+            :param descriptor: the fdu descriptor
+            :param wait: make the call wait for completio
+            :return the fdu uuid
+
+            '''
             fduid = descriptor.get('uuid')
             if fduid is None:
                 fduid = '{}'.format(uuid.uuid4())
-            res = self.connector.glob.desired.add_fdu_info(
+            self.connector.glob.desired.add_fdu_info(
                 self.sysid, self.tenantid, fduid, descriptor)
             if wait:
                 self.__wait_fdu(fduid)
-            return res
+            return fduid
 
         def offload(self, fdu_uuid, wait=True):
+            '''
+
+            Offload the FDU descriptor from the Catalog
+            :param fdu_uuid: fdu uuid you want to remove
+            :param wait: make the call wait for completion
+            :return the fdu uuid
+
+            '''
             res = self.connector.glob.desired.remove_fdu_info(
                 self.sysid, self.tenantid, fdu_uuid)
+            return fdu_uuid
 
         def define(self, fduid, node_uuid, wait=True):
             '''
@@ -472,7 +489,7 @@ class FIMAPI(object):
             Defines an FDU instance in a node, this method will check
              the descriptor before sending the definition to the node
 
-            :param manifest: dictionary representing the atomic entity manifest
+            :param fduid: id of the fdu you want to instantiate
             :param node_uuid: destination node uuid
             :param wait: if wait that the definition is complete before
              returning
@@ -675,7 +692,7 @@ class FIMAPI(object):
         def migrate(self, instanceid, destination_node_uuid, wait=True):
             '''
 
-            Live migrate an atomic entity instance between two nodes
+            Live migrate an instance between two nodes
 
             The migration is issued when this command is sended,
              there is a little overhead for the copy of the base image and the disk image
@@ -718,12 +735,26 @@ class FIMAPI(object):
 
 
         def instantiate(self, fduid, nodeid, wait=True):
+            '''
+            Instantiate (define, configure, start) an fdu in a node
+
+            :param fduid: id of the fdu to instantiate
+            :param nodeid: node where instantiate
+            :return instance uuid
+            '''
             instance_id = self.define(fduid, nodeid)
             self.configure(instance_id)
             self.start(instance_id)
             return instance_id
 
         def terminate(self, instanceid, wait=True):
+            '''
+            Terminate (stop, clean, undefine) an instance
+
+            :param instanceid: instance you want to terminate
+            :return instance uuid
+            '''
+
             self.stop(instanceid)
             self.clean(instanceid)
             return self.undefine(instanceid)
@@ -747,6 +778,14 @@ class FIMAPI(object):
             return self.connector.glob.actual.get_fdu_info(self.sysid, self.tenantid, fdu_uuid)
 
         def instance_info(self, instanceid):
+            '''
+            Information about an instance
+
+            :param instanceid: instance id
+
+            :return dict containing the fdu record and hypervisor informations
+
+            '''
             return self.connector.glob.actual.get_node_fdu_instance(self.sysid, self.tenantid, "*", instanceid)
 
         def get_nodes(self, fdu_uuid):
@@ -799,31 +838,6 @@ class FIMAPI(object):
             :param node_uuid: optional node uuid
             :return: dictionary {node uuid: {entity uuid: instance list} list}
             '''
-
-            # if node_uuid is not None:
-            #     entity_list = {}
-            #     uri = '{}/{}/runtime/*/entity/**'.format(self.store.aroot, node_uuid)
-            #     response = self.store.actual.resolveAll(uri)
-            #     for i in response:
-            #         rid = i[0]
-            #         en_uuid = rid.split('/')[7]
-            #         if en_uuid not in entity_list:
-            #             entity_list.update({en_uuid: []})
-            #         if len(rid.split('/')) == 8 and en_uuid in entity_list:
-            #             pass
-            #         if len(rid.split('/')) == 10:
-            #             entity_list.get(en_uuid).append(rid.split('/')[9])
-
-            #     return {node_uuid: entity_list}
-
-            # entities = {}
-            # uri = '{}/*/runtime/*/entity/**'.format(self.store.aroot)
-            # response = self.store.actual.resolveAll(uri)
-            # for i in response:
-            #     node_id = i[0].split('/')[3]
-            #     elist = self.list(node_id)
-            #     entities.update({node_id: elist.get(node_id)})
-            # return entities
             return self.connector.glob.actual.get_all_fdus(self.sysid, self.tenantid)
 
 

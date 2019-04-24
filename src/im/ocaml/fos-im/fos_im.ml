@@ -11,9 +11,9 @@
  *   Gabriele Baldoni (gabriele (dot) baldoni (at) adlinktech (dot) com ) - OCaml implementation
  *********************************************************************************)
 
-module IM_Types = Im
-module IM_Json = Im
-module IM_Validator = Im_v
+module MEC_Types = Im
+module MEC_Json = Im
+module MEC_Validator = Im_v
 
 module FAgentTypes = Agent_types
 (* module FAgentTypesJson = Agent_types *)
