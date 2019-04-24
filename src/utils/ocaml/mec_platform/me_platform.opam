@@ -1,0 +1,35 @@
+opam-version: "1.2"
+version:"0.1"
+maintainer: "gabriele.baldoni@adlinktech.com"
+license: "ELP 2"
+authors:      "Gabriele Baldoni"
+homepage:     "https://github.com/eclipse/fog05"
+bug-reports:  "https://github.com/eclipse/fog05/issues/"
+dev-repo:     "https://github.com/eclipse/fog05.git"
+
+build: [
+ ["dune" "subst"] {pinned}
+ ["dune" "-p" name "-j" jobs]
+]
+
+install: [
+  ["dune" "build" "-p" name "@install"]
+  ["dune" "install" name]
+]
+
+depends: [
+  "dune"
+  "cmdliner"
+  "re"
+  "yojson"
+  "logs"
+  "atdgen"
+  "lwt"
+  "lwt_ppx"
+  "httpaf"
+  "httpaf-lwt-unix"
+  "faraday"
+  "yaks-common"
+  "yaks-ocaml"
+  "fos-im"
+]

@@ -23,9 +23,11 @@ def index():
 def node_list():
     return json.dumps(fos_api.node.list())
 
+
 @app.route('/node/info/<uuid>', methods=['GET'])
 def node_info(uuid):
     return json.dumps(fos_api.node.info(uuid))
+
 
 @app.route('/node/status/<uuid>', methods=['GET'])
 def node_status(uuid):
@@ -55,9 +57,11 @@ def network_add():
 def network_remove(net_id):
     return json.dumps({'result':fos_api.network.remove_network(net_id)})
 
+
 @app.route('/network/list', methods=['GET'])
 def network_list():
     return json.dumps(fos_api.network.list())
+
 
 @app.route('/connection_point/add', methods=['POST'])
 def cp_add():
@@ -77,41 +81,95 @@ def fdu_onboard():
     descriptor = json.loads(request.data)
     return json.dumps({'result':fos_api.fdu.onboard(descriptor)})
 
+
 @app.route('/fdu/offload/<fdu_id>', methods=['DELETE'])
 def fdu_offload(fdu_id):
     return json.dumps({'result':fos_api.fdu.offload(fdu_id)})
 
+
 @app.route('/fdu/define/<fdu_id>/<node_id>', methods=['POST'])
 def fdu_define(fdu_id, node_id):
-    return json.dumps({'result':fos_api.fdu.define(fdu_id, node_id, wait=True)})
+    try:
+        return json.dumps({'result':fos_api.fdu.define(fdu_id, node_id)})
+    except ValueError as ve:
+        return json.dumps({'error':'{}'.format(ve)})
 
-@app.route('/fdu/undefine/<fdu_id>/<node_id>', methods=['DELETE'])
-def fdu_undefine(fdu_id, node_id):
-    return json.dumps({'result':fos_api.fdu.undefine(fdu_id, node_id, wait=True)})
 
-@app.route('/fdu/configure/<fdu_id>/<node_id>', methods=['POST'])
-def fdu_configure(fdu_id, node_id):
-    return json.dumps({'result':fos_api.fdu.configure(fdu_id, node_id, wait=True)})
+@app.route('/fdu/undefine/<finstanceid>', methods=['DELETE'])
+def fdu_undefine(instanceid):
+    return json.dumps({'result':fos_api.fdu.undefine(instanceid)})
 
-@app.route('/fdu/clean/<fdu_id>/<node_id>', methods=['POST'])
-def fdu_clean(fdu_id, node_id):
-    return json.dumps({'result':fos_api.fdu.clean(fdu_id, node_id, wait=True)})
 
-@app.route('/fdu/run/<fdu_id>/<node_id>', methods=['POST'])
-def fdu_run(fdu_id, node_id):
-    return json.dumps({'result':fos_api.fdu.run(fdu_id, node_id, wait=True)})
+@app.route('/fdu/configure/<instanceid>', methods=['POST'])
+def fdu_configure(instanceid):
+    try:
+        return json.dumps({'result':fos_api.fdu.configure(instanceid)})
+    except ValueError as ve:
+        return json.dumps({'error':'{}'.format(ve)})
 
-@app.route('/fdu/stop/<fdu_id>/<node_id>', methods=['POST'])
-def fdu_stop(fdu_id, node_id):
-    return json.dumps({'result':fos_api.fdu.stop(fdu_id, node_id, wait=True)})
 
-@app.route('/fdu/pause/<fdu_id>/<node_id>', methods=['POST'])
-def fdu_pause(fdu_id, node_id):
-    return json.dumps({'result':fos_api.fdu.pause(fdu_id, node_id, wait=True)})
+@app.route('/fdu/clean/<instanceid>', methods=['POST'])
+def fdu_clean(instanceid):
+    try:
+        return json.dumps({'result':fos_api.fdu.clean(instanceid)})
+    except ValueError as ve:
+        return json.dumps({'error':'{}'.format(ve)})
 
-@app.route('/fdu/resume/<fdu_id>/<node_id>', methods=['POST'])
-def fdu_resume(fdu_id, node_id):
-    return json.dumps({'result':fos_api.fdu.resume(fdu_id, node_id, wait=True)})
+
+@app.route('/fdu/start/<instanceid>', methods=['POST'])
+def fdu_run(instanceid):
+    try:
+        return json.dumps({'result':fos_api.fdu.start(instanceid)})
+    except ValueError as ve:
+        return json.dumps({'error':'{}'.format(ve)})
+
+
+@app.route('/fdu/stop/<instanceid>', methods=['POST'])
+def fdu_stop(instanceid):
+    try:
+        return json.dumps({'result':fos_api.fdu.stop(instanceid)})
+    except ValueError as ve:
+        return json.dumps({'error':'{}'.format(ve)})
+
+
+@app.route('/fdu/pause/<instanceid>', methods=['POST'])
+def fdu_pause(instanceid):
+    try:
+        return json.dumps({'result':fos_api.fdu.pause(instanceid)})
+    except ValueError as ve:
+        return json.dumps({'error':'{}'.format(ve)})
+
+
+@app.route('/fdu/resume/<instanceid>', methods=['POST'])
+def fdu_resume(instanceid):
+    try:
+        return json.dumps({'result':fos_api.fdu.resume(instanceid)})
+    except ValueError as ve:
+        return json.dumps({'error':'{}'.format(ve)})
+
+
+@app.route('/fdu/migrate/<instanceid>/<destinationid>', methods=['POST'])
+def fdu_migrate(instanceid ,destinationid):
+    try:
+        return json.dumps({'result':fos_api.fdu.migrate(instanceid, destinationid)})
+    except ValueError as ve:
+        return json.dumps({'error':'{}'.format(ve)})
+
+
+@app.route('/fdu/instantiate/<fdu_id>/<node_id>', methods=['POST'])
+def fdu_instantiate(fdu_id, node_id):
+    try:
+        return json.dumps({'result':fos_api.fdu.instantiate(fdu_id, node_id)})
+    except ValueError as ve:
+        return json.dumps({'error':'{}'.format(ve)})
+
+
+@app.route('/fdu/terminate/<instanceid>', methods=['POST'])
+def fdu_terminate(instanceid):
+    try:
+        return json.dumps({'result':fos_api.fdu.terminate(instanceid)})
+    except ValueError as ve:
+        return json.dumps({'error':'{}'.format(ve)})
 
 
 @app.route('/fdu/get_nodes/<fdu_id>', methods=['GET'])
@@ -121,16 +179,23 @@ def fdu_get_nodes(fdu_id):
 
 @app.route('/fdu/list_node/<node_id>', methods=['GET'])
 def fdu_node_list(node_id):
-    return json.dumps(fos_api.fdu.node_id(node_id))
+    return json.dumps(fos_api.fdu.list_node(node_id))
 
 
 @app.route('/fdu/info/<fdu_id>', methods=['GET'])
 def fdu_info(fdu_id):
     return json.dumps(fos_api.fdu.info(fdu_id))
 
-@app.route('/fdu/instance_info/<fdu_id>/<node_id>', methods=['GET'])
-def fdu_instance_info(fdu_id, node_id):
-    return json.dumps(fos_api.fdu.instance_info(fdu_id, node_id))
+
+@app.route('/fdu/instance_info/<instanceid>', methods=['GET'])
+def fdu_instance_info(instanceid):
+    return json.dumps(fos_api.fdu.instance_info(instanceid))
+
+
+@app.route('/fdu/instance_list/<fdu_id>', methods=['GET'])
+def fdu_instance_list(fdu_id):
+    return json.dumps(fos_api.fdu.instance_list(fdu_id))
+
 
 @app.route('/fdu/list', methods=['GET'])
 def fdu_list():
@@ -160,13 +225,16 @@ def image_add():
     descriptor.update({'uri':uri})
     return json.dumps({'result':fos_api.image.add(descriptor)})
 
+
 @app.route('/image/<img_id>', methods=['GET'])
 def image_get(img_id):
     return json.dumps(fos_api.image.get(img_id))
 
+
 @app.route('/image/list', methods=['GET'])
 def image_list():
     return json.dumps(fos_api.image.list())
+
 
 @app.route('/image/remove/<img_id>', methods=['DELETE'])
 def image_remove(img_id):
@@ -180,6 +248,7 @@ def image_remove(img_id):
             os.remove(os.path.join(conf.get('image_path'), '{}.json'.format(img_id)))
         return json.dumps({'result':fos_api.image.remove(img_id)})
 
+
 @app.route('/image/file/<fname>', methods=['GET'])
 def get_image_file(fname):
     return send_from_directory(conf.get('image_path'), fname)
@@ -192,13 +261,16 @@ def flavor_add():
     descriptor = json.loads(request.data)
     return json.dumps({'result':fos_api.flavor.add(descriptor)})
 
+
 @app.route('/flavor/<flv_id>', methods=['GET'])
 def flavor_get(flv_id):
     return json.dumps(fos_api.flavor.get(flv_id))
 
+
 @app.route('/flavor/list', methods=['GET'])
 def flavor_list():
     return json.dumps(fos_api.flavor.list())
+
 
 @app.route('/flavor/<flv_id>', methods=['DELETE'])
 def flavor_remove(flv_id):

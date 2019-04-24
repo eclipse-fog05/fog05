@@ -16,6 +16,7 @@ import requests
 import json
 import os
 import tempfile
+import uuid
 
 
 def save_file(content, filename):
@@ -42,7 +43,6 @@ class FIMAPI(object):
         self.fdu = self.FDU(self.base_url)
         self.image = self.Image(self.base_url)
         self.flavor = self.Flavor(self.base_url)
-
 
     def check(self):
         url = '{}'.format(self.base_url)
@@ -86,7 +86,6 @@ class FIMAPI(object):
         def __init__(self, base_url):
             self.base_url = base_url
 
-
         def info(self, node_uuid, pluginid):
             url = '{}/plugin/info/{}/{}'.format(self.base_url, pluginid, node_uuid)
             return json.loads(str(requests.get(url).content))
@@ -118,7 +117,6 @@ class FIMAPI(object):
             url = '{}/connection_point/remove/{}'.format(self.base_url, cp_uuid)
             return json.loads(str(requests.delete(url).content))
 
-
         def list(self):
             url = '{}/network/list'.format(self.base_url)
             return json.loads(str(requests.get(url).content))
@@ -134,7 +132,6 @@ class FIMAPI(object):
         def __init__(self, base_url):
             self.base_url = base_url
 
-
         def onboard(self, descriptor):
             url = '{}/fdu/onboard'.format(self.base_url)
             return json.loads(str(requests.post(url, data=json.dumps(descriptor)).content))
@@ -147,36 +144,75 @@ class FIMAPI(object):
             url = '{}/fdu/define/{}/{}'.format(self.base_url, fduid, node_uuid)
             return json.loads(str(requests.post(url).content))
 
-        def undefine(self, fduid, node_uuid):
-            url = '{}/fdu/undefine/{}/{}'.format(self.base_url, fduid, node_uuid)
-            return json.loads(str(requests.delete(url).content))
+        def undefine(self, instanceid):
+            url = '{}/fdu/undefine/{}'.format(self.base_url, instanceid)
+            res = json.loads(str(requests.delete(url).content))
+            if 'error' in res:
+                raise ValueError(res['error'])
+            return res['result']
 
-        def configure(self, fduid, node_uuid):
-            url = '{}/fdu/configure/{}/{}'.format(self.base_url, fduid, node_uuid)
-            return json.loads(str(requests.post(url).content))
+        def configure(self, instanceid):
+            url = '{}/fdu/configure/{}'.format(self.base_url, instanceid)
+            res = json.loads(str(requests.post(url).content))
+            if 'error' in res:
+                raise ValueError(res['error'])
+            return res['result']
 
-        def clean(self, fduid, node_uuid):
-            url = '{}/fdu/clean/{}/{}'.format(self.base_url, fduid, node_uuid)
-            return json.loads(str(requests.post(url).content))
+        def clean(self, instanceid):
+            url = '{}/fdu/clean/{}'.format(self.base_url, instanceid)
+            res = json.loads(str(requests.post(url).content))
+            if 'error' in res:
+                raise ValueError(res['error'])
+            return res['result']
 
-        def run(self, fduid, node_uuid):
-            url = '{}/fdu/run/{}/{}'.format(self.base_url, fduid, node_uuid)
-            return json.loads(str(requests.post(url).content))
+        def start(self, instanceid):
+            url = '{}/fdu/start/{}'.format(self.base_url, instanceid)
+            res = json.loads(str(requests.post(url).content))
+            if 'error' in res:
+                raise ValueError(res['error'])
+            return res['result']
 
-        def stop(self, fduid, node_uuid):
-            url = '{}/fdu/stop/{}/{}'.format(self.base_url, fduid, node_uuid)
-            return json.loads(str(requests.post(url).content))
+        def stop(self, instanceid):
+            url = '{}/fdu/stop/{}'.format(self.base_url, instanceid)
+            res = json.loads(str(requests.post(url).content))
+            if 'error' in res:
+                raise ValueError(res['error'])
+            return res['result']
 
-        def pause(self, fduid, node_uuid):
-            url = '{}/fdu/pause/{}/{}'.format(self.base_url, fduid, node_uuid)
-            return json.loads(str(requests.post(url).content))
+        def pause(self, instanceid):
+            url = '{}/fdu/pause/{}'.format(self.base_url, instanceid)
+            res = json.loads(str(requests.post(url).content))
+            if 'error' in res:
+                raise ValueError(res['error'])
+            return res['result']
 
-        def resume(self, fduid, node_uuid):
-            url = '{}/fdu/resume/{}/{}'.format(self.base_url, fduid, node_uuid)
-            return json.loads(str(requests.post(url).content))
+        def resume(self, instanceid):
+            url = '{}/fdu/resume/{}'.format(self.base_url, instanceid)
+            res = json.loads(str(requests.post(url).content))
+            if 'error' in res:
+                raise ValueError(res['error'])
+            return res['result']
 
-        def migrate(self, fduid, node_uuid, destination_node_uuid):
-            pass
+        def migrate(self, instanceid, destination_node_uuid):
+            url = '{}/fdu/migrate/{}/{}'.format(self.base_url, instanceid, destination_node_uuid)
+            res = json.loads(str(requests.post(url).content))
+            if 'error' in res:
+                raise ValueError(res['error'])
+            return res['result']
+
+        def instantiate(self, fduid, nodeid):
+            url = '{}/fdu/instantiate/{}/{}'.format(self.base_url, fduid, nodeid)
+            res = json.loads(str(requests.post(url).content))
+            if 'error' in res:
+                raise ValueError(res['error'])
+            return res['result']
+
+        def terminate(self, instanceid):
+            url = '{}/fdu/terminate/{}'.format(self.base_url, instanceid)
+            res = json.loads(str(requests.post(url).content))
+            if 'error' in res:
+                raise ValueError(res['error'])
+            return res['result']
 
         def get_nodes(self, fdu_uuid, node_uuid):
             url = '{}/fdu/get_nodes/{}'.format(self.base_url, fdu_uuid)
@@ -186,13 +222,16 @@ class FIMAPI(object):
             url = '{}/fdu/list_node/{}'.format(self.base_url, node_uuid)
             return json.loads(str(requests.get(url).content))
 
+        def instance_list(self, fduid):
+            url = '{}/fdu/instance_list/{}'.format(self.base_url, fduid)
+            return json.loads(str(requests.get(url).content))
 
         def info(self, fdu_uuid):
             url = '{}/fdu/info/{}'.format(self.base_url, fdu_uuid)
             return json.loads(str(requests.get(url).content))
 
-        def instance_info(self, fdu_uuid, node_uuid):
-            url = '{}/fdu/instance_info/{}/{}'.format(self.base_url, fdu_uuid, node_uuid)
+        def instance_info(self, instanceid):
+            url = '{}/fdu/instance_info/{}'.format(self.base_url, instanceid)
             return json.loads(str(requests.get(url).content))
 
         def list(self):
@@ -230,11 +269,9 @@ class FIMAPI(object):
             url = '{}/image/{}'.format(self.base_url, image_uuid)
             return json.loads(str(requests.get(url).content))
 
-
         def remove(self, image_uuid):
             url = '{}/image/{}'.format(self.base_url, image_uuid)
             return json.loads(str(requests.delete(url).content))
-
 
         def list(self):
             url = '{}/image/list'.format(self.base_url)
