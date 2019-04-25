@@ -17,3 +17,4 @@ _build
 .idea/
 .vscode/
 */_build/*
+.coverage

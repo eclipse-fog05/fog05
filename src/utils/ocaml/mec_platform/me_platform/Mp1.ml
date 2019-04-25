@@ -412,6 +412,11 @@ module Mp1 = struct
                   Lwt_list.map_p (fun sid ->
                       MEC_Core.get_service_by_category_id sid self.core
                     ) categories
+                | None, None, None ->
+                  MEC_Core.get_services self.core >>=
+                  Lwt_list.map_p (fun s ->
+                      Lwt.return (Some s)
+                    )
                 | _ -> failwith "Forbidden"
               in
               let f svcs =

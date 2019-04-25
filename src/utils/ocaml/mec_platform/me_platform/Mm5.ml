@@ -50,7 +50,7 @@ module Mm5 = struct
 
   let empty_path reqd =
     let headers = Headers.of_list [ "Connection", "close" ] in
-    Reqd.respond_with_string reqd (Response.create ~headers `OK)  "Mm5\n"
+    Reqd.respond_with_string reqd (Response.create ~headers `OK)  "{\"api\":\"Mm5\"}"
 
 
   let respond_ok reqd headers s =
@@ -64,8 +64,9 @@ module Mm5 = struct
     Reqd.respond_with_string reqd (Response.create ~headers `Created) s;
     Logs.debug (fun m -> m "[Mm5] : Replied OK with %s" s)
 
-  (* let respond_bad_request reqd headers s =
-     Reqd.respond_with_string reqd (Response.create ~headers `Bad_request) s *)
+  let respond_bad_request reqd headers s =
+    let headers = Headers.add headers "Connection" "close"  in
+    Reqd.respond_with_string reqd (Response.create ~headers `Bad_request) s
 
 
   let respond_forbidden reqd headers s =
@@ -87,6 +88,12 @@ module Mm5 = struct
         Body.write_string response_body (Status.default_reason_phrase error)
     end;
     Body.close_writer response_body
+
+
+  let on_err reqd (ex:exn) =
+    Logs.debug (fun m -> m "[Mm5] : Exception  %s" (Printexc.to_string ex) );
+    let problem_details = Rest_types.string_of_error_response @@ {problem_details = { err_type = "bad_request"; title=(Printexc.to_string ex); status=0; detail=""; instance=""}} in
+    respond_bad_request reqd (Headers.of_list ["Content-Type", "application/json"]) problem_details
   (* let internal_error msg =
      Server.respond_error ~status:`Internal_server_error ~body:msg () *)
 
@@ -163,7 +170,7 @@ module Mm5 = struct
                let res = List.map (fun e -> Yojson.Safe.from_string @@ MEC_Types.string_of_appd_descriptor e) apps |> fun x -> Yojson.Safe.to_string @@ (`List x) in
                respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res
              in
-             Lwt.on_success apps f;
+             Lwt.on_any apps f (on_err reqd);
              Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri )
            | `POST ->
              Logs.debug (fun m -> m "[Mm5] : POST Application");
@@ -182,7 +189,7 @@ module Mm5 = struct
                respond_created reqd (Headers.of_list ["Content-Type", "application/json"; "location", app_uri]) res
              in
              (* Should be Lwt.on_any *)
-             Lwt.on_success app f;
+             Lwt.on_any app f (on_err reqd);
              Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri );
            | _ ->
              let problem_details = Rest_types.string_of_error_response @@ {problem_details = { err_type = "forbidden"; title="forbidden"; status=0; detail=""; instance=""}} in
@@ -204,7 +211,7 @@ module Mm5 = struct
                      let problem_details = Rest_types.string_of_error_response @@ {problem_details = { err_type = "not found"; title="not found"; status=0; detail=""; instance=app_instance_id}} in
                      respond_not_found reqd (Headers.of_list ["Content-Type", "application/json"]) problem_details)
                 in
-                Lwt.on_success app f;
+                Lwt.on_any app f (on_err reqd);
                 Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri )
               | `PUT ->
                 Logs.debug (fun m -> m "[Mm5] : PUT Application %s" app_instance_id);
@@ -218,8 +225,16 @@ module Mm5 = struct
                   respond_created reqd (Headers.of_list ["Content-Type", "application/json"]) res
                 in
                 (* Should be Lwt.on_any *)
-                Lwt.on_success app f;
-                Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri );
+                Lwt.on_any app f (on_err reqd);
+                Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri )
+              | `DELETE ->
+                Logs.debug (fun m -> m "[Mm5] : DELETE Applicaiton %s"  app_instance_id );
+                let subid = MEC_Core.remove_application app_instance_id self.core in
+                let f _ =
+                  respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) ""
+                in
+                Lwt.on_any subid f (on_err reqd);
+                Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri )
               | _ -> let problem_details = Rest_types.string_of_error_response @@ {problem_details = { err_type = "forbidden"; title="forbidden"; status=0; detail=""; instance=""}} in
                 respond_forbidden reqd (Headers.of_list ["Content-Type", "application/json"]) problem_details)
            | ["dns_rules"] ->
@@ -236,7 +251,7 @@ module Mm5 = struct
                   Logs.debug (fun m -> m "[Mm5] : DNS Rules for %s -> %s" app_instance_id res);
                   respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res
                 in
-                Lwt.on_success rules f;
+                Lwt.on_any rules f (on_err reqd);
                 Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri )
               | `POST ->
                 Logs.debug (fun m -> m "[Mm5] : POST DNS Rule for %s" app_instance_id);
@@ -255,7 +270,7 @@ module Mm5 = struct
                   respond_created reqd (Headers.of_list ["Content-Type", "application/json"; "location", dnsr_uri]) res
                 in
                 (* Should be Lwt.on_any *)
-                Lwt.on_success dns_rule f;
+                Lwt.on_any dns_rule f (on_err reqd);
                 Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri );
               | _ ->
                 let problem_details = Rest_types.string_of_error_response @@ {problem_details = { err_type = "forbidden"; title="forbidden"; status=0; detail=""; instance=""}} in
@@ -276,7 +291,7 @@ module Mm5 = struct
                     let problem_details = Rest_types.string_of_error_response @@ {problem_details = { err_type = "not found"; title="not found"; status=0; detail=""; instance=app_instance_id}} in
                     respond_not_found reqd (Headers.of_list ["Content-Type", "application/json"]) problem_details
                 in
-                Lwt.on_success rule f;
+                Lwt.on_any rule f (on_err reqd);
                 Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri )
               | `PUT ->
                 let rule = read_body reqd
@@ -293,9 +308,16 @@ module Mm5 = struct
                   let rrule = Rest_types.string_of_dns_rule_response {dns_rule = rule} in
                   respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) rrule
                 in
-                Lwt.on_success rule f;
-                Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri );
-
+                Lwt.on_any rule f (on_err reqd);
+                Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri )
+              | `DELETE ->
+                Logs.debug (fun m -> m "[Mm5] : DELETE DNS Rule %s for %s"  dns_rule_id app_instance_id );
+                let subid = MEC_Core.remove_dns_rule_for_application app_instance_id dns_rule_id self.core in
+                let f _ =
+                  respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) ""
+                in
+                Lwt.on_any subid f (on_err reqd);
+                Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri )
               | _ ->
                 let problem_details = Rest_types.string_of_error_response @@ {problem_details = { err_type = "forbidden"; title="forbidden"; status=0; detail=""; instance=""}} in
                 respond_forbidden reqd (Headers.of_list ["Content-Type", "application/json"]) problem_details)
@@ -312,7 +334,7 @@ module Mm5 = struct
                    Logs.debug (fun m -> m "[Mm5] : Traffic Rules for %s -> %s" app_instance_id res);
                    respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res;
                  in
-                 Lwt.on_success rules f;
+                 Lwt.on_any rules f (on_err reqd);
                  Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri )
                | `POST ->
                  Logs.debug (fun m -> m "[Mm5] : POST Traffic Rule for %s" app_instance_id);
@@ -320,9 +342,15 @@ module Mm5 = struct
                       location	The resource URI of the created resource	string
                  *)
                  let tfc_rule = read_body reqd
-                   >>= fun string_tfcr -> Lwt.return @@ Rest_types.traffic_rule_of_string string_tfcr
-                   >>= fun tfcr -> MEC_Core.add_traffic_rule_for_application app_instance_id tfcr self.core
-                   >>= fun tfcid -> Lwt.return (tfcid,tfcr)
+                   >>= fun string_tfcr ->
+                   Logs.debug (fun m -> m "### Traffic Rule %s" string_tfcr);
+                   Lwt.return @@ Rest_types.traffic_rule_of_string string_tfcr
+                   >>= fun tfcr ->
+                   Logs.debug (fun m -> m "### Traffic Rule converted");
+                   MEC_Core.add_traffic_rule_for_application app_instance_id tfcr self.core
+                   >>= fun tfcid ->
+                   Logs.debug (fun m -> m "### Put on YAKS done");
+                   Lwt.return (tfcid,tfcr)
                  in
                  let f tfc_rule =
                    let tfcid, tfc_rule = tfc_rule in
@@ -330,8 +358,7 @@ module Mm5 = struct
                    let res = Rest_types.string_of_traffic_rule_response {traffic_rule =  tfc_rule}  in
                    respond_created reqd (Headers.of_list ["Content-Type", "application/json"; "location", tfcr_uri]) res
                  in
-                 (* Should be Lwt.on_any *)
-                 Lwt.on_success tfc_rule f;
+                 Lwt.on_any tfc_rule f (on_err reqd);
                  Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri );
                | _ ->
                  let problem_details = Rest_types.string_of_error_response @@ {problem_details = { err_type = "forbidden"; title="forbidden"; status=0; detail=""; instance=""}} in
@@ -352,7 +379,7 @@ module Mm5 = struct
                     let problem_details = Rest_types.string_of_error_response @@ {problem_details = { err_type = "not found"; title="not found"; status=0; detail=""; instance=app_instance_id}} in
                     respond_not_found reqd (Headers.of_list ["Content-Type", "application/json"]) problem_details
                 in
-                Lwt.on_success rule f;
+                Lwt.on_any rule f (on_err reqd);
                 Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri )
               | `PUT ->
                 let rule = read_body reqd
@@ -365,8 +392,16 @@ module Mm5 = struct
                   let rrule = Rest_types.string_of_traffic_rule_response {traffic_rule = rule} in
                   respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) rrule
                 in
-                Lwt.on_success rule f;
+                Lwt.on_any rule f (on_err reqd);
                 Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri );
+              | `DELETE ->
+                Logs.debug (fun m -> m "[Mm5] : DELETE Traffic Rule %s for %s"  traffic_rule_id app_instance_id );
+                let subid = MEC_Core.remove_traffic_rule_for_application app_instance_id traffic_rule_id self.core in
+                let f _ =
+                  respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) ""
+                in
+                Lwt.on_any subid f (on_err reqd);
+                Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri )
               | _ ->
                 let problem_details = Rest_types.string_of_error_response @@ {problem_details = { err_type = "forbidden"; title="forbidden"; status=0; detail=""; instance=""}} in
                 respond_forbidden reqd (Headers.of_list ["Content-Type", "application/json"]) problem_details)
@@ -399,6 +434,11 @@ module Mm5 = struct
                   Lwt_list.map_p (fun sid ->
                       MEC_Core.get_service_by_category_id sid self.core
                     ) categories
+                | None, None, None ->
+                  MEC_Core.get_services self.core >>=
+                  Lwt_list.map_p (fun s ->
+                      Lwt.return (Some s)
+                    )
                 | _ -> failwith "Forbidden"
               in
               let f svcs =
@@ -418,7 +458,7 @@ module Mm5 = struct
                 respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res
               in
               (* Should be Lwt.on_any *)
-              Lwt.on_success svcs f;
+              Lwt.on_any svcs f (on_err reqd);
               Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri );
 
             | `POST ->
@@ -438,7 +478,7 @@ module Mm5 = struct
                 respond_created reqd (Headers.of_list ["Content-Type", "application/json"; "location", svc_uri]) res
               in
               (* Should be Lwt.on_any *)
-              Lwt.on_success svc f;
+              Lwt.on_any svc f (on_err reqd);
               Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri )
             | _ ->
               let problem_details = Rest_types.string_of_error_response @@ {problem_details = { err_type = "forbidden"; title="forbidden"; status=0; detail=""; instance=""}} in
@@ -456,7 +496,7 @@ module Mm5 = struct
                   let problem_details = Rest_types.string_of_error_response @@ {problem_details = { err_type = "not found"; title="service not found"; status=0; detail=""; instance=""}} in
                   respond_not_found reqd (Headers.of_list ["Content-Type", "application/json"]) problem_details
               in
-              Lwt.on_success svc f;
+              Lwt.on_any svc f (on_err reqd);
               Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri )
             | `PUT ->
               Logs.debug (fun m -> m "[Mm5] : PUT Service with id %s" service_id);
@@ -470,13 +510,22 @@ module Mm5 = struct
                 respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res
               in
               (* Should be Lwt.on_any *)
-              Lwt.on_success svc f;
+              Lwt.on_any svc f (on_err reqd);
+              Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri )
+            | `DELETE ->
+              Logs.debug (fun m -> m "[Mm5] : DELETE Service %s "  service_id );
+              let subid = MEC_Core.remove_service service_id self.core in
+              let f _ =
+                respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) ""
+              in
+              Lwt.on_any subid f (on_err reqd);
               Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri )
             | _ ->
               let problem_details = Rest_types.string_of_error_response @@ {problem_details = { err_type = "forbidden"; title="forbidden"; status=0; detail=""; instance=""}} in
               respond_forbidden reqd (Headers.of_list ["Content-Type", "application/json"]) problem_details)
         | ["transports"] -> (match meth with
             | `GET ->
+              Logs.debug (fun m -> m "[Mm5] : GET Transports");
               let txs = MEC_Core.get_transports self.core in
               let f txs =
                 let res =List.map (fun e ->
@@ -485,7 +534,7 @@ module Mm5 = struct
                 in
                 respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res
               in
-              Lwt.on_success txs f;
+              Lwt.on_any txs f (on_err reqd);
               Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri )
             | `POST ->
               Logs.debug (fun m -> m "[Mm5] : POST Transport");
@@ -502,11 +551,52 @@ module Mm5 = struct
                 respond_created reqd (Headers.of_list ["Content-Type", "application/json"]) res
               in
               (* Should be Lwt.on_any *)
-              Lwt.on_success tx f;
+              Lwt.on_any tx f (on_err reqd);
               Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri );
             | _ ->
               let problem_details = Rest_types.string_of_error_response @@ {problem_details = { err_type = "forbidden"; title="forbidden"; status=0; detail=""; instance=""}} in
               respond_forbidden reqd (Headers.of_list ["Content-Type", "application/json"]) problem_details )
+        | "transports" :: transport_id :: _ ->
+          (match meth with
+           | `GET ->
+             Logs.debug (fun m -> m "[Mm5] : GET Transport %s" transport_id);
+             let tx = MEC_Core.get_transport_by_id transport_id self.core in
+             let f tx =
+               match tx with
+               | Some tx ->
+                 let res = Rest_types.string_of_transport_info_response {transport_info = tx} in
+                 respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res
+               | None ->
+                 let problem_details = Rest_types.string_of_error_response @@ {problem_details = { err_type = "not found"; title="service not found"; status=0; detail=""; instance=""}} in
+                 respond_not_found reqd (Headers.of_list ["Content-Type", "application/json"]) problem_details
+             in
+             Lwt.on_any tx f (on_err reqd);
+             Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri )
+           | `PUT ->
+             Logs.debug (fun m -> m "[Mm5] : PUT Transport with id %s" transport_id);
+             let tx = read_body reqd
+               >>= fun string_tx -> Lwt.return @@ Rest_types.transport_info_of_string string_tx
+               >>= fun txt -> MEC_Core.add_tranport txt self.core
+               >>= fun _ -> Lwt.return txt
+             in
+             let f tx =
+               let res = Rest_types.string_of_transport_info_response {transport_info = tx} in
+               respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res
+             in
+             (* Should be Lwt.on_any *)
+             Lwt.on_any tx f (on_err reqd);
+             Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri )
+           | `DELETE ->
+             Logs.debug (fun m -> m "[Mm5] : DELETE Transport %s "  transport_id );
+             let subid = MEC_Core.remove_transport transport_id self.core in
+             let f _ =
+               respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) ""
+             in
+             Lwt.on_any subid f (on_err reqd);
+             Logs.debug (fun m -> m "[Mm5] : DONE %s" useful_uri )
+           | _ ->
+             let problem_details = Rest_types.string_of_error_response @@ {problem_details = { err_type = "forbidden"; title="forbidden"; status=0; detail=""; instance=""}} in
+             respond_forbidden reqd (Headers.of_list ["Content-Type", "application/json"]) problem_details)
         | _ ->
           let problem_details = Rest_types.string_of_error_response @@ {problem_details = { err_type = "forbidden"; title="forbidden"; status=0; detail=""; instance=""}} in
           respond_forbidden reqd (Headers.of_list ["Content-Type", "application/json"]) problem_details

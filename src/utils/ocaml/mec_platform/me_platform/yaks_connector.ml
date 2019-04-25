@@ -188,7 +188,7 @@ module MakeServiceRegistry(P: sig val prefix: string end) = struct
 
   let get_services connector =
     MVar.read connector >>= fun connector ->
-    let s = get_applications_selector in
+    let s = get_services_selector in
     Yaks.Workspace.get s connector.ws
     >>= fun res ->
     match res with
@@ -204,7 +204,7 @@ module MakeServiceRegistry(P: sig val prefix: string end) = struct
 
   let observe_services callback connector =
     MVar.guarded connector @@ fun connector ->
-    let s = get_applications_selector in
+    let s = get_services_selector in
     let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.service_info_of_string extract_serviceid_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}

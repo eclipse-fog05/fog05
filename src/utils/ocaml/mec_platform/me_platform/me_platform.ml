@@ -63,8 +63,8 @@ let run mep_id configuration_path style_renderer level =
   setup_log style_renderer level;
   (* Note: by default the Lwt.async_exception_hook do "exit 2" when an exception is raised in a canceled Lwt task.
      We rather force it to log and ignore the exception to avoid crashes (as it occurs randomly within cohttp at connection closure).  *)
-  Lwt.async_exception_hook := (fun exn ->
-      ignore @@ Logs.debug (fun m -> m "Exception caught in Lwt.async_exception_hook: %s\n%s" (Printexc.to_string exn) (Printexc.get_backtrace ())));
+  (* Lwt.async_exception_hook := (fun exn ->
+      Logs.debug (fun m -> m "Exception caught in Lwt.async_exception_hook: %s\n%s" (Printexc.to_string exn) (Printexc.get_backtrace ()))); *)
   Lwt_main.run @@ run_platform mep_id configuration_path
 
 

@@ -11,6 +11,9 @@
  *   Gabriele Baldoni (gabriele (dot) baldoni (at) adlinktech (dot) com ) -
  *********************************************************************************)
 
+
+type json <ocaml module="Yojson.Safe"> = abstract
+
 (* Errors *)
 
 type problem_details = {
@@ -115,7 +118,7 @@ type link_type = {
 }
 
 type oauth2_info = {
-  grant_types <json name="grantTypes"> : oauth_grant_types list;
+  grant_types <json name="grantTypes"> : oauth_grant_types;
   ?token_endpoint <json name="tokenEndpoint"> : string option;
 }
 
@@ -150,7 +153,7 @@ type category_ref = {
 
 type endpoint_info = {
   uris : string list;
-  alternative : string;
+  alternative <json name="alternative"> : json;
   addresses : address list;
 }
 
@@ -166,7 +169,7 @@ type traffic_filter = {
   dst_port <json name="dstPort"> : string list;
   protocol :  string list;
   token : string list;
-  src__tunnel_address <json name="srcATunnelddress"> : string list;
+  src_tunnel_address <json name="srcTunnelAddress"> : string list;
   dst_tunnel_address <json name="dstTunnelAddress"> : string list;
   src_tunnel_port <json name="srcTunnelPort"> : string list;
   dst_tunnel_port <json name="dstTunnelPort"> : string list;
@@ -177,7 +180,7 @@ type traffic_filter = {
 }
 
 type tunnel_info = {
-  tunnel_type : tunnel_type;
+  tunnel_type <json name="tunnelType"> : tunnel_type;
   ?tunnel_dst_address <json name="tunnelDstAddress"> : string option;
   ?tunnel_src_address <json name="tunnelSrcAddress"> : string option;
 }
@@ -203,7 +206,7 @@ type transport_info = {
   version : string;
   endpoint : endpoint_info;
   security :  security_info;
-  ?impl_specific_info : string option;
+  ?impl_specific_info <json name="implSpecificInfo"> : json option;
 }
 
 
@@ -220,9 +223,11 @@ type service_info = {
 
 type traffic_rule = {
   traffic_rule_id <json name="trafficRuleId"> : string;
-  filter_type <json name="filterType"> : filter_type list;
+  filter_type <json name="filterType"> : filter_type;
+  priority : int;
   action : action_type;
-  ?dst_interface <json name="dstInterface"> : interface_type option;
+  traffic_filter <json name="trafficFilter"> : traffic_filter list;
+  ?dst_interface <json name="dstInterface"> : destination_interface option;
   state : state_type;
 }
 
