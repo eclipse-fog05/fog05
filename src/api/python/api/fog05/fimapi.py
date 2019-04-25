@@ -935,8 +935,9 @@ class FIMAPI(object):
             # else:
             #     return False
             img_id = descriptor.get('uuid')
-            return self.connector.glob.desired.add_image(self.sysid,
+            res = self.connector.glob.desired.add_image(self.sysid,
              self.tenantid,img_id, descriptor)
+            return img_id
 
         def get(self, image_uuid):
             return self.connector.glob.desired.get_image(self.sysid,
@@ -963,8 +964,9 @@ class FIMAPI(object):
             #     return True
             # else:
             #     return False
-            return self.connector.glob.desired.remove_image(self.sysid,
+            ret = self.connector.glob.desired.remove_image(self.sysid,
              self.tenantid, image_uuid)
+            return image_uuid
 
         def search(self, search_dict, node_uuid=None):
             pass
@@ -1039,8 +1041,9 @@ class FIMAPI(object):
             # else:
             #     return False
             flv_id = descriptor.get('uuid')
-            return self.connector.glob.desired.add_flavor(self.sysid,
+            res = self.connector.glob.desired.add_flavor(self.sysid,
              self.tenantid,flv_id, descriptor)
+            return flv_id
 
         def get(self, flavor_uuid):
             '''
@@ -1088,8 +1091,9 @@ class FIMAPI(object):
             #     return True
             # else:
             #     return False
-            return self.connector.glob.desired.remove_flavor(self.sysid,
+            ret = self.connector.glob.desired.remove_flavor(self.sysid,
              self.tenantid, flavor_uuid)
+            return flavor_uuid
 
         def list(self):
             '''
