@@ -19,6 +19,7 @@ module MEC_Core = struct
 
   (* ME Apps and Svcs *)
 
+  (* This should add the transports *)
   let add_service (ser_desc: service_info ) self =
     MVar.read self >>= fun self ->
     let serid = Apero.Option.get_or_default ser_desc.ser_instance_id (Apero.Uuid.to_string @@  Apero.Uuid.make ()) in
@@ -74,6 +75,7 @@ module MEC_Core = struct
     | None -> Lwt.fail @@ MEException (`ServiceNotExisting (`Msg (Printf.sprintf "Service with id %s not exist" ser_uuid)))
 
 
+  (* This should add the traffic rules and dns rules *)
   let add_application (app_desc: Fos_im.MEC_Types.appd_descriptor ) self =
     MVar.read self >>= fun self ->
     let appid = app_desc.id in
