@@ -121,26 +121,30 @@ class LXD(RuntimePluginFDU):
 
     def stop_runtime(self):
         self.logger.info(
-            'stopRuntime()', 'LXD Plugin - Destroying {} running FDUs'.format(len(self.current_fdus)))
+            'stop_runtime()', 'LXD Plugin - Destroying {} running FDUs'.format(len(self.current_fdus)))
         for k in list(self.current_fdus.keys()):
-            fdu = self.current_fdus.get(k)
-            self.__force_fdu_termination(k)
+            try:
+                fdu = self.current_fdus.get(k)
+                self.__force_fdu_termination(k)
+            except Exception as e:
+                self.logger.error('stop_runtime()', 'Error {}, continuing'.format(e))
+                pass
+
             # if fdu.get_state() == State.DEFINED:
             #     self.undefine_fdu(k)
         keys = list(self.images.keys())
         for k in keys:
             self.logger.info(
-                'stopRuntime()', 'Removing Image {}'.format(k))
+                'stop_runtime()', 'Removing Image {}'.format(k))
             try:
                 img = self.conn.images.get_by_alias(k)
                 img.delete()
             except LXDAPIException as e:
-                self.logger.error('stopRuntime()', 'Error {}'.format(e))
+                self.logger.error('stop_runtime()', 'Error {}'.format(e))
                 pass
 
         self.conn = None
-        self.logger.info(
-            'stopRuntime()', '[ DONE ] LXD Plugin - Bye Bye')
+        self.logger.info('stop_runtime()', '[ DONE ] LXD Plugin - Bye Bye')
 
     def get_fdus(self):
         return self.current_fdus
