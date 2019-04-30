@@ -436,6 +436,8 @@ class LXD(RuntimePluginFDU):
                 cp = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
                 cp.update({'status':'DESTROY'})
                 self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id, cp)
+                self.call_nw_plugin_function('delete_port',{'cp_id': cp_id})
+
             self.current_fdus.update({instance_uuid: fdu})
             self.update_fdu_status(fdu_uuid, instance_uuid, 'DEFINE')
             self.logger.info('clean_fdu()', '[ DONE ] LXD Plugin - Clean a Container uuid {} '.format(instance_uuid))
