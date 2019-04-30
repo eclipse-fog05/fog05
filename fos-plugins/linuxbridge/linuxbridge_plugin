@@ -601,7 +601,7 @@ class LinuxBridge(NetworkPlugin):
     def __port_observer(self, port_info):
         self.logger.info('__port_observer()', 'Linux Bridge Plugin - New Action of a Port - Port Info: {}'.format(port_info))
         action = port_info.get('status')
-        port_uuid = port_info.get('cp_uuid')
+        port_uuid = port_info.get('uuid')
         if action == 'DESTROY':
             self.logger.info('__port_observer()', 'Linux Bridge Plugin - This is a remove for : {}'.format(port_info))
             self.delete_port(port_uuid)
