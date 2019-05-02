@@ -118,11 +118,7 @@ type link_type = {
 }
 
 type oauth2_info = {
-<<<<<<< HEAD
   grant_types <json name="grantTypes"> : oauth_grant_types;
-=======
-  grant_types <json name="grantTypes"> : oauth_grant_types list;
->>>>>>> upstream/master
   ?token_endpoint <json name="tokenEndpoint"> : string option;
 }
 
@@ -157,11 +153,7 @@ type category_ref = {
 
 type endpoint_info = {
   uris : string list;
-<<<<<<< HEAD
   alternative <json name="alternative"> : json;
-=======
-  alternative : string;
->>>>>>> upstream/master
   addresses : address list;
 }
 
@@ -177,11 +169,7 @@ type traffic_filter = {
   dst_port <json name="dstPort"> : string list;
   protocol :  string list;
   token : string list;
-<<<<<<< HEAD
   src_tunnel_address <json name="srcTunnelAddress"> : string list;
-=======
-  src__tunnel_address <json name="srcATunnelddress"> : string list;
->>>>>>> upstream/master
   dst_tunnel_address <json name="dstTunnelAddress"> : string list;
   src_tunnel_port <json name="srcTunnelPort"> : string list;
   dst_tunnel_port <json name="dstTunnelPort"> : string list;
@@ -192,11 +180,7 @@ type traffic_filter = {
 }
 
 type tunnel_info = {
-<<<<<<< HEAD
   tunnel_type <json name="tunnelType"> : tunnel_type;
-=======
-  tunnel_type : tunnel_type;
->>>>>>> upstream/master
   ?tunnel_dst_address <json name="tunnelDstAddress"> : string option;
   ?tunnel_src_address <json name="tunnelSrcAddress"> : string option;
 }
@@ -222,11 +206,7 @@ type transport_info = {
   version : string;
   endpoint : endpoint_info;
   security :  security_info;
-<<<<<<< HEAD
   ?impl_specific_info <json name="implSpecificInfo"> : json option;
-=======
-  ?impl_specific_info : string option;
->>>>>>> upstream/master
 }
 
 
@@ -243,17 +223,11 @@ type service_info = {
 
 type traffic_rule = {
   traffic_rule_id <json name="trafficRuleId"> : string;
-<<<<<<< HEAD
   filter_type <json name="filterType"> : filter_type;
   priority : int;
   action : action_type;
   traffic_filter <json name="trafficFilter"> : traffic_filter list;
   ?dst_interface <json name="dstInterface"> : destination_interface option;
-=======
-  filter_type <json name="filterType"> : filter_type list;
-  action : action_type;
-  ?dst_interface <json name="dstInterface"> : interface_type option;
->>>>>>> upstream/master
   state : state_type;
 }
 
