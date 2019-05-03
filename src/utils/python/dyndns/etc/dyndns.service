@@ -6,7 +6,7 @@ After=yaks.target
 [Service]
 Type=simple
 PIDFile=/var/fos/dyndns.pid
-ExecStart = python3 /etc/fos/utils/dyndns/src/service.py /etc/fos/utils/dyndns/src/service.json
+ExecStart = /usr/bin/python3 /etc/fos/utils/dyndns/src/service.py /etc/fos/utils/dyndns/src/service.json
 KillMode=process
 Restart=on-failure
 User=mec
