@@ -1,6 +1,6 @@
 [unit]
 Description = Eclipse fog05 MEC DynDNS service
-After=network.target
+After=yaks.target
 
 
 [Service]
