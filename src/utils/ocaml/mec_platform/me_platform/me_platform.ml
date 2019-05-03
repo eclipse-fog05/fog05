@@ -15,6 +15,7 @@ open Cmdliner
 open Me_core
 open Mp1
 open Mm5
+open DNS
 (* open Lwt.Infix *)
 (* open Fos_im *)
 
@@ -47,7 +48,8 @@ let setup_log style_renderer level =
 let run_platform mep_id configuration_path =
   try%lwt
     ignore mep_id; ignore configuration_path;
-    let%lwt core = MEC_Core.create (Apero.Option.get @@ Apero_net.Locator.of_string "tcp/127.0.0.1:7887") in
+    let%lwt dns_client = DynDNS.create "127.0.0.1" 9999 "http://127.0.0.1:9999" in
+    let%lwt core = MEC_Core.create (Apero.Option.get @@ Apero_net.Locator.of_string "tcp/127.0.0.1:7887") dns_client in
     let%lwt mm5 = Mm5.create "127.0.0.1" "/exampleAPI/mm5/v1/" 8091 core in
     let%lwt mp1 = Mp1.create "127.0.0.1" "/exampleAPI/mp1/v1/" 8081 core in
     Lwt.join [MEC_Core.start core; Mp1.start mp1; Mm5.start mm5]
@@ -63,8 +65,8 @@ let run mep_id configuration_path style_renderer level =
   setup_log style_renderer level;
   (* Note: by default the Lwt.async_exception_hook do "exit 2" when an exception is raised in a canceled Lwt task.
      We rather force it to log and ignore the exception to avoid crashes (as it occurs randomly within cohttp at connection closure).  *)
-  (* Lwt.async_exception_hook := (fun exn ->
-      Logs.debug (fun m -> m "Exception caught in Lwt.async_exception_hook: %s\n%s" (Printexc.to_string exn) (Printexc.get_backtrace ()))); *)
+  Lwt.async_exception_hook := (fun exn ->
+      Logs.debug (fun m -> m "Exception caught in Lwt.async_exception_hook: %s\n%s" (Printexc.to_string exn) (Printexc.get_backtrace ())));
   Lwt_main.run @@ run_platform mep_id configuration_path
 
 

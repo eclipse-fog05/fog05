@@ -1,6 +1,7 @@
 open Lwt.Infix
 open Rest_types
 open Mec_errors
+open DNS
 
 module MVar = Apero.MVar_lwt
 
@@ -8,14 +9,15 @@ module MEC_Core = struct
 
   type state = {
     connector : Yaks_connector.connector;
+    dns_client : DynDNS.t
   }
 
 
   type t = state MVar.t
 
-  let create loc =
+  let create loc dns_client =
     let%lwt con = Yaks_connector.get_connector_of_locator loc in
-    Lwt.return @@ MVar.create ({connector = con})
+    Lwt.return @@ MVar.create ({connector = con; dns_client})
 
   (* ME Apps and Svcs *)
 
@@ -140,12 +142,17 @@ module MEC_Core = struct
   let add_dns_rule_for_application appid dns_rule self =
     MVar.read self >>= fun self ->
     Yaks_connector.Storage.DNSRules.add_application_dns_rule appid dns_rule.dns_rule_id dns_rule self.connector
-    >>= fun _ -> Lwt.return dns_rule.dns_rule_id
+    >>= fun _ ->
+    DynDNS.add_dns_rule self.dns_client dns_rule.ip_address dns_rule.domain_name
+    >>= fun _->
+    Lwt.return dns_rule.dns_rule_id
 
   let remove_dns_rule_for_application appid dns_rule_id self =
     MVar.read self >>= fun self ->
     match%lwt (Yaks_connector.Storage.DNSRules.get_application_dns_rule appid dns_rule_id self.connector) with
-    | Some _ ->
+    | Some rule ->
+      DynDNS.remove_dns_rule self.dns_client rule.ip_address rule.domain_name
+      >>= fun _ ->
       Yaks_connector.Storage.DNSRules.remove_application_dns_rule appid dns_rule_id self.connector
       >>= fun _ -> Lwt.return dns_rule_id
     | None -> Lwt.fail @@ MEException (`DNSRuleNotExisting (`Msg (Printf.sprintf "DNS Rule with id %s not exist in application %s" dns_rule_id appid )))

@@ -1,7 +1,0 @@
-(executable
-   (name fos_cat)
-   (public_name fos_cat)
-   (package fos-cat)
-   (libraries cmdliner fos-core apero-core apero-net yaks-common yaks-ocaml yojson atdgen lwt logs logs.fmt logs.cli fmt fmt.cli fmt.tty)  
-   (preprocess (pps lwt_ppx ppx_cstruct ))
-)
