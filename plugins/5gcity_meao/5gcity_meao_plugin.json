@@ -1,9 +1,0 @@
-{
-      "name": "5gcity_meao",
-      "version": 1,
-      "uuid": "5894800C-78D5-4F6F-BBCB-DE2835D5F190",
-      "type": "orchestration",
-      "configuration":{
-            "name":"5gcity"
-      }
-}
