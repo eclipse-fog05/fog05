@@ -129,7 +129,7 @@ class Native(RuntimePluginFDU):
         self.logger.info('define_fdu()', ' Native Plugin - Define BE FDU')
         self.logger.info('define_fdu()', ' Native Plugin - FDU is {}'.format(fdu))
 
-        if fdu.image is not None and fdu.get_image_uri().startswith('http'):
+        if fdu.image is not None:
             zip_name = fdu.get_image_uri().split('/')[-1]
             zip_file = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, zip_name)
             dest = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid)
@@ -146,7 +146,13 @@ class Native(RuntimePluginFDU):
                 unzip_cmd = ''
 
             self.call_os_plugin_function('create_dir',{'dir_path':os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid)})
-            self.call_os_plugin_function('download_file',{'url':fdu.get_image_uri(),'file_path':os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, zip_name)})
+
+            if fdu.get_image_uri().startswith('http'):
+                self.call_os_plugin_function('download_file',{'url':fdu.get_image_uri(),'file_path':os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, zip_name)})
+            elif fdu.get_image_uri().startswith('file://'):
+                cmd = 'cp {} {}'.format(fdu.get_image_uri()[len('file://'):], os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, zip_name))
+                self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
+
             self.call_os_plugin_function('execute_command',{'command':unzip_cmd,'blocking':True, 'external':True})
             fdu.source = dest
         else:
