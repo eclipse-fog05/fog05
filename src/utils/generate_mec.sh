@@ -28,7 +28,7 @@ lxc exec plat -- sudo chown mec:mec -R /etc/fos
 
 lxc file push ../../etc/yaks.service plat/lib/systemd/system/
 lxc file push ../../etc/yaks.target plat/lib/systemd/system/
-lxc file push ./ocaml/mec_platform/etc/mec_platfrom.service plat/lib/systemd/system/
+lxc file push ./ocaml/mec_platform/etc/mec_platform.service plat/lib/systemd/system/
 lxc file push ./python/dyndns/etc/dyndns.service plat/lib/systemd/system/
 lxc exec plat -- sudo apt install libev-dev libssl-dev nginx dnsmasq python3 python3-pip -y
 lxc exec plat -- sudo pip3 install flask psutil
