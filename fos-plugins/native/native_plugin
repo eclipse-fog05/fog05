@@ -269,7 +269,7 @@ class Native(RuntimePluginFDU):
             fdu_uuid = fdu.fdu_uuid
             if fdu.source is not None:
                 native_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name)
-                source_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid)
+                source_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, instance_uuid)
                 pid_file = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name, instance_uuid)
                 run_script = self.__generate_run_script(fdu.command, fdu.args, source_dir, pid_file)
                 run_script = binascii.hexlify(base64.b64encode(bytes(run_script, 'utf-8'))).decode()
