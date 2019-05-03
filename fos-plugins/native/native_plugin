@@ -102,9 +102,13 @@ class Native(RuntimePluginFDU):
         self.logger.info('stopRuntime()', ' Native Plugin - Destroy running BE')
         for k in list(self.current_fdus.keys()):
             fdu = self.current_fdus.get(k)
-            self.__force_fdu_termination(k)
-            if fdu.get_state() == State.DEFINED:
-                self.undefine_fdu(k)
+            try:
+                self.__force_fdu_termination(k)
+                if fdu.get_state() == State.DEFINED:
+                    self.undefine_fdu(k)
+            except Exception as e:
+                self.logger.error('stop_runtime()', 'Error {}, continuing'.format(e))
+                pass
         self.logger.info('stopRuntime()', '[ DONE ] Native Plugin - Bye')
         return True
 
