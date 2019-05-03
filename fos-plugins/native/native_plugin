@@ -102,9 +102,13 @@ class Native(RuntimePluginFDU):
         self.logger.info('stopRuntime()', ' Native Plugin - Destroy running BE')
         for k in list(self.current_fdus.keys()):
             fdu = self.current_fdus.get(k)
-            self.__force_fdu_termination(k)
-            if fdu.get_state() == State.DEFINED:
-                self.undefine_fdu(k)
+            try:
+                self.__force_fdu_termination(k)
+                if fdu.get_state() == State.DEFINED:
+                    self.undefine_fdu(k)
+            except Exception as e:
+                self.logger.error('stop_runtime()', 'Error {}, continuing'.format(e))
+                pass
         self.logger.info('stopRuntime()', '[ DONE ] Native Plugin - Bye')
         return True
 
@@ -129,25 +133,31 @@ class Native(RuntimePluginFDU):
         self.logger.info('define_fdu()', ' Native Plugin - Define BE FDU')
         self.logger.info('define_fdu()', ' Native Plugin - FDU is {}'.format(fdu))
 
-        if fdu.image is not None and fdu.get_image_uri().startswith('http'):
+        if fdu.image is not None:
             zip_name = fdu.get_image_uri().split('/')[-1]
             zip_file = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, zip_name)
             dest = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid)
             # entity.source = os.path.join(dest,entity.command)
 
-            if self.operating_system.lower() == 'linux':
-                if zip_name.endswith('.tar.gz'):
-                    unzip_cmd = 'tar -zxvf {} -C {}'.format(zip_file, dest)
-                else:
-                    unzip_cmd = 'unzip {} -d {}'.format(zip_file, dest)
-            elif self.operating_system.lower() == 'windows':
-                unzip_cmd = 'Expand-Archive -Path {} -DestinationPath {}'.format(zip_file, dest)
-            else:
-                unzip_cmd = ''
+            # if self.operating_system.lower() == 'linux':
+            #     if zip_name.endswith('.tar.gz'):
+            #         unzip_cmd = 'tar -zxvf {} -C {}'.format(zip_file, dest)
+            #     else:
+            #         unzip_cmd = 'unzip {} -d {}'.format(zip_file, dest)
+            # elif self.operating_system.lower() == 'windows':
+            #     unzip_cmd = 'Expand-Archive -Path {} -DestinationPath {}'.format(zip_file, dest)
+            # else:
+            #     unzip_cmd = ''
 
             self.call_os_plugin_function('create_dir',{'dir_path':os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid)})
-            self.call_os_plugin_function('download_file',{'url':fdu.get_image_uri(),'file_path':os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, zip_name)})
-            self.call_os_plugin_function('execute_command',{'command':unzip_cmd,'blocking':True, 'external':True})
+
+            if fdu.get_image_uri().startswith('http'):
+                self.call_os_plugin_function('download_file',{'url':fdu.get_image_uri(),'file_path':os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, zip_name)})
+            elif fdu.get_image_uri().startswith('file://'):
+                cmd = 'cp {} {}'.format(fdu.get_image_uri()[len('file://'):], os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, zip_name))
+                self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
+
+            # self.call_os_plugin_function('execute_command',{'command':unzip_cmd,'blocking':True, 'external':True})
             fdu.source = dest
         else:
             fdu.source = None
@@ -197,6 +207,21 @@ class Native(RuntimePluginFDU):
             native_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name)
             self.call_os_plugin_function('create_dir',{'dir_path':native_dir})
             self.call_os_plugin_function('create_file',{'file_path':fdu.outfile})
+
+            if fdu.source is not None:
+                zip_name = fdu.get_image_uri().split('/')[-1]
+                zip_file = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, zip_name)
+                if self.operating_system.lower() == 'linux':
+                    if zip_name.endswith('.tar.gz'):
+                        unzip_cmd = 'tar -zxvf {} -C {}'.format(zip_file, native_dir)
+                    else:
+                        unzip_cmd = 'unzip {} -d {}'.format(zip_file, native_dir)
+                elif self.operating_system.lower() == 'windows':
+                    unzip_cmd = 'Expand-Archive -Path {} -DestinationPath {}'.format(zip_file, native_dir)
+                else:
+                    unzip_cmd = ''
+                self.call_os_plugin_function('execute_command',{'command':unzip_cmd,'blocking':True, 'external':True})
+
             fdu.on_configured()
 
             self.logger.info('configure_fdu()', ' Native Plugin - FDU is {}'.format(fdu))
@@ -244,7 +269,7 @@ class Native(RuntimePluginFDU):
             fdu_uuid = fdu.fdu_uuid
             if fdu.source is not None:
                 native_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name)
-                source_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid)
+                source_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name)
                 pid_file = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name, instance_uuid)
                 run_script = self.__generate_run_script(fdu.command, fdu.args, source_dir, pid_file)
                 run_script = binascii.hexlify(base64.b64encode(bytes(run_script, 'utf-8'))).decode()
@@ -260,7 +285,7 @@ class Native(RuntimePluginFDU):
                     cmd = ''
                 process = self.__execute_command(cmd, fdu.outfile)
                 time.sleep(1)
-                # pid_file = '{}.pid'.format(fdu_uuid)
+                pid_file = '{}.pid'.format(pid_file)
                 # pid_file = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name, pid_file)
                 pid = int(self.call_os_plugin_function('read_file',{'file_path':pid_file, 'root':False}))
                 fdu.on_start(pid, process)
