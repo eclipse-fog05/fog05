@@ -270,7 +270,7 @@ class Native(RuntimePluginFDU):
             if fdu.source is not None:
                 native_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name)
                 source_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid)
-                pid_file = '{}.pid'.format(os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name, instance_uuid))
+                pid_file = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name, instance_uuid)
                 run_script = self.__generate_run_script(fdu.command, fdu.args, source_dir, pid_file)
                 run_script = binascii.hexlify(base64.b64encode(bytes(run_script, 'utf-8'))).decode()
                 if self.operating_system.lower() == 'linux':
@@ -285,7 +285,7 @@ class Native(RuntimePluginFDU):
                     cmd = ''
                 process = self.__execute_command(cmd, fdu.outfile)
                 time.sleep(1)
-                # pid_file = '{}.pid'.format(fdu_uuid)
+                pid_file = '{}.pid'.format(pid_file)
                 # pid_file = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name, pid_file)
                 pid = int(self.call_os_plugin_function('read_file',{'file_path':pid_file, 'root':False}))
                 fdu.on_start(pid, process)
