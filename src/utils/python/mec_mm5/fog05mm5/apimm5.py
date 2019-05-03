@@ -43,7 +43,7 @@ class Mm5(object):
 
     def check(self):
         url = '{}'.format(self.base_url)
-        return json.loads(requests.get(url).content)
+        return json.loads(requests.get(url).text)
 
     def close(self):
         pass
@@ -54,22 +54,22 @@ class Mm5(object):
 
         def list(self):
             url = '{}/applications'.format(self.base_url)
-            return json.loads(requests.get(url).content)
+            return json.loads(requests.get(url).text)
 
         def add(self, appd):
             url = '{}/applications'.format(self.base_url)
-            return json.loads(requests.post(url, data=json.dumps(appd)).content)
+            return json.loads(requests.post(url, data=json.dumps(appd)).text)
 
         def get(self, applicationid):
             url = '{}/applications/{}'.format(self.base_url, applicationid)
-            ret = json.loads(requests.get(url).content)
+            ret = json.loads(requests.get(url).text)
             if 'ProblemDetails' in ret.keys():
                 raise ValueError(ret['ProblemDetails']['title'])
             return ret
 
         def update(self, applicationid, appd):
             url = '{}/applications/{}'.format(self.base_url, applicationid)
-            return json.loads(requests.put(url, data=json.dumps(appd)).content)
+            return json.loads(requests.put(url, data=json.dumps(appd)).text)
 
         def remove(self, applicationid):
             url = '{}/applications/{}'.format(self.base_url, applicationid)
@@ -82,19 +82,19 @@ class Mm5(object):
 
         def list(self, applicationid):
             url = '{}/applications/{}/dns_rules'.format(self.base_url, applicationid)
-            return json.loads(requests.get(url).content)
+            return json.loads(requests.get(url).text)
 
         def add(self, applicationid, dns_rule):
             url = '{}/applications/{}/dns_rules'.format(self.base_url, applicationid)
-            return json.loads(requests.post(url, data=json.dumps(dns_rule)).content)
+            return json.loads(requests.post(url, data=json.dumps(dns_rule)).text)
 
         def update(self, applicationid, dns_rule_id, dns_rule):
             url = '{}/applications/{}/dns_rules/{}'.format(self.base_url, applicationid, dns_rule_id)
-            return json.loads(requests.put(url, data=json.dumps(dns_rule)).content)
+            return json.loads(requests.put(url, data=json.dumps(dns_rule)).text)
 
         def get(self, applicationid, dns_rule_id):
             url = '{}/applications/{}/dns_rules/{}'.format(self.base_url, applicationid, dns_rule_id)
-            ret = json.loads(requests.get(url).content)
+            ret = json.loads(requests.get(url).text)
             if 'ProblemDetails' in ret.keys():
                 raise ValueError(ret['ProblemDetails']['title'])
             return ret
@@ -110,19 +110,19 @@ class Mm5(object):
 
         def list(self, applicationid):
             url = '{}/applications/{}/traffic_rules'.format(self.base_url, applicationid)
-            return json.loads(requests.get(url).content)
+            return json.loads(requests.get(url).text)
 
         def add(self, applicationid, traffic_rule):
             url = '{}/applications/{}/traffic_rules'.format(self.base_url, applicationid)
-            return json.loads(requests.post(url, data=json.dumps(traffic_rule)).content)
+            return json.loads(requests.post(url, data=json.dumps(traffic_rule)).text)
 
         def update(self, applicationid, traffic_rule_id, traffic_rule):
             url = '{}/applications/{}/traffic_rules/{}'.format(self.base_url, applicationid, traffic_rule_id)
-            return json.loads(requests.put(url, data=json.dumps(traffic_rule)).content)
+            return json.loads(requests.put(url, data=json.dumps(traffic_rule)).text)
 
         def get(self, applicationid, traffic_rule_id):
             url = '{}/applications/{}/traffic_rules/{}'.format(self.base_url, applicationid, traffic_rule_id)
-            ret = json.loads(requests.get(url).content)
+            ret = json.loads(requests.get(url).text)
             if 'ProblemDetails' in ret.keys():
                 raise ValueError(ret['ProblemDetails']['title'])
             return ret
@@ -138,19 +138,19 @@ class Mm5(object):
 
         def list(self):
             url = '{}/services'.format(self.base_url)
-            return json.loads(requests.get(url).content)
+            return json.loads(requests.get(url).text)
 
         def add(self, service_info):
             url = '{}/services'.format(self.base_url)
-            return json.loads(requests.post(url, data=json.dumps(service_info)).content)
+            return json.loads(requests.post(url, data=json.dumps(service_info)).text)
 
         def update(self, service_id, service_info):
             url = '{}/services/{}'.format(self.base_url, service_id)
-            return json.loads(requests.put(url, data=json.dumps(service_info)).content)
+            return json.loads(requests.put(url, data=json.dumps(service_info)).text)
 
         def get(self, service_id):
             url = '{}/services/{}'.format(self.base_url, service_id)
-            ret = json.loads(requests.get(url).content)
+            ret = json.loads(requests.get(url).text)
             if 'ProblemDetails' in ret.keys():
                 raise ValueError(ret['ProblemDetails']['title'])
             return ret
@@ -166,19 +166,19 @@ class Mm5(object):
 
         def list(self):
             url = '{}/transports'.format(self.base_url)
-            return json.loads(requests.get(url).content)
+            return json.loads(requests.get(url).text)
 
         def add(self, transport_info):
             url = '{}/transports'.format(self.base_url)
-            return json.loads(requests.post(url, data=json.dumps(transport_info)).content)
+            return json.loads(requests.post(url, data=json.dumps(transport_info)).text)
 
         def update(self, transport_id, transport_info):
             url = '{}/transports/{}'.format(self.base_url, transport_id)
-            return json.loads(requests.put(url, data=json.dumps(transport_info)).content)
+            return json.loads(requests.put(url, data=json.dumps(transport_info)).text)
 
         def get(self, transport_id):
             url = '{}/transports/{}'.format(self.base_url, transport_id)
-            ret = json.loads(requests.get(url).content)
+            ret = json.loads(requests.get(url).text)
             if 'ProblemDetails' in ret.keys():
                 raise ValueError(ret['ProblemDetails']['title'])
             return ret

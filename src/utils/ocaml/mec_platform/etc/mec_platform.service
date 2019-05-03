@@ -1,0 +1,14 @@
+[unit]
+Description = Eclipse fog05 MEC DynDNS service
+After=yaks.target
+
+
+[Service]
+Type=simple
+PIDFile=/var/fos/platform.pid
+ExecStart = /etc/fos/utils/platform
+KillMode=process
+Restart=on-failure
+User=mec
+[Install]
+WantedBy=multi-user.target
