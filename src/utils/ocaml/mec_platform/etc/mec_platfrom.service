@@ -1,0 +1,14 @@
+[unit]
+Description = Eclipse fog05 MEC DynDNS service
+After=network.target
+
+
+[Service]
+Type=simple
+PIDFile=/var/fos/platfrom.pid
+ExecStart = python 3 /etc/fos/utils/mec/platfrom
+KillMode=process
+Restart=on-failure
+User=mec
+[Install]
+WantedBy=multi-user.target
