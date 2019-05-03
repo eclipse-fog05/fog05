@@ -6,6 +6,7 @@ import psutil
 import signal
 from flask import Flask, request, abort, send_from_directory, url_for
 
+# HOST_FILE = 'dynhosts'
 HOST_FILE = '/tmp/dynhosts'
 # conf = None
 # fos_api = None
@@ -67,10 +68,13 @@ def index():
 # GET Record
 @app.route('/record',methods=['GET'])
 def get_records():
-    cont = read_file(HOST_FILE)
+    with open(HOST_FILE, 'r') as f:
+        cont = f.readlines()
+    print(cont)
     l = []
     for line in cont:
-        ls = line.rstrip().split('\t')
+        ls = line.split('\t')
+        print(ls)
         r = {
             'ip': ls[0],
             'name': ls[1]

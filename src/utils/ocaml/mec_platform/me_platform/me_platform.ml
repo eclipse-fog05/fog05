@@ -70,8 +70,8 @@ let run mep_id configuration_path style_renderer level =
   Lwt_main.run @@ run_platform mep_id configuration_path
 
 
-let () =
-  Printexc.record_backtrace true;
-  Lwt_engine.set (new Lwt_engine.libev ());
-  let env = Arg.env_var "YAKSD_VERBOSITY" in
-  let _ = Term.(eval (const run $ mep_id $ configuration_path $ Fmt_cli.style_renderer () $ Logs_cli.level ~env (), Term.info "Yaks daemon")) in  ()
+(* let () =
+   Printexc.record_backtrace true;
+   Lwt_engine.set (new Lwt_engine.libev ());
+   let env = Arg.env_var "YAKSD_VERBOSITY" in
+   let _ = Term.(eval (const run $ mep_id $ configuration_path $ Fmt_cli.style_renderer () $ Logs_cli.level ~env (), Term.info "Yaks daemon")) in  () *)
