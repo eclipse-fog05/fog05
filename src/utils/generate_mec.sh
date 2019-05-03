@@ -37,7 +37,7 @@ lxc exec plat -- sudo pip3 install flask psutil
 lxc file push ./ocaml/mec_platform/etc/nginx plat/etc/nginx/sites-available/default
 lxc file push ./ocaml/mec_platform/etc/dnsmasq plat/etc/default/dnsmasq
 lxc file push ./python/dyndns/etc/mec.conf plat/etc/dnsmasq.d/mec.conf
-lxc file push ./ocaml/mec_platform/etc/ip_replace.sh /plat/tmp/
+lxc file push ./ocaml/mec_platform/etc/ip_replace.sh plat/tmp/
 
 lxc exec plat -- touch /tmp/dynhosts
 lxc exec plat --  /tmp/ip_replace.sh
