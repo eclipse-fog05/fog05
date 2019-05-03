@@ -52,7 +52,7 @@ lxc exec plat -- systemctl enable mec_platform
 lxc exec plat -- systemctl enable dyndns
 
 lxc exec plat -- systemctl start dnsmasq
-# lxc exec plat -- systemctl start nginx
+lxc exec plat -- systemctl start nginx
 lxc exec plat -- systemctl start yaks
 lxc exec plat -- systemctl start mec_platform
 lxc exec plat -- systemctl start dyndns
