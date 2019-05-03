@@ -6,7 +6,7 @@ After=yaks.target
 [Service]
 Type=simple
 PIDFile=/var/fos/platfrom.pid
-ExecStart = python 3 /etc/fos/utils/mec/platfrom
+ExecStart = /etc/fos/utils/mec/platfrom
 KillMode=process
 Restart=on-failure
 User=mec
