@@ -40,6 +40,7 @@ lxc file push ./python/dyndns/etc/mec.conf plat/etc/dnsmasq.d/mec.conf
 lxc file push ./ocaml/mec_platform/etc/ip_replace.sh plat/tmp/
 
 lxc exec plat -- touch /tmp/dynhosts
+lxc exec plat -- chmod 0666 /tmp/dynhosts
 lxc exec plat --  /tmp/ip_replace.sh
 
 lxc exec plat -- systemctl stop nginx
