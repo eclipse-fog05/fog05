@@ -43,7 +43,7 @@ lxc exec plat -- systemctl daemon-reload
 lxc exec plat -- systemctl enable dnsmasq
 lxc exec plat -- systemctl enable nginx
 lxc exec plat -- systemctl enable yaks
-lxc exec plat -- systemctl enable mec_platfrom
+lxc exec plat -- systemctl enable mec_platform
 lxc exec plat -- systemctl enable dyndns
 
 lxc exec plat -- systemctl start dnsmasq
