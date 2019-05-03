@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 
-sudo ip link add mecbuildbr
+sudo ip link add mecbuildbr type bridge
 sudo ip link set mecbuildbr up
 
 
