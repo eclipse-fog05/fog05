@@ -39,7 +39,10 @@ lxc file push ./ocaml/mec_platform/etc/dnsmasq plat/etc/default/dnsmasq
 lxc file push ./python/dyndns/etc/mec.conf plat/etc/dnsmasq.d/mec.conf
 
 lxc exec plat -- touch /tmp/dynhosts
-lxc exec plat -- ip -4 -o addr show dev eth0| awk '{split($4,a,"/");print a[1]}' | xargs -i sed -i -e "s/10.212.26.21/{}/g" /etc/nginx/sites-available/default
+# lxc exec plat --  ip -4 -o addr show dev eth0 | awk '{split($4,a,"/");print a[1]}' | xargs -i sed -i -e "s/10.212.26.21/{}/g" /etc/nginx/sites-available/default
+
+lxc exec plat -- systemctl stop nginx
+lxc exec plat -- systemctl stop dnsmasq
 
 lxc exec plat -- systemctl daemon-reload
 lxc exec plat -- systemctl enable dnsmasq
@@ -49,7 +52,7 @@ lxc exec plat -- systemctl enable mec_platform
 lxc exec plat -- systemctl enable dyndns
 
 lxc exec plat -- systemctl start dnsmasq
-lxc exec plat -- systemctl start nginx
+# lxc exec plat -- systemctl start nginx
 lxc exec plat -- systemctl start yaks
 lxc exec plat -- systemctl start mec_platform
 lxc exec plat -- systemctl start dyndns
