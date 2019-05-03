@@ -5,6 +5,7 @@ sudo ip link add mecbuildbr type bridge
 sudo ip link set mecbuildbr up
 
 
+
 lxc profile copy default mecp
 lxc profile device add mecp eth1 nic nictype=bridged parent=mecbuildbr
 lxc launch images:ubuntu/bionic plat -p mecp
@@ -38,6 +39,7 @@ lxc file push ./ocaml/mec_platform/etc/dnsmasq plat/etc/default/dnsmasq
 lxc file push ./python/dyndns/etc/mec.conf plat/etc/dnsmasq.d/mec.conf
 
 lxc exec plat -- touch /tmp/dynhosts
+lxc exec plat -- ip -4 -o addr show dev eth0| awk '{split($4,a,"/");print a[1]}' | xargs -i sed -i -e "s/10.212.26.21/{}/g" /etc/nginx/sites-available/default
 
 lxc exec plat -- systemctl daemon-reload
 lxc exec plat -- systemctl enable dnsmasq
