@@ -468,10 +468,12 @@ class Native(RuntimePluginFDU):
                 template_script = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'run_native_unix.sh')})
             na_script = Environment().from_string(template_script)
             if directory:
-                cmd = os.path.join(directory, cmd)
+                p = directory
+            else:
+                p = self.BASE_DIR
             if len(args)>0:
                 cmd = cmd + ' {}'.format(' '.join(args))
-            na_script = na_script.render(command=cmd, outfile=outfile)
+            na_script = na_script.render(path=p,command=cmd, outfile=outfile)
         return na_script
 
 

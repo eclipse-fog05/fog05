@@ -14,7 +14,6 @@
 
 type json <ocaml module="Yojson.Safe"> = abstract
 
-
 type appd_descriptor <ocaml module="Fos_im.MEC_Types"> = abstract
 
 (* Errors *)
@@ -358,6 +357,7 @@ type application_info_list_response = {
   application_info <json name="ApplicationInfo"> : appd_descriptor list;
 }
 
+
 type service_info_list_response = {
   service_info <json name="ServiceInfo"> : service_info list;
 }
@@ -370,6 +370,22 @@ type traffic_rule_list_response = {
   traffic_rule <json name="TrafficRule"> : traffic_rule list;
 }
 
+
 type transport_info_list_response = {
   transport_info <json name="TransportInfo"> : transport_info list;
+}
+
+(* Platform *)
+
+type platform = {
+  platform_id <json name="platformId"> : string;
+  endpoint : endpoint_info;
+}
+
+type platform_info_response = {
+  platform_info <json name="PlatformInfo"> : platform;
+}
+
+type platform_info_list_response = {
+  platform_info <json name="PlatformInfo"> : platform list;
 }

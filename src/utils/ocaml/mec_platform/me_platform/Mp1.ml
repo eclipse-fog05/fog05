@@ -159,8 +159,7 @@ module Mp1 = struct
                 Logs.debug (fun m -> m "[Mp1] : GET DNS Rules for %s" app_instance_id);
                 let rules = MEC_Core.get_dns_rules_for_application app_instance_id self.core in
                 let f rules =
-                  let res = rules
-                            |> List.map (fun e -> Rest_types.{dns_rule = e})
+                  let res = List.map (fun e -> Rest_types.create_dns_rule_response ~dns_rule:e ()) rules
                             |> List.map (fun e -> Yojson.Safe.from_string @@ Rest_types.string_of_dns_rule_response e)
                             |> fun x -> Yojson.Safe.to_string @@ (`List x)
                   in
@@ -337,7 +336,7 @@ module Mp1 = struct
                  let rules = MEC_Core.get_traffic_rules_for_application app_instance_id self.core in
                  let f rules =
                    let res = rules
-                             |> List.map (fun e -> Rest_types.{traffic_rule = e})
+                             |> List.map (fun e -> Rest_types.create_traffic_rule_response ~traffic_rule:e ())
                              |> List.map (fun e -> Yojson.Safe.from_string @@ Rest_types.string_of_traffic_rule_response e)
                              |> fun x -> Yojson.Safe.to_string @@ (`List x)
                    in
