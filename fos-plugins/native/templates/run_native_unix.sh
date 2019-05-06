@@ -17,4 +17,4 @@
 
 
 
-sh -c "{{ command }}" & echo $! > {{outfile}}.pid
+cd {{ path }} && sh -c "{{ command }}" & echo $! > {{outfile}}.pid
