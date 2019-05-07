@@ -33,7 +33,7 @@ class Mm1(object):
         This class allow the interaction with fog05 FIM
     '''
 
-    def __init__(self, endpoint='127.0.0.1:8071/exampleAPI/mm5/v1',):
+    def __init__(self, endpoint='127.0.0.1:8071/exampleAPI/mm1/v1',):
         self.base_url = 'http://{}'.format(endpoint)
         self.applications = self.Applications(self.base_url)
         self.dns_rules = self.DnsRules(self.base_url)
@@ -118,7 +118,7 @@ class Mm1(object):
             return json.loads(requests.post(url, data=json.dumps(dns_rule)).text)
 
         def update(self, platformid, applicationid, dns_rule_id, dns_rule):
-            url = '{}/platforms/{}/applications/{}/dns_rules/{}'.format(self.base_url platformid, applicationid, dns_rule_id)
+            url = '{}/platforms/{}/applications/{}/dns_rules/{}'.format(self.base_url, platformid, applicationid, dns_rule_id)
             return json.loads(requests.put(url, data=json.dumps(dns_rule)).text)
 
         def get(self, platformid, applicationid, dns_rule_id):
