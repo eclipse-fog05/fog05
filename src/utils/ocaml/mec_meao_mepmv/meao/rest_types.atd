@@ -14,7 +14,6 @@
 
 type json <ocaml module="Yojson.Safe"> = abstract
 
-type appd_descriptor <ocaml module="Fos_im.MEC_Types"> = abstract
 
 (* Errors *)
 
@@ -199,6 +198,20 @@ type destination_interface = {
 
 (* Resouce Data types *)
 
+
+type app_info = {
+  appd_id <json name="appDId"> : string;
+  ?app_instance_id <json name="appInstanceId"> : string option;
+  name <json name="appName"> : string;
+  vendor <json name="appProvider"> : string;
+  soft_verision <json name="softVersion"> : string;
+  service_produced <json name="appServiceProduced"> : service_info list;
+  traffic_rules <json name="appTrafficRule"> : traffic_rule list;
+  dns_rules <json name="appDNSRule"> : dns_rule list;
+  state : state_type;
+}
+
+
 type transport_info = {
   id : string;
   name : string;
@@ -254,6 +267,8 @@ type current_time = {
   nanoseconds <json name="nanoSeconds"> : int;
   time_source_status <json name="timeSourceStatus"> : timesource_status_type;
 }
+
+
 
 (* Subscription Data Types *)
 
@@ -350,11 +365,11 @@ type transport_info_response = {
 }
 
 type application_info_response = {
-  application_info <json name="ApplicationInfo"> : appd_descriptor;
+  application_info <json name="ApplicationInfo"> : app_info;
 }
 
 type application_info_list_response = {
-  application_info <json name="ApplicationInfo"> : appd_descriptor list;
+  application_info <json name="ApplicationInfo"> : app_info list;
 }
 
 

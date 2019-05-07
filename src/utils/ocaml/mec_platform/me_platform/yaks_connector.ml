@@ -122,7 +122,7 @@ module MakeServiceRegistry(P: sig val prefix: string end) = struct
     | hd::_ ->
       let _,v = hd in
       try
-        Lwt.return @@ Some (Fos_im.MEC_Types.appd_descriptor_of_string (Yaks.Value.to_string v))
+        Lwt.return @@ Some (Rest_types.app_info_of_string (Yaks.Value.to_string v))
       with
       | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _  ->
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_application") ))
@@ -138,7 +138,7 @@ module MakeServiceRegistry(P: sig val prefix: string end) = struct
       Lwt.return []
     | _ ->
       try
-        Lwt_list.map_p (fun (_,v) -> Lwt.return @@ Fos_im.MEC_Types.appd_descriptor_of_string (Yaks.Value.to_string v)) res
+        Lwt_list.map_p (fun (_,v) -> Lwt.return @@ Rest_types.app_info_of_string (Yaks.Value.to_string v)) res
       with
       | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _  ->
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_applications") ))
@@ -147,21 +147,21 @@ module MakeServiceRegistry(P: sig val prefix: string end) = struct
   let observe_applications callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = get_applications_selector in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Fos_im.MEC_Types.appd_descriptor_of_string extract_appid_from_path) s connector.ws in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.app_info_of_string extract_appid_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
   let observe_application applicationid callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = Yaks.Selector.of_path @@ get_application_path applicationid in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Fos_im.MEC_Types.appd_descriptor_of_string extract_appid_from_path) s connector.ws in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.app_info_of_string extract_appid_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
   let add_application applicationid appd connector =
     MVar.read connector >>= fun connector ->
     let p = get_application_path applicationid in
-    let value = Yaks.Value.StringValue (Fos_im.MEC_Types.string_of_appd_descriptor appd) in
+    let value = Yaks.Value.StringValue (Rest_types.string_of_app_info appd) in
     Yaks.Workspace.put p value connector.ws
 
   let remove_application applicationid connector =

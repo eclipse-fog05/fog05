@@ -14,7 +14,7 @@
 open Cmdliner
 open Me_core
 open Mm1
-open Mm5
+(* open Mm5 *)
 (* open Lwt.Infix *)
 (* open Fos_im *)
 
@@ -43,8 +43,8 @@ let run_platform configuration_path =
   let%lwt _ = Lwt_io.printf "Started!\n" in
   try%lwt
 
-    let%lwt mm5_client = Mm5_client.create "127.0.0.1" 8091 "http://127.0.0.1:8091" in
-    let%lwt core = MEAO.create (Apero.Option.get @@ Apero_net.Locator.of_string "tcp/127.0.0.1:7887") mm5_client in
+    (* let%lwt mm5_client = Mm5_client.create "127.0.0.1" 8091 "http://127.0.0.1:8091" in *)
+    let%lwt core = MEAO.create (Apero.Option.get @@ Apero_net.Locator.of_string "tcp/127.0.0.1:7887") in
     let%lwt mm1 = Mm1.create "127.0.0.1" "/exampleAPI/mm1/v1/" 8071 core in
     Lwt.join [MEAO.start core; Mm1.start mm1]
   (*

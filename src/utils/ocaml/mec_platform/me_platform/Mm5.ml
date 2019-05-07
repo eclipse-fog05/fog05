@@ -25,7 +25,6 @@ open Httpaf_lwt_unix
 open Httpaf
 open Lwt.Infix
 open Me_core
-open Fos_im
 
 module Mm5 = struct
 
@@ -167,7 +166,6 @@ module Mm5 = struct
              Logs.debug (fun m -> m "[Mm5] : GET Applications");
              let apps = MEC_Core.get_applications self.core in
              let f apps =
-               (* let res = List.map (fun e -> Yojson.Safe.from_string @@ MEC_Types.string_of_appd_descriptor e) apps |> fun x -> Yojson.Safe.to_string @@ (`List x) in *)
                let res = Rest_types.string_of_application_info_list_response {application_info = apps} in
                respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res
              in
@@ -179,14 +177,13 @@ module Mm5 = struct
                   location	The resource URI of the created resource	string
              *)
              let app = read_body reqd
-               >>= fun string_appd -> Lwt.return @@ MEC_Types.appd_descriptor_of_string string_appd
+               >>= fun string_appd -> Lwt.return @@ Rest_types.app_info_of_string string_appd
                >>= fun appd -> MEC_Core.add_application appd self.core
                >>= fun appid -> Lwt.return (appid,appd)
              in
              let f app =
                let appid, appd = app in
                let app_uri = make_app_url self.prefix appid in
-               (* let res = MEC_Types.string_of_appd_descriptor appd in *)
                let res = Rest_types.string_of_application_info_response {application_info = appd} in
                respond_created reqd (Headers.of_list ["Content-Type", "application/json"; "location", app_uri]) res
              in
@@ -207,7 +204,6 @@ module Mm5 = struct
                 let f app =
                   (match app with
                    | Some app ->
-                     (* let res = MEC_Types.string_of_appd_descriptor app in *)
                      let res = Rest_types.string_of_application_info_response {application_info = app} in
                      respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res
                    | None ->
@@ -220,13 +216,12 @@ module Mm5 = struct
               | `PUT ->
                 Logs.debug (fun m -> m "[Mm5] : PUT Application %s" app_instance_id);
                 let app = read_body reqd
-                  >>= fun string_appd -> Lwt.return @@ MEC_Types.appd_descriptor_of_string string_appd
+                  >>= fun string_appd -> Lwt.return @@ Rest_types.app_info_of_string string_appd
                   >>= fun appd -> MEC_Core.add_application appd self.core
                   >>= fun _ -> Lwt.return appd
                 in
                 let f app =
                   let res = Rest_types.string_of_application_info_response {application_info = app} in
-                  (* let res = MEC_Types.string_of_appd_descriptor app in *)
                   respond_created reqd (Headers.of_list ["Content-Type", "application/json"]) res
                 in
                 (* Should be Lwt.on_any *)

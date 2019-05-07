@@ -82,9 +82,9 @@ module Mm5_client = struct
 
     let add appd client =
       let uri =  client.base_uri ^  "/applications" in
-      let%lwt resp = do_request uri `POST [] (Fos_im.MEC_Types.string_of_appd_descriptor appd) client in
+      let%lwt resp = do_request uri `POST [] (Rest_types.string_of_app_info appd) client in
       let _ = Rest_types.application_info_response_of_string resp in
-      Lwt.return @@ appd.id
+      Lwt.return @@ Apero.Option.get appd.app_instance_id
 
 
     let get appid client =
@@ -101,9 +101,9 @@ module Mm5_client = struct
 
     let update appid appd client =
       let uri = client.base_uri ^ "/applications/"  ^ appid in
-      let%lwt resp = do_request uri `PUT [] (Fos_im.MEC_Types.string_of_appd_descriptor appd) client in
+      let%lwt resp = do_request uri `PUT [] (Rest_types.string_of_app_info appd) client in
       let _ = Rest_types.application_info_response_of_string resp in
-      Lwt.return @@ appd.id
+      Lwt.return @@ Apero.Option.get appd.app_instance_id
 
   end
 

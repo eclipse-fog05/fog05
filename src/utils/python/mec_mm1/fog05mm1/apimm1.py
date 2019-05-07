@@ -33,7 +33,7 @@ class Mm1(object):
         This class allow the interaction with fog05 FIM
     '''
 
-    def __init__(self, endpoint='127.0.0.1:8091/exampleAPI/mm5/v1',):
+    def __init__(self, endpoint='127.0.0.1:8071/exampleAPI/mm5/v1',):
         self.base_url = 'http://{}'.format(endpoint)
         self.applications = self.Applications(self.base_url)
         self.dns_rules = self.DnsRules(self.base_url)
@@ -81,27 +81,27 @@ class Mm1(object):
         def __init__(self, base_url):
             self.base_url = base_url
 
-        def list(self):
-            url = '{}/applications'.format(self.base_url)
+        def list(self, platformid):
+            url = '{}/platforms/{}/applications'.format(self.base_url,platformid)
             return json.loads(requests.get(url).text)
 
-        def add(self, appd):
+        def add(self,platformid, appd):
             url = '{}/applications'.format(self.base_url)
             return json.loads(requests.post(url, data=json.dumps(appd)).text)
 
-        def get(self, applicationid):
-            url = '{}/applications/{}'.format(self.base_url, applicationid)
+        def get(self,platformid, applicationid):
+            url = '{}/platforms/{}/applications/{}'.format(self.base_url, platformid, applicationid)
             ret = json.loads(requests.get(url).text)
             if 'ProblemDetails' in ret.keys():
                 raise ValueError(ret['ProblemDetails']['title'])
             return ret
 
-        def update(self, applicationid, appd):
-            url = '{}/applications/{}'.format(self.base_url, applicationid)
+        def update(self,platformid, applicationid, appd):
+            url = '{}/platforms/{}/applications/{}'.format(self.base_url, platformid, applicationid)
             return json.loads(requests.put(url, data=json.dumps(appd)).text)
 
-        def remove(self, applicationid):
-            url = '{}/applications/{}'.format(self.base_url, applicationid)
+        def remove(self,platformid, applicationid):
+            url = '{}/platforms/{}/applications/{}'.format(self.base_url, platformid, applicationid)
             ret = requests.delete(url)
             return {'id': applicationid}
 
@@ -109,27 +109,27 @@ class Mm1(object):
         def __init__(self, base_url):
             self.base_url = base_url
 
-        def list(self, applicationid):
-            url = '{}/applications/{}/dns_rules'.format(self.base_url, applicationid)
+        def list(self, platformid, applicationid):
+            url = '{}/platforms/{}/applications/{}/dns_rules'.format(self.base_url, platformid, applicationid)
             return json.loads(requests.get(url).text)
 
-        def add(self, applicationid, dns_rule):
-            url = '{}/applications/{}/dns_rules'.format(self.base_url, applicationid)
+        def add(self, platformid, applicationid, dns_rule):
+            url = '{}/platforms/{}/applications/{}/dns_rules'.format(self.base_url, platformid, applicationid)
             return json.loads(requests.post(url, data=json.dumps(dns_rule)).text)
 
-        def update(self, applicationid, dns_rule_id, dns_rule):
-            url = '{}/applications/{}/dns_rules/{}'.format(self.base_url, applicationid, dns_rule_id)
+        def update(self, platformid, applicationid, dns_rule_id, dns_rule):
+            url = '{}/platforms/{}/applications/{}/dns_rules/{}'.format(self.base_url platformid, applicationid, dns_rule_id)
             return json.loads(requests.put(url, data=json.dumps(dns_rule)).text)
 
-        def get(self, applicationid, dns_rule_id):
-            url = '{}/applications/{}/dns_rules/{}'.format(self.base_url, applicationid, dns_rule_id)
+        def get(self, platformid, applicationid, dns_rule_id):
+            url = '{}/platforms/{}/applications/{}/dns_rules/{}'.format(self.base_url, platformid, applicationid, dns_rule_id)
             ret = json.loads(requests.get(url).text)
             if 'ProblemDetails' in ret.keys():
                 raise ValueError(ret['ProblemDetails']['title'])
             return ret
 
-        def remove(self, applicationid, dns_rule_id):
-            url = '{}/applications/{}/dns_rules/{}'.format(self.base_url, applicationid, dns_rule_id)
+        def remove(self, platformid, applicationid, dns_rule_id):
+            url = '{}/platforms/{}/applications/{}/dns_rules/{}'.format(self.base_url, platformid, applicationid, dns_rule_id)
             ret = requests.delete(url)
             return {'DnsRule': {'dnsRuleId': dns_rule_id}}
 
@@ -137,27 +137,27 @@ class Mm1(object):
         def __init__(self, base_url):
             self.base_url = base_url
 
-        def list(self, applicationid):
-            url = '{}/applications/{}/traffic_rules'.format(self.base_url, applicationid)
+        def list(self, platformid, applicationid):
+            url = '{}/platforms/{}/applications/{}/traffic_rules'.format(self.base_url, platformid, applicationid)
             return json.loads(requests.get(url).text)
 
-        def add(self, applicationid, traffic_rule):
-            url = '{}/applications/{}/traffic_rules'.format(self.base_url, applicationid)
+        def add(self, platformid, applicationid, traffic_rule):
+            url = '{}/platforms/{}/applications/{}/traffic_rules'.format(self.base_url, platformid, applicationid)
             return json.loads(requests.post(url, data=json.dumps(traffic_rule)).text)
 
-        def update(self, applicationid, traffic_rule_id, traffic_rule):
-            url = '{}/applications/{}/traffic_rules/{}'.format(self.base_url, applicationid, traffic_rule_id)
+        def update(self, platformid, applicationid, traffic_rule_id, traffic_rule):
+            url = '{}/platforms/{}/applications/{}/traffic_rules/{}'.format(self.base_url, platformid, applicationid, traffic_rule_id)
             return json.loads(requests.put(url, data=json.dumps(traffic_rule)).text)
 
-        def get(self, applicationid, traffic_rule_id):
-            url = '{}/applications/{}/traffic_rules/{}'.format(self.base_url, applicationid, traffic_rule_id)
+        def get(self, platformid, applicationid, traffic_rule_id):
+            url = '{}/platforms/{}/applications/{}/traffic_rules/{}'.format(self.base_url, platformid, applicationid, traffic_rule_id)
             ret = json.loads(requests.get(url).text)
             if 'ProblemDetails' in ret.keys():
                 raise ValueError(ret['ProblemDetails']['title'])
             return ret
 
-        def remove(self, applicationid, traffic_rule_id):
-            url = '{}/applications/{}/traffic_rules/{}'.format(self.base_url, applicationid, traffic_rule_id)
+        def remove(self, platformid, applicationid, traffic_rule_id):
+            url = '{}/platforms/{}/applications/{}/traffic_rules/{}'.format(self.base_url, platformid, applicationid, traffic_rule_id)
             ret = requests.delete(url)
             return {'TrafficRule': {'trafficRuleId': traffic_rule_id}}
 
@@ -165,54 +165,54 @@ class Mm1(object):
         def __init__(self, base_url):
             self.base_url = base_url
 
-        def list(self):
-            url = '{}/services'.format(self.base_url)
+        def list(self, platformid):
+            url = '{}/platforms/{}/services'.format(self.base_url,  platformid)
             return json.loads(requests.get(url).text)
 
-        def add(self, service_info):
-            url = '{}/services'.format(self.base_url)
+        def add(self, platformid, service_info):
+            url = '{}/platforms/{}/services'.format(self.base_url, platformid)
             return json.loads(requests.post(url, data=json.dumps(service_info)).text)
 
-        def update(self, service_id, service_info):
-            url = '{}/services/{}'.format(self.base_url, service_id)
+        def update(self, platformid, service_id, service_info):
+            url = '{}/platforms/{}/services/{}'.format(self.base_url, platformid, service_id)
             return json.loads(requests.put(url, data=json.dumps(service_info)).text)
 
-        def get(self, service_id):
-            url = '{}/services/{}'.format(self.base_url, service_id)
+        def get(self, platformid, service_id):
+            url = '{}/platforms/{}/services/{}'.format(self.base_url, platformid, service_id)
             ret = json.loads(requests.get(url).text)
             if 'ProblemDetails' in ret.keys():
                 raise ValueError(ret['ProblemDetails']['title'])
             return ret
 
-        def remove(self, service_id):
-            url = '{}/services/{}'.format(self.base_url, service_id)
+        def remove(self, platformid, service_id):
+            url = '{}/platforms/{}/services/{}'.format(self.base_url, platformid, service_id)
             ret = requests.delete(url)
             return {'ServiceInfo': {'serInstanceId': service_id}}
 
     class Transports(object):
-        def __init__(self, base_url):
+        def __init__(self,base_url):
             self.base_url = base_url
 
-        def list(self):
-            url = '{}/transports'.format(self.base_url)
+        def list(self, platformid):
+            url = '{}/platforms/{}/transports'.format(self.base_url)
             return json.loads(requests.get(url).text)
 
-        def add(self, transport_info):
-            url = '{}/transports'.format(self.base_url)
+        def add(self, platformid, transport_info):
+            url = '{}/platforms/{}/transports'.format(self.base_url, platformid)
             return json.loads(requests.post(url, data=json.dumps(transport_info)).text)
 
-        def update(self, transport_id, transport_info):
-            url = '{}/transports/{}'.format(self.base_url, transport_id)
+        def update(self,platformid , transport_id, transport_info):
+            url = '{}/platforms/{}/transports/{}'.format(self.base_url, platformid, transport_id)
             return json.loads(requests.put(url, data=json.dumps(transport_info)).text)
 
-        def get(self, transport_id):
-            url = '{}/transports/{}'.format(self.base_url, transport_id)
+        def get(self, platformid, transport_id):
+            url = '{}/platforms/{}/transports/{}'.format(self.base_url, platformid, transport_id)
             ret = json.loads(requests.get(url).text)
             if 'ProblemDetails' in ret.keys():
                 raise ValueError(ret['ProblemDetails']['title'])
             return ret
 
-        def remove(self, transport_id):
-            url = '{}/transports/{}'.format(self.base_url, transport_id)
+        def remove(self, platformid, transport_id):
+            url = '{}/platforms/{}/transports/{}'.format(self.base_url, platformid, transport_id)
             ret = requests.delete(url)
             return {'TransportInfo': {'id': transport_id}}

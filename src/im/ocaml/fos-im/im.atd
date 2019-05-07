@@ -75,47 +75,65 @@ type filter_action_types = [
   | DUPLICATE_AS_IS
 ]
 
+type oauth_grant_types = [
+  | OAUTH2_AUTHORIZATION_CODE
+  | OAUTH2_IMPLICIT_GRANT
+  | OAUTH2_RESOURCE_OWNER
+  | OAUTH2_CLIENT_CREDENTIALS
+]
 
-type tunnel_info_type = {
-  tunnel_type : tunnel_types;
-  tunnel_dst_address : string;
-  tunnel_src_address : string;
+type tunnel_info = {
+  tunnel_type <json name="tunnelType"> : tunnel_types;
+  tunnel_dst_address <json name="tunnelDstAddress"> : string;
+  tunnel_src_address <json name="tunnelStcAddress"> : string;
 }
 
 type interface_descriptor = {
-  interface_type : interface_types;
-  tunnel_info : tunnel_info_type;
-  src_mac_address : string;
-  dst_mac_address : string;
-  dst_ip_address  : string;
+  interface_type <json name="interfaceType"> : interface_types;
+  ?tunnel_info <json name="tunnelInfo">  : tunnel_info option;
+  ?src_mac_address <json name="srcMACAddress"> : string option;
+  ?dst_mac_address <json name="dstMACAddress"> : string option;
+  ?dst_ip_address <json name="dstIPAddress">  : string option;
 }
 
-type traffic_filter_type = {
-  src_address : string list;
-  dst_addresses : string list;
-  src_port : string;
-  dst_port : string;
-  protocol : string;
-  token : string;
-  src_tunnel_address : string;
-  tgt_tunnel_address : string;
-  dst_tunnel_port : string;
-  qci : int;
-  dscp : int;
-  tc : int
+type traffic_filter = {
+  src_address <json name="srcAddress"> : string list;
+  dst_addresses <json name="dstAddress"> : string list;
+  src_port <json name="srcPort"> : string list;
+  dst_port <json name="dstPort"> : string list;
+  protocol <json name="Protocol"> : string list;
+  token <json name="Token">  : string list;
+  src_tunnel_address <json name="srcTunnelAddress"> : string list;
+  tgt_tunnel_address <json name="tgtTunnelAddress"> : string list;
+  src_tunnel_port <json name="srcTunnelPort"> : string list;
+  dst_tunnel_port <json name="dstTunnelPort"> : string list;
+  ?qci <json name="qCI"> : int option;
+  ?dscp <json name="dSCP"> : int option;
+  ?tc <json name="tC"> : int option;
 }
 
-type security_info_type = {
-  oauth2_info : string;
-  grants : grant_types list;
-  token_endpoint : string;
+(* type security_info_type = {
+   oauth2_info : string;
+   grants : grant_types list;
+   token_endpoint : string;
+   } *)
+
+type oauth2_info = {
+  grant_types <json name="grantTypes"> : oauth_grant_types;
+  ?token_endpoint <json name="tokenEndpoint"> : string option;
 }
+
+type security_info = {
+  ?oauth2_info <json name="oAuth2Info"> : oauth2_info option;
+}
+(*  *)
+
 
 type transport_descriptor = {
-  transport_type : transport_types;
+  transport_type <json name="type"> : transport_types;
   protocol : string;
   version : string;
-  security : security_info_type;
+  security : security_info;
 }
 
 type transport_dependency = {
@@ -132,42 +150,43 @@ type category_ref = {
 }
 
 type service_dependency = {
-  ser_name : string;
-  ser_category : category_ref;
-  ser_transport_dependency : transport_dependency list;
+  ser_name <json name="serName"> : string;
+  ?ser_category <json name="serCategory"> : category_ref option;
+  version : string;
+  ser_transport_dependency <json name="serTransportDependencies"> : transport_dependency list;
 }
 
 type service_descriptor = {
-  ser_name : string;
-  ser_category : category_ref;
+  ser_name <json name="serName"> : string;
+  ?ser_category <json name="serCategory"> : category_ref option;
   version : string;
-  transport_supported : (transport_descriptor * serializer_types list) list
+  transport_supported <json name="transportSupported"> : (transport_descriptor * serializer_types list) list
 }
 
 type feature_dependency = {
-  feature_name : string;
+  feature_name <json name="featureName"> : string;
   version : string;
 }
 
 type traffic_rule_descriptor = {
-  traffic_rule_id : string;
-  filter_type : filter_types;
+  traffic_rule_id <json name="trafficRuleId"> : string;
+  filter_type <json name="filterType"> : filter_types;
   priority : int;
-  traffic_filter : traffic_filter_type list;
+  traffic_filter <json name="trafficFilter"> : traffic_filter list;
   action : filter_action_types;
-  dst_interface : interface_descriptor list;
+  dst_interface <json name="dstinterface"> : interface_descriptor list;
 }
 
 type dns_rule_descriptor = {
-  dns_rule_id : string;
-  domain_name : string;
-  ip_address_type : ip_address_types;
-  ip_addresses : string;
+  dns_rule_id <json name="dnsRuleId"> : string;
+  domain_name <json name="domainName"> : string;
+  ip_address_type <json name="ipAddressType"> : ip_address_types;
+  ip_addresses<json name="ipAddress">  : string;
   ttl : int;
 }
 
 type latency_descriptor = {
-  time_unit : int;
+  time_unit <json name="timeUnit"> : int;
   latency : string;
 }
 
@@ -179,21 +198,30 @@ type latency_descriptor = {
 
 
 type appd_descriptor = {
-  id : string;
-  name : string;
-  vendor : string;
-  soft_version : string;
-  mec_version : string list;
-  description : string;
-  service_required : service_dependency list;
-  service_optional : service_dependency list;
-  service_produces : service_descriptor list;
-  feature_required : feature_dependency list;
-  feature_optional : feature_dependency list;
-  transport_dependencies : transport_dependency list;
-  traffic_rules: traffic_rule_descriptor list;
-  dns_rules : dns_rule_descriptor list;
-  latency : latency_descriptor;
+  id <json name="appDId"> : string;
+  name <json name="appName"> : string;
+  vendor <json name="appProvider"> : string;
+  soft_version <json name="appSoftVersion"> : string;
+  appd_version <json name="appDVersion"> : string;
+  mec_version <json name="mecVersion"> : string list;
+  ?app_info_name <json name="appInfoName"> : string option;
+  description <json name="appDescription"> : string;
+  service_required <json name="appServiceRequired"> : service_dependency list;
+  service_optional <json name="appServiceOptional"> : service_dependency list;
+  service_produces  <json name="appServiceProduced"> : service_descriptor list;
+  feature_required <json name="appFeatureRequired"> : feature_dependency list;
+  feature_optional <json name="appFeatureOptional"> : feature_dependency list;
+  transport_dependencies <json name="transportDependencies"> : transport_dependency list;
+  traffic_rules<json name="appTrafficRule"> : traffic_rule_descriptor list;
+  dns_rules <json name="appDNSRule"> : dns_rule_descriptor list;
+  latency <json name="appLatency"> : latency_descriptor;
+  (* ETSI MEC 010-2 Field missing
+     virtualComputeDescriptor : VirtualComputeDescription
+     swImageDescriptor: SwImageDescriptor
+     virtualStorageDescriptor : VirtualStorageDescriptor
+     appExtCpd : AppExternalCpd
+
+  *)
 }
 
 (* type plugin_type = {

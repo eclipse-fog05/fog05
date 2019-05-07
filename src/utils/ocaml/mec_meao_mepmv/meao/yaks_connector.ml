@@ -89,6 +89,9 @@ let sub_cb_3ids callback of_string extract_uuid1 extract_uuid2 extract_uuid3 (da
 
 module MakePlatformRegisty (P: sig val prefix: string end) = struct
 
+  (* Following same Mm1 URI structure of APIs
+   * Only For Platform
+  *)
 
   let get_platform_path pid =
     create_path [P.prefix; "platforms"; pid]
@@ -167,29 +170,29 @@ module MakeServiceRegistry(P: sig val prefix: string end) = struct
    * Only For services and applications
   *)
 
-  let get_application_path appid =
-    create_path [P.prefix; "applications"; appid]
+  let get_application_path platformid appid =
+    create_path [P.prefix; "platforms"; platformid; "applications"; appid]
 
-  let get_applications_selector =
-    create_selector [P.prefix; "applications"; "*"]
+  let get_applications_selector platformid =
+    create_selector [P.prefix; "platforms"; platformid; "applications"; "*"]
 
-  let get_service_path serviceid =
-    create_path [P.prefix; "services"; serviceid]
+  let get_service_path platformid serviceid =
+    create_path [P.prefix;"platforms"; platformid; "services"; serviceid]
 
-  let get_services_selector  =
-    create_selector [P.prefix; "services"; "*"]
+  let get_services_selector platformid =
+    create_selector [P.prefix;"platforms"; platformid; "services"; "*"]
 
   let extract_serviceid_from_path path =
     let ps = Yaks.Path.to_string path in
-    List.nth (String.split_on_char '/' ps) 3
+    List.nth (String.split_on_char '/' ps) 5
 
   let extract_appid_from_path path =
     let ps = Yaks.Path.to_string path in
-    List.nth (String.split_on_char '/' ps) 3
+    List.nth (String.split_on_char '/' ps) 5
 
-  let get_application appid connector =
+  let get_application platformid appid connector =
     MVar.read connector >>= fun connector ->
-    let s = Yaks.Selector.of_path @@ get_application_path appid in
+    let s = Yaks.Selector.of_path @@ get_application_path platformid appid in
     Yaks.Workspace.get s connector.ws
     >>= fun res ->
     match res with
@@ -198,15 +201,15 @@ module MakeServiceRegistry(P: sig val prefix: string end) = struct
     | hd::_ ->
       let _,v = hd in
       try
-        Lwt.return @@ Some (Fos_im.MEC_Types.appd_descriptor_of_string (Yaks.Value.to_string v))
+        Lwt.return @@ Some (Rest_types.app_info_of_string (Yaks.Value.to_string v))
       with
       | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _  ->
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_application") ))
       | exn -> Lwt.fail exn
 
-  let get_applications connector =
+  let get_applications platformid connector =
     MVar.read connector >>= fun connector ->
-    let s = get_applications_selector in
+    let s = get_applications_selector platformid in
     Yaks.Workspace.get s connector.ws
     >>= fun res ->
     match res with
@@ -214,40 +217,40 @@ module MakeServiceRegistry(P: sig val prefix: string end) = struct
       Lwt.return []
     | _ ->
       try
-        Lwt_list.map_p (fun (_,v) -> Lwt.return @@ Fos_im.MEC_Types.appd_descriptor_of_string (Yaks.Value.to_string v)) res
+        Lwt_list.map_p (fun (_,v) -> Lwt.return @@ Rest_types.app_info_of_string (Yaks.Value.to_string v)) res
       with
       | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _  ->
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_applications") ))
       | exn -> Lwt.fail exn
 
-  let observe_applications callback connector =
+  let observe_applications platformid callback connector =
     MVar.guarded connector @@ fun connector ->
-    let s = get_applications_selector in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Fos_im.MEC_Types.appd_descriptor_of_string extract_appid_from_path) s connector.ws in
+    let s = get_applications_selector platformid in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.app_info_of_string extract_appid_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
-  let observe_application applicationid callback connector =
+  let observe_application platformid applicationid callback connector =
     MVar.guarded connector @@ fun connector ->
-    let s = Yaks.Selector.of_path @@ get_application_path applicationid in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Fos_im.MEC_Types.appd_descriptor_of_string extract_appid_from_path) s connector.ws in
+    let s = Yaks.Selector.of_path @@ get_application_path platformid applicationid in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.app_info_of_string extract_appid_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
-  let add_application applicationid appd connector =
+  let add_application platformid applicationid appd connector =
     MVar.read connector >>= fun connector ->
-    let p = get_application_path applicationid in
-    let value = Yaks.Value.StringValue (Fos_im.MEC_Types.string_of_appd_descriptor appd) in
+    let p = get_application_path platformid applicationid in
+    let value = Yaks.Value.StringValue (Rest_types.string_of_app_info appd) in
     Yaks.Workspace.put p value connector.ws
 
-  let remove_application applicationid connector =
+  let remove_application platformid applicationid connector =
     MVar.read connector >>= fun connector ->
-    let p = get_application_path applicationid in
+    let p = get_application_path platformid applicationid in
     Yaks.Workspace.remove p connector.ws
 
-  let get_service serviceid connector =
+  let get_service platformid serviceid connector =
     MVar.read connector >>= fun connector ->
-    let s = Yaks.Selector.of_path @@ get_service_path serviceid in
+    let s = Yaks.Selector.of_path @@ get_service_path platformid serviceid in
     Yaks.Workspace.get s connector.ws
     >>= fun res ->
     match res with
@@ -262,9 +265,9 @@ module MakeServiceRegistry(P: sig val prefix: string end) = struct
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_application") ))
       | exn -> Lwt.fail exn
 
-  let get_services connector =
+  let get_services platformid connector =
     MVar.read connector >>= fun connector ->
-    let s = get_services_selector in
+    let s = get_services_selector platformid in
     Yaks.Workspace.get s connector.ws
     >>= fun res ->
     match res with
@@ -278,29 +281,29 @@ module MakeServiceRegistry(P: sig val prefix: string end) = struct
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_applications") ))
       | exn -> Lwt.fail exn
 
-  let observe_services callback connector =
+  let observe_services platformid callback connector =
     MVar.guarded connector @@ fun connector ->
-    let s = get_services_selector in
+    let s = get_services_selector platformid in
     let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.service_info_of_string extract_serviceid_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
-  let observe_service serviceid callback connector =
+  let observe_service platformid serviceid callback connector =
     MVar.guarded connector @@ fun connector ->
-    let s = Yaks.Selector.of_path @@ get_service_path serviceid in
+    let s = Yaks.Selector.of_path @@ get_service_path platformid serviceid in
     let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.service_info_of_string extract_serviceid_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
-  let add_service serviceid serd connector =
+  let add_service platformid serviceid serd connector =
     MVar.read connector >>= fun connector ->
-    let p = get_service_path serviceid in
+    let p = get_service_path platformid serviceid in
     let value = Yaks.Value.StringValue (Rest_types.string_of_service_info serd) in
     Yaks.Workspace.put p value connector.ws
 
-  let remove_service serviceid connector =
+  let remove_service platformid serviceid connector =
     MVar.read connector >>= fun connector ->
-    let p = get_service_path serviceid in
+    let p = get_service_path platformid serviceid in
     Yaks.Workspace.remove p connector.ws
 
 
@@ -313,23 +316,23 @@ module MakeDNSRules(P: sig val prefix: string end) = struct
    * Only For DNS Rules
   *)
 
-  let get_application_dns_rule_path appid dns_rule_id =
-    create_path [P.prefix; "applications"; appid; "dns_rules"; dns_rule_id]
+  let get_application_dns_rule_path platformid appid dns_rule_id =
+    create_path [P.prefix; "platforms"; platformid; "applications"; appid; "dns_rules"; dns_rule_id]
 
-  let get_applications_dns_rules_selector appid =
-    create_selector [P.prefix; "applications"; appid; "dns_rules"; "*"]
+  let get_applications_dns_rules_selector platformid appid =
+    create_selector [P.prefix; "platforms"; platformid; "applications"; appid; "dns_rules"; "*"]
 
   let extract_appid_from_path path =
     let ps = Yaks.Path.to_string path in
-    List.nth (String.split_on_char '/' ps) 3
+    List.nth (String.split_on_char '/' ps) 5
 
   let extract_dns_rule_id_from_path path =
     let ps = Yaks.Path.to_string path in
-    List.nth (String.split_on_char '/' ps) 5
+    List.nth (String.split_on_char '/' ps) 7
 
-  let get_application_dns_rule appid dns_rule_id connector =
+  let get_application_dns_rule platformid appid dns_rule_id connector =
     MVar.read connector >>= fun connector ->
-    let s = Yaks.Selector.of_path @@ get_application_dns_rule_path appid  dns_rule_id in
+    let s = Yaks.Selector.of_path @@ get_application_dns_rule_path platformid appid dns_rule_id in
     Yaks.Workspace.get s connector.ws
     >>= fun res ->
     match res with
@@ -343,9 +346,9 @@ module MakeDNSRules(P: sig val prefix: string end) = struct
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_application") ))
       | exn -> Lwt.fail exn
 
-  let get_application_dns_rules appid connector =
+  let get_application_dns_rules platformid appid connector =
     MVar.read connector >>= fun connector ->
-    let s = get_applications_dns_rules_selector appid  in
+    let s = get_applications_dns_rules_selector platformid appid  in
     Yaks.Workspace.get s connector.ws
     >>= fun res ->
     match res with
@@ -359,29 +362,29 @@ module MakeDNSRules(P: sig val prefix: string end) = struct
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_application") ))
       | exn -> Lwt.fail exn
 
-  let observe_application_dns_rules appid callback connector =
+  let observe_application_dns_rules platformid appid callback connector =
     MVar.guarded connector @@ fun connector ->
-    let s = get_applications_dns_rules_selector appid  in
+    let s = get_applications_dns_rules_selector platformid appid  in
     let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.dns_rule_of_string extract_dns_rule_id_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
-  let observe_application_dns_rule applicationid dns_rule_id callback connector =
+  let observe_application_dns_rule platformid applicationid dns_rule_id callback connector =
     MVar.guarded connector @@ fun connector ->
-    let s = Yaks.Selector.of_path @@ get_application_dns_rule_path applicationid dns_rule_id in
+    let s = Yaks.Selector.of_path @@ get_application_dns_rule_path platformid applicationid dns_rule_id in
     let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.dns_rule_of_string extract_dns_rule_id_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
-  let add_application_dns_rule applicationid dns_rule_id dns_rule connector =
+  let add_application_dns_rule platformid applicationid dns_rule_id dns_rule connector =
     MVar.read connector >>= fun connector ->
-    let p = get_application_dns_rule_path applicationid dns_rule_id in
+    let p = get_application_dns_rule_path platformid applicationid dns_rule_id in
     let value = Yaks.Value.StringValue (Rest_types.string_of_dns_rule dns_rule) in
     Yaks.Workspace.put p value connector.ws
 
-  let remove_application_dns_rule applicationid dns_rule_id connector =
+  let remove_application_dns_rule platformid applicationid dns_rule_id connector =
     MVar.read connector >>= fun connector ->
-    let p = get_application_dns_rule_path applicationid dns_rule_id in
+    let p = get_application_dns_rule_path platformid applicationid dns_rule_id in
     Yaks.Workspace.remove p connector.ws
 end
 
@@ -391,23 +394,23 @@ module MakeTrafficRules(P: sig val prefix: string end) = struct
    * Only For Traffic Rules
   *)
 
-  let get_application_traffic_rule_path appid traffic_rule_id =
-    create_path [P.prefix; "applications"; appid; "traffic_rules"; traffic_rule_id]
+  let get_application_traffic_rule_path platformid appid traffic_rule_id =
+    create_path [P.prefix; "platforms"; platformid; "applications"; appid; "traffic_rules"; traffic_rule_id]
 
-  let get_applications_traffic_rules_selector appid =
-    create_selector [P.prefix; "applications"; appid; "traffic_rules"; "*"]
+  let get_applications_traffic_rules_selector platformid appid =
+    create_selector [P.prefix;  "platforms"; platformid;"applications"; appid; "traffic_rules"; "*"]
 
   let extract_appid_from_path path =
     let ps = Yaks.Path.to_string path in
-    List.nth (String.split_on_char '/' ps) 3
+    List.nth (String.split_on_char '/' ps) 5
 
   let extract_traffic_rule_id_from_path path =
     let ps = Yaks.Path.to_string path in
-    List.nth (String.split_on_char '/' ps) 5
+    List.nth (String.split_on_char '/' ps) 7
 
-  let get_application_traffic_rule appid traffic_rule_id connector =
+  let get_application_traffic_rule platformid appid traffic_rule_id connector =
     MVar.read connector >>= fun connector ->
-    let s = Yaks.Selector.of_path @@ get_application_traffic_rule_path appid  traffic_rule_id in
+    let s = Yaks.Selector.of_path @@ get_application_traffic_rule_path platformid appid traffic_rule_id in
     Yaks.Workspace.get s connector.ws
     >>= fun res ->
     match res with
@@ -421,9 +424,9 @@ module MakeTrafficRules(P: sig val prefix: string end) = struct
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_application") ))
       | exn -> Lwt.fail exn
 
-  let get_application_traffic_rules appid connector =
+  let get_application_traffic_rules platformid appid connector =
     MVar.read connector >>= fun connector ->
-    let s = get_applications_traffic_rules_selector appid  in
+    let s = get_applications_traffic_rules_selector platformid appid  in
     Yaks.Workspace.get s connector.ws
     >>= fun res ->
     match res with
@@ -437,167 +440,32 @@ module MakeTrafficRules(P: sig val prefix: string end) = struct
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_application") ))
       | exn -> Lwt.fail exn
 
-  let observe_application_traffic_rules appid callback connector =
+  let observe_application_traffic_rules platformid appid callback connector =
     MVar.guarded connector @@ fun connector ->
-    let s = get_applications_traffic_rules_selector appid  in
+    let s = get_applications_traffic_rules_selector platformid appid  in
     let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.traffic_rule_of_string extract_traffic_rule_id_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
-  let observe_application_traffic_rule applicationid traffic_rule_id callback connector =
+  let observe_application_traffic_rule platformid applicationid traffic_rule_id callback connector =
     MVar.guarded connector @@ fun connector ->
-    let s = Yaks.Selector.of_path @@ get_application_traffic_rule_path applicationid traffic_rule_id in
+    let s = Yaks.Selector.of_path @@ get_application_traffic_rule_path platformid applicationid traffic_rule_id in
     let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.traffic_rule_of_string extract_traffic_rule_id_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
-  let add_application_traffic_rule applicationid traffic_rule_id traffic_rule connector =
+  let add_application_traffic_rule platformid applicationid traffic_rule_id traffic_rule connector =
     MVar.read connector >>= fun connector ->
-    let p = get_application_traffic_rule_path applicationid traffic_rule_id in
+    let p = get_application_traffic_rule_path platformid applicationid traffic_rule_id in
     let value = Yaks.Value.StringValue (Rest_types.string_of_traffic_rule traffic_rule) in
     Yaks.Workspace.put p value connector.ws
 
-  let remove_application_traffic_rule applicationid traffic_rule_id connector =
+  let remove_application_traffic_rule platformid applicationid traffic_rule_id connector =
     MVar.read connector >>= fun connector ->
-    let p = get_application_traffic_rule_path applicationid traffic_rule_id in
+    let p = get_application_traffic_rule_path platformid applicationid traffic_rule_id in
     Yaks.Workspace.remove p connector.ws
 end
 
-
-module MakeSubscriptions (P: sig val prefix: string end) = struct
-
-  (* Following same Mp1 URI structure of APIs
-   * Only For Traffic Rules
-  *)
-
-  let get_application_termination_subscription_path appid subscriptionid =
-    create_path [P.prefix; "applications"; appid; "subscriptions"; "AppTerminationNotificationSubscription"; subscriptionid]
-
-  let get_applications_termination_subscription_selector appid =
-    create_selector [P.prefix; "applications"; appid; "subscriptions"; "AppTerminationNotificationSubscription"; "*"]
-
-  let get_service_availaility_subscription_path appid subscriptionid =
-    create_path [P.prefix; "applications"; appid; "subscriptions"; "SerAvailabilityNotificationSubscription"; subscriptionid]
-
-  let get_service_availaility_subscription_selector appid =
-    create_selector [P.prefix; "applications"; appid; "subscriptions"; "SerAvailabilityNotificationSubscription"; "*"]
-
-  let get_application_subscriptions_selector appid =
-    create_path [P.prefix; "applications"; appid; "subscriptions"; "**"]
-
-  let extract_appid_from_path path =
-    let ps = Yaks.Path.to_string path in
-    List.nth (String.split_on_char '/' ps) 6
-
-  let extract_sub_type_from_path path =
-    let ps = Yaks.Path.to_string path in
-    List.nth (String.split_on_char '/' ps) 5
-
-  let extract_subscriptionid_from_path path =
-    let ps = Yaks.Path.to_string path in
-    List.nth (String.split_on_char '/' ps) 3
-
-  let get_application_termination_subscription appid subscriptionid connector =
-    MVar.read connector >>= fun connector ->
-    let s = Yaks.Selector.of_path @@ get_application_termination_subscription_path appid  subscriptionid in
-    Yaks.Workspace.get s connector.ws
-    >>= fun res ->
-    match res with
-    | [] ->
-      Lwt.return None
-    | (_,v)::_ ->
-      try
-        Lwt.return @@ Some (Rest_types.app_termination_notification_subscription_of_string (Yaks.Value.to_string v))
-      with
-      | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _  ->
-        Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_application") ))
-      | exn -> Lwt.fail exn
-
-  let get_application_termination_subscriptions appid connector =
-    MVar.read connector >>= fun connector ->
-    let s = get_applications_termination_subscription_selector appid in
-    Yaks.Workspace.get s connector.ws
-    >>= fun res ->
-    match res with
-    | [] ->
-      Lwt.return []
-    | _ ->
-      try
-        Lwt_list.map_p (fun (k,v) -> Lwt.return (extract_subscriptionid_from_path k, (Rest_types.app_termination_notification_subscription_of_string (Yaks.Value.to_string v)))) res
-      with
-      | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _  ->
-        Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_transports") ))
-      | exn -> Lwt.fail exn
-
-  let observe_application_termination_subscriptions appid callback connector =
-    MVar.guarded connector @@ fun connector ->
-    let s = get_applications_termination_subscription_selector appid  in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.app_termination_notification_of_string extract_subscriptionid_from_path) s connector.ws in
-    let ls = List.append connector.listeners [subid] in
-    MVar.return subid {connector with listeners = ls}
-
-  let add_application_termination_subscription applicationid subscriptionid sub connector =
-    MVar.read connector >>= fun connector ->
-    let p = get_application_termination_subscription_path applicationid subscriptionid in
-    let value = Yaks.Value.StringValue (Rest_types.string_of_app_termination_notification_subscription sub) in
-    Yaks.Workspace.put p value connector.ws
-
-  let remove_application_termination_subscription applicationid subscriptionid connector =
-    MVar.read connector >>= fun connector ->
-    let p = get_application_termination_subscription_path applicationid subscriptionid in
-    Yaks.Workspace.remove p connector.ws
-
-  let get_service_availability_subscription appid subscriptionid connector =
-    MVar.read connector >>= fun connector ->
-    let s = Yaks.Selector.of_path @@ get_service_availaility_subscription_path appid  subscriptionid in
-    Yaks.Workspace.get s connector.ws
-    >>= fun res ->
-    match res with
-    | [] ->
-      Lwt.return None
-    | (_,v)::_ ->
-      try
-        Lwt.return @@ Some (Rest_types.ser_availability_notification_subscription_of_string (Yaks.Value.to_string v))
-      with
-      | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _  ->
-        Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_application") ))
-      | exn -> Lwt.fail exn
-
-  let get_service_availability_subscriptions appid connector =
-    MVar.read connector >>= fun connector ->
-    let s = get_service_availaility_subscription_selector appid in
-    Yaks.Workspace.get s connector.ws
-    >>= fun res ->
-    match res with
-    | [] ->
-      Lwt.return []
-    | _ ->
-      try
-        Lwt_list.map_p (fun (k,v) -> Lwt.return (extract_subscriptionid_from_path k, (Rest_types.ser_availability_notification_subscription_of_string (Yaks.Value.to_string v)))) res
-      with
-      | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _  ->
-        Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_transports") ))
-      | exn -> Lwt.fail exn
-
-  let observe_service_availability_subscriptions appid callback connector =
-    MVar.guarded connector @@ fun connector ->
-    let s = get_service_availaility_subscription_selector appid  in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.ser_availability_notification_subscription_of_string extract_subscriptionid_from_path) s connector.ws in
-    let ls = List.append connector.listeners [subid] in
-    MVar.return subid {connector with listeners = ls}
-
-  let add_service_availability_subscription applicationid subscriptionid sub connector =
-    MVar.read connector >>= fun connector ->
-    let p = get_service_availaility_subscription_path applicationid subscriptionid in
-    let value = Yaks.Value.StringValue (Rest_types.string_of_ser_availability_notification_subscription sub) in
-    Yaks.Workspace.put p value connector.ws
-
-  let remove_service_availability_subscription applicationid subscriptionid connector =
-    MVar.read connector >>= fun connector ->
-    let p = get_service_availaility_subscription_path applicationid subscriptionid in
-    Yaks.Workspace.remove p connector.ws
-
-end
 
 module MakeTransports (P: sig val prefix: string end) = struct
 
@@ -605,25 +473,25 @@ module MakeTransports (P: sig val prefix: string end) = struct
    * Only For Traffic Rules
   *)
 
-  let get_transport_path transportid =
-    create_path [P.prefix; "transport"; transportid]
+  let get_transport_path platformid transportid =
+    create_path [P.prefix; "platforms"; platformid; "transport"; transportid]
 
-  let get_transport_selector =
-    create_selector [P.prefix; "transport"; "*"]
+  let get_transport_selector platformid =
+    create_selector [P.prefix; "platforms"; platformid; "transport"; "*"]
 
   let extract_transport_id_from_path path =
     let ps = Yaks.Path.to_string path in
-    List.nth (String.split_on_char '/' ps) 3
+    List.nth (String.split_on_char '/' ps) 5
 
-  let add_tranport transportid transport_desc connector =
+  let add_tranport platformid transportid transport_desc connector =
     MVar.read connector >>= fun connector ->
-    let p = get_transport_path transportid in
+    let p = get_transport_path platformid transportid in
     let value = Yaks.Value.StringValue (Rest_types.string_of_transport_info transport_desc) in
     Yaks.Workspace.put p value connector.ws
 
-  let get_tranport transportid connector =
+  let get_tranport platformid transportid connector =
     MVar.read connector >>= fun connector ->
-    let s = Yaks.Selector.of_path @@ get_transport_path  transportid in
+    let s = Yaks.Selector.of_path @@ get_transport_path platformid transportid in
     Yaks.Workspace.get s connector.ws
     >>= fun res ->
     match res with
@@ -638,9 +506,9 @@ module MakeTransports (P: sig val prefix: string end) = struct
       | exn -> Lwt.fail exn
 
 
-  let get_transports connector =
+  let get_transports platformid connector =
     MVar.read connector >>= fun connector ->
-    let s = get_transport_selector in
+    let s = get_transport_selector platformid in
     Yaks.Workspace.get s connector.ws
     >>= fun res ->
     match res with
@@ -654,16 +522,16 @@ module MakeTransports (P: sig val prefix: string end) = struct
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_transports") ))
       | exn -> Lwt.fail exn
 
-  let observe_transports callback connector =
+  let observe_transports platformid callback connector =
     MVar.guarded connector @@ fun connector ->
-    let s = get_transport_selector  in
+    let s = get_transport_selector platformid  in
     let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.transport_info_of_string extract_transport_id_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
-  let remove_transport transportid connector =
+  let remove_transport platformid transportid connector =
     MVar.read connector >>= fun connector ->
-    let p = get_transport_path transportid in
+    let p = get_transport_path platformid transportid in
     Yaks.Workspace.remove p connector.ws
 
 end
@@ -675,7 +543,6 @@ module Storage = struct
   module ServiceInfo = MakeServiceRegistry(struct let prefix = prefix end)
   module DNSRules = MakeDNSRules(struct let prefix = prefix end)
   module TrafficRules = MakeTrafficRules(struct let prefix = prefix end)
-  module Subscriptions = MakeSubscriptions(struct let prefix = prefix end)
   module Transports = MakeTransports(struct let prefix = prefix end)
 
 end
