@@ -40,7 +40,7 @@ class Mm1(object):
         self.traffic_rules = self.TrafficRules(self.base_url)
         self.services = self.Services(self.base_url)
         self.transports = self.Transports(self.base_url)
-        self.platforms = self.platforms(self.base_url)
+        self.platforms = self.Platforms(self.base_url)
 
     def check(self):
         url = '{}'.format(self.base_url)
