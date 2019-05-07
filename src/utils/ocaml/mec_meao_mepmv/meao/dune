@@ -1,0 +1,7 @@
+(executable
+ (name meao)
+ (public_name meao)
+ (package meao)
+ (libraries base lwt apero-core lwt.unix re yaks-common yaks-ocaml httpaf httpaf-lwt-unix faraday str cmdliner uuidm yojson fos-im)
+ (preprocess (pps lwt_ppx ppx_cstruct ))
+ )
