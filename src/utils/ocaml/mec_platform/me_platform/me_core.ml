@@ -78,9 +78,10 @@ module MEC_Core = struct
 
 
   (* This should add the traffic rules and dns rules *)
-  let add_application (app_desc: Fos_im.MEC_Types.appd_descriptor ) self =
+  let add_application (app_desc: Rest_types.app_info ) self =
     MVar.read self >>= fun self ->
-    let appid = app_desc.id in
+    let appid = Apero.Option.get_or_default app_desc.app_instance_id (Apero.Uuid.to_string @@  Apero.Uuid.make ()) in
+    let app_desc = {app_desc with app_instance_id = Some appid} in
     Yaks_connector.Storage.ServiceInfo.add_application appid app_desc self.connector
     >>= fun  _ -> Lwt.return appid
 
@@ -95,7 +96,7 @@ module MEC_Core = struct
   let get_application_by_name app_name self =
     MVar.read self >>= fun self ->
     let%lwt services = Yaks_connector.Storage.ServiceInfo.get_applications self.connector in
-    let%lwt services = Lwt_list.filter_map_p (fun (e:Fos_im.MEC_Types.appd_descriptor) ->
+    let%lwt services = Lwt_list.filter_map_p (fun (e:Rest_types.app_info) ->
         if e.name = app_name then
           Lwt.return @@ Some e
         else
@@ -109,7 +110,7 @@ module MEC_Core = struct
   let get_application_by_vendor app_vendor self =
     MVar.read self >>= fun self ->
     let%lwt services = Yaks_connector.Storage.ServiceInfo.get_applications self.connector in
-    let%lwt services = Lwt_list.filter_map_p (fun (e:Fos_im.MEC_Types.appd_descriptor) ->
+    let%lwt services = Lwt_list.filter_map_p (fun (e:Rest_types.app_info) ->
         if e.vendor = app_vendor then
           Lwt.return @@ Some e
         else
