@@ -33,14 +33,14 @@ class Mm1(object):
         This class allow the interaction with fog05 FIM
     '''
 
-    def __init__(self, endpoint='127.0.0.1:8071/exampleAPI/mm5/v1',):
+    def __init__(self, endpoint='127.0.0.1:8071/exampleAPI/mm1/v1',):
         self.base_url = 'http://{}'.format(endpoint)
         self.applications = self.Applications(self.base_url)
         self.dns_rules = self.DnsRules(self.base_url)
         self.traffic_rules = self.TrafficRules(self.base_url)
         self.services = self.Services(self.base_url)
         self.transports = self.Transports(self.base_url)
-        self.platforms = self.platforms(self.base_url)
+        self.platforms = self.Platforms(self.base_url)
 
     def check(self):
         url = '{}'.format(self.base_url)
@@ -50,6 +50,9 @@ class Mm1(object):
         pass
 
     class Platforms(object):
+        '''
+        pl = {'platformId':'platform1', 'endpoint':{'uris':['/exampleAPI/mm5/v1'], 'alternative':{},'addresses':[{'host':'10.212.26.250','port':8091}]}}
+        '''
         def __init__(self, base_url):
             self.base_url = base_url
 
@@ -118,7 +121,7 @@ class Mm1(object):
             return json.loads(requests.post(url, data=json.dumps(dns_rule)).text)
 
         def update(self, platformid, applicationid, dns_rule_id, dns_rule):
-            url = '{}/platforms/{}/applications/{}/dns_rules/{}'.format(self.base_url platformid, applicationid, dns_rule_id)
+            url = '{}/platforms/{}/applications/{}/dns_rules/{}'.format(self.base_url, platformid, applicationid, dns_rule_id)
             return json.loads(requests.put(url, data=json.dumps(dns_rule)).text)
 
         def get(self, platformid, applicationid, dns_rule_id):
