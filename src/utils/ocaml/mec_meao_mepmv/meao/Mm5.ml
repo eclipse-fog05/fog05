@@ -112,32 +112,32 @@ module Mm5_client = struct
   module DnsRules = struct
 
     let list appid client =
-      let uri = client.base_uri ^ "/applications/" ^ appid ^ "dns_rules" in
+      let uri = client.base_uri ^ "/applications/" ^ appid ^ "/dns_rules" in
       let%lwt resp = do_request uri `GET [] "" client in
       let r = Rest_types.dns_rule_list_response_of_string resp in
       Lwt.return r.dns_rule
 
     let add appid dnsrule client =
-      let uri = client.base_uri ^ "/applications/" ^ appid ^ "dns_rules" in
+      let uri = client.base_uri ^ "/applications/" ^ appid ^ "/dns_rules" in
       let%lwt resp = do_request uri `POST [] (Rest_types.string_of_dns_rule dnsrule) client in
       let r = Rest_types.dns_rule_response_of_string resp in
       Lwt.return @@ r.dns_rule.dns_rule_id
 
 
     let get appid dns_rule_id client =
-      let uri = client.base_uri ^ "/applications/" ^ appid ^ "dns_rules/" ^ dns_rule_id in
+      let uri = client.base_uri ^ "/applications/" ^ appid ^ "/dns_rules/" ^ dns_rule_id in
       let%lwt resp = do_request uri `GET [] "" client in
       let r = Rest_types.dns_rule_response_of_string resp in
       Lwt.return @@ r.dns_rule
 
     let remove appid dns_rule_id client =
-      let uri = client.base_uri ^ "/applications/" ^ appid ^ "dns_rules/" ^ dns_rule_id in
+      let uri = client.base_uri ^ "/applications/" ^ appid ^ "/dns_rules/" ^ dns_rule_id in
       let%lwt _ = do_request uri `DELETE [] "" client in
       Lwt.return dns_rule_id
 
 
     let update appid dns_rule_id dnsrule client =
-      let uri = client.base_uri ^ "/applications/" ^ appid ^ "dns_rules/" ^ dns_rule_id in
+      let uri = client.base_uri ^ "/applications/" ^ appid ^ "/dns_rules/" ^ dns_rule_id in
       let%lwt resp = do_request uri `PUT [] (Rest_types.string_of_dns_rule dnsrule) client in
       let r = Rest_types.dns_rule_response_of_string resp in
       Lwt.return @@ r.dns_rule.dns_rule_id
@@ -147,32 +147,32 @@ module Mm5_client = struct
   module TrafficRules = struct
 
     let list appid client =
-      let uri = client.base_uri ^ "/applications/" ^ appid ^ "traffic_rules" in
+      let uri = client.base_uri ^ "/applications/" ^ appid ^ "/traffic_rules" in
       let%lwt resp = do_request uri `GET [] "" client in
       let r = Rest_types.traffic_rule_list_response_of_string resp in
       Lwt.return r.traffic_rule
 
     let add appid tfcrule client =
-      let uri = client.base_uri ^ "/applications/" ^ appid ^ "traffic_rules" in
+      let uri = client.base_uri ^ "/applications/" ^ appid ^ "/traffic_rules" in
       let%lwt resp = do_request uri `POST [] (Rest_types.string_of_traffic_rule tfcrule) client in
       let r = Rest_types.traffic_rule_response_of_string resp in
       Lwt.return @@ r.traffic_rule.traffic_rule_id
 
 
     let get appid dns_rule_id client =
-      let uri = client.base_uri ^ "/applications/" ^ appid ^ "traffic_rules/" ^ dns_rule_id in
+      let uri = client.base_uri ^ "/applications/" ^ appid ^ "/traffic_rules/" ^ dns_rule_id in
       let%lwt resp = do_request uri `GET [] "" client in
       let r = Rest_types.traffic_rule_response_of_string resp in
       Lwt.return @@ r.traffic_rule
 
     let remove appid dns_rule_id client =
-      let uri = client.base_uri ^ "/applications/" ^ appid ^ "traffic_rules/" ^ dns_rule_id in
+      let uri = client.base_uri ^ "/applications/" ^ appid ^ "/traffic_rules/" ^ dns_rule_id in
       let%lwt _ = do_request uri `DELETE [] "" client in
       Lwt.return dns_rule_id
 
 
     let update appid dns_rule_id tfcrule client =
-      let uri = client.base_uri ^ "/applications/" ^ appid ^ "traffic_rules/" ^ dns_rule_id in
+      let uri = client.base_uri ^ "/applications/" ^ appid ^ "/traffic_rules/" ^ dns_rule_id in
       let%lwt resp = do_request uri `PUT [] (Rest_types.string_of_traffic_rule tfcrule) client in
       let r = Rest_types.traffic_rule_response_of_string resp in
       Lwt.return @@ r.traffic_rule.traffic_rule_id
