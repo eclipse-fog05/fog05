@@ -38,7 +38,7 @@ module Mm5_client = struct
 
 
   let do_request uri meth header body self =
-    Logs.debug (fun m -> m "[Mm5 Client]: Request to %s with body" uri body );
+    Logs.debug (fun m -> m "[Mm5 Client]: Request to %s with body %s" uri body );
     let sock = Lwt_unix.socket Unix.PF_INET Unix.SOCK_STREAM 0 in
     let p,c = Lwt.wait () in
     let error_handler _ =
@@ -63,7 +63,7 @@ module Mm5_client = struct
     Body.write_string request_body body;
     Body.close_writer request_body;
     let%lwt res = p in
-    Logs.debug (fun m -> m "[Mm5 Client]: Request result" res );
+    Logs.debug (fun m -> m "[Mm5 Client]: Request result %s" res );
     Lwt.return res
 
   let create address port base_uri =
