@@ -58,7 +58,8 @@ module Mm5_client = struct
         "Content-Length", (string_of_int (String.length body));
         "Connection", "keep-alive";
         "Content-Type", "application/json";
-        "User-Agent", "fog05/Mm5/0.0.1"
+        "User-Agent", "fog05/Mm5/0.0.1";
+        "Host", Printf.sprintf "%s:%d" self.address self.port;
       ] @ header)
     in
     let request_body = Client.request ~error_handler ~response_handler sock (Request.create ~headers meth uri) in
