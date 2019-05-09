@@ -63,7 +63,15 @@ module MEAO = struct
     let dns_rules = List.map (fun d -> MEC_Types.string_of_dns_rule_descriptor d |> Rest_types.dns_rule_of_string |> fun r -> {r with state = `ACTIVE}) appd.dns_rules in
     Rest_types.create_app_info ~appd_id ~app_instance_id ~vendor ~soft_verision ~state ~name ~service_produced:[] ~traffic_rules ~dns_rules ()
 
-
+  let transport_info_of_descriptor (txd:MEC_Types.transport_descriptor) =
+    let id = Apero.Uuid.to_string @@ Apero.Uuid.make () in
+    let transport_type = transport_types_of_string (MEC_Types.string_of_transport_types txd.transport_type) in
+    let version = txd.version in
+    let security = security_info_of_string (MEC_Types.string_of_security_info txd.security) in
+    let protocol = txd.protocol in
+    let name = id ^ protocol in
+    let endpoint = {uris=[]; alternative = Fos_im.JSON.create_empty (); addresses =[] } in
+    Rest_types.create_transport_info ~id ~transport_type ~version ~security ~protocol ~name ~endpoint ()
 
 
   (* MEC Platforms *)
@@ -343,17 +351,13 @@ module MEAO = struct
 
       let app_info = app_info_of_descriptor app_desc in
       let app_inst_id = Apero.Option.get app_info.app_instance_id in
-      let%lwt txs = get_transports plid state in
-      let rtxs = app_desc.transport_dependencies in
-      let mtxs = find_matching_transports txs rtxs in
+      (* let%lwt txs = get_transports plid state in *)
+      (* let rtxs = app_desc.transport_dependencies in *)
+      (* let mtxs = find_matching_transports txs rtxs in *)
       let svcs =
         List.map ( fun (s:MEC_Types.service_descriptor) ->
-            let rtxs = List.map ( fun (t,_) -> t ) s.transport_supported  in
-            let txs = List.filter (fun ptx -> filter_tx ptx rtxs ) mtxs in
-            match txs with
-            | [] -> raise @@ MEException (`TransportNotExisting (`Msg (Printf.sprintf "No required transport found")))
-            | hd:: _ ->
-              service_info_of_descriptor s `JSON hd hd.id
+            let rtxs = List.map ( fun (t,_) -> t ) s.transport_supported  |> List.hd |> transport_info_of_descriptor in
+            service_info_of_descriptor s `JSON rtxs rtxs.id
           ) app_desc.service_produces in
       let app_info = {app_info with service_produced = svcs} in
       Mm5_client.Applications.add app_info client
