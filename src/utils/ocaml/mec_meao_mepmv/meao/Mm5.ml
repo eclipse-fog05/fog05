@@ -55,7 +55,7 @@ module Mm5_client = struct
     in
     let%lwt _ = Lwt_unix.connect sock self.addr_info.Unix.ai_addr in
     let headers = Headers.of_list ([
-        "Content-Length", (string_of_int (String.length body));
+        (* "Content-Length", (string_of_int (String.length body)); *)
         "Connection", "keep-alive";
       ] @ header)
     in
