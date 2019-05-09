@@ -55,8 +55,10 @@ module Mm5_client = struct
     in
     let%lwt _ = Lwt_unix.connect sock self.addr_info.Unix.ai_addr in
     let headers = Headers.of_list ([
-        (* "Content-Length", (string_of_int (String.length body)); *)
+        "Content-Length", (string_of_int (String.length body));
         "Connection", "keep-alive";
+        "Content-Type", "application/json";
+        "User-Agent", "fog05/Mm5/0.0.1"
       ] @ header)
     in
     let request_body = Client.request ~error_handler ~response_handler sock (Request.create ~headers meth uri) in
