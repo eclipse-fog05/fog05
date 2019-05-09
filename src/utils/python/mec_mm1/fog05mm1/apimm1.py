@@ -50,6 +50,9 @@ class Mm1(object):
         pass
 
     class Platforms(object):
+        '''
+        pl = {'platformId':'platform1', 'endpoint':{'uris':['/exampleAPI/mm5/v1'], 'alternative':{},'addresses':[{'host':'10.212.26.250','port':8091}]}}
+        '''
         def __init__(self, base_url):
             self.base_url = base_url
 
