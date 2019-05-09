@@ -1,7 +1,7 @@
 
 
 server {
-	listen ip:8091;
+	listen ip:8071;
 	#server_name mm1.meao.mec;
 	location / {
 
