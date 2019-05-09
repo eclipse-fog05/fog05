@@ -115,10 +115,10 @@ module Mp1 = struct
 
 
   let make_sub_url prefix appid kind id =
-    prefix ^ "applications" ^ appid ^ "subscriptions" ^ kind ^ id
+    prefix ^ "applications/" ^ appid ^ "/subscriptions/" ^ kind ^ id
 
   let make_svc_url prefix id =
-    prefix ^ "services" ^ id
+    prefix ^ "services/" ^ id
 
 
 

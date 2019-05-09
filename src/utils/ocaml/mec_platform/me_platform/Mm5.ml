@@ -118,16 +118,16 @@ module Mm5 = struct
     p
 
   let make_svc_url prefix id =
-    prefix ^ "services" ^ id
+    prefix ^ "services/" ^ id
 
   let make_app_url prefix appid =
-    prefix ^ "applications" ^ appid
+    prefix ^ "applications/" ^ appid
 
   let make_dns_rule_url prefix appid dnsruleid=
-    prefix ^ "applications" ^ appid ^ "dns_rules" ^ dnsruleid
+    prefix ^ "applications/" ^ appid ^ "/dns_rules/" ^ dnsruleid
 
   let make_traffic_rule_url prefix appid tfcruleid =
-    prefix ^ "applications" ^ appid ^ "traffic_rules" ^ tfcruleid
+    prefix ^ "applications/" ^ appid ^ "/traffic_rules/" ^ tfcruleid
 
 
 
