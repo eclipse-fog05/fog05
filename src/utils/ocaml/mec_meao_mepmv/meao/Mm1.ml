@@ -94,7 +94,11 @@ module Mm1 = struct
 
 
   let on_err reqd (ex:exn) =
-    Logs.debug (fun m -> m "[Mm1] : Exception  %s" (Printexc.to_string ex) );
+    (match ex with
+     | Mec_errors.MEException e  ->
+       Logs.debug (fun m -> m "[Mm1] : MEC Exception %s raised %s" (Mec_errors.show_ferror e) (Printexc.get_backtrace () ));
+     | _ -> ());
+    Logs.debug (fun m -> m "[Mm1] : Exception %s raised %s" (Printexc.to_string ex) (Printexc.get_backtrace () ));
     let problem_details = Rest_types.string_of_error_response @@ {problem_details = { err_type = "bad_request"; title=(Printexc.to_string ex); status=0; detail=""; instance=""}} in
     respond_bad_request reqd (Headers.of_list ["Content-Type", "application/json"]) problem_details
   (* let internal_error msg =
@@ -472,7 +476,8 @@ module Mm1 = struct
                  | `DELETE ->
                    Logs.debug (fun m -> m "[Mm1] : DELETE Traffic Rule %s for %s"  traffic_rule_id app_instance_id );
                    let subid = MEAO.remove_traffic_rule_for_application platform_id app_instance_id traffic_rule_id self.core in
-                   let f _ =
+                   let f subid =
+                     Logs.debug (fun m -> m "Traffic rule %s removed from %s" subid app_instance_id);
                      respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) ""
                    in
                    Lwt.on_any subid f (on_err reqd);

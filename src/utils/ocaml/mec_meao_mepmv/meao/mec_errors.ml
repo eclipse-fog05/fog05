@@ -12,3 +12,6 @@ type ferror = [
 
 
 exception MEException of ferror [@@deriving show]
+
+
+let () = Printexc.register_printer @@ function | MEException(e) -> Some ("MException: "^(show_ferror e)) | _ -> None

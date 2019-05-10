@@ -2,6 +2,6 @@
  (name meao)
  (public_name meao)
  (package meao)
- (libraries base lwt apero-core lwt.unix re yaks-common yaks-ocaml httpaf httpaf-lwt-unix faraday str cmdliner uuidm yojson fos-im)
- (preprocess (pps lwt_ppx ppx_cstruct ))
+ (libraries base lwt apero-core lwt.unix re yaks-common yaks-ocaml httpaf httpaf-lwt-unix faraday str cmdliner uuidm yojson fos-im ppx_deriving.show)
+ (preprocess (pps lwt_ppx ppx_cstruct ppx_deriving.show ))
  )
