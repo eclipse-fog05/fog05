@@ -23,6 +23,7 @@ case $key in
 esac
 done
 
+make -C ocaml/mec_meao_mepmv clean
 make -C ocaml/mec_meao_mepmv
 
 docker network rm fog05-meaonet
@@ -37,6 +38,8 @@ docker stack deploy -c ./docker/docker-compose.yaml meao
 
 if [ $TEST ]
 then
+    make -C ocaml/mec_platform clean
+    make -C ocaml/mec_platform
     ./generate_mec_platform.sh
     MEC_IP=$(lxc list -c4 --format json plat |  jq -r '.[0].state.network.eth0.addresses[0].address')
     PL="{\"platformId\":\"testp\", \"endpoint\":{\"uris\":[\"/exampleAPI/mm5/v1\"], \"alternative\":{},\"addresses\":[{\"host\":\"$MEC_IP\",\"port\":8091}]}}"
