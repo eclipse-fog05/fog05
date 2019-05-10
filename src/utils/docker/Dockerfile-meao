@@ -9,4 +9,4 @@ copy ./ocaml/mec_meao_mepmv/_build/default/meao/meao.exe /root/meao
 
 EXPOSE 8071
 
-CMD /root/meao
+CMD /root/meao -vv
