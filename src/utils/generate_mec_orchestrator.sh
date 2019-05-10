@@ -38,11 +38,9 @@ docker stack deploy -c ./docker/docker-compose.yaml meao
 if [ $TEST ]
 then
     ./generate_mec_platform.sh
-    MECP_IP=$(lxc list -c4 --format json plat |  jq -r '.[0].state.network.eth0.addresses[0].address')
-    PL= '{"platformId":"testp", "endpoint":{"uris":["/exampleAPI/mm5/v1"], "alternative":{},"addresses":[{"host":"$MEC_IP","port":8091}]}}'
-    curl -X POST \
-    http://127.0.1:8071/exampleAPI/mm1/v1/platforms \
-    -d $PL
+    MEC_IP=$(lxc list -c4 --format json plat |  jq -r '.[0].state.network.eth0.addresses[0].address')
+    PL="{\"platformId\":\"testp\", \"endpoint\":{\"uris\":[\"/exampleAPI/mm5/v1\"], \"alternative\":{},\"addresses\":[{\"host\":\"$MEC_IP\",\"port\":8091}]}}"
+    curl -X POST http://127.0.1:8071/exampleAPI/mm1/v1/platforms -d "$PL"
 fi
 
 
