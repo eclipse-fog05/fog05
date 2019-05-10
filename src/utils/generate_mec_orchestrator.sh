@@ -7,18 +7,47 @@
 
 # docker swarm init --advertise-addr 192.168.100.134
 
+POSITIONAL=()
+while [[ $# -gt 0 ]]
+do
+key="$1"
+
+case $key in
+    -t|--test)
+    TEST=true
+    shift;;
+    *)
+    POSITIONAL+=("$1")
+    shift
+    ;;
+esac
+done
+
+make -C ocaml/mec_meao_mepmv
+
+docker network rm fog05-meaonet
+docker network create -d overlay --attachable fog05-meaonet
 
 
-# docker network rm fog05-meaonet
-# docker network create -d overlay --attachable fog05-meaonet
+sg docker -c "docker build . -f ./docker/Dockerfile-yaks -t fog05/yaks --no-cache"
+sg docker -c "docker build . -f ./docker/Dockerfile-meao -t fog05/meao --no-cache"
+
+docker stack deploy -c ./docker/docker-compose.yaml meao
 
 
-#sg docker -c "docker build ~/fog05/src/utils -f ~/fog05/src/utils/docker/Dockerfile-yaks -t fog05/yaks --no-cache"
-#sg docker -c "docker build ~/fog05/src/utils -f ~/fog05/src/utils/docker/Dockerfile-meao -t fog05/meao --no-cache"
+if [ $TEST ]
+then
+    ./generate_mec_platform.sh
+    MECP_IP=$(lxc list -c4 --format json plat |  jq -r '.[0].state.network.eth0.addresses[0].address')
+    PL= '{"platformId":"testp", "endpoint":{"uris":["/exampleAPI/mm5/v1"], "alternative":{},"addresses":[{"host":"$MEC_IP","port":8091}]}}'
+    curl -X POST \
+    http://127.0.1:8071/exampleAPI/mm1/v1/platforms \
+    -d $PL
+fi
 
 
 
-# docker stack deploy -c src/utils/docker/docker-compose.yaml meao
+
 
 
 # lxc launch images:ubuntu/bionic meao

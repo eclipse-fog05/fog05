@@ -62,20 +62,23 @@ module Mm1 = struct
   let respond_created reqd headers s =
     let headers = Headers.add headers "Connection" "close"  in
     Reqd.respond_with_string reqd (Response.create ~headers `Created) s;
-    Logs.debug (fun m -> m "[Mm1] : Replied OK with %s" s)
+    Logs.debug (fun m -> m "[Mm1] : Replied Created with %s" s)
 
   let respond_bad_request reqd headers s =
     let headers = Headers.add headers "Connection" "close"  in
-    Reqd.respond_with_string reqd (Response.create ~headers `Bad_request) s
+    Reqd.respond_with_string reqd (Response.create ~headers `Bad_request) s;
+    Logs.debug (fun m -> m "[Mm1] : Replied Bad Request with %s" s)
 
 
   let respond_forbidden reqd headers s =
     let headers = Headers.add headers "Connection" "close"  in
-    Reqd.respond_with_string reqd (Response.create ~headers `Forbidden) s
+    Reqd.respond_with_string reqd (Response.create ~headers `Forbidden) s;
+    Logs.debug (fun m -> m "[Mm1] : Replied Forbidden with %s" s)
 
   let respond_not_found reqd headers s =
     let headers = Headers.add headers "Connection" "close"  in
-    Reqd.respond_with_string reqd (Response.create ~headers `Not_found) s
+    Reqd.respond_with_string reqd (Response.create ~headers `Not_found) s;
+    Logs.debug (fun m -> m "[Mm1] : Replied Not Found with %s" s)
 
 
   let error_handler ?request:_ error start_response =
