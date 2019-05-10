@@ -21,9 +21,9 @@ services:
     restart: always
     networks:
       - netMEAO
-    # environment:
-    #   - RO_DB_ROOT_PASSWORD=osm4u
-    #   - DB_HOST=osm-ro-db
+    environment:
+      - YAKS_HOST: fog05-meao-yaks
+      - YAKS_PORT: "7887"
     ports:
       - "8071:8071"
     depends_on:

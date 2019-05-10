@@ -38,13 +38,27 @@ let setup_log style_renderer level =
   ()
 
 
+let get_yaks_locator () =
+  let host =
+    try
+      Unix.getenv "YAKS_HOST"
+    with Not_found -> "127.0.0.1"
+  in
+  let port =
+    try
+      Unix.getenv "YAKS_PORT"
+    with Not_found -> "7887"
+  in
+  let strloc = Printf.sprintf "tcp/%s:%s" host port in
+  Apero_net.Locator.of_string strloc |> Apero.Option.get
+
 let run_platform configuration_path =
   ignore configuration_path;
   let%lwt _ = Lwt_io.printf "Started!\n" in
   try%lwt
 
     (* let%lwt mm5_client = Mm5_client.create "127.0.0.1" 8091 "http://127.0.0.1:8091" in *)
-    let%lwt core = MEAO.create (Apero.Option.get @@ Apero_net.Locator.of_string "tcp/127.0.0.1:7887") in
+    let%lwt core = MEAO.create (get_yaks_locator ()) in
     let%lwt mm1 = Mm1.create "127.0.0.1" "/exampleAPI/mm1/v1/" 8071 core in
     Lwt.join [MEAO.start core; Mm1.start mm1]
   (*

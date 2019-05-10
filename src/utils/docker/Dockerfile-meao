@@ -3,7 +3,7 @@ from ubuntu:xenial
 LABEL authors="Gabriele Baldoni"
 
 RUN apt update && \
-    DEBIAN_FRONTEND=noninteractive  apt install libev-dev libssl-dev -y
+    DEBIAN_FRONTEND=noninteractive  apt install libev-dev libssl-dev libgmp-dev -y
 
 copy ./ocaml/mec_meao_mepmv/_build/default/meao/meao.exe /root/meao
 
