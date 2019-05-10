@@ -1,0 +1,12 @@
+from ubuntu:xenial
+
+LABEL authors:"Gabriele Baldoni"
+
+RUN apt update && \
+    DEBIAN_FRONTEND=noninteractive  apt install libev-dev libssl-dev curl -y
+
+copy ./ocaml/mec_meao_mepmv/_build/default/meao/meao.exe /root/meao
+
+EXPOSE 8071
+
+CMD /root/meao
