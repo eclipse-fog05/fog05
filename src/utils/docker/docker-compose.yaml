@@ -22,8 +22,8 @@ services:
     networks:
       - netMEAO
     environment:
-      - YAKS_HOST: fog05-meao-yaks
-      - YAKS_PORT: "7887"
+      YAKS_HOST: fog05-meao-yaks
+      YAKS_PORT: "7887"
     ports:
       - "8071:8071"
     depends_on:

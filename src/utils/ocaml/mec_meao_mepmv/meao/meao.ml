@@ -41,7 +41,9 @@ let setup_log style_renderer level =
 let get_yaks_locator () =
   let host =
     try
-      Unix.getenv "YAKS_HOST"
+      Unix.getenv "YAKS_HOST" |> Unix.gethostbyname
+      |> fun x -> Array.get x.h_addr_list 0 |>
+                  Unix.string_of_inet_addr
     with Not_found -> "127.0.0.1"
   in
   let port =
@@ -49,6 +51,7 @@ let get_yaks_locator () =
       Unix.getenv "YAKS_PORT"
     with Not_found -> "7887"
   in
+  Logs.debug (fun m -> m "YAKS AT %s:%s" host port);
   let strloc = Printf.sprintf "tcp/%s:%s" host port in
   Apero_net.Locator.of_string strloc |> Apero.Option.get
 
