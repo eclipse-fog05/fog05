@@ -13,13 +13,35 @@
 # Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Tests
 
 import unittest
-from fog05mm5 import Mm5
+from fog05mm1 import Mm1
 
 
 class APITest(unittest.TestCase):
 
+    def test_platforms(self):
+        self.maxDiff = None
+        plid = 'testp'
+        uris = ['/exampleAPI/mm5/v1']
+
+        mm1 = Mm1()
+
+        res = mm1.platforms.list()
+        self.assertEqual(1, len(res['PlatformInfo']))
+
+        cp = mm1.platforms.get(plid)
+        self.assertEqual(plid, cp['PlatformInfo']['platformId'])
+        self.assertEqual(uris, cp['PlatformInfo']['endpoint']['uris'])
+
+        res = mm1.platforms.remove(plid)
+        self.assertEqual({'platformId': plid}, res)
+        self.assertEqual(mm1.platforms.list(), {'PlatformInfo': []})
+
+        res = mm1.platforms.add(cp['PlatformInfo'])
+        self.assertEqual(res, cp)
+
     def test_dns_rules(self):
         self.maxDiff = None
+        plid = 'testp'
         appid = '123'
         rule = {
             'dnsRuleId': 'dnsRule1',
@@ -29,11 +51,11 @@ class APITest(unittest.TestCase):
             'ttl': 100,
             'state': 'ACTIVE'
         }
-        mm5 = Mm5()
-        mm5.dns_rules.add(appid, rule)
+        mm1 = Mm1()
+        mm1.dns_rules.add(plid, appid, rule)
         response_rule = {'DnsRule': rule}
-        self.assertEqual(mm5.dns_rules.get(appid, rule['dnsRuleId']), response_rule)
-        self.assertEqual(mm5.dns_rules.list(appid)['DnsRule'], [rule])
+        self.assertEqual(mm1.dns_rules.get(plid, appid, rule['dnsRuleId']), response_rule)
+        self.assertEqual(mm1.dns_rules.list(plid, appid)['DnsRule'], [rule])
 
         updated_rule = {
             'dnsRuleId': 'dnsRule1',
@@ -44,16 +66,17 @@ class APITest(unittest.TestCase):
             'state': 'ACTIVE'
         }
         response_rule = {'DnsRule': updated_rule}
-        mm5.dns_rules.update(appid, updated_rule['dnsRuleId'], updated_rule)
-        self.assertEqual(mm5.dns_rules.get(appid, rule['dnsRuleId']), response_rule)
-        self.assertEqual(mm5.dns_rules.list(appid)['DnsRule'], [updated_rule])
+        mm1.dns_rules.update(plid, appid, updated_rule['dnsRuleId'], updated_rule)
+        self.assertEqual(mm1.dns_rules.get(plid, appid, updated_rule['dnsRuleId']), response_rule)
+        self.assertEqual(mm1.dns_rules.list(plid, appid)['DnsRule'], [updated_rule])
 
-        mm5.dns_rules.remove(appid, updated_rule['dnsRuleId'])
-        self.assertEqual(mm5.dns_rules.list(appid)['DnsRule'], [])
-        self.assertRaises(ValueError, mm5.dns_rules.get, appid, updated_rule['dnsRuleId'])
+        mm1.dns_rules.remove(plid, appid, updated_rule['dnsRuleId'])
+        self.assertEqual(mm1.dns_rules.list(plid, appid)['DnsRule'], [])
+        self.assertRaises(ValueError, mm1.dns_rules.get, plid, appid, updated_rule['dnsRuleId'])
 
     def test_traffic_rule(self):
         self.maxDiff = None
+        plid = 'testp'
         appid = '123'
         rule = {
                 'trafficRuleId': 'TrafficRule1',
@@ -96,11 +119,11 @@ class APITest(unittest.TestCase):
                 },
                 'state': 'ACTIVE'
             }
-        mm5 = Mm5()
-        mm5.traffic_rules.add(appid, rule)
+        mm1 = Mm1()
+        mm1.traffic_rules.add(plid, appid, rule)
         response_rule = {'TrafficRule': rule}
-        self.assertEqual(mm5.traffic_rules.get(appid, rule['trafficRuleId']), response_rule)
-        self.assertEqual(mm5.traffic_rules.list(appid)['TrafficRule'], [rule])
+        self.assertEqual(mm1.traffic_rules.get(plid, appid, rule['trafficRuleId']), response_rule)
+        self.assertEqual(mm1.traffic_rules.list(plid, appid)['TrafficRule'], [rule])
 
         updated_rule = {
                 'trafficRuleId': 'TrafficRule1',
@@ -144,16 +167,17 @@ class APITest(unittest.TestCase):
                 'state': 'INACTIVE'
             }
         response_rule = {'TrafficRule': updated_rule}
-        mm5.traffic_rules.update(appid, updated_rule['trafficRuleId'], updated_rule)
-        self.assertEqual(mm5.traffic_rules.get(appid, updated_rule['trafficRuleId']), response_rule)
-        self.assertEqual(mm5.traffic_rules.list(appid)['TrafficRule'], [updated_rule])
+        mm1.traffic_rules.update(plid, appid, updated_rule['trafficRuleId'], updated_rule)
+        self.assertEqual(mm1.traffic_rules.get(plid, appid, updated_rule['trafficRuleId']), response_rule)
+        self.assertEqual(mm1.traffic_rules.list(plid, appid)['TrafficRule'], [updated_rule])
 
-        mm5.traffic_rules.remove(appid, updated_rule['trafficRuleId'])
-        self.assertEqual(mm5.traffic_rules.list(appid)['TrafficRule'], [])
-        self.assertRaises(ValueError, mm5.traffic_rules.get, appid, updated_rule['trafficRuleId'])
+        mm1.traffic_rules.remove(plid, appid, updated_rule['trafficRuleId'])
+        self.assertEqual(mm1.traffic_rules.list(plid, appid)['TrafficRule'], [])
+        self.assertRaises(ValueError, mm1.traffic_rules.get, plid, appid, updated_rule['trafficRuleId'])
 
     def test_services(self):
         self.maxDiff = None
+        plid = 'testp'
         service_info = {
                 "serInstanceId": "ServiceInstance123",
                 "serName": "ExampleService",
@@ -195,11 +219,11 @@ class APITest(unittest.TestCase):
                 },
                 "serializer": "JSON"
                 }
-        mm5 = Mm5()
-        mm5.services.add(service_info)
+        mm1 = Mm1()
+        mm1.services.add(plid, service_info)
         response_svc = {'ServiceInfo': service_info}
-        self.assertEqual(mm5.services.get(service_info['serInstanceId']), response_svc)
-        self.assertEqual(mm5.services.list()['ServiceInfo'], [service_info])
+        self.assertEqual(mm1.services.get(plid, service_info['serInstanceId']), response_svc)
+        self.assertEqual(mm1.services.list(plid)['ServiceInfo'], [service_info])
 
         updated_svc = {
                 "serInstanceId": "ServiceInstance123",
@@ -243,16 +267,17 @@ class APITest(unittest.TestCase):
                 "serializer": "JSON"
                 }
         response_svc = {'ServiceInfo': updated_svc}
-        mm5.services.update(service_info['serInstanceId'], updated_svc)
-        self.assertEqual(mm5.services.get(updated_svc['serInstanceId']), response_svc)
-        self.assertEqual(mm5.services.list()['ServiceInfo'], [updated_svc])
+        mm1.services.update(plid, service_info['serInstanceId'], updated_svc)
+        self.assertEqual(mm1.services.get(plid, updated_svc['serInstanceId']), response_svc)
+        self.assertEqual(mm1.services.list(plid)['ServiceInfo'], [updated_svc])
 
-        mm5.services.remove(updated_svc['serInstanceId'])
-        self.assertEqual(mm5.services.list()['ServiceInfo'], [])
-        self.assertRaises(ValueError, mm5.services.get, updated_svc['serInstanceId'])
+        mm1.services.remove(plid, updated_svc['serInstanceId'])
+        self.assertEqual(mm1.services.list(plid)['ServiceInfo'], [])
+        self.assertRaises(ValueError, mm1.services.get, plid, updated_svc['serInstanceId'])
 
     def test_transport(self):
         self.maxDiff = None
+        plid = 'testp'
         transport_info = {
             "id": "TransId12345",
             "name": "REST",
@@ -281,11 +306,11 @@ class APITest(unittest.TestCase):
             "implSpecificInfo": {}
         }
 
-        mm5 = Mm5()
-        mm5.transports.add(transport_info)
+        mm1 = Mm1()
+        mm1.transports.add(plid, transport_info)
         response_tx = {'TransportInfo': transport_info}
-        self.assertEqual(mm5.transports.get(transport_info['id']), response_tx)
-        self.assertEqual(mm5.transports.list()['TransportInfo'], [transport_info])
+        self.assertEqual(mm1.transports.get(plid, transport_info['id']), response_tx)
+        self.assertEqual(mm1.transports.list(plid)['TransportInfo'], [transport_info])
 
         updated_tx = {
             "id": "TransId12345",
@@ -316,49 +341,105 @@ class APITest(unittest.TestCase):
         }
 
         response_tx = {'TransportInfo': updated_tx}
-        mm5.transports.update(updated_tx['id'], updated_tx)
-        self.assertEqual(mm5.transports.get(updated_tx['id']), response_tx)
-        self.assertEqual(mm5.transports.list()['TransportInfo'], [updated_tx])
+        mm1.transports.update(plid, updated_tx['id'], updated_tx)
+        self.assertEqual(mm1.transports.get(plid, updated_tx['id']), response_tx)
+        self.assertEqual(mm1.transports.list(plid)['TransportInfo'], [updated_tx])
 
-        mm5.transports.remove(updated_tx['id'])
-        self.assertEqual(mm5.transports.list()['TransportInfo'], [])
-        self.assertRaises(ValueError, mm5.transports.get, updated_tx['id'])
+        mm1.transports.remove(plid, updated_tx['id'])
+        self.assertEqual(mm1.transports.list(plid)['TransportInfo'], [])
+        self.assertRaises(ValueError, mm1.transports.get, plid, updated_tx['id'])
 
     def test_application(self):
         self.maxDiff = None
+        plid = 'testp'
         appd = {
-            'appTrafficRule': [],
-            'appServiceProduced': [],
-            'appDNSRule': [],
-            'appName': 'TestApp',
-            'appDId': 'App123',
-            'appProvider': 'ETSI',
-            'state': 'ACTIVE',
-            'appInstanceId': 'd8f659a9-5864-426d-b3a6-76cf866201c6',
-            'softVersion': '0.1'
+            "appDId": "App123",
+            "appName": "TestApp",
+            "appProvider": "ETSI",
+            "appSoftVersion": "0.1",
+            "appDVersion": "1",
+            "mecVersion": ["1", "2"],
+            "appDescription": "Test App",
+            "appServiceRequired": [],
+            "appServiceOptional": [],
+            "appServiceProduced": [],
+            "appFeatureRequired": [],
+            "appFeatureOptional": [],
+            "transportDependencies": [],
+            "appTrafficRule": [],
+            "appDNSRule": [],
+            "appLatency": {
+                "timeUnit": 10,
+                "latency": "ms"
             }
+        }
 
-        mm5 = Mm5()
-        mm5.applications.add(appd)
-        self.assertEqual(mm5.applications.get(appd['appInstanceId'])['ApplicationInfo'], appd)
-        self.assertEqual(mm5.applications.list()['ApplicationInfo'], [appd])
+        # add
+        # {
+        #  'appTrafficRule': [],
+        #  'appSoftVersion': '0.1',
+        #  'appDVersion': '1',
+        #  'appFeatureRequired': [],
+        #  'appServiceProduced': [],
+        #  'appProvider': 'ETSI',
+        #  'appLatency': {'latency': 'ms', 'timeUnit': 10},a
+        #  'appDNSRule': [],
+        #  'mecVersion': ['1', '2'],
+        #  'appName': 'TestApp',
+        #  'appDId': 'App123',
+        #  'transportDependencies': [],
+        #  'appDescription': 'Test App',
+        #  'appServiceRequired': [],
+        #  'appServiceOptional': [],
+        #  'appFeatureOptional': []
+        # }
 
-        updated_appd = {
-            'appTrafficRule': [],
-            'appServiceProduced': [],
-            'appDNSRule': [],
-            'appName': 'TestApp',
-            'appDId': 'App123',
-            'appProvider': 'ETSI',
-            'state': 'ACTIVE',
-            'appInstanceId': 'd8f659a9-5864-426d-b3a6-76cf866201c6',
-            'softVersion': '1.1'
-            }
+        # get
+        # [
+        #   {'appTrafficRule': [],
+        #    'appServiceProduced': [],
+        #     'appDNSRule': [],
+        #     'appName': 'TestApp',
+        #     'appDId': 'App123',
+        #     'appProvider': 'ETSI',
+        #     'state': 'ACTIVE',
+        #     'appInstanceId': 'd8f659a9-5864-426d-b3a6-76cf866201c6',
+        #     'softVersion': '0.1'}
+        # ]
 
-        mm5.applications.update(updated_appd['appInstanceId'], updated_appd)
-        self.assertEqual(mm5.applications.get(updated_appd['appInstanceId'])['ApplicationInfo'], updated_appd)
-        self.assertEqual(mm5.applications.list()['ApplicationInfo'], [updated_appd])
+        mm1 = Mm1()
+        res = mm1.applications.add(plid, appd)
 
-        mm5.applications.remove(updated_appd['appInstanceId'])
-        self.assertEqual(mm5.applications.list()['ApplicationInfo'], [])
-        self.assertRaises(ValueError, mm5.applications.get, updated_appd['appInstanceId'])
+        self.assertEqual(res['ApplicationInfo']['appDId'], appd['appDId'])
+        self.assertEqual(mm1.applications.get(plid, res['ApplicationInfo']['appInstanceId']), res)
+        self.assertEqual(mm1.applications.list(plid)['ApplicationInfo'], [res['ApplicationInfo']])
+
+        # appd = {
+        #     "appDId": "App123",
+        #     "appName": "TestApp",
+        #     "appProvider": "ETSI",
+        #     "appSoftVersion": "1.1",
+        #     "appDVersion":"1",
+        #     "mecVersion": ["1", "2"],
+        #     "appDescription": "Test App",
+        #     "appServiceRequired": [],
+        #     "appServiceOptional": [],
+        #     "appServiceProduced": [],
+        #     "appFeatureRequired": [],
+        #     "appFeatureOptional": [],
+        #     "transportDependencies": [],
+        #     "appTrafficRule": [],
+        #     "appDNSRule": [],
+        #     "latency": {
+        #         "time_unit": 10,
+        #         "latency": "ms"
+        #     }
+        # }
+
+        # mm1.applications.update(updated_appd['id'], updated_appd)
+        # self.assertEqual(mm1.applications.get(updated_appd['id']), updated_appd)
+        # self.assertEqual(mm1.applications.list(), [updated_appd])
+
+        mm1.applications.remove(plid, res['ApplicationInfo']['appInstanceId'])
+        self.assertEqual(mm1.applications.list(plid), {'ApplicationInfo': []})
+        self.assertRaises(ValueError, mm1.applications.get, plid, res['ApplicationInfo']['appInstanceId'])

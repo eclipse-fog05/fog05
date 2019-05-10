@@ -1,0 +1,12 @@
+from ubuntu:xenial
+
+LABEL authors="Gabriele Baldoni"
+
+RUN apt update && \
+    DEBIAN_FRONTEND=noninteractive  apt install libev-dev libssl-dev curl -y && \
+    DEBIAN_FRONTEND=noninteractive curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/g4tnzvjwlx3zcr2/yaksd.tar.gz && \
+    tar -xzvf /tmp/yaks.tar.gz -C /root/
+
+EXPOSE 7887
+
+CMD /root/yaksd

@@ -1,12 +1,12 @@
 [unit]
-Description = Eclipse fog05 MEC DynDNS service
+Description = Eclipse fog05 MEC Orchestrator service
 After=yaks.target
 
 
 [Service]
 Type=simple
-PIDFile=/var/fos/platform.pid
-ExecStart = /etc/fos/utils/platform
+PIDFile=/var/fos/meao.pid
+ExecStart = /etc/fos/utils/meao
 KillMode=process
 Restart=on-failure
 User=mec

@@ -62,20 +62,23 @@ module Mm1 = struct
   let respond_created reqd headers s =
     let headers = Headers.add headers "Connection" "close"  in
     Reqd.respond_with_string reqd (Response.create ~headers `Created) s;
-    Logs.debug (fun m -> m "[Mm1] : Replied OK with %s" s)
+    Logs.debug (fun m -> m "[Mm1] : Replied Created with %s" s)
 
   let respond_bad_request reqd headers s =
     let headers = Headers.add headers "Connection" "close"  in
-    Reqd.respond_with_string reqd (Response.create ~headers `Bad_request) s
+    Reqd.respond_with_string reqd (Response.create ~headers `Bad_request) s;
+    Logs.debug (fun m -> m "[Mm1] : Replied Bad Request with %s" s)
 
 
   let respond_forbidden reqd headers s =
     let headers = Headers.add headers "Connection" "close"  in
-    Reqd.respond_with_string reqd (Response.create ~headers `Forbidden) s
+    Reqd.respond_with_string reqd (Response.create ~headers `Forbidden) s;
+    Logs.debug (fun m -> m "[Mm1] : Replied Forbidden with %s" s)
 
   let respond_not_found reqd headers s =
     let headers = Headers.add headers "Connection" "close"  in
-    Reqd.respond_with_string reqd (Response.create ~headers `Not_found) s
+    Reqd.respond_with_string reqd (Response.create ~headers `Not_found) s;
+    Logs.debug (fun m -> m "[Mm1] : Replied Not Found with %s" s)
 
 
   let error_handler ?request:_ error start_response =
@@ -91,7 +94,7 @@ module Mm1 = struct
 
 
   let on_err reqd (ex:exn) =
-    Logs.debug (fun m -> m "[Mm1] : Exception  %s" (Printexc.to_string ex) );
+    Logs.debug (fun m -> m "[Mm1] : Exception %s raised %s" (Printexc.to_string ex) (Printexc.get_backtrace () ));
     let problem_details = Rest_types.string_of_error_response @@ {problem_details = { err_type = "bad_request"; title=(Printexc.to_string ex); status=0; detail=""; instance=""}} in
     respond_bad_request reqd (Headers.of_list ["Content-Type", "application/json"]) problem_details
   (* let internal_error msg =
@@ -247,7 +250,7 @@ module Mm1 = struct
                 Logs.debug (fun m -> m "[Mm1] : GET Applications");
                 let apps = MEAO.get_applications platform_id self.core in
                 let f apps =
-                  let res = List.map (fun e -> Yojson.Safe.from_string @@ Rest_types.string_of_app_info e) apps |> fun x -> Yojson.Safe.to_string @@ (`List x) in
+                  let res = Rest_types.string_of_application_info_list_response  {application_info = apps} in
                   respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res
                 in
                 Lwt.on_any apps f (on_err reqd);
@@ -260,12 +263,12 @@ module Mm1 = struct
                 let app = read_body reqd
                   >>= fun string_appd -> Lwt.return @@ MEC_Types.appd_descriptor_of_string string_appd
                   >>= fun appd -> MEAO.add_application platform_id appd self.core
-                  >>= fun appid -> Lwt.return (appid,appd)
+                  >>= fun app_info -> Lwt.return (Apero.Option.get app_info.app_instance_id, app_info)
                 in
                 let f app =
                   let appid, appd = app in
                   let app_uri = make_app_url self.prefix appid in
-                  let res = MEC_Types.string_of_appd_descriptor appd in
+                  let res = Rest_types.string_of_application_info_response {application_info = appd} in
                   respond_created reqd (Headers.of_list ["Content-Type", "application/json"; "location", app_uri]) res
                 in
                 (* Should be Lwt.on_any *)
@@ -283,7 +286,7 @@ module Mm1 = struct
                    let app = MEAO.get_application_by_uuid platform_id app_instance_id self.core in
                    let f app =
                      (match app with
-                      | Some app -> let res = Rest_types.string_of_app_info app in
+                      | Some app -> let res = Rest_types.string_of_application_info_response {application_info = app}  in
                         respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res
                       | None ->
                         Logs.debug (fun m -> m "[Mm1] : Not found application %s" app_instance_id);
@@ -297,10 +300,10 @@ module Mm1 = struct
                    let app = read_body reqd
                      >>= fun string_appd -> Lwt.return @@ MEC_Types.appd_descriptor_of_string string_appd
                      >>= fun appd -> MEAO.add_application platform_id appd self.core
-                     >>= fun _ -> Lwt.return appd
+                     >>= fun appi -> Lwt.return appi
                    in
                    let f app =
-                     let res = MEC_Types.string_of_appd_descriptor app in
+                     let res = Rest_types.string_of_application_info_response {application_info = app}  in
                      respond_created reqd (Headers.of_list ["Content-Type", "application/json"]) res
                    in
                    (* Should be Lwt.on_any *)
@@ -322,11 +325,7 @@ module Mm1 = struct
                    Logs.debug (fun m -> m "[Mm1] : GET DNS Rules for %s" app_instance_id);
                    let rules = MEAO.get_dns_rules_for_application platform_id app_instance_id self.core in
                    let f rules =
-                     let res = rules
-                               |> List.map (fun e -> Rest_types.create_dns_rule_response ~dns_rule:e ())
-                               |> List.map (fun e -> Yojson.Safe.from_string @@ Rest_types.string_of_dns_rule_response e)
-                               |> fun x -> Yojson.Safe.to_string @@ (`List x)
-                     in
+                     let res = Rest_types.string_of_dns_rule_list_response {dns_rule = rules} in
                      Logs.debug (fun m -> m "[Mm1] : DNS Rules for %s -> %s" app_instance_id res);
                      respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res
                    in
@@ -406,11 +405,7 @@ module Mm1 = struct
                    Logs.debug (fun m -> m "[Mm1] : GET Traffic Rules for %s" app_instance_id);
                    let rules = MEAO.get_traffic_rules_for_application platform_id app_instance_id self.core in
                    let f rules =
-                     let res = rules
-                               |> List.map (fun e -> Rest_types.create_traffic_rule_response ~traffic_rule:e ())
-                               |> List.map (fun e -> Yojson.Safe.from_string @@ Rest_types.string_of_traffic_rule_response e)
-                               |> fun x -> Yojson.Safe.to_string @@ (`List x)
-                     in
+                     let res = Rest_types.string_of_traffic_rule_list_response {traffic_rule = rules} in
                      Logs.debug (fun m -> m "[Mm1] : Traffic Rules for %s -> %s" app_instance_id res);
                      respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res;
                    in
@@ -477,7 +472,8 @@ module Mm1 = struct
                  | `DELETE ->
                    Logs.debug (fun m -> m "[Mm1] : DELETE Traffic Rule %s for %s"  traffic_rule_id app_instance_id );
                    let subid = MEAO.remove_traffic_rule_for_application platform_id app_instance_id traffic_rule_id self.core in
-                   let f _ =
+                   let f subid =
+                     Logs.debug (fun m -> m "Traffic rule %s removed from %s" subid app_instance_id);
                      respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) ""
                    in
                    Lwt.on_any subid f (on_err reqd);
@@ -531,10 +527,7 @@ module Mm1 = struct
                      | [] -> nsvcs)
                   in
                   let svcs = filt_map svcs [] in
-                  let res = List.map (fun e ->
-                      Yojson.Safe.from_string @@ Rest_types.string_of_service_info_response {service_info = e}
-                    ) svcs |> fun x -> Yojson.Safe.to_string @@ (`List x)
-                  in
+                  let res = Rest_types.string_of_service_info_list_response {service_info = svcs} in
                   respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res
                 in
                 (* Should be Lwt.on_any *)
@@ -608,10 +601,7 @@ module Mm1 = struct
                 Logs.debug (fun m -> m "[Mm1] : GET Transports");
                 let txs = MEAO.get_transports platform_id self.core in
                 let f txs =
-                  let res =List.map (fun e ->
-                      Yojson.Safe.from_string @@ Rest_types.string_of_transport_info_response {transport_info = e}
-                    ) txs |> fun x -> Yojson.Safe.to_string @@ (`List x)
-                  in
+                  let res = Rest_types.string_of_transport_info_list_response {transport_info = txs} in
                   respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res
                 in
                 Lwt.on_any txs f (on_err reqd);
