@@ -14,7 +14,7 @@ services:
     restart: always
     ports:
       - "7887:7887"
-     networks:
+    networks:
       - netMEAO
   fog05-meao:
     image: fog05-meao
