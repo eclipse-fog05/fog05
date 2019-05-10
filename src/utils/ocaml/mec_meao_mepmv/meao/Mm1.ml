@@ -250,7 +250,7 @@ module Mm1 = struct
                 Logs.debug (fun m -> m "[Mm1] : GET Applications");
                 let apps = MEAO.get_applications platform_id self.core in
                 let f apps =
-                  let res = List.map (fun e -> Yojson.Safe.from_string @@ Rest_types.string_of_application_info_response {application_info = e}) apps |> fun x -> Yojson.Safe.to_string @@ (`List x) in
+                  let res = Rest_types.string_of_application_info_list_response  {application_info = apps} in
                   respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res
                 in
                 Lwt.on_any apps f (on_err reqd);
@@ -325,11 +325,7 @@ module Mm1 = struct
                    Logs.debug (fun m -> m "[Mm1] : GET DNS Rules for %s" app_instance_id);
                    let rules = MEAO.get_dns_rules_for_application platform_id app_instance_id self.core in
                    let f rules =
-                     let res = rules
-                               |> List.map (fun e -> Rest_types.create_dns_rule_response ~dns_rule:e ())
-                               |> List.map (fun e -> Yojson.Safe.from_string @@ Rest_types.string_of_dns_rule_response e)
-                               |> fun x -> Yojson.Safe.to_string @@ (`List x)
-                     in
+                     let res = Rest_types.string_of_dns_rule_list_response {dns_rule = rules} in
                      Logs.debug (fun m -> m "[Mm1] : DNS Rules for %s -> %s" app_instance_id res);
                      respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res
                    in
@@ -409,11 +405,7 @@ module Mm1 = struct
                    Logs.debug (fun m -> m "[Mm1] : GET Traffic Rules for %s" app_instance_id);
                    let rules = MEAO.get_traffic_rules_for_application platform_id app_instance_id self.core in
                    let f rules =
-                     let res = rules
-                               |> List.map (fun e -> Rest_types.create_traffic_rule_response ~traffic_rule:e ())
-                               |> List.map (fun e -> Yojson.Safe.from_string @@ Rest_types.string_of_traffic_rule_response e)
-                               |> fun x -> Yojson.Safe.to_string @@ (`List x)
-                     in
+                     let res = Rest_types.string_of_traffic_rule_list_response {traffic_rule = rules} in
                      Logs.debug (fun m -> m "[Mm1] : Traffic Rules for %s -> %s" app_instance_id res);
                      respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res;
                    in
@@ -534,10 +526,7 @@ module Mm1 = struct
                      | [] -> nsvcs)
                   in
                   let svcs = filt_map svcs [] in
-                  let res = List.map (fun e ->
-                      Yojson.Safe.from_string @@ Rest_types.string_of_service_info_response {service_info = e}
-                    ) svcs |> fun x -> Yojson.Safe.to_string @@ (`List x)
-                  in
+                  let res = Rest_types.string_of_service_info_list_response {service_info = svcs} in
                   respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res
                 in
                 (* Should be Lwt.on_any *)
@@ -611,10 +600,7 @@ module Mm1 = struct
                 Logs.debug (fun m -> m "[Mm1] : GET Transports");
                 let txs = MEAO.get_transports platform_id self.core in
                 let f txs =
-                  let res =List.map (fun e ->
-                      Yojson.Safe.from_string @@ Rest_types.string_of_transport_info_response {transport_info = e}
-                    ) txs |> fun x -> Yojson.Safe.to_string @@ (`List x)
-                  in
+                  let res = Rest_types.string_of_transport_info_list_response {transport_info = txs} in
                   respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res
                 in
                 Lwt.on_any txs f (on_err reqd);
