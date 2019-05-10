@@ -8,6 +8,7 @@ type ferror = [
   | `TrafficRuleNotExising of error_info
   | `TransportNotExisting of error_info
   | `SubscriptionNotExisting of error_info
+  | `PlatformNotExisting of error_info
 ] [@@deriving show]
 
 

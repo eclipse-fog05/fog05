@@ -235,7 +235,7 @@ module MEAO = struct
          Mm5_client.TrafficRules.remove appid traffic_rule_id client
          >>= fun _ -> Yaks_connector.Storage.TrafficRules.remove_application_traffic_rule plid appid traffic_rule_id self.connector
          >>= fun _ -> Lwt.return traffic_rule_id
-       | None -> Lwt.fail @@ MEException (`ServiceNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid))))
+       | None -> Lwt.fail @@ MEException (`PlatformNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid))))
     | None -> Lwt.fail @@ MEException (`TrafficRuleNotExising (`Msg (Printf.sprintf "Traffic Rule with id %s not exist in application %s" traffic_rule_id appid )))
 
 
