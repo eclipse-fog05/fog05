@@ -1,24 +1,10 @@
-server {
-	listen 192.168.11.254:8081;
-	#server_name mp1.platfrom.mec;
-	location / {
-		proxy_pass http://127.0.0.1:8081;
-	}
-}
+
 
 server {
-	listen ip:8091;
-	#server_name mm5.platform.mec;
+	listen ip:8071;
+	#server_name mm1.meao.mec;
 	location / {
 
-		proxy_pass http://127.0.0.1:8091;
-	}
-}
-
-server {
-	listen ip:9999;
-	#server_name dyndns.platfrom.mec;
-	location / {
-		proxy_pass http://127.0.0.1:9999;
+		proxy_pass http://127.0.0.1:8071;
 	}
 }

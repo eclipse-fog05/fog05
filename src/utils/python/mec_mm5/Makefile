@@ -10,7 +10,7 @@ install:
 	rm -rf build dist fog05mm5.egg-info
 
 uninstall:
-	pip uninstall fog05rest -y
+	pip uninstall fog05mm5 -y
 
 test:
 	rm -rf .tox

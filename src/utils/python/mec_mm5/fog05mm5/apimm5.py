@@ -74,7 +74,7 @@ class Mm5(object):
         def remove(self, applicationid):
             url = '{}/applications/{}'.format(self.base_url, applicationid)
             ret = requests.delete(url)
-            return {'id': applicationid}
+            return {'appInstanceId': applicationid}
 
     class DnsRules(object):
         def __init__(self, base_url):
@@ -102,7 +102,7 @@ class Mm5(object):
         def remove(self, applicationid, dns_rule_id):
             url = '{}/applications/{}/dns_rules/{}'.format(self.base_url, applicationid, dns_rule_id)
             ret = requests.delete(url)
-            return {'DnsRule': {'dnsRuleId': dns_rule_id}}
+            return {'dnsRuleId': dns_rule_id}
 
     class TrafficRules(object):
         def __init__(self, base_url):
@@ -130,7 +130,7 @@ class Mm5(object):
         def remove(self, applicationid, traffic_rule_id):
             url = '{}/applications/{}/traffic_rules/{}'.format(self.base_url, applicationid, traffic_rule_id)
             ret = requests.delete(url)
-            return {'TrafficRule': {'trafficRuleId': traffic_rule_id}}
+            return {'trafficRuleId': traffic_rule_id}
 
     class Services(object):
         def __init__(self, base_url):
@@ -158,7 +158,7 @@ class Mm5(object):
         def remove(self, service_id):
             url = '{}/services/{}'.format(self.base_url, service_id)
             ret = requests.delete(url)
-            return {'ServiceInfo': {'serInstanceId': service_id}}
+            return {'serInstanceId': service_id}
 
     class Transports(object):
         def __init__(self, base_url):
@@ -186,4 +186,4 @@ class Mm5(object):
         def remove(self, transport_id):
             url = '{}/transports/{}'.format(self.base_url, transport_id)
             ret = requests.delete(url)
-            return {'TransportInfo': {'id': transport_id}}
+            return {'id': transport_id}

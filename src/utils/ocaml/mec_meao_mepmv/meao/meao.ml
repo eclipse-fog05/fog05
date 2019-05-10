@@ -38,14 +38,31 @@ let setup_log style_renderer level =
   ()
 
 
+let get_yaks_locator () =
+  let host =
+    try
+      Unix.getenv "YAKS_HOST" |> Unix.gethostbyname
+      |> fun x -> Array.get x.h_addr_list 0 |>
+                  Unix.string_of_inet_addr
+    with Not_found -> "127.0.0.1"
+  in
+  let port =
+    try
+      Unix.getenv "YAKS_PORT"
+    with Not_found -> "7887"
+  in
+  Logs.debug (fun m -> m "YAKS AT %s:%s" host port);
+  let strloc = Printf.sprintf "tcp/%s:%s" host port in
+  Apero_net.Locator.of_string strloc |> Apero.Option.get
+
 let run_platform configuration_path =
   ignore configuration_path;
   let%lwt _ = Lwt_io.printf "Started!\n" in
   try%lwt
 
     (* let%lwt mm5_client = Mm5_client.create "127.0.0.1" 8091 "http://127.0.0.1:8091" in *)
-    let%lwt core = MEAO.create (Apero.Option.get @@ Apero_net.Locator.of_string "tcp/127.0.0.1:7887") in
-    let%lwt mm1 = Mm1.create "127.0.0.1" "/exampleAPI/mm1/v1/" 8071 core in
+    let%lwt core = MEAO.create (get_yaks_locator ()) in
+    let%lwt mm1 = Mm1.create "0.0.0.0" "/exampleAPI/mm1/v1/" 8071 core in
     Lwt.join [MEAO.start core; Mm1.start mm1]
   (*
      let%lwt mp1 = Mp1.create "127.0.0.1" "/exampleAPI/mp1/v1/" 8081 core in
@@ -70,5 +87,5 @@ let run configuration_path style_renderer level =
 let () =
   Printexc.record_backtrace true;
   Lwt_engine.set (new Lwt_engine.libev ());
-  let env = Arg.env_var "YAKSD_VERBOSITY" in
+  let env = Arg.env_var "MEAO_VERBOSITY" in
   let _ = Term.(eval (const run $ configuration_path $ Fmt_cli.style_renderer () $ Logs_cli.level ~env (), Term.info "Yaks daemon")) in  ()

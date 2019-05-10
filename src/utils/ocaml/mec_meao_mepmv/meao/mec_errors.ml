@@ -8,7 +8,12 @@ type ferror = [
   | `TrafficRuleNotExising of error_info
   | `TransportNotExisting of error_info
   | `SubscriptionNotExisting of error_info
+  | `PlatformNotExisting of error_info
+  | `DuplicatedResource of error_info
 ] [@@deriving show]
 
 
 exception MEException of ferror [@@deriving show]
+
+
+let () = Printexc.register_printer @@ function | MEException(e) -> Some ("MException: "^(show_ferror e)) | _ -> None

@@ -78,35 +78,35 @@ class Mm1(object):
         def remove(self, platformid):
             url = '{}/platforms/{}'.format(self.base_url, platformid)
             ret = requests.delete(url)
-            return {'id': platformid}
+            return {'platformId': platformid}
 
     class Applications(object):
         def __init__(self, base_url):
             self.base_url = base_url
 
         def list(self, platformid):
-            url = '{}/platforms/{}/applications'.format(self.base_url,platformid)
+            url = '{}/platforms/{}/applications'.format(self.base_url, platformid)
             return json.loads(requests.get(url).text)
 
-        def add(self,platformid, appd):
-            url = '{}/applications'.format(self.base_url)
+        def add(self, platformid, appd):
+            url = '{}/platforms/{}/applications'.format(self.base_url, platformid)
             return json.loads(requests.post(url, data=json.dumps(appd)).text)
 
-        def get(self,platformid, applicationid):
+        def get(self, platformid, applicationid):
             url = '{}/platforms/{}/applications/{}'.format(self.base_url, platformid, applicationid)
             ret = json.loads(requests.get(url).text)
             if 'ProblemDetails' in ret.keys():
                 raise ValueError(ret['ProblemDetails']['title'])
             return ret
 
-        def update(self,platformid, applicationid, appd):
+        def update(self, platformid, applicationid, appd):
             url = '{}/platforms/{}/applications/{}'.format(self.base_url, platformid, applicationid)
             return json.loads(requests.put(url, data=json.dumps(appd)).text)
 
-        def remove(self,platformid, applicationid):
+        def remove(self, platformid, applicationid):
             url = '{}/platforms/{}/applications/{}'.format(self.base_url, platformid, applicationid)
             ret = requests.delete(url)
-            return {'id': applicationid}
+            return {'appInstanceId': applicationid}
 
     class DnsRules(object):
         def __init__(self, base_url):
@@ -134,7 +134,7 @@ class Mm1(object):
         def remove(self, platformid, applicationid, dns_rule_id):
             url = '{}/platforms/{}/applications/{}/dns_rules/{}'.format(self.base_url, platformid, applicationid, dns_rule_id)
             ret = requests.delete(url)
-            return {'DnsRule': {'dnsRuleId': dns_rule_id}}
+            return {'dnsRuleId': dns_rule_id}
 
     class TrafficRules(object):
         def __init__(self, base_url):
@@ -162,14 +162,14 @@ class Mm1(object):
         def remove(self, platformid, applicationid, traffic_rule_id):
             url = '{}/platforms/{}/applications/{}/traffic_rules/{}'.format(self.base_url, platformid, applicationid, traffic_rule_id)
             ret = requests.delete(url)
-            return {'TrafficRule': {'trafficRuleId': traffic_rule_id}}
+            return {'trafficRuleId': traffic_rule_id}
 
     class Services(object):
         def __init__(self, base_url):
             self.base_url = base_url
 
         def list(self, platformid):
-            url = '{}/platforms/{}/services'.format(self.base_url,  platformid)
+            url = '{}/platforms/{}/services'.format(self.base_url, platformid)
             return json.loads(requests.get(url).text)
 
         def add(self, platformid, service_info):
@@ -190,21 +190,21 @@ class Mm1(object):
         def remove(self, platformid, service_id):
             url = '{}/platforms/{}/services/{}'.format(self.base_url, platformid, service_id)
             ret = requests.delete(url)
-            return {'ServiceInfo': {'serInstanceId': service_id}}
+            return {'serInstanceId': service_id}
 
     class Transports(object):
-        def __init__(self,base_url):
+        def __init__(self, base_url):
             self.base_url = base_url
 
         def list(self, platformid):
-            url = '{}/platforms/{}/transports'.format(self.base_url)
+            url = '{}/platforms/{}/transports'.format(self.base_url, platformid)
             return json.loads(requests.get(url).text)
 
         def add(self, platformid, transport_info):
             url = '{}/platforms/{}/transports'.format(self.base_url, platformid)
             return json.loads(requests.post(url, data=json.dumps(transport_info)).text)
 
-        def update(self,platformid , transport_id, transport_info):
+        def update(self, platformid, transport_id, transport_info):
             url = '{}/platforms/{}/transports/{}'.format(self.base_url, platformid, transport_id)
             return json.loads(requests.put(url, data=json.dumps(transport_info)).text)
 
@@ -218,4 +218,4 @@ class Mm1(object):
         def remove(self, platformid, transport_id):
             url = '{}/platforms/{}/transports/{}'.format(self.base_url, platformid, transport_id)
             ret = requests.delete(url)
-            return {'TransportInfo': {'id': transport_id}}
+            return {'id': transport_id}
