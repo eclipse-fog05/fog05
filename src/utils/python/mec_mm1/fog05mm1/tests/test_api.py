@@ -176,7 +176,7 @@ class APITest(unittest.TestCase):
         self.assertEqual(mm1.traffic_rules.list(plid, appid)['TrafficRule'], [updated_rule])
 
         mm1.traffic_rules.remove(appid, updated_rule['trafficRuleId'])
-        self.assertEqual(mm1.traffic_rules.list(plid, appid),['TrafficRule'] [])
+        self.assertEqual(mm1.traffic_rules.list(plid, appid)['TrafficRule'], [])
         self.assertRaises(ValueError, mm1.traffic_rules.get, plid,  appid, updated_rule['trafficRuleId'])
 
     def test_services(self):
