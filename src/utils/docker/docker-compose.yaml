@@ -17,7 +17,7 @@ services:
     networks:
       - netMEAO
   fog05-meao:
-    image: fog05-meao
+    image: fog05/meao
     restart: always
     networks:
       - netMEAO
@@ -26,7 +26,6 @@ services:
     #   - DB_HOST=osm-ro-db
     ports:
       - "8071:8071"
-
     depends_on:
       - fog05-meao-yaks
     links:
