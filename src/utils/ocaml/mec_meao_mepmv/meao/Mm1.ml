@@ -94,10 +94,6 @@ module Mm1 = struct
 
 
   let on_err reqd (ex:exn) =
-    (match ex with
-     | Mec_errors.MEException e  ->
-       Logs.debug (fun m -> m "[Mm1] : MEC Exception %s raised %s" (Mec_errors.show_ferror e) (Printexc.get_backtrace () ));
-     | _ -> ());
     Logs.debug (fun m -> m "[Mm1] : Exception %s raised %s" (Printexc.to_string ex) (Printexc.get_backtrace () ));
     let problem_details = Rest_types.string_of_error_response @@ {problem_details = { err_type = "bad_request"; title=(Printexc.to_string ex); status=0; detail=""; instance=""}} in
     respond_bad_request reqd (Headers.of_list ["Content-Type", "application/json"]) problem_details

@@ -9,6 +9,7 @@ type ferror = [
   | `TransportNotExisting of error_info
   | `SubscriptionNotExisting of error_info
   | `PlatformNotExisting of error_info
+  | `DuplicatedResource of error_info
 ] [@@deriving show]
 
 

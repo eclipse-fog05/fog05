@@ -81,7 +81,7 @@ module MEAO = struct
     let plid = mec_plat.platform_id in
     match Mm5Map.mem plid self.mm5_clients with
     | true ->
-      Lwt.fail @@ MEException (`ServiceNotExisting (`Msg (Printf.sprintf "Platform with id %s already exist" plid)))
+      Lwt.fail @@ MEException (`DuplicatedResource (`Msg (Printf.sprintf "Platform with id %s already exist" plid)))
     | false ->
       let addr = List.hd mec_plat.endpoint.addresses in
       let url = List.hd mec_plat.endpoint.uris in
@@ -117,7 +117,7 @@ module MEAO = struct
       >>= fun _ -> Yaks_connector.Storage.ServiceInfo.add_service plid serid ser_desc self.connector
       >>= fun _ -> Lwt.return serid
     | None ->
-      Lwt.fail @@ MEException (`ServiceNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid)))
+      Lwt.fail @@ MEException (`PlatformNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid)))
 
 
   let get_service_by_uuid plid ser_uuid self =
@@ -168,7 +168,7 @@ module MEAO = struct
          Mm5_client.Services.remove ser_uuid client
          >>= fun _ -> Yaks_connector.Storage.ServiceInfo.remove_service plid ser_uuid self.connector
          >>= fun _ ->  Lwt.return ser_uuid
-       | None -> Lwt.fail @@ MEException (`ServiceNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid))))
+       | None -> Lwt.fail @@ MEException (`PlatformNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid))))
     | None -> Lwt.fail @@ MEException (`ServiceNotExisting (`Msg (Printf.sprintf "Service with id %s not exist" ser_uuid)))
 
 
@@ -191,7 +191,7 @@ module MEAO = struct
       Mm5_client.DnsRules.add appid dns_rule client
       >>= fun _ -> Yaks_connector.Storage.DNSRules.add_application_dns_rule plid appid dns_rule.dns_rule_id dns_rule self.connector
       >>= fun _-> Lwt.return dns_rule.dns_rule_id
-    | None -> Lwt.fail @@ MEException (`ServiceNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid)))
+    | None -> Lwt.fail @@ MEException (`PlatformNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid)))
 
 
 
@@ -204,7 +204,7 @@ module MEAO = struct
          Mm5_client.DnsRules.remove appid dns_rule_id client
          >>= fun _ -> Yaks_connector.Storage.DNSRules.remove_application_dns_rule plid appid dns_rule_id self.connector
          >>= fun _ -> Lwt.return dns_rule_id
-       | None ->  Lwt.fail @@ MEException (`ServiceNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid))))
+       | None ->  Lwt.fail @@ MEException (`PlatformNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid))))
     | None -> Lwt.fail @@ MEException (`DNSRuleNotExisting (`Msg (Printf.sprintf "DNS Rule with id %s not exist in application %s" dns_rule_id appid )))
 
   (* Traffic Rules *)
@@ -224,11 +224,11 @@ module MEAO = struct
       Mm5_client.TrafficRules.add appid traffic_rule client
       >>= fun _ -> Yaks_connector.Storage.TrafficRules.add_application_traffic_rule plid appid traffic_rule.traffic_rule_id traffic_rule self.connector
       >>= fun _ -> Lwt.return traffic_rule.traffic_rule_id
-    | None -> Lwt.fail @@ MEException (`ServiceNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid)))
+    | None -> Lwt.fail @@ MEException (`PlatformNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid)))
 
   let remove_traffic_rule_for_application plid appid traffic_rule_id self =
     MVar.read self >>= fun self ->
-    match%lwt (Yaks_connector.Storage.TrafficRules.get_application_traffic_rule appid plid traffic_rule_id self.connector) with
+    match%lwt (Yaks_connector.Storage.TrafficRules.get_application_traffic_rule plid appid  traffic_rule_id self.connector) with
     | Some _ ->
       (match Mm5Map.find_opt plid self.mm5_clients with
        | Some client ->
@@ -251,7 +251,7 @@ module MEAO = struct
       >>= fun _ -> Yaks_connector.Storage.Transports.add_tranport plid transport_desc.id transport_desc self.connector
       >>= fun _ -> Lwt.return transport_desc.id
     |None ->
-      Lwt.fail @@ MEException (`ServiceNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid)))
+      Lwt.fail @@ MEException (`PlatformNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid)))
 
   let get_transports plid self =
     MVar.read self >>= fun self ->
@@ -305,7 +305,7 @@ module MEAO = struct
          >>= fun _ -> Yaks_connector.Storage.Transports.remove_transport plid transportid self.connector
          >>= fun _ -> Lwt.return transportid
        | None ->
-         Lwt.fail @@ MEException (`ServiceNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid))))
+         Lwt.fail @@ MEException (`PlatformNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid))))
     | None -> Lwt.fail @@ MEException (`TrafficRuleNotExising (`Msg (Printf.sprintf "Transport with id %s not exist" transportid)))
 
 
@@ -379,7 +379,7 @@ module MEAO = struct
       Yaks_connector.Storage.ServiceInfo.add_application plid app_inst_id app_info self.connector
       >>= fun _ ->
       Lwt.return app_info
-    | None -> Lwt.fail @@ MEException (`ServiceNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid)))
+    | None -> Lwt.fail @@ MEException (`PlatformNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid)))
 
   let get_application_by_uuid plid app_uuid self =
     MVar.read self >>= fun self ->
@@ -438,7 +438,7 @@ module MEAO = struct
            ) appi.dns_rules
          >>= fun _ -> Yaks_connector.Storage.ServiceInfo.remove_application plid app_uuid self.connector
          >>= fun _ -> Lwt.return app_uuid
-       | None -> Lwt.fail @@ MEException (`ServiceNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid))))
+       | None -> Lwt.fail @@ MEException (`PlatformNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid))))
     | None -> Lwt.fail @@ MEException (`ApplicationNotExisting (`Msg (Printf.sprintf "Application with id %s not exist" app_uuid)))
 
 end
