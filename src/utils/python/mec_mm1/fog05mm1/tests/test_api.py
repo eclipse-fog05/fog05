@@ -410,7 +410,7 @@ class APITest(unittest.TestCase):
         mm1 = Mm1()
         res = mm1.applications.add(plid, appd)
 
-        self.assertEqual(res['ApplicationInfo']['appDid'], appd['appDId'])
+        self.assertEqual(res['ApplicationInfo']['appDId'], appd['appDId'])
         self.assertEqual(mm1.applications.get(plid, res['ApplicationInfo']['appInstanceId']), res)
         self.assertEqual(mm1.applications.list(plid)['ApplicationInfo'], [res['ApplicationInfo']])
 
