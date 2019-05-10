@@ -23,6 +23,9 @@ case $key in
 esac
 done
 
+docker image rm fog05/yaks --force
+docker image rm fog05/meao --force
+
 make -C ocaml/mec_meao_mepmv clean
 make -C ocaml/mec_meao_mepmv
 
