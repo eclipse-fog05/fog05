@@ -1,6 +1,6 @@
 from ubuntu:xenial
 
-LABEL authors:"Gabriele Baldoni"
+LABEL authors="Gabriele Baldoni"
 
 RUN apt update && \
     DEBIAN_FRONTEND=noninteractive  apt install libev-dev libssl-dev -y && \

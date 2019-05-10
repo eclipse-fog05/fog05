@@ -1,0 +1,24 @@
+version: '2'
+services:
+  fog05-meao-yaks:
+    image: fog05/yaks
+    container_name: meao-yaks
+    restart: always
+    ports:
+      - "7887:7887"
+  fog05-meao:
+    image: fog05-meao
+    container_name: meao-ro
+    restart: always
+    # environment:
+    #   - RO_DB_ROOT_PASSWORD=osm4u
+    #   - DB_HOST=osm-ro-db
+    ports:
+      - "8071:8071"
+    volumes:
+      - /var/log/osm/openmano/logs:/var/log/osm
+    depends_on:
+      - fog05-meao-yaks
+    links:
+      - fog05-meao-yaks
+
