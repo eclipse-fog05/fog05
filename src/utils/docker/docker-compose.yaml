@@ -11,23 +11,19 @@ networks:
 services:
   fog05-meao-yaks:
     image: fog05/yaks
-    restart: always
-    ports:
-      - "7887:7887"
+    # ports:
+    #   - "7887:7887"
     networks:
       - netMEAO
   fog05-meao:
     image: fog05/meao
-    restart: always
     networks:
       - netMEAO
     environment:
       YAKS_HOST: fog05-meao-yaks
-      YAKS_PORT: "7887"
+      YAKS_PORT: 7887
     ports:
       - "8071:8071"
     depends_on:
-      - fog05-meao-yaks
-    links:
       - fog05-meao-yaks
 
