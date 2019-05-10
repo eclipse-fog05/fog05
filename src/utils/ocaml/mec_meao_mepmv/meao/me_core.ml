@@ -345,7 +345,7 @@ module MEAO = struct
   (* This add service, rules*)
   let add_application plid (app_desc: Fos_im.MEC_Types.appd_descriptor ) state =
     MVar.read state >>= fun self ->
-    let appid = app_desc.id in
+    (* let appid = app_desc.id in *)
     match Mm5Map.find_opt plid self.mm5_clients with
     | Some client ->
 
@@ -361,8 +361,8 @@ module MEAO = struct
           ) app_desc.service_produces in
       let app_info = {app_info with service_produced = svcs} in
       Mm5_client.Applications.add app_info client
-      >>= fun _ ->
-      Yaks_connector.Storage.ServiceInfo.add_application plid appid app_info self.connector
+      (* >>= fun _ ->
+         Yaks_connector.Storage.ServiceInfo.add_application plid appid app_info self.connector *)
       >>= fun  _ ->
       Lwt_list.iter_p (fun ser ->
           add_service plid ser state >>= fun _ -> Lwt.return_unit

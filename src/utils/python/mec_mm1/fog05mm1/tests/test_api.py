@@ -67,7 +67,7 @@ class APITest(unittest.TestCase):
         }
         response_rule = {'DnsRule': updated_rule}
         mm1.dns_rules.update(plid, appid, updated_rule['dnsRuleId'], updated_rule)
-        self.assertEqual(mm1.dns_rules.get(plid, appid, rule['dnsRuleId']), response_rule)
+        self.assertEqual(mm1.dns_rules.get(plid, appid, updated_rule['dnsRuleId']), response_rule)
         self.assertEqual(mm1.dns_rules.list(plid, appid)['DnsRule'], [updated_rule])
 
         mm1.dns_rules.remove(plid, appid, updated_rule['dnsRuleId'])
@@ -167,7 +167,7 @@ class APITest(unittest.TestCase):
                 'state': 'INACTIVE'
             }
         response_rule = {'TrafficRule': updated_rule}
-        mm1.traffic_rules.update(appid, updated_rule['trafficRuleId'], updated_rule)
+        mm1.traffic_rules.update(plid, appid, updated_rule['trafficRuleId'], updated_rule)
         self.assertEqual(mm1.traffic_rules.get(plid, appid, updated_rule['trafficRuleId']), response_rule)
         self.assertEqual(mm1.traffic_rules.list(plid, appid)['TrafficRule'], [updated_rule])
 
