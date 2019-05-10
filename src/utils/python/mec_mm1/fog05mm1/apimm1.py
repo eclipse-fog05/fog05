@@ -85,25 +85,25 @@ class Mm1(object):
             self.base_url = base_url
 
         def list(self, platformid):
-            url = '{}/platforms/{}/applications'.format(self.base_url,platformid)
+            url = '{}/platforms/{}/applications'.format(self.base_url, platformid)
             return json.loads(requests.get(url).text)
 
-        def add(self,platformid, appd):
+        def add(self, platformid, appd):
             url = '{}/platforms/{}/applications'.format(self.base_url, platformid)
             return json.loads(requests.post(url, data=json.dumps(appd)).text)
 
-        def get(self,platformid, applicationid):
+        def get(self, platformid, applicationid):
             url = '{}/platforms/{}/applications/{}'.format(self.base_url, platformid, applicationid)
             ret = json.loads(requests.get(url).text)
             if 'ProblemDetails' in ret.keys():
                 raise ValueError(ret['ProblemDetails']['title'])
             return ret
 
-        def update(self,platformid, applicationid, appd):
+        def update(self, platformid, applicationid, appd):
             url = '{}/platforms/{}/applications/{}'.format(self.base_url, platformid, applicationid)
             return json.loads(requests.put(url, data=json.dumps(appd)).text)
 
-        def remove(self,platformid, applicationid):
+        def remove(self, platformid, applicationid):
             url = '{}/platforms/{}/applications/{}'.format(self.base_url, platformid, applicationid)
             ret = requests.delete(url)
             return {'appInstanceId': applicationid}
@@ -169,7 +169,7 @@ class Mm1(object):
             self.base_url = base_url
 
         def list(self, platformid):
-            url = '{}/platforms/{}/services'.format(self.base_url,  platformid)
+            url = '{}/platforms/{}/services'.format(self.base_url, platformid)
             return json.loads(requests.get(url).text)
 
         def add(self, platformid, service_info):
@@ -193,18 +193,18 @@ class Mm1(object):
             return {'serInstanceId': service_id}
 
     class Transports(object):
-        def __init__(self,base_url):
+        def __init__(self, base_url):
             self.base_url = base_url
 
         def list(self, platformid):
-            url = '{}/platforms/{}/transports'.format(self.base_url)
+            url = '{}/platforms/{}/transports'.format(self.base_url, platformid)
             return json.loads(requests.get(url).text)
 
         def add(self, platformid, transport_info):
             url = '{}/platforms/{}/transports'.format(self.base_url, platformid)
             return json.loads(requests.post(url, data=json.dumps(transport_info)).text)
 
-        def update(self,platformid , transport_id, transport_info):
+        def update(self, platformid, transport_id, transport_info):
             url = '{}/platforms/{}/transports/{}'.format(self.base_url, platformid, transport_id)
             return json.loads(requests.put(url, data=json.dumps(transport_info)).text)
 

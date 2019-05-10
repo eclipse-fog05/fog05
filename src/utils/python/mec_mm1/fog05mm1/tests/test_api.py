@@ -18,11 +18,10 @@ from fog05mm1 import Mm1
 
 class APITest(unittest.TestCase):
 
-
     def test_platforms(self):
         self.maxDiff = None
         plid = 'testp'
-        uris = ['/exampleAPI/mm1/v1']
+        uris = ['/exampleAPI/mm5/v1']
 
         mm1 = Mm1()
 
@@ -35,13 +34,10 @@ class APITest(unittest.TestCase):
 
         res = mm1.platforms.remove(plid)
         self.assertEqual({'platformId': plid}, res)
-        self.assertEqual(mm.platform.list(),{'PlatformInfo':[]})
+        self.assertEqual(mm1.platform.list(), {'PlatformInfo': []})
 
         res = mm1.platforms.add(cp['PlatformInfo'])
         self.assertEqual(res, cp)
-
-
-
 
     def test_dns_rules(self):
         self.maxDiff = None
@@ -59,7 +55,7 @@ class APITest(unittest.TestCase):
         mm1.dns_rules.add(plid, appid, rule)
         response_rule = {'DnsRule': rule}
         self.assertEqual(mm1.dns_rules.get(plid, appid, rule['dnsRuleId']), response_rule)
-        self.assertEqual(mm1.dns_rules.list(plid,appid)['DnsRule'], [rule])
+        self.assertEqual(mm1.dns_rules.list(plid, appid)['DnsRule'], [rule])
 
         updated_rule = {
             'dnsRuleId': 'dnsRule1',
@@ -76,7 +72,7 @@ class APITest(unittest.TestCase):
 
         mm1.dns_rules.remove(plid, appid, updated_rule['dnsRuleId'])
         self.assertEqual(mm1.dns_rules.list(plid, appid)['DnsRule'], [])
-        self.assertRaises(ValueError, mm1.dns_rules.get, plid,  appid, updated_rule['dnsRuleId'])
+        self.assertRaises(ValueError, mm1.dns_rules.get, plid, appid, updated_rule['dnsRuleId'])
 
     def test_traffic_rule(self):
         self.maxDiff = None
@@ -177,7 +173,7 @@ class APITest(unittest.TestCase):
 
         mm1.traffic_rules.remove(appid, updated_rule['trafficRuleId'])
         self.assertEqual(mm1.traffic_rules.list(plid, appid)['TrafficRule'], [])
-        self.assertRaises(ValueError, mm1.traffic_rules.get, plid,  appid, updated_rule['trafficRuleId'])
+        self.assertRaises(ValueError, mm1.traffic_rules.get, plid, appid, updated_rule['trafficRuleId'])
 
     def test_services(self):
         self.maxDiff = None
@@ -361,7 +357,7 @@ class APITest(unittest.TestCase):
             "appName": "TestApp",
             "appProvider": "ETSI",
             "appSoftVersion": "0.1",
-            "appDVersion":"1",
+            "appDVersion": "1",
             "mecVersion": ["1", "2"],
             "appDescription": "Test App",
             "appServiceRequired": [],
@@ -377,7 +373,6 @@ class APITest(unittest.TestCase):
                 "latency": "ms"
             }
         }
-
 
         # add
         # {
@@ -446,5 +441,5 @@ class APITest(unittest.TestCase):
         # self.assertEqual(mm1.applications.list(), [updated_appd])
 
         mm1.applications.remove(plid, res['ApplicationInfo']['appInstanceId'])
-        self.assertEqual(mm1.applications.list(plid), {'ApplicationInfo':[]})
+        self.assertEqual(mm1.applications.list(plid), {'ApplicationInfo': []})
         self.assertRaises(ValueError, mm1.applications.get, plid, res['ApplicationInfo']['appInstanceId'])
