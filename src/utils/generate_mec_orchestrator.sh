@@ -37,3 +37,13 @@ lxc exec meao -- systemctl enable mec_meao
 lxc exec meao -- systemctl start nginx
 lxc exec meao -- systemctl start yaks
 lxc exec meao -- systemctl start mec_meao
+
+# lxc list -c4 --format json plat
+
+MEAOIP=$(lxc list -c4 --format csv meao | cut -d' ' -f1)
+
+sudo iptables -t nat -A PREROUTING -i lo -p tcp --dport 8071 -j DNAT --to $MEAOIP:8071
+
+echo "export MEAO=127.0.0.1:8071/exampleAPI/mm1/v1" > ~/.profile
+
+export MEAO="127.0.0.1:8071/exampleAPI/mm1/v1"
