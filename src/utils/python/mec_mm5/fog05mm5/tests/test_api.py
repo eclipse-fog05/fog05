@@ -245,7 +245,7 @@ class APITest(unittest.TestCase):
         response_svc = {'ServiceInfo': updated_svc}
         mm5.services.update(service_info['serInstanceId'], updated_svc)
         self.assertEqual(mm5.services.get(updated_svc['serInstanceId']), response_svc)
-        self.assertEqual(mm5.services.list()['ServiceInfo'], [service_info])
+        self.assertEqual(mm5.services.list()['ServiceInfo'], [updated_svc])
 
         mm5.services.remove(updated_svc['serInstanceId'])
         self.assertEqual(mm5.services.list()['ServiceInfo'], [])
@@ -318,7 +318,7 @@ class APITest(unittest.TestCase):
         response_tx = {'TransportInfo': updated_tx}
         mm5.transports.update(updated_tx['id'], updated_tx)
         self.assertEqual(mm5.transports.get(updated_tx['id']), response_tx)
-        self.assertEqual(mm5.transports.list()['TransportInfo'], [transport_info])
+        self.assertEqual(mm5.transports.list()['TransportInfo'], [updated_tx])
 
         mm5.transports.remove(updated_tx['id'])
         self.assertEqual(mm5.transports.list()['TransportInfo'], [])
