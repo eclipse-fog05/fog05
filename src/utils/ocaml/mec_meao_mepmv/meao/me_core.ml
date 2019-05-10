@@ -376,7 +376,9 @@ module MEAO = struct
           add_dns_rule_for_application plid app_inst_id d state >>= fun _ -> Lwt.return_unit
         ) app_info.dns_rules
       >>= fun _ ->
-      Lwt.return app_inst_id
+      Yaks_connector.Storage.ServiceInfo.add_application plid app_inst_id app_info self.connector
+      >>= fun _ ->
+      Lwt.return app_info
     | None -> Lwt.fail @@ MEException (`ServiceNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid)))
 
   let get_application_by_uuid plid app_uuid self =

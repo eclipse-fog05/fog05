@@ -250,7 +250,7 @@ module Mm1 = struct
                 Logs.debug (fun m -> m "[Mm1] : GET Applications");
                 let apps = MEAO.get_applications platform_id self.core in
                 let f apps =
-                  let res = List.map (fun e -> Yojson.Safe.from_string @@ Rest_types.string_of_app_info e) apps |> fun x -> Yojson.Safe.to_string @@ (`List x) in
+                  let res = List.map (fun e -> Yojson.Safe.from_string @@ Rest_types.string_of_application_info_response {application_info = e}) apps |> fun x -> Yojson.Safe.to_string @@ (`List x) in
                   respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res
                 in
                 Lwt.on_any apps f (on_err reqd);
@@ -263,12 +263,12 @@ module Mm1 = struct
                 let app = read_body reqd
                   >>= fun string_appd -> Lwt.return @@ MEC_Types.appd_descriptor_of_string string_appd
                   >>= fun appd -> MEAO.add_application platform_id appd self.core
-                  >>= fun appid -> Lwt.return (appid,appd)
+                  >>= fun app_info -> Lwt.return (Apero.Option.get app_info.app_instance_id, app_info)
                 in
                 let f app =
                   let appid, appd = app in
                   let app_uri = make_app_url self.prefix appid in
-                  let res = MEC_Types.string_of_appd_descriptor appd in
+                  let res = Rest_types.string_of_application_info_response {application_info = appd} in
                   respond_created reqd (Headers.of_list ["Content-Type", "application/json"; "location", app_uri]) res
                 in
                 (* Should be Lwt.on_any *)
@@ -286,7 +286,7 @@ module Mm1 = struct
                    let app = MEAO.get_application_by_uuid platform_id app_instance_id self.core in
                    let f app =
                      (match app with
-                      | Some app -> let res = Rest_types.string_of_app_info app in
+                      | Some app -> let res = Rest_types.string_of_application_info_response {application_info = app}  in
                         respond_ok reqd (Headers.of_list ["Content-Type", "application/json"]) res
                       | None ->
                         Logs.debug (fun m -> m "[Mm1] : Not found application %s" app_instance_id);
@@ -300,10 +300,10 @@ module Mm1 = struct
                    let app = read_body reqd
                      >>= fun string_appd -> Lwt.return @@ MEC_Types.appd_descriptor_of_string string_appd
                      >>= fun appd -> MEAO.add_application platform_id appd self.core
-                     >>= fun _ -> Lwt.return appd
+                     >>= fun appi -> Lwt.return appi
                    in
                    let f app =
-                     let res = MEC_Types.string_of_appd_descriptor app in
+                     let res = Rest_types.string_of_application_info_response {application_info = app}  in
                      respond_created reqd (Headers.of_list ["Content-Type", "application/json"]) res
                    in
                    (* Should be Lwt.on_any *)
