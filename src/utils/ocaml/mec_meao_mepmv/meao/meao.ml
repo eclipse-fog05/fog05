@@ -62,7 +62,7 @@ let run_platform configuration_path =
 
     (* let%lwt mm5_client = Mm5_client.create "127.0.0.1" 8091 "http://127.0.0.1:8091" in *)
     let%lwt core = MEAO.create (get_yaks_locator ()) in
-    let%lwt mm1 = Mm1.create "127.0.0.1" "/exampleAPI/mm1/v1/" 8071 core in
+    let%lwt mm1 = Mm1.create "0.0.0.0" "/exampleAPI/mm1/v1/" 8071 core in
     Lwt.join [MEAO.start core; Mm1.start mm1]
   (*
      let%lwt mp1 = Mp1.create "127.0.0.1" "/exampleAPI/mp1/v1/" 8081 core in
@@ -87,5 +87,5 @@ let run configuration_path style_renderer level =
 let () =
   Printexc.record_backtrace true;
   Lwt_engine.set (new Lwt_engine.libev ());
-  let env = Arg.env_var "YAKSD_VERBOSITY" in
+  let env = Arg.env_var "MEAO_VERBOSITY" in
   let _ = Term.(eval (const run $ configuration_path $ Fmt_cli.style_renderer () $ Logs_cli.level ~env (), Term.info "Yaks daemon")) in  ()
