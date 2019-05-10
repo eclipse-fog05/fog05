@@ -34,7 +34,7 @@ class APITest(unittest.TestCase):
 
         res = mm1.platforms.remove(plid)
         self.assertEqual({'platformId': plid}, res)
-        self.assertEqual(mm1.platform.list(), {'PlatformInfo': []})
+        self.assertEqual(mm1.platforms.list(), {'PlatformInfo': []})
 
         res = mm1.platforms.add(cp['PlatformInfo'])
         self.assertEqual(res, cp)
@@ -410,7 +410,7 @@ class APITest(unittest.TestCase):
         mm1 = Mm1()
         res = mm1.applications.add(plid, appd)
 
-        self.assertEqual(res['ApplicationInfo']['appDid'], appd['appDid'])
+        self.assertEqual(res['ApplicationInfo']['appDid'], appd['appDId'])
         self.assertEqual(mm1.applications.get(plid, res['ApplicationInfo']['appInstanceId']), res)
         self.assertEqual(mm1.applications.list(plid)['ApplicationInfo'], [res['ApplicationInfo']])
 
