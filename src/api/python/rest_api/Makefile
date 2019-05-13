@@ -10,3 +10,6 @@ install:
 
 uninstall:
 	pip uninstall fog05rest -y
+
+package:
+	python setup.py sdist bdist_wheel
