@@ -34,7 +34,7 @@ setup(
           'Intended Audience :: Telecommunications Industry',
           'License :: OSI Approved :: Apache Software License',
           'License :: OSI Approved :: Eclipse Public License 2.0 (EPL-2.0)',
-          'Programming Language :: Python :: 2'
+          'Programming Language :: Python :: 2',
           'Programming Language :: Python :: 3'
     ],
 )
