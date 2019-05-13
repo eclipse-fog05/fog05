@@ -1,7 +1,7 @@
 open Httpaf
 open Httpaf_lwt_unix
 open Lwt.Infix
-
+open Fos_im
 
 
 module Mm5_client = struct
@@ -83,15 +83,15 @@ module Mm5_client = struct
       let uri = client.base_uri ^ "/applications" in
       Logs.debug (fun m -> m "[Mm5 Client]: Application list uri http://%s:%d%s" client.address client.port uri );
       let%lwt resp = do_request uri `GET [] "" client in
-      let r = Rest_types.application_info_list_response_of_string resp in
+      let r = MEC_Interfaces.application_info_list_response_of_string resp in
       Lwt.return r.application_info
 
     let add appd client =
       let uri =  client.base_uri ^  "/applications" in
-      let body = Rest_types.string_of_app_info appd in
+      let body = MEC_Interfaces.string_of_app_info appd in
       Logs.debug (fun m -> m "[Mm5 Client]: Application add uri http://%s:%d%s body %s " client.address client.port uri body );
       let%lwt resp = do_request uri `POST [] body  client in
-      let _ = Rest_types.application_info_response_of_string resp in
+      let _ = MEC_Interfaces.application_info_response_of_string resp in
       Lwt.return @@ Apero.Option.get appd.app_instance_id
 
 
@@ -99,7 +99,7 @@ module Mm5_client = struct
       let uri = client.base_uri ^ "/applications/"  ^ appid in
       Logs.debug (fun m -> m "[Mm5 Client]: Application get uri http://%s:%d%s" client.address client.port uri );
       let%lwt resp = do_request uri `GET [] "" client in
-      let r = Rest_types.application_info_response_of_string resp in
+      let r = MEC_Interfaces.application_info_response_of_string resp in
       Lwt.return r.application_info
 
     let remove appid client =
@@ -111,10 +111,10 @@ module Mm5_client = struct
 
     let update appid appd client =
       let uri = client.base_uri ^ "/applications/"  ^ appid in
-      let body = Rest_types.string_of_app_info appd in
+      let body = MEC_Interfaces.string_of_app_info appd in
       Logs.debug (fun m -> m "[Mm5 Client]: Application update uri http://%s:%d%s body %s" client.address client.port uri body);
       let%lwt resp = do_request uri `PUT [] body client in
-      let _ = Rest_types.application_info_response_of_string resp in
+      let _ = MEC_Interfaces.application_info_response_of_string resp in
       Lwt.return @@ Apero.Option.get appd.app_instance_id
 
   end
@@ -125,15 +125,15 @@ module Mm5_client = struct
       let uri = client.base_uri ^ "/applications/" ^ appid ^ "/dns_rules" in
       Logs.debug (fun m -> m "[Mm5 Client]: Dns rule list uri http://%s:%d%s" client.address client.port uri );
       let%lwt resp = do_request uri `GET [] "" client in
-      let r = Rest_types.dns_rule_list_response_of_string resp in
+      let r = MEC_Interfaces.dns_rule_list_response_of_string resp in
       Lwt.return r.dns_rule
 
     let add appid dnsrule client =
       let uri = client.base_uri ^ "/applications/" ^ appid ^ "/dns_rules" in
-      let body = Rest_types.string_of_dns_rule dnsrule in
+      let body = MEC_Interfaces.string_of_dns_rule dnsrule in
       Logs.debug (fun m -> m "[Mm5 Client]: Dns rule add uri http://%s:%d%s body %s" client.address client.port uri body);
       let%lwt resp = do_request uri `POST [] body client in
-      let r = Rest_types.dns_rule_response_of_string resp in
+      let r = MEC_Interfaces.dns_rule_response_of_string resp in
       Lwt.return @@ r.dns_rule.dns_rule_id
 
 
@@ -141,7 +141,7 @@ module Mm5_client = struct
       let uri = client.base_uri ^ "/applications/" ^ appid ^ "/dns_rules/" ^ dns_rule_id in
       Logs.debug (fun m -> m "[Mm5 Client]: Dns rule get uri http://%s:%d%s" client.address client.port uri );
       let%lwt resp = do_request uri `GET [] "" client in
-      let r = Rest_types.dns_rule_response_of_string resp in
+      let r = MEC_Interfaces.dns_rule_response_of_string resp in
       Lwt.return @@ r.dns_rule
 
     let remove appid dns_rule_id client =
@@ -153,10 +153,10 @@ module Mm5_client = struct
 
     let update appid dns_rule_id dnsrule client =
       let uri = client.base_uri ^ "/applications/" ^ appid ^ "/dns_rules/" ^ dns_rule_id in
-      let body = Rest_types.string_of_dns_rule dnsrule in
+      let body = MEC_Interfaces.string_of_dns_rule dnsrule in
       Logs.debug (fun m -> m "[Mm5 Client]: Dns rule update uri http://%s:%d%s body %s" client.address client.port uri body);
       let%lwt resp = do_request uri `PUT [] body client in
-      let r = Rest_types.dns_rule_response_of_string resp in
+      let r = MEC_Interfaces.dns_rule_response_of_string resp in
       Lwt.return @@ r.dns_rule.dns_rule_id
 
   end
@@ -167,15 +167,15 @@ module Mm5_client = struct
       let uri = client.base_uri ^ "/applications/" ^ appid ^ "/traffic_rules" in
       Logs.debug (fun m -> m "[Mm5 Client]: Traffic rule list uri http://%s:%d%s" client.address client.port uri );
       let%lwt resp = do_request uri `GET [] "" client in
-      let r = Rest_types.traffic_rule_list_response_of_string resp in
+      let r = MEC_Interfaces.traffic_rule_list_response_of_string resp in
       Lwt.return r.traffic_rule
 
     let add appid tfcrule client =
       let uri = client.base_uri ^ "/applications/" ^ appid ^ "/traffic_rules" in
-      let body  = Rest_types.string_of_traffic_rule tfcrule in
+      let body  = MEC_Interfaces.string_of_traffic_rule tfcrule in
       Logs.debug (fun m -> m "[Mm5 Client]: Traffic rule add uri http://%s:%d%s body %s" client.address client.port uri body);
       let%lwt resp = do_request uri `POST [] body client in
-      let r = Rest_types.traffic_rule_response_of_string resp in
+      let r = MEC_Interfaces.traffic_rule_response_of_string resp in
       Lwt.return @@ r.traffic_rule.traffic_rule_id
 
 
@@ -183,7 +183,7 @@ module Mm5_client = struct
       let uri = client.base_uri ^ "/applications/" ^ appid ^ "/traffic_rules/" ^ dns_rule_id in
       Logs.debug (fun m -> m "[Mm5 Client]: Traffic rule get uri http://%s:%d%s" client.address client.port uri );
       let%lwt resp = do_request uri `GET [] "" client in
-      let r = Rest_types.traffic_rule_response_of_string resp in
+      let r = MEC_Interfaces.traffic_rule_response_of_string resp in
       Lwt.return @@ r.traffic_rule
 
     let remove appid dns_rule_id client =
@@ -195,10 +195,10 @@ module Mm5_client = struct
 
     let update appid dns_rule_id tfcrule client =
       let uri = client.base_uri ^ "/applications/" ^ appid ^ "/traffic_rules/" ^ dns_rule_id in
-      let body = Rest_types.string_of_traffic_rule tfcrule in
+      let body = MEC_Interfaces.string_of_traffic_rule tfcrule in
       Logs.debug (fun m -> m "[Mm5 Client]: Traffic rule update uri http://%s:%d%s body %s" client.address client.port uri body);
       let%lwt resp = do_request uri `PUT [] body client in
-      let r = Rest_types.traffic_rule_response_of_string resp in
+      let r = MEC_Interfaces.traffic_rule_response_of_string resp in
       Lwt.return @@ r.traffic_rule.traffic_rule_id
 
   end
@@ -210,15 +210,15 @@ module Mm5_client = struct
       let uri = client.base_uri ^ "/services" in
       Logs.debug (fun m -> m "[Mm5 Client]: Service list uri http://%s:%d%s" client.address client.port uri );
       let%lwt resp = do_request uri `GET [] "" client in
-      let r = Rest_types.service_info_list_response_of_string resp in
+      let r = MEC_Interfaces.service_info_list_response_of_string resp in
       Lwt.return r.service_info
 
     let add svcd client =
       let uri =  client.base_uri ^  "/services" in
-      let body = Rest_types.string_of_service_info svcd in
+      let body = MEC_Interfaces.string_of_service_info svcd in
       Logs.debug (fun m -> m "[Mm5 Client]: Service add uri http://%s:%d%s body %s" client.address client.port uri body);
       let%lwt resp = do_request uri `POST [] body client in
-      let _ = Rest_types.service_info_response_of_string resp in
+      let _ = MEC_Interfaces.service_info_response_of_string resp in
       Lwt.return @@ Apero.Option.get (svcd.ser_instance_id)
 
 
@@ -226,7 +226,7 @@ module Mm5_client = struct
       let uri = client.base_uri ^ "/services/"  ^ svcid in
       Logs.debug (fun m -> m "[Mm5 Client]: Service get uri http://%s:%d%s" client.address client.port uri );
       let%lwt resp = do_request uri `GET [] "" client in
-      let r = Rest_types.service_info_response_of_string resp in
+      let r = MEC_Interfaces.service_info_response_of_string resp in
       Lwt.return r.service_info
 
     let remove svcid client =
@@ -238,10 +238,10 @@ module Mm5_client = struct
 
     let update svcid svcd client =
       let uri = client.base_uri ^ "/services/"  ^ svcid in
-      let body = Rest_types.string_of_service_info svcd in
+      let body = MEC_Interfaces.string_of_service_info svcd in
       Logs.debug (fun m -> m "[Mm5 Client]: Service update uri http://%s:%d%s body %s" client.address client.port uri body);
       let%lwt resp = do_request uri `PUT [] body client in
-      let r = Rest_types.service_info_response_of_string resp in
+      let r = MEC_Interfaces.service_info_response_of_string resp in
       Lwt.return @@ Apero.Option.get (r.service_info.ser_instance_id)
   end
 
@@ -251,15 +251,15 @@ module Mm5_client = struct
       let uri = client.base_uri ^ "/transports" in
       Logs.debug (fun m -> m "[Mm5 Client]: Transport list uri http://%s:%d%s" client.address client.port uri );
       let%lwt resp = do_request uri `GET [] "" client in
-      let r = Rest_types.transport_info_list_response_of_string resp in
+      let r = MEC_Interfaces.transport_info_list_response_of_string resp in
       Lwt.return r.transport_info
 
     let add txd client =
       let uri =  client.base_uri ^  "/transports" in
-      let body = Rest_types.string_of_transport_info txd in
+      let body = MEC_Interfaces.string_of_transport_info txd in
       Logs.debug (fun m -> m "[Mm5 Client]: Transport add uri http://%s:%d%s body %s" client.address client.port uri body);
       let%lwt resp = do_request uri `POST [] body client in
-      let _ = Rest_types.transport_info_response_of_string resp in
+      let _ = MEC_Interfaces.transport_info_response_of_string resp in
       Lwt.return @@ txd.id
 
 
@@ -267,7 +267,7 @@ module Mm5_client = struct
       let uri = client.base_uri ^ "/transports/"  ^ txid in
       Logs.debug (fun m -> m "[Mm5 Client]: Transport get uri http://%s:%d%s" client.address client.port uri );
       let%lwt resp = do_request uri `GET [] "" client in
-      let r = Rest_types.transport_info_response_of_string resp in
+      let r = MEC_Interfaces.transport_info_response_of_string resp in
       Lwt.return @@ r.transport_info
 
     let remove txid client =
@@ -279,10 +279,10 @@ module Mm5_client = struct
 
     let update txid txd client =
       let uri = client.base_uri ^ "/transports/"  ^ txid in
-      let body = Rest_types.string_of_transport_info txd in
+      let body = MEC_Interfaces.string_of_transport_info txd in
       Logs.debug (fun m -> m "[Mm5 Client]: Transport update uri http://%s:%d%s body %s" client.address client.port uri body);
       let%lwt resp = do_request uri `PUT [] body client in
-      let r = Rest_types.transport_info_response_of_string resp in
+      let r = MEC_Interfaces.transport_info_response_of_string resp in
       Lwt.return @@ (r.transport_info.id)
 
   end

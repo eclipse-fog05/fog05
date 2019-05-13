@@ -1,6 +1,6 @@
 open Lwt.Infix
-open Rest_types
-open Mec_errors
+open Fos_im
+open Fos_im.Errors
 open DNS
 
 module MVar = Apero.MVar_lwt
@@ -22,7 +22,7 @@ module MEC_Core = struct
   (* ME Apps and Svcs *)
 
   (* This should add the transports *)
-  let add_service (ser_desc: service_info ) self =
+  let add_service (ser_desc: MEC_Interfaces.service_info ) self =
     MVar.read self >>= fun self ->
     let serid = Apero.Option.get_or_default ser_desc.ser_instance_id (Apero.Uuid.to_string @@  Apero.Uuid.make ()) in
     let ser_desc = {ser_desc with ser_instance_id = Some serid} in
@@ -40,7 +40,7 @@ module MEC_Core = struct
   let get_service_by_name ser_name self =
     MVar.read self >>= fun self ->
     let%lwt services = Yaks_connector.Storage.ServiceInfo.get_services self.connector in
-    let%lwt services = Lwt_list.filter_map_p (fun e ->
+    let%lwt services = Lwt_list.filter_map_p (fun (e:MEC_Interfaces.service_info) ->
         if e.ser_name = ser_name then
           Lwt.return @@ Some e
         else
@@ -54,7 +54,7 @@ module MEC_Core = struct
   let get_service_by_category_id ser_cat_id self =
     MVar.read self >>= fun self ->
     let%lwt services = Yaks_connector.Storage.ServiceInfo.get_services self.connector in
-    let%lwt services = Lwt_list.filter_map_p (fun e ->
+    let%lwt services = Lwt_list.filter_map_p (fun (e:MEC_Interfaces.service_info) ->
         match e.ser_category with
         | Some sc ->
           if sc.id = ser_cat_id then
@@ -78,7 +78,7 @@ module MEC_Core = struct
 
 
   (* This should add the traffic rules and dns rules *)
-  let add_application (app_desc: Rest_types.app_info ) self =
+  let add_application (app_desc: MEC_Interfaces.app_info ) self =
     MVar.read self >>= fun self ->
     let appid = Apero.Option.get_or_default app_desc.app_instance_id (Apero.Uuid.to_string @@  Apero.Uuid.make ()) in
     let app_desc = {app_desc with app_instance_id = Some appid} in
@@ -96,7 +96,7 @@ module MEC_Core = struct
   let get_application_by_name app_name self =
     MVar.read self >>= fun self ->
     let%lwt services = Yaks_connector.Storage.ServiceInfo.get_applications self.connector in
-    let%lwt services = Lwt_list.filter_map_p (fun (e:Rest_types.app_info) ->
+    let%lwt services = Lwt_list.filter_map_p (fun (e:MEC_Interfaces.app_info) ->
         if e.name = app_name then
           Lwt.return @@ Some e
         else
@@ -110,7 +110,7 @@ module MEC_Core = struct
   let get_application_by_vendor app_vendor self =
     MVar.read self >>= fun self ->
     let%lwt services = Yaks_connector.Storage.ServiceInfo.get_applications self.connector in
-    let%lwt services = Lwt_list.filter_map_p (fun (e:Rest_types.app_info) ->
+    let%lwt services = Lwt_list.filter_map_p (fun (e:MEC_Interfaces.app_info) ->
         if e.vendor = app_vendor then
           Lwt.return @@ Some e
         else
@@ -140,7 +140,7 @@ module MEC_Core = struct
     MVar.read self >>= fun self ->
     Yaks_connector.Storage.DNSRules.get_application_dns_rule appid dns_rule_id self.connector
 
-  let add_dns_rule_for_application appid dns_rule self =
+  let add_dns_rule_for_application appid (dns_rule:MEC_Interfaces.dns_rule) self =
     MVar.read self >>= fun self ->
     Yaks_connector.Storage.DNSRules.add_application_dns_rule appid dns_rule.dns_rule_id dns_rule self.connector
     >>= fun _ ->
@@ -168,7 +168,7 @@ module MEC_Core = struct
     MVar.read self >>= fun self ->
     Yaks_connector.Storage.TrafficRules.get_application_traffic_rule appid traffic_rule_id self.connector
 
-  let add_traffic_rule_for_application appid traffic_rule self =
+  let add_traffic_rule_for_application appid (traffic_rule:MEC_Interfaces.traffic_rule) self =
     MVar.read self >>= fun self ->
     Yaks_connector.Storage.TrafficRules.add_application_traffic_rule appid traffic_rule.traffic_rule_id traffic_rule self.connector
     >>= fun _ -> Lwt.return traffic_rule.traffic_rule_id
@@ -187,20 +187,20 @@ module MEC_Core = struct
   let get_current_time self =
     ignore self;
     (* WIll get time using system time just for PoC *)
-    let time = Rest_types.{seconds = 0; nanoseconds = 0; time_source_status= `NONTRACEABLE } in
+    let time = MEC_Interfaces.{seconds = 0; nanoseconds = 0; time_source_status= `NONTRACEABLE } in
     Lwt.return time
 
   let get_timing_caps self =
     ignore self;
     (* PlaceHolder Value *)
-    let ts = {seconds = 0; nanoseconds = 0} in
-    let tc = {timestamp = Some ts; ntp_servers = []; ptp_masters = []} in
+    let ts = MEC_Interfaces.{seconds = 0; nanoseconds = 0} in
+    let tc = MEC_Interfaces.{timestamp = Some ts; ntp_servers = []; ptp_masters = []} in
     Lwt.return tc
 
   (* Transports *)
 
 
-  let add_tranport (transport_desc:transport_info) self =
+  let add_tranport (transport_desc:MEC_Interfaces.transport_info) self =
     MVar.read self >>= fun self ->
     Yaks_connector.Storage.Transports.add_tranport transport_desc.id transport_desc self.connector
     >>= fun _ -> Lwt.return transport_desc.id
@@ -212,7 +212,7 @@ module MEC_Core = struct
   let get_transport_by_id transportid self =
     MVar.read self >>= fun self ->
     let%lwt tranports = Yaks_connector.Storage.Transports.get_transports self.connector in
-    let%lwt tranports = Lwt_list.filter_map_p (fun (e:transport_info) ->
+    let%lwt tranports = Lwt_list.filter_map_p (fun (e:MEC_Interfaces.transport_info) ->
         if e.id = transportid then
           Lwt.return @@ Some e
         else
@@ -226,7 +226,7 @@ module MEC_Core = struct
   let get_transport_by_name trans_name self =
     MVar.read self >>= fun self ->
     let%lwt tranports = Yaks_connector.Storage.Transports.get_transports self.connector in
-    let%lwt tranports = Lwt_list.filter_map_p (fun (e:transport_info) ->
+    let%lwt tranports = Lwt_list.filter_map_p (fun (e:MEC_Interfaces.transport_info) ->
         if e.name = trans_name then
           Lwt.return @@ Some e
         else
@@ -240,7 +240,7 @@ module MEC_Core = struct
   let get_transports_by_type trans_type self =
     MVar.read self >>= fun self ->
     let%lwt tranports = Yaks_connector.Storage.Transports.get_transports self.connector in
-    Lwt_list.filter_map_p (fun (e:transport_info) ->
+    Lwt_list.filter_map_p (fun (e:MEC_Interfaces.transport_info) ->
         if e.transport_type = trans_type then
           Lwt.return @@ Some e
         else

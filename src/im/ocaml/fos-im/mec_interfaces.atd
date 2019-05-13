@@ -14,6 +14,7 @@
 
 type json <ocaml module="Yojson.Safe"> = abstract
 
+type appd_descriptor <ocaml module="Mec"> = abstract
 
 (* Errors *)
 

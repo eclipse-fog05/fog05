@@ -191,11 +191,26 @@ type latency_descriptor = {
 }
 
 
+
+
+(* Types defined in NFV *)
+
+type sw_image_descriptor <ocaml_json module="Nfv">  = abstract
+type virtual_compute_descriptor <ocaml_json module="Nfv">  = abstract
+type virtual_network_interface_requirement <ocaml_json module="Nfv"> = abstract
+type virtual_storage_data <ocaml_json module="Nfv"> = abstract
+type terminate_vnf_op_config  <ocaml_json module="Nfv"> = abstract
+type operate_vnf_op_config  <ocaml_json module="Nfv"> = abstract
+
+type app_external_cpd = {
+  virtual_network_interface_requirements <json name="virtualNetworkInterfaceRequirements"> : virtual_network_interface_requirement list;
+}
+
+
 (*
  * AppD Base types
  *
  *)
-
 
 type appd_descriptor = {
   id <json name="appDId"> : string;
@@ -215,87 +230,11 @@ type appd_descriptor = {
   traffic_rules<json name="appTrafficRule"> : traffic_rule_descriptor list;
   dns_rules <json name="appDNSRule"> : dns_rule_descriptor list;
   latency <json name="appLatency"> : latency_descriptor;
-  (* ETSI MEC 010-2 Field missing
-     virtualComputeDescriptor : VirtualComputeDescription
-     swImageDescriptor: SwImageDescriptor
-     virtualStorageDescriptor : VirtualStorageDescriptor
-     appExtCpd : AppExternalCpd
-
-  *)
+  (* ETSI MEC 010-2 *)
+  virtual_compute_descriptor <json name="virtualComputeDescriptor"> : virtual_compute_descriptor;
+  sw_image_descriptor <json name="swImageDescriptor"> : sw_image_descriptor;
+  virutal_storage_descriptor <json name="virtualStorageDescriptor"> : virtual_storage_data;
+  app_ext_cpd <json name="appExtCpd"> : app_external_cpd;
+  terminate_app_instance_op_config <json name="terminateAppInstanceOpConfig"> : terminate_vnf_op_config;
+  change_app_instance_op_config <json name="changeAppInstanceOpConfig"> : operate_vnf_op_config;
 }
-
-(* type plugin_type = {
-   name : string;
-   version : int;
-   uuid : string;
-   description : string;
-   ?url : string option;
-   ?configuration : json option;
-   ?requirements : string list option;
-   ?status : string option;
-   pl_type <json name="type"> : string;
-   }
-
-
-   type plugins_type = {
-   plugins : plugin_type list;
-   }
-
-   type plugin_pid = {
-   pid : int
-   }
-
-   type node_info = {
-   uuid : string;
-   name : string;
-   os : string;
-   cpu : json;
-   ram : json;
-   disks : json;
-   network : json;
-   io : json;
-   accelerator : json;
-   }
-
-   type quota_type = {
-   max_vcpu : int;
-   current_vcpu : int;
-   max_vdisk : int;
-   current_vdisk : int;
-   max_vnetwork : int;
-   current_vnetwork: int;
-   max_instances : int;
-   current_instances: int;
-   }
-
-   type tenant_type = {
-   name : string;
-   uuid : string;
-   quotas : quota_type;
-   users : string list;
-   nodes : string list;
-   }
-
-
-   type tenants = {
-   tenants:tenant_type list;
-   }
-
-   type user_type = {
-   uuid : string;
-   name : string;
-   access : string;
-   role : string;
-   }
-
-   type users = { users : user_type list }
-
-   type network_type = {
-   uuid : string;
-   nodes : string list;
-   manifest : json;
-   }
-
-   type entities = { entities : string list}
-
-   type networks = { networks : network_type list } *)

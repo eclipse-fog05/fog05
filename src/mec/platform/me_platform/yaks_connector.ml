@@ -1,6 +1,7 @@
 open Yaks_ocaml
 open Lwt.Infix
-open Mec_errors
+open Fos_im
+open Fos_im.Errors
 
 
 module MVar = Apero.MVar_lwt
@@ -122,7 +123,7 @@ module MakeServiceRegistry(P: sig val prefix: string end) = struct
     | hd::_ ->
       let _,v = hd in
       try
-        Lwt.return @@ Some (Rest_types.app_info_of_string (Yaks.Value.to_string v))
+        Lwt.return @@ Some (MEC_Interfaces.app_info_of_string (Yaks.Value.to_string v))
       with
       | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _  ->
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_application") ))
@@ -138,7 +139,7 @@ module MakeServiceRegistry(P: sig val prefix: string end) = struct
       Lwt.return []
     | _ ->
       try
-        Lwt_list.map_p (fun (_,v) -> Lwt.return @@ Rest_types.app_info_of_string (Yaks.Value.to_string v)) res
+        Lwt_list.map_p (fun (_,v) -> Lwt.return @@ MEC_Interfaces.app_info_of_string (Yaks.Value.to_string v)) res
       with
       | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _  ->
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_applications") ))
@@ -147,21 +148,21 @@ module MakeServiceRegistry(P: sig val prefix: string end) = struct
   let observe_applications callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = get_applications_selector in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.app_info_of_string extract_appid_from_path) s connector.ws in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback MEC_Interfaces.app_info_of_string extract_appid_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
   let observe_application applicationid callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = Yaks.Selector.of_path @@ get_application_path applicationid in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.app_info_of_string extract_appid_from_path) s connector.ws in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback MEC_Interfaces.app_info_of_string extract_appid_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
   let add_application applicationid appd connector =
     MVar.read connector >>= fun connector ->
     let p = get_application_path applicationid in
-    let value = Yaks.Value.StringValue (Rest_types.string_of_app_info appd) in
+    let value = Yaks.Value.StringValue (MEC_Interfaces.string_of_app_info appd) in
     Yaks.Workspace.put p value connector.ws
 
   let remove_application applicationid connector =
@@ -180,7 +181,7 @@ module MakeServiceRegistry(P: sig val prefix: string end) = struct
     | hd::_ ->
       let _,v = hd in
       try
-        Lwt.return @@ Some (Rest_types.service_info_of_string (Yaks.Value.to_string v))
+        Lwt.return @@ Some (MEC_Interfaces.service_info_of_string (Yaks.Value.to_string v))
       with
       | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _  ->
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_application") ))
@@ -196,7 +197,7 @@ module MakeServiceRegistry(P: sig val prefix: string end) = struct
       Lwt.return []
     | _ ->
       try
-        Lwt_list.map_p (fun (_,v) -> Lwt.return @@ Rest_types.service_info_of_string (Yaks.Value.to_string v)) res
+        Lwt_list.map_p (fun (_,v) -> Lwt.return @@ MEC_Interfaces.service_info_of_string (Yaks.Value.to_string v)) res
       with
       | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _  ->
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_applications") ))
@@ -205,21 +206,21 @@ module MakeServiceRegistry(P: sig val prefix: string end) = struct
   let observe_services callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = get_services_selector in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.service_info_of_string extract_serviceid_from_path) s connector.ws in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback MEC_Interfaces.service_info_of_string extract_serviceid_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
   let observe_service serviceid callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = Yaks.Selector.of_path @@ get_service_path serviceid in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.service_info_of_string extract_serviceid_from_path) s connector.ws in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback MEC_Interfaces.service_info_of_string extract_serviceid_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
   let add_service serviceid serd connector =
     MVar.read connector >>= fun connector ->
     let p = get_service_path serviceid in
-    let value = Yaks.Value.StringValue (Rest_types.string_of_service_info serd) in
+    let value = Yaks.Value.StringValue (MEC_Interfaces.string_of_service_info serd) in
     Yaks.Workspace.put p value connector.ws
 
   let remove_service serviceid connector =
@@ -261,7 +262,7 @@ module MakeDNSRules(P: sig val prefix: string end) = struct
       Lwt.return None
     | (_,v)::_ ->
       try
-        Lwt.return @@ Some (Rest_types.dns_rule_of_string (Yaks.Value.to_string v))
+        Lwt.return @@ Some (MEC_Interfaces.dns_rule_of_string (Yaks.Value.to_string v))
       with
       | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _  ->
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_application") ))
@@ -277,7 +278,7 @@ module MakeDNSRules(P: sig val prefix: string end) = struct
       Lwt.return []
     | _ ->
       try
-        Lwt_list.map_p (fun (_,v) -> Lwt.return (Rest_types.dns_rule_of_string (Yaks.Value.to_string v))) res
+        Lwt_list.map_p (fun (_,v) -> Lwt.return (MEC_Interfaces.dns_rule_of_string (Yaks.Value.to_string v))) res
       with
       | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _  ->
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_application") ))
@@ -286,21 +287,21 @@ module MakeDNSRules(P: sig val prefix: string end) = struct
   let observe_application_dns_rules appid callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = get_applications_dns_rules_selector appid  in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.dns_rule_of_string extract_dns_rule_id_from_path) s connector.ws in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback MEC_Interfaces.dns_rule_of_string extract_dns_rule_id_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
   let observe_application_dns_rule applicationid dns_rule_id callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = Yaks.Selector.of_path @@ get_application_dns_rule_path applicationid dns_rule_id in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.dns_rule_of_string extract_dns_rule_id_from_path) s connector.ws in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback MEC_Interfaces.dns_rule_of_string extract_dns_rule_id_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
   let add_application_dns_rule applicationid dns_rule_id dns_rule connector =
     MVar.read connector >>= fun connector ->
     let p = get_application_dns_rule_path applicationid dns_rule_id in
-    let value = Yaks.Value.StringValue (Rest_types.string_of_dns_rule dns_rule) in
+    let value = Yaks.Value.StringValue (MEC_Interfaces.string_of_dns_rule dns_rule) in
     Yaks.Workspace.put p value connector.ws
 
   let remove_application_dns_rule applicationid dns_rule_id connector =
@@ -339,7 +340,7 @@ module MakeTrafficRules(P: sig val prefix: string end) = struct
       Lwt.return None
     | (_,v)::_ ->
       try
-        Lwt.return @@ Some (Rest_types.traffic_rule_of_string (Yaks.Value.to_string v))
+        Lwt.return @@ Some (MEC_Interfaces.traffic_rule_of_string (Yaks.Value.to_string v))
       with
       | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _  ->
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_application") ))
@@ -355,7 +356,7 @@ module MakeTrafficRules(P: sig val prefix: string end) = struct
       Lwt.return []
     | _ ->
       try
-        Lwt_list.map_p (fun (_,v) -> Lwt.return (Rest_types.traffic_rule_of_string (Yaks.Value.to_string v))) res
+        Lwt_list.map_p (fun (_,v) -> Lwt.return (MEC_Interfaces.traffic_rule_of_string (Yaks.Value.to_string v))) res
       with
       | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _  ->
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_application") ))
@@ -364,21 +365,21 @@ module MakeTrafficRules(P: sig val prefix: string end) = struct
   let observe_application_traffic_rules appid callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = get_applications_traffic_rules_selector appid  in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.traffic_rule_of_string extract_traffic_rule_id_from_path) s connector.ws in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback MEC_Interfaces.traffic_rule_of_string extract_traffic_rule_id_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
   let observe_application_traffic_rule applicationid traffic_rule_id callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = Yaks.Selector.of_path @@ get_application_traffic_rule_path applicationid traffic_rule_id in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.traffic_rule_of_string extract_traffic_rule_id_from_path) s connector.ws in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback MEC_Interfaces.traffic_rule_of_string extract_traffic_rule_id_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
   let add_application_traffic_rule applicationid traffic_rule_id traffic_rule connector =
     MVar.read connector >>= fun connector ->
     let p = get_application_traffic_rule_path applicationid traffic_rule_id in
-    let value = Yaks.Value.StringValue (Rest_types.string_of_traffic_rule traffic_rule) in
+    let value = Yaks.Value.StringValue (MEC_Interfaces.string_of_traffic_rule traffic_rule) in
     Yaks.Workspace.put p value connector.ws
 
   let remove_application_traffic_rule applicationid traffic_rule_id connector =
@@ -431,7 +432,7 @@ module MakeSubscriptions (P: sig val prefix: string end) = struct
       Lwt.return None
     | (_,v)::_ ->
       try
-        Lwt.return @@ Some (Rest_types.app_termination_notification_subscription_of_string (Yaks.Value.to_string v))
+        Lwt.return @@ Some (MEC_Interfaces.app_termination_notification_subscription_of_string (Yaks.Value.to_string v))
       with
       | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _  ->
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_application") ))
@@ -447,7 +448,7 @@ module MakeSubscriptions (P: sig val prefix: string end) = struct
       Lwt.return []
     | _ ->
       try
-        Lwt_list.map_p (fun (k,v) -> Lwt.return (extract_subscriptionid_from_path k, (Rest_types.app_termination_notification_subscription_of_string (Yaks.Value.to_string v)))) res
+        Lwt_list.map_p (fun (k,v) -> Lwt.return (extract_subscriptionid_from_path k, (MEC_Interfaces.app_termination_notification_subscription_of_string (Yaks.Value.to_string v)))) res
       with
       | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _  ->
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_transports") ))
@@ -456,14 +457,14 @@ module MakeSubscriptions (P: sig val prefix: string end) = struct
   let observe_application_termination_subscriptions appid callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = get_applications_termination_subscription_selector appid  in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.app_termination_notification_of_string extract_subscriptionid_from_path) s connector.ws in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback MEC_Interfaces.app_termination_notification_of_string extract_subscriptionid_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
   let add_application_termination_subscription applicationid subscriptionid sub connector =
     MVar.read connector >>= fun connector ->
     let p = get_application_termination_subscription_path applicationid subscriptionid in
-    let value = Yaks.Value.StringValue (Rest_types.string_of_app_termination_notification_subscription sub) in
+    let value = Yaks.Value.StringValue (MEC_Interfaces.string_of_app_termination_notification_subscription sub) in
     Yaks.Workspace.put p value connector.ws
 
   let remove_application_termination_subscription applicationid subscriptionid connector =
@@ -481,7 +482,7 @@ module MakeSubscriptions (P: sig val prefix: string end) = struct
       Lwt.return None
     | (_,v)::_ ->
       try
-        Lwt.return @@ Some (Rest_types.ser_availability_notification_subscription_of_string (Yaks.Value.to_string v))
+        Lwt.return @@ Some (MEC_Interfaces.ser_availability_notification_subscription_of_string (Yaks.Value.to_string v))
       with
       | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _  ->
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_application") ))
@@ -497,7 +498,7 @@ module MakeSubscriptions (P: sig val prefix: string end) = struct
       Lwt.return []
     | _ ->
       try
-        Lwt_list.map_p (fun (k,v) -> Lwt.return (extract_subscriptionid_from_path k, (Rest_types.ser_availability_notification_subscription_of_string (Yaks.Value.to_string v)))) res
+        Lwt_list.map_p (fun (k,v) -> Lwt.return (extract_subscriptionid_from_path k, (MEC_Interfaces.ser_availability_notification_subscription_of_string (Yaks.Value.to_string v)))) res
       with
       | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _  ->
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_transports") ))
@@ -506,14 +507,14 @@ module MakeSubscriptions (P: sig val prefix: string end) = struct
   let observe_service_availability_subscriptions appid callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = get_service_availaility_subscription_selector appid  in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.ser_availability_notification_subscription_of_string extract_subscriptionid_from_path) s connector.ws in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback MEC_Interfaces.ser_availability_notification_subscription_of_string extract_subscriptionid_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
   let add_service_availability_subscription applicationid subscriptionid sub connector =
     MVar.read connector >>= fun connector ->
     let p = get_service_availaility_subscription_path applicationid subscriptionid in
-    let value = Yaks.Value.StringValue (Rest_types.string_of_ser_availability_notification_subscription sub) in
+    let value = Yaks.Value.StringValue (MEC_Interfaces.string_of_ser_availability_notification_subscription sub) in
     Yaks.Workspace.put p value connector.ws
 
   let remove_service_availability_subscription applicationid subscriptionid connector =
@@ -542,7 +543,7 @@ module MakeTransports (P: sig val prefix: string end) = struct
   let add_tranport transportid transport_desc connector =
     MVar.read connector >>= fun connector ->
     let p = get_transport_path transportid in
-    let value = Yaks.Value.StringValue (Rest_types.string_of_transport_info transport_desc) in
+    let value = Yaks.Value.StringValue (MEC_Interfaces.string_of_transport_info transport_desc) in
     Yaks.Workspace.put p value connector.ws
 
   let get_tranport transportid connector =
@@ -555,7 +556,7 @@ module MakeTransports (P: sig val prefix: string end) = struct
       Lwt.return None
     | (_,v)::_ ->
       try
-        Lwt.return @@ Some (Rest_types.transport_info_of_string (Yaks.Value.to_string v))
+        Lwt.return @@ Some (MEC_Interfaces.transport_info_of_string (Yaks.Value.to_string v))
       with
       | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _  ->
         Lwt.fail @@ MEException (`InternalError (`Msg (Printf.sprintf "Value is not well formatted in transportid: %s" (Yaks.Value.to_string v)) ))
@@ -572,7 +573,7 @@ module MakeTransports (P: sig val prefix: string end) = struct
       Lwt.return []
     | _ ->
       try
-        Lwt_list.map_p (fun (_,v) -> Lwt.return (Rest_types.transport_info_of_string (Yaks.Value.to_string v))) res
+        Lwt_list.map_p (fun (_,v) -> Lwt.return (MEC_Interfaces.transport_info_of_string (Yaks.Value.to_string v))) res
       with
       | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _  ->
         Lwt.fail @@ MEException (`InternalError (`Msg ("Value is not well formatted in get_transports") ))
@@ -581,7 +582,7 @@ module MakeTransports (P: sig val prefix: string end) = struct
   let observe_transports callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = get_transport_selector  in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Rest_types.transport_info_of_string extract_transport_id_from_path) s connector.ws in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback MEC_Interfaces.transport_info_of_string extract_transport_id_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 

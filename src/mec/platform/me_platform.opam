@@ -32,4 +32,5 @@ depends: [
   "yaks-common"
   "yaks-ocaml"
   "fos-im"
+  "fos-dns"
 ]
