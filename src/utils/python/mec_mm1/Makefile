@@ -12,6 +12,9 @@ install:
 uninstall:
 	pip uninstall fog05mm1 -y
 
+package:
+	python setup.py sdist bdist_wheel
+
 test:
 	rm -rf .tox
 	tox
