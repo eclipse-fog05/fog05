@@ -10,6 +10,8 @@ all:
 install:
 	sudo pip3 install flask
 ifeq "$(wildcard $(REST_API_DIR))" ""
+	sudo mkdir -p $(REST_API_DIR)
+	sudo mkdir -p $(REST_API_DIR)/imgs
 	sudo cp -r ./src/service.py $(REST_API_DIR)/service.py
 	sudo cp -r ./src/service.json $(REST_API_CONFIG)
 else
