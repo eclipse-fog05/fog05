@@ -35,3 +35,7 @@ sudo make install
 
 sudo sh -c "cat /etc/machine-id | xargs -i  jq  '.configuration.nodeid = \"{}\"' /etc/fos/plugins/linux/linux_plugin.json > /tmp/linux_plugin.tmp && mv /tmp/linux_plugin.tmp /etc/fos/plugins/linux/linux_plugin.json"
 
+echo 'You may want to install the other plugins, look at the fos-plugins directory!'
+
+
+
