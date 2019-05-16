@@ -14,5 +14,6 @@ clean:
 install:
 	opam install .
 
-#  uninstall:
-#  	opam remove me-platform
+ uninstall:
+	opam remove fos-meao
+	opam remove meao

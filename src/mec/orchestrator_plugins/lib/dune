@@ -1,0 +1,7 @@
+(library
+  (name            fos_meao_plugins)
+  (public_name     fos-meao-plugins)
+  (wrapped     false)
+  (modules_without_implementation FIM Placement)
+  (libraries       base lwt yojson atdgen )
+  )

@@ -17,7 +17,8 @@ open Mm1
 (* open Mm5 *)
 (* open Lwt.Infix *)
 (* open Fos_im *)
-
+open FIMPlugin
+open Lwt.Infix
 
 
 module MVar = Apero.MVar_lwt
@@ -29,6 +30,9 @@ let max_buf_len = 64 * 1024
 
 let configuration_path = Arg.(value & opt string "/etc/fos/mec_platfrom.json" & info ["c"; "conf"] ~docv:"Path to configuration"
                                 ~doc:"Absolute path to configuration file")
+
+let fim_plugin = Arg.(value & opt string "" & info ["p"; "plugin"] ~docv:"Path to fim plugin"
+                        ~doc:"Absolute path to plugin file")
 
 
 let setup_log style_renderer level =
@@ -55,15 +59,51 @@ let get_yaks_locator () =
   let strloc = Printf.sprintf "tcp/%s:%s" host port in
   Apero_net.Locator.of_string strloc |> Apero.Option.get
 
-let run_platform configuration_path =
+let run_platform configuration_path fim_plugin =
   ignore configuration_path;
-  let%lwt _ = Lwt_io.printf "Started!\n" in
+  ignore fim_plugin;
+  Logs.debug (fun m -> m "Started!\n" );
+  let load_plugin fname =
+    let fname = Dynlink.adapt_filename fname in
+    match Sys.file_exists fname with
+    | true ->
+      (try
+         Dynlink.loadfile fname;
+         true
+       with
+       | Dynlink.Error err ->
+         Logs.err (fun m -> m "[MEAO] error while loading FIM Plugin %s" (Dynlink.error_message err));
+         false)
+    | false ->
+      Logs.err (fun m -> m "[MEAO] Plugin file does not esist");
+      false
+  in
+
   try%lwt
 
-    (* let%lwt mm5_client = Mm5_client.create "127.0.0.1" 8091 "http://127.0.0.1:8091" in *)
+    Findlib.init ();
+
     let%lwt core = MEAO.create (get_yaks_locator ()) in
+    let%lwt ro = RO.create (get_yaks_locator ())  core in
+    (* let%lwt _ = RO.add_fim_conn "fos" fos_conn ro in *)
     let%lwt mm1 = Mm1.create "0.0.0.0" "/exampleAPI/mm1/v1/" 8071 core in
-    Lwt.join [MEAO.start core; Mm1.start mm1]
+
+    (match fim_plugin with
+     | "" -> Lwt.return_unit
+     | _ ->
+       (* dynamic loading packages needed by plugin *)
+       Fl_dynload.load_packages ["fos-fim-api"];
+       let r = load_plugin fim_plugin in
+       (match r with
+        | true ->
+          let module M = (val FIMPlugin.get_plugin () : FIMPlugin) in
+          let fos_conn = M.make "tcp/127.0.0.1:7887" "" "" (Fos_im.JSON.create_empty ()) in
+          let%lwt _ = RO.add_fim_conn "fos" fos_conn ro in
+          Logs.debug (fun m -> m "FIM Plugin Loaded!" );
+          Lwt.return_unit
+        | false -> Lwt.return_unit))
+    >>= fun  _ ->
+    Lwt.join [MEAO.start core; Mm1.start mm1; RO.start ro]
   (*
      let%lwt mp1 = Mp1.create "127.0.0.1" "/exampleAPI/mp1/v1/" 8081 core in
      Lwt.join [MEC_Core.start core; Mp1.start mp1; Mm5.start mm5] *)
@@ -75,17 +115,17 @@ let run_platform configuration_path =
     in Lwt.return_unit
 
 
-let run configuration_path style_renderer level =
+let run configuration_path fim_plugin style_renderer level =
   setup_log style_renderer level;
   (* Note: by default the Lwt.async_exception_hook do "exit 2" when an exception is raised in a canceled Lwt task.
      We rather force it to log and ignore the exception to avoid crashes (as it occurs randomly within cohttp at connection closure).  *)
   Lwt.async_exception_hook := (fun exn ->
       Logs.debug (fun m -> m "Exception caught in Lwt.async_exception_hook: %s\n%s" (Printexc.to_string exn) (Printexc.get_backtrace ())));
-  Lwt_main.run @@ run_platform configuration_path
+  Lwt_main.run @@ run_platform configuration_path fim_plugin
 
 
 let () =
   Printexc.record_backtrace true;
   Lwt_engine.set (new Lwt_engine.libev ());
   let env = Arg.env_var "MEAO_VERBOSITY" in
-  let _ = Term.(eval (const run $ configuration_path $ Fmt_cli.style_renderer () $ Logs_cli.level ~env (), Term.info "Yaks daemon")) in  ()
+  let _ = Term.(eval (const run $ configuration_path $ fim_plugin $ Fmt_cli.style_renderer () $ Logs_cli.level ~env (), Term.info "Yaks daemon")) in  ()

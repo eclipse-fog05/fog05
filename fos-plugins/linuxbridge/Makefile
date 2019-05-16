@@ -5,7 +5,7 @@ WD := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))));
 LB_PLUGIN_DIR = /etc/fos/plugins/linuxbridge
 LB_PLUGIN_CONFFILE = /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json
 all:
-	cd src/ocaml; make
+	echo "Nothing to do"
 
 install:
 	sudo pip3 install jinja2

@@ -8,20 +8,23 @@ module MVar = Apero.MVar_lwt
 
 
 module Mm5Map = Map.Make(String)
+module FIMMap = Map.Make(String)
+
 
 module MEAO = struct
 
   type state = {
-    connector : Yaks_connector.connector;
-    mm5_clients : Mm5_client.t Mm5Map.t
+    connector : Yconnector.connector;
+    mm5_clients : Mm5_client.t Mm5Map.t;
+    fim_conns : (module FIM.FIMConn) FIMMap.t
   }
 
 
   type t = state MVar.t
 
   let create loc =
-    let%lwt con = Yaks_connector.get_connector_of_locator loc in
-    Lwt.return @@ MVar.create ({connector = con; mm5_clients = Mm5Map.empty})
+    let%lwt con = Yconnector.get_connector_of_locator loc in
+    Lwt.return @@ MVar.create ({connector = con; mm5_clients = Mm5Map.empty; fim_conns= FIMMap.empty})
 
 
   (* Start and Stop *)
@@ -86,22 +89,22 @@ module MEAO = struct
       let addr = List.hd mec_plat.endpoint.addresses in
       let url = List.hd mec_plat.endpoint.uris in
       let%lwt client = Mm5_client.create addr.host addr.port url in
-      Yaks_connector.Storage.Platform.add_platform plid mec_plat self.connector
+      Yconnector.Storage.Platform.add_platform plid mec_plat self.connector
       >>= fun _ -> MVar.return plid {self with mm5_clients = Mm5Map.add plid client self.mm5_clients}
 
   let get_platform plid self =
     MVar.read self >>= fun self ->
-    Yaks_connector.Storage.Platform.get_platform plid self.connector
+    Yconnector.Storage.Platform.get_platform plid self.connector
 
 
   let get_platforms self =
     MVar.read self >>= fun self ->
-    Yaks_connector.Storage.Platform.get_platforms self.connector
+    Yconnector.Storage.Platform.get_platforms self.connector
 
 
   let remove_platform plid self =
     MVar.guarded self @@ fun self ->
-    Yaks_connector.Storage.Platform.remove_platform plid self.connector
+    Yconnector.Storage.Platform.remove_platform plid self.connector
     >>= fun _ -> MVar.return plid {self with mm5_clients = Mm5Map.remove plid self.mm5_clients}
 
   (* ME Svcs *)
@@ -114,7 +117,7 @@ module MEAO = struct
     match Mm5Map.find_opt plid self.mm5_clients with
     | Some client ->
       Mm5_client.Services.add ser_desc client
-      >>= fun _ -> Yaks_connector.Storage.ServiceInfo.add_service plid serid ser_desc self.connector
+      >>= fun _ -> Yconnector.Storage.ServiceInfo.add_service plid serid ser_desc self.connector
       >>= fun _ -> Lwt.return serid
     | None ->
       Lwt.fail @@ MEException (`PlatformNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid)))
@@ -122,15 +125,15 @@ module MEAO = struct
 
   let get_service_by_uuid plid ser_uuid self =
     MVar.read self >>= fun self ->
-    Yaks_connector.Storage.ServiceInfo.get_service plid ser_uuid self.connector
+    Yconnector.Storage.ServiceInfo.get_service plid ser_uuid self.connector
 
   let get_services plid self =
     MVar.read self >>= fun self ->
-    Yaks_connector.Storage.ServiceInfo.get_services plid self.connector
+    Yconnector.Storage.ServiceInfo.get_services plid self.connector
 
   let get_service_by_name plid ser_name self =
     MVar.read self >>= fun self ->
-    let%lwt services = Yaks_connector.Storage.ServiceInfo.get_services plid self.connector in
+    let%lwt services = Yconnector.Storage.ServiceInfo.get_services plid self.connector in
     let%lwt services = Lwt_list.filter_map_p (fun (e:MEC_Interfaces.service_info) ->
         if e.ser_name = ser_name then
           Lwt.return @@ Some e
@@ -144,7 +147,7 @@ module MEAO = struct
 
   let get_service_by_category_id plid ser_cat_id self =
     MVar.read self >>= fun self ->
-    let%lwt services = Yaks_connector.Storage.ServiceInfo.get_services plid self.connector in
+    let%lwt services = Yconnector.Storage.ServiceInfo.get_services plid self.connector in
     let%lwt services = Lwt_list.filter_map_p (fun (e:MEC_Interfaces.service_info) ->
         match e.ser_category with
         | Some sc ->
@@ -161,12 +164,12 @@ module MEAO = struct
 
   let remove_service plid ser_uuid self =
     MVar.read self >>= fun self ->
-    match%lwt (Yaks_connector.Storage.ServiceInfo.get_service plid ser_uuid self.connector) with
+    match%lwt (Yconnector.Storage.ServiceInfo.get_service plid ser_uuid self.connector) with
     | Some _ ->
       (match Mm5Map.find_opt plid self.mm5_clients with
        | Some client ->
          Mm5_client.Services.remove ser_uuid client
-         >>= fun _ -> Yaks_connector.Storage.ServiceInfo.remove_service plid ser_uuid self.connector
+         >>= fun _ -> Yconnector.Storage.ServiceInfo.remove_service plid ser_uuid self.connector
          >>= fun _ ->  Lwt.return ser_uuid
        | None -> Lwt.fail @@ MEException (`PlatformNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid))))
     | None -> Lwt.fail @@ MEException (`ServiceNotExisting (`Msg (Printf.sprintf "Service with id %s not exist" ser_uuid)))
@@ -177,11 +180,11 @@ module MEAO = struct
 
   let get_dns_rules_for_application plid appid self =
     MVar.read self >>= fun self ->
-    Yaks_connector.Storage.DNSRules.get_application_dns_rules plid appid self.connector
+    Yconnector.Storage.DNSRules.get_application_dns_rules plid appid self.connector
 
   let get_dns_rule_for_application plid appid dns_rule_id self =
     MVar.read self >>= fun self ->
-    Yaks_connector.Storage.DNSRules.get_application_dns_rule plid appid dns_rule_id self.connector
+    Yconnector.Storage.DNSRules.get_application_dns_rule plid appid dns_rule_id self.connector
 
   let add_dns_rule_for_application plid appid dns_rule self =
     MVar.read self >>= fun self ->
@@ -189,7 +192,7 @@ module MEAO = struct
     match Mm5Map.find_opt plid self.mm5_clients with
     | Some client ->
       Mm5_client.DnsRules.add appid dns_rule client
-      >>= fun _ -> Yaks_connector.Storage.DNSRules.add_application_dns_rule plid appid dns_rule.dns_rule_id dns_rule self.connector
+      >>= fun _ -> Yconnector.Storage.DNSRules.add_application_dns_rule plid appid dns_rule.dns_rule_id dns_rule self.connector
       >>= fun _-> Lwt.return dns_rule.dns_rule_id
     | None -> Lwt.fail @@ MEException (`PlatformNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid)))
 
@@ -197,12 +200,12 @@ module MEAO = struct
 
   let remove_dns_rule_for_application plid appid dns_rule_id self =
     MVar.read self >>= fun self ->
-    match%lwt (Yaks_connector.Storage.DNSRules.get_application_dns_rule plid appid dns_rule_id self.connector) with
+    match%lwt (Yconnector.Storage.DNSRules.get_application_dns_rule plid appid dns_rule_id self.connector) with
     | Some _ ->
       (match Mm5Map.find_opt plid self.mm5_clients with
        | Some client ->
          Mm5_client.DnsRules.remove appid dns_rule_id client
-         >>= fun _ -> Yaks_connector.Storage.DNSRules.remove_application_dns_rule plid appid dns_rule_id self.connector
+         >>= fun _ -> Yconnector.Storage.DNSRules.remove_application_dns_rule plid appid dns_rule_id self.connector
          >>= fun _ -> Lwt.return dns_rule_id
        | None ->  Lwt.fail @@ MEException (`PlatformNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid))))
     | None -> Lwt.fail @@ MEException (`DNSRuleNotExisting (`Msg (Printf.sprintf "DNS Rule with id %s not exist in application %s" dns_rule_id appid )))
@@ -211,29 +214,29 @@ module MEAO = struct
 
   let get_traffic_rules_for_application plid appid self =
     MVar.read self >>= fun self ->
-    Yaks_connector.Storage.TrafficRules.get_application_traffic_rules plid appid self.connector
+    Yconnector.Storage.TrafficRules.get_application_traffic_rules plid appid self.connector
 
   let get_traffic_rule_for_application plid appid traffic_rule_id self =
     MVar.read self >>= fun self ->
-    Yaks_connector.Storage.TrafficRules.get_application_traffic_rule plid appid traffic_rule_id self.connector
+    Yconnector.Storage.TrafficRules.get_application_traffic_rule plid appid traffic_rule_id self.connector
 
   let add_traffic_rule_for_application plid appid traffic_rule self =
     MVar.read self >>= fun self ->
     match Mm5Map.find_opt plid self.mm5_clients with
     | Some client ->
       Mm5_client.TrafficRules.add appid traffic_rule client
-      >>= fun _ -> Yaks_connector.Storage.TrafficRules.add_application_traffic_rule plid appid traffic_rule.traffic_rule_id traffic_rule self.connector
+      >>= fun _ -> Yconnector.Storage.TrafficRules.add_application_traffic_rule plid appid traffic_rule.traffic_rule_id traffic_rule self.connector
       >>= fun _ -> Lwt.return traffic_rule.traffic_rule_id
     | None -> Lwt.fail @@ MEException (`PlatformNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid)))
 
   let remove_traffic_rule_for_application plid appid traffic_rule_id self =
     MVar.read self >>= fun self ->
-    match%lwt (Yaks_connector.Storage.TrafficRules.get_application_traffic_rule plid appid  traffic_rule_id self.connector) with
+    match%lwt (Yconnector.Storage.TrafficRules.get_application_traffic_rule plid appid  traffic_rule_id self.connector) with
     | Some _ ->
       (match Mm5Map.find_opt plid self.mm5_clients with
        | Some client ->
          Mm5_client.TrafficRules.remove appid traffic_rule_id client
-         >>= fun _ -> Yaks_connector.Storage.TrafficRules.remove_application_traffic_rule plid appid traffic_rule_id self.connector
+         >>= fun _ -> Yconnector.Storage.TrafficRules.remove_application_traffic_rule plid appid traffic_rule_id self.connector
          >>= fun _ -> Lwt.return traffic_rule_id
        | None -> Lwt.fail @@ MEException (`PlatformNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid))))
     | None -> Lwt.fail @@ MEException (`TrafficRuleNotExising (`Msg (Printf.sprintf "Traffic Rule with id %s not exist in application %s" traffic_rule_id appid )))
@@ -248,18 +251,18 @@ module MEAO = struct
     match Mm5Map.find_opt plid self.mm5_clients with
     | Some client ->
       Mm5_client.Transports.add transport_desc client
-      >>= fun _ -> Yaks_connector.Storage.Transports.add_tranport plid transport_desc.id transport_desc self.connector
+      >>= fun _ -> Yconnector.Storage.Transports.add_tranport plid transport_desc.id transport_desc self.connector
       >>= fun _ -> Lwt.return transport_desc.id
     |None ->
       Lwt.fail @@ MEException (`PlatformNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid)))
 
   let get_transports plid self =
     MVar.read self >>= fun self ->
-    Yaks_connector.Storage.Transports.get_transports plid self.connector
+    Yconnector.Storage.Transports.get_transports plid self.connector
 
   let get_transport_by_id plid transportid self =
     MVar.read self >>= fun self ->
-    let%lwt tranports = Yaks_connector.Storage.Transports.get_transports plid self.connector in
+    let%lwt tranports = Yconnector.Storage.Transports.get_transports plid self.connector in
     let%lwt tranports = Lwt_list.filter_map_p (fun (e: MEC_Interfaces.transport_info) ->
         if e.id = transportid then
           Lwt.return @@ Some e
@@ -273,7 +276,7 @@ module MEAO = struct
 
   let get_transport_by_name plid trans_name self =
     MVar.read self >>= fun self ->
-    let%lwt tranports = Yaks_connector.Storage.Transports.get_transports plid self.connector in
+    let%lwt tranports = Yconnector.Storage.Transports.get_transports plid self.connector in
     let%lwt tranports = Lwt_list.filter_map_p (fun (e: MEC_Interfaces.transport_info) ->
         if e.name = trans_name then
           Lwt.return @@ Some e
@@ -287,7 +290,7 @@ module MEAO = struct
 
   let get_transports_by_type plid trans_type self =
     MVar.read self >>= fun self ->
-    let%lwt tranports = Yaks_connector.Storage.Transports.get_transports plid self.connector in
+    let%lwt tranports = Yconnector.Storage.Transports.get_transports plid self.connector in
     Lwt_list.filter_map_p (fun (e:MEC_Interfaces.transport_info) ->
         if e.transport_type = trans_type then
           Lwt.return @@ Some e
@@ -297,12 +300,12 @@ module MEAO = struct
 
   let remove_transport plid transportid self =
     MVar.read self >>= fun self ->
-    match%lwt (Yaks_connector.Storage.Transports.get_tranport plid transportid self.connector) with
+    match%lwt (Yconnector.Storage.Transports.get_tranport plid transportid self.connector) with
     | Some _ ->
       (match Mm5Map.find_opt plid self.mm5_clients with
        | Some client ->
          Mm5_client.Transports.remove transportid client
-         >>= fun _ -> Yaks_connector.Storage.Transports.remove_transport plid transportid self.connector
+         >>= fun _ -> Yconnector.Storage.Transports.remove_transport plid transportid self.connector
          >>= fun _ -> Lwt.return transportid
        | None ->
          Lwt.fail @@ MEException (`PlatformNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid))))
@@ -361,8 +364,6 @@ module MEAO = struct
           ) app_desc.service_produces in
       let app_info = {app_info with service_produced = svcs} in
       Mm5_client.Applications.add app_info client
-      (* >>= fun _ ->
-         Yaks_connector.Storage.ServiceInfo.add_application plid appid app_info self.connector *)
       >>= fun  _ ->
       Lwt_list.iter_p (fun ser ->
           add_service plid ser state >>= fun _ -> Lwt.return_unit
@@ -376,22 +377,22 @@ module MEAO = struct
           add_dns_rule_for_application plid app_inst_id d state >>= fun _ -> Lwt.return_unit
         ) app_info.dns_rules
       >>= fun _ ->
-      Yaks_connector.Storage.ServiceInfo.add_application plid app_inst_id app_info self.connector
+      Yconnector.Storage.ServiceInfo.add_application plid app_inst_id app_info self.connector
       >>= fun _ ->
       Lwt.return app_info
     | None -> Lwt.fail @@ MEException (`PlatformNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid)))
 
   let get_application_by_uuid plid app_uuid self =
     MVar.read self >>= fun self ->
-    Yaks_connector.Storage.ServiceInfo.get_application plid app_uuid self.connector
+    Yconnector.Storage.ServiceInfo.get_application plid app_uuid self.connector
 
   let get_applications plid self =
     MVar.read self >>= fun self ->
-    Yaks_connector.Storage.ServiceInfo.get_applications plid self.connector
+    Yconnector.Storage.ServiceInfo.get_applications plid self.connector
 
   let get_application_by_name plid app_name self =
     MVar.read self >>= fun self ->
-    let%lwt services = Yaks_connector.Storage.ServiceInfo.get_applications plid self.connector in
+    let%lwt services = Yconnector.Storage.ServiceInfo.get_applications plid self.connector in
     let%lwt services = Lwt_list.filter_map_p (fun (e:MEC_Interfaces.app_info) ->
         if e.name = app_name then
           Lwt.return @@ Some e
@@ -405,7 +406,7 @@ module MEAO = struct
 
   let get_application_by_vendor plid app_vendor self =
     MVar.read self >>= fun self ->
-    let%lwt services = Yaks_connector.Storage.ServiceInfo.get_applications plid self.connector in
+    let%lwt services = Yconnector.Storage.ServiceInfo.get_applications plid self.connector in
     let%lwt services = Lwt_list.filter_map_p (fun (e:MEC_Interfaces.app_info) ->
         if e.vendor = app_vendor then
           Lwt.return @@ Some e
@@ -419,7 +420,7 @@ module MEAO = struct
 
   let remove_application plid app_uuid state =
     MVar.read state >>= fun self ->
-    match%lwt (Yaks_connector.Storage.ServiceInfo.get_application plid app_uuid self.connector) with
+    match%lwt (Yconnector.Storage.ServiceInfo.get_application plid app_uuid self.connector) with
     | Some appi ->
       (match Mm5Map.find_opt plid self.mm5_clients with
        | Some client ->
@@ -436,9 +437,51 @@ module MEAO = struct
          Lwt_list.iter_p (fun (d:MEC_Interfaces.dns_rule) ->
              remove_dns_rule_for_application plid app_uuid d.dns_rule_id state >>= fun _ -> Lwt.return_unit
            ) appi.dns_rules
-         >>= fun _ -> Yaks_connector.Storage.ServiceInfo.remove_application plid app_uuid self.connector
+         >>= fun _ -> Yconnector.Storage.ServiceInfo.remove_application plid app_uuid self.connector
          >>= fun _ -> Lwt.return app_uuid
        | None -> Lwt.fail @@ MEException (`PlatformNotExisting (`Msg (Printf.sprintf "Platform with id %s not found " plid))))
     | None -> Lwt.fail @@ MEException (`ApplicationNotExisting (`Msg (Printf.sprintf "Application with id %s not exist" app_uuid)))
+
+end
+
+
+
+module RO = struct
+
+  type state = {
+    connector : Yconnector.connector;
+    meao : MEAO.t;
+    fim_conns : (module FIM.FIMConn) FIMMap.t;
+    completer : unit Lwt.u;
+    promise : unit Lwt.t
+  }
+
+
+  type t = state MVar.t
+
+  let create loc meao =
+    let f, c =  Lwt.wait () in
+    let%lwt con = Yconnector.get_connector_of_locator loc in
+    Lwt.return @@ MVar.create ({connector = con; meao = meao; fim_conns= FIMMap.empty; completer = c; promise = f})
+
+  (* Start and Stop *)
+  let start self =
+    Logs.debug (fun m -> m "[RO] Started...");
+    MVar.read self >>= fun self ->
+    self.promise >>= Lwt.return
+  (* let f,c =  Lwt.wait () in
+     MVar.guarded self @@ fun self ->
+     MVar.return_lwt f {self with completer = Some c} *)
+
+
+
+  let stop self =
+    Lwt.wakeup_later self.completer () |> Lwt.return
+
+  let add_fim_conn fim_id connector self =
+    Logs.debug (fun m -> m "[RO] Adding FIMConn: %s" fim_id);
+    MVar.guarded self @@ fun self ->
+    MVar.return () {self with fim_conns = FIMMap.add fim_id connector self.fim_conns}
+
 
 end

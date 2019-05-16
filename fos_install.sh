@@ -13,7 +13,7 @@ MACHINE_TYPE=`uname -m`
 
 
 sudo apt update -qq
-sudo apt install libev4 libev-dev libssl1.0.0 python3-pip python3-dev curl -y
+sudo apt install libev4 libev-dev libssl1.0.0 python3-pip python3-dev curl jq -y
 sudo pip3 install jsonschema
 
 mkdir -p src/agent/_build/default/fos-agent
@@ -33,7 +33,5 @@ rm -rf /tmp/fos.tar.gz
 
 sudo make install
 
-echo 'Update the fog05 configuration file under /etc/fos/agent.json and /etc/fos/plugins/linux/linux_plugins.json'
-
-
+sudo sh -c "cat /etc/machine-id | xargs -i  jq  '.configuration.nodeid = \"{}\"' /etc/fos/plugins/linux/linux_plugin.json > /tmp/linux_plugin.tmp && mv /tmp/linux_plugin.tmp /etc/fos/plugins/linux/linux_plugin.json"
 

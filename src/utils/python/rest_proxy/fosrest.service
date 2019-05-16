@@ -1,0 +1,17 @@
+[unit]
+Description = Eclipse fog05 REST Proxy
+After=fos_agent.target
+
+
+[Service]
+Type=simple
+PIDFile=/var/fos/rest.pid
+ExecStart = /etc/fos/rest/service.py /etc/fos/rest/service.json
+KillMode=process
+Restart=on-failure
+User=fos
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=fos_rest
+[Install]
+WantedBy=multi-user.target
