@@ -11,15 +11,15 @@ export LC_CTYPE="en_US.UTF-8"
 # sudo dpkg-reconfigure locales
 
 sudo apt update
-sudo apt remove --purge lxd lxd-client lxc -y
+# sudo apt remove --purge lxd lxd-client lxc -y
 sudo apt install libev4 libev-dev libssl1.0.0 python3-pip python3-dev curl jq snapd -y
-sudo snap install lxd
+# sudo snap install lxd
 
-newgrp lxd << EONG
-lxd init --auto
-lxd waitready
-lxc network create lxdbr0 ipv4.address=auto ipv4.nat=true ipv6.address=none ipv6.nat=false
-EONG
+# newgrp lxd << EONG
+# lxd init --auto
+# lxd waitready
+# lxc network create lxdbr0 ipv4.address=auto ipv4.nat=true ipv6.address=none ipv6.nat=false
+# EONG
 
 
 sudo pip3 install jsonschema psutil jinja2 netifaces
