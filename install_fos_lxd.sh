@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 
-git clone https://github.com/eclipse/fog05
+git clone https://github.com/gabrik/fog05
 cd fog05
 
 MACHINE_TYPE=`uname -m`
 
 
 sudo apt update -qq
-sudo apt remove --purge lxd lxd-client lxc
+sudo apt remove --purge lxd lxd-client lxc -y
 sudo apt install libev4 libev-dev libssl1.0.0 python3-pip python3-dev curl jq snapd -y
 sudo snap install lxd
 
@@ -43,6 +43,8 @@ sudo sh -c "cat /etc/machine-id | xargs -i  jq  '.configuration.nodeid = \"{}\"'
 sudo make -C fos-plugins/linuxbridge install
 
 sudo sh -c "cat /etc/machine-id | xargs -i  jq  '.configuration.nodeid = \"{}\"' /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json > /tmp/linuxbridge.tmp && mv /tmp/linuxbridge.tmp /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json"
+
+sudo sh -c "awk '$2 == 00000000 { print $1 }' /proc/net/route |  xargs -i  jq  '.configuration.dataplane_interface = \"{}\"' /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json > /tmp/linuxbridge.tmp && mv /tmp/linuxbridge.tmp /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json"
 
 sudo make -C fos-plugins/LXD install
 
