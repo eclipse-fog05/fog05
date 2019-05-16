@@ -6,7 +6,11 @@ cd fog05
 MACHINE_TYPE=`uname -m`
 
 
-sudo apt update -qq
+export LC_ALL="en_US.UTF-8"
+export LC_CTYPE="en_US.UTF-8"
+# sudo dpkg-reconfigure locales
+
+sudo apt update
 sudo apt remove --purge lxd lxd-client lxc -y
 sudo apt install libev4 libev-dev libssl1.0.0 python3-pip python3-dev curl jq snapd -y
 sudo snap install lxd
