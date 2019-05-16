@@ -22,8 +22,7 @@ lxc network create lxdbr0 ipv4.address=auto ipv4.nat=true ipv6.address=none ipv6
 EONG
 
 
-
-sudo pip3 install jsonschema
+sudo pip3 install jsonschema psutil jinja2
 
 mkdir -p src/agent/_build/default/fos-agent
 
