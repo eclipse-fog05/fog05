@@ -66,7 +66,7 @@ git checkout 0.2
 sudo pip3 uninstall yaks -y
 sudo make install
 
-sudo systemctl daemon -eload
+sudo systemctl daemon-reload
 
 sudo systemctl start yaks
 sudo systemctl start fos_agent
