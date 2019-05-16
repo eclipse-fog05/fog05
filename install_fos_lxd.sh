@@ -9,7 +9,7 @@ MACHINE_TYPE=`uname -m`
 sudo apt update -qq
 sudo apt remove --purge lxd lxd-client lxc
 sudo apt install libev4 libev-dev libssl1.0.0 python3-pip python3-dev curl jq snapd -y
-
+sudo snap install lxd
 
 newgrp lxd << EONG
 lxd init --auto
