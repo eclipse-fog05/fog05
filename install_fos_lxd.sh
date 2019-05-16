@@ -48,7 +48,9 @@ sudo make -C fos-plugins/linuxbridge install
 
 sudo sh -c "cat /etc/machine-id | xargs -i  jq  '.configuration.nodeid = \"{}\"' /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json > /tmp/linuxbridge.tmp && mv /tmp/linuxbridge.tmp /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json"
 
-sudo sh -c "awk '$2 == 00000000 { print $1 }' /proc/net/route |  xargs -i  jq  '.configuration.dataplane_interface = \"{}\"' /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json > /tmp/linuxbridge.tmp && mv /tmp/linuxbridge.tmp /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json"
+DP_FACE=$(awk '$2 == 00000000 { print $1 }' /proc/net/route | head -n 1)
+
+sudo sh -c "jq '.configuration.dataplane_interface = \"$DP_FACE\"' /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json > /tmp/linuxbridge.tmp && mv /tmp/linuxbridge.tmp /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json"
 
 sudo make -C fos-plugins/LXD install
 
