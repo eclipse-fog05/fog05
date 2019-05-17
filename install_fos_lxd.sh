@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 
-<<<<<<< HEAD
 git clone https://github.com/eclipse/fog05
-=======
-git clone https://github.com/gabrik/fog05
->>>>>>> upstream/master
 cd fog05
 
 MACHINE_TYPE=`uname -m`
