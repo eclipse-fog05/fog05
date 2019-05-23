@@ -1,9 +1,0 @@
-appd:appd-descriptor:
-    id: example-meapp1
-    name: example_mec_application
-    vendor: ADLINK
-    description: Simple MEC Application
-    version: '1.0'
-    mec-version:
-    - "1"
-
