@@ -18,7 +18,7 @@ module type FIMConn = sig
 
   val check_connectivity : unit -> unit Lwt.t
 
-  val new_network : string -> string -> json -> bool -> bool -> string Lwt.t
+  val new_network : net_name:string -> net_type:string -> ip_profile:json option-> shared:bool -> vlan:int option -> string Lwt.t
 
   val get_network_list : unit -> string list Lwt.t
 
@@ -38,7 +38,7 @@ module type FIMConn = sig
 
   val get_image_list : unit -> string list Lwt.t
 
-  val new_fdu_instance : string -> string -> bool -> string -> string -> string list -> json  -> (string * json) Lwt.t
+  val new_fdu_instance : name:string -> description:string -> start:bool -> image_id:string -> flavor_id:string -> net_list:string list -> cloud_config:json ->  nodeid:string-> (string * json) Lwt.t
 
   val get_fdu_instance : string  -> json Lwt.t
 
@@ -46,6 +46,6 @@ module type FIMConn = sig
 
   val action_fdu_instance : string -> json -> string  -> (string * json) Lwt.t
 
-  val get_fim_status : unit -> Types.node_status list Lwt.t
+  val get_fim_status : unit -> Pl_types.node_status list Lwt.t
 
 end

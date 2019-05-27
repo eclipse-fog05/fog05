@@ -52,7 +52,7 @@ type virtual_cpu_pinning_data = {
 
 type virtual_cpu_data = {
   cpu_architecture <json name="cpuArchitecture"> : string;
-  num_virtual_cpu <json name="numVirtrualCpu"> : int;
+  num_virtual_cpu <json name="numVirtualCpu"> : int;
   ?virtual_cpu_clock <json name="virtualCpuClock"> : int option; (* in MHz *)
   ?virtual_cpu_oversubscription_policy <json name="virtualCpuOversubscriptionPolicy"> : json option;
   vdu_cpu_requirements <json name="vduCpuRequirements"> : json list;
@@ -147,12 +147,12 @@ type virtual_network_interface_requirement = {
 type terminate_vnf_op_config = {
   min_graceful_termination_timeout <json name="minGracefulTerminationTimeout"> : int;
   max_recommended_graceful_termination_timeout <json name="maxRecommendedGracefulTerminationTimeout"> : int;
-  paramter : string list;
+  parameter : string list;
 }
 
 
 type operate_vnf_op_config = {
   min_graceful_stop_timeout <json name="minGracefulStopTimeout"> : int;
   max_recommended_graceful_stop_timeout <json name="maxRecommendedGracefulStopTimeout"> : int;
-  paramter : string list;
+  parameter : string list;
 }

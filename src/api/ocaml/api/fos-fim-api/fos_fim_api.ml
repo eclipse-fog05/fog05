@@ -74,8 +74,12 @@ module Network = struct
 
   let add_network (descriptor:FTypes.virtual_network) api =
     let netid = descriptor.uuid in
-    Yaks_connector.Global.Desired.add_network api.sysid api.tenantid netid descriptor api.yconnector
-    >>= fun _ -> Lwt.return true
+    let%lwt n = Yaks_connector.Global.Actual.get_network api.sysid api.tenantid netid api.yconnector in
+    match n with
+    | Some _ -> Lwt.fail @@ FException (`InternalError (`Msg (Printf.sprintf "Network with id %s already exists" netid)))
+    | None ->
+      Yaks_connector.Global.Actual.add_network api.sysid api.tenantid netid descriptor api.yconnector
+      >>= fun _ -> Lwt.return true
   let remove_network netid  api =
     Yaks_connector.Global.Desired.remove_network api.sysid api.tenantid netid api.yconnector
     >>= fun _ -> Lwt.return true
@@ -308,19 +312,24 @@ module Image = struct
 
 end
 
-(*
-module Flavor = struct
-  let add descriptor api =
-    ignore [descriptor; api];
-    Lwt.return true
-  let remove descriptor api =
-    ignore [descriptor; api];
-    Lwt.return true
-  let list api =
-    ignore api;
-    Lwt.return []
 
-end *)
+module Flavor = struct
+  let add (descriptor:Fdu.computational_requirements) api =
+    let flv_id = (match descriptor.uuid with
+        | Some id -> id
+        | None -> Apero.Uuid.to_string (Apero.Uuid.make ()) ) in
+    let descriptor = {descriptor with uuid = Some flv_id} in
+    Yaks_connector.Global.Desired.add_flavor api.sysid api.tenantid flv_id descriptor api.yconnector
+    >>= fun _ -> Lwt.return flv_id
+
+  let remove flv_id api =
+    Yaks_connector.Global.Desired.remove_flavor api.sysid api.tenantid flv_id api.yconnector
+    >>= fun _ -> Lwt.return flv_id
+
+  let list api =
+    Yaks_connector.Global.Actual.get_all_flavors api.sysid api.tenantid api.yconnector
+
+end
 
 module FIMAPI = struct
 

@@ -3,7 +3,6 @@ open Fos_im
 open Fos_im.Errors
 open Mm5
 
-
 module MVar = Apero.MVar_lwt
 
 
@@ -452,6 +451,7 @@ module RO = struct
     connector : Yconnector.connector;
     meao : MEAO.t;
     fim_conns : (module FIM.FIMConn) FIMMap.t;
+    placement_algo :  (module Placement.PlacementConn) option;
     completer : unit Lwt.u;
     promise : unit Lwt.t
   }
@@ -462,7 +462,7 @@ module RO = struct
   let create loc meao =
     let f, c =  Lwt.wait () in
     let%lwt con = Yconnector.get_connector_of_locator loc in
-    Lwt.return @@ MVar.create ({connector = con; meao = meao; fim_conns= FIMMap.empty; completer = c; promise = f})
+    Lwt.return @@ MVar.create ({connector = con; meao = meao; fim_conns= FIMMap.empty; completer = c; promise = f; placement_algo = None})
 
   (* Start and Stop *)
   let start self =
@@ -474,6 +474,24 @@ module RO = struct
      MVar.return_lwt f {self with completer = Some c} *)
 
 
+  let instantiate _ fim_id self =
+    Logs.debug (fun m -> m "[RO] Received instatiation request for FIM %s" fim_id);
+    (match self.placement_algo with
+     | Some placement ->
+       let module P = (val placement : Placement.PlacementConn) in
+       let fim = FIMMap.find fim_id self.fim_conns in
+       let module F = (val fim : FIM.FIMConn) in
+       let%lwt fim_status = F.get_fim_status () in
+       let cpu = 1 in
+       let ram = 256 in
+       let disk = 1 in
+       let cpu_arch = "x86_64" in
+       let hypervisor = "LXD" in
+       let _ = "linux" in
+       let%lwt _ = P.get_elegible_nodes fim_status cpu ram disk cpu_arch hypervisor  in
+       Lwt.return_unit
+     | None ->
+       Lwt.fail @@ MEException (`InternalError (`Msg (Printf.sprintf "No placement algorithm found"))))
 
   let stop self =
     Lwt.wakeup_later self.completer () |> Lwt.return
@@ -483,5 +501,9 @@ module RO = struct
     MVar.guarded self @@ fun self ->
     MVar.return () {self with fim_conns = FIMMap.add fim_id connector self.fim_conns}
 
+  let add_placement_algo algo self =
+    Logs.debug ( fun m -> m "[RO] Updating the placement algorithm");
+    MVar.guarded self @@ fun self  ->
+    MVar.return () { self with placement_algo = Some algo}
 
 end
