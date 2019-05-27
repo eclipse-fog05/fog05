@@ -78,7 +78,11 @@ class LXD(RuntimePluginFDU):
     def start_runtime(self):
         self.logger.info(
             'start_runtime()', ' LXD Plugin - Connecting to LXD')
-        self.conn = Client()
+        try:
+            self.conn = Client()
+        except:
+            self.conn = Client(endpoint='https://127.0.0.1:8443', verify=False)
+
         self.logger.info(
             'start_runtime()', '[ DONE ] LXD Plugin - Connecting to LXD')
 
