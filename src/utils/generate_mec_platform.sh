@@ -42,6 +42,10 @@ lxc file push ./ocaml/mec_platform/etc/ip_replace.sh plat/tmp/
 lxc exec plat -- touch /tmp/dynhosts
 lxc exec plat -- chmod 0666 /tmp/dynhosts
 lxc exec plat --  /tmp/ip_replace.sh
+lxc exec plat -- cp /tmp/ip_replace.sh /etc/init.d/
+lxc exec plat -- chmod +x /etc/init.d/ip_replace.sh
+lxc exec plat -- update-rc.d ip_replace.sh defaults
+
 
 lxc exec plat -- systemctl stop nginx
 lxc exec plat -- systemctl stop dnsmasq
@@ -53,8 +57,11 @@ lxc exec plat -- systemctl enable yaks
 lxc exec plat -- systemctl enable mec_platform
 lxc exec plat -- systemctl enable dyndns
 
-lxc exec plat -- systemctl start dnsmasq
-lxc exec plat -- systemctl start nginx
-lxc exec plat -- systemctl start yaks
-lxc exec plat -- systemctl start mec_platform
-lxc exec plat -- systemctl start dyndns
+lxc publish plat --alias platform --force
+lxc image export platform mec_platform
+
+# lxc exec plat -- systemctl start dnsmasq
+# lxc exec plat -- systemctl start nginx
+# lxc exec plat -- systemctl start yaks
+# lxc exec plat -- systemctl start mec_platform
+# lxc exec plat -- systemctl start dyndns

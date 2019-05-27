@@ -4,5 +4,5 @@ network:
     eth0: {dhcp4: true}
 
     eth1:
-          addresses : [192.168.11.254/24]
+          addresses : [172.16.123.254/24]
           dhcp4: no
