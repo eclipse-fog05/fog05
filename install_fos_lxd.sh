@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-git clone https://github.com/gabrik/fog05
+git clone https://github.com/eclipse/fog05
 cd fog05
 
 MACHINE_TYPE=`uname -m`

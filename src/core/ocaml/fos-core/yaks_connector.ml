@@ -1,9 +1,8 @@
 open Yaks_ocaml
 open Lwt.Infix
-open Fos_errors
 open Fos_core
 open Fos_im
-
+open Errors
 
 
 

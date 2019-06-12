@@ -5,7 +5,7 @@ After=network.target
 
 [Service]
 Type=simple
-PIDFile=/var/yaks/yaksd.pid
+PIDFile=/var/fos/yaksd.pid
 ExecStart = /etc/fos/yaksd
 KillMode=process
 Restart=on-failure

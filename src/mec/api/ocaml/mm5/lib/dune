@@ -1,0 +1,6 @@
+(library
+  (name            fos_mm5)
+  (public_name     fos-mm5)
+  (wrapped     false)
+  (libraries       base lwt lwt.unix httpaf httpaf-lwt-unix faraday apero-core fos-im)
+  (preprocess (pps lwt_ppx)))

@@ -6,7 +6,7 @@ After=fos_agent.target
 [Service]
 Type=simple
 PIDFile=/var/fos/rest.pid
-ExecStart = /etc/fos/rest/service.py /etc/fos/rest/service.json
+ExecStart = /usr/bin/python3 /etc/fos/rest/service.py /etc/fos/rest/service.json
 KillMode=process
 Restart=on-failure
 User=fos
