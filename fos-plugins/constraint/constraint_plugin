@@ -172,7 +172,7 @@ class ConstraintNode(Plugin):
         f.write(content)
         f.flush()
         f.close()
-        self.logger.error(
+        self.logger.info(
             'store_file()', 'Stored: {} bytes'.format(len(content)))
         return True
 
