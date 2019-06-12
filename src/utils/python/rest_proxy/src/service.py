@@ -49,7 +49,10 @@ def plugin_info(pl_uuid, node_uuid):
 
 @app.route('/network/add', methods=['POST'])
 def network_add():
-    descriptor = json.loads(request.data)
+    data = request.data
+    if isinstance(data,bytes):
+        data = data.decode()
+    descriptor = json.loads(data)
     return json.dumps({'result':fos_api.network.add_network(descriptor)})
 
 
@@ -65,7 +68,10 @@ def network_list():
 
 @app.route('/connection_point/add', methods=['POST'])
 def cp_add():
-    descriptor = json.loads(request.data)
+    data = request.data
+    if isinstance(data,bytes):
+        data = data.decode()
+    descriptor = json.loads(data)
     return json.dumps({'result':fos_api.network.add_connection_point(descriptor)})
 
 
@@ -78,7 +84,10 @@ def cp_remove(cp_id):
 
 @app.route('/fdu/onboard', methods=['POST'])
 def fdu_onboard():
-    descriptor = json.loads(request.data)
+    data = request.data
+    if isinstance(data,bytes):
+        data = data.decode()
+    descriptor = json.loads(data)
     return json.dumps({'result':fos_api.fdu.onboard(descriptor)})
 
 
@@ -258,7 +267,10 @@ def get_image_file(fname):
 
 @app.route('/flavor/add', methods=['POST'])
 def flavor_add():
-    descriptor = json.loads(request.data)
+    data = request.data
+    if isinstance(data,bytes):
+        data = data.decode()
+    descriptor = json.loads(data)
     return json.dumps({'result':fos_api.flavor.add(descriptor)})
 
 
