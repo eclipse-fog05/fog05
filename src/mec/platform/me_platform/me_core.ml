@@ -144,15 +144,37 @@ module MEC_Core = struct
     MVar.read self >>= fun self ->
     Yaks_connector.Storage.DNSRules.add_application_dns_rule appid dns_rule.dns_rule_id dns_rule self.connector
     >>= fun _ ->
-    DynDNS.add_dns_rule self.dns_client dns_rule.ip_address dns_rule.domain_name
+    (match dns_rule.state with
+     | `ACTIVE ->
+       DynDNS.add_dns_rule self.dns_client dns_rule.ip_address dns_rule.domain_name
+     | `INACTIVE ->
+       DynDNS.remove_dns_rule self.dns_client dns_rule.ip_address dns_rule.domain_name)
     >>= fun _->
     Lwt.return dns_rule.dns_rule_id
+
+
+  let update_dns_rule_for_application appid dns_rule_id (dns_rule:MEC_Interfaces.dns_rule) self =
+    MVar.read self >>= fun self ->
+    match%lwt (Yaks_connector.Storage.DNSRules.get_application_dns_rule appid dns_rule_id self.connector) with
+    | Some _ ->
+      (match dns_rule.state with
+       | `ACTIVE ->
+         DynDNS.remove_dns_rule self.dns_client dns_rule.ip_address dns_rule.domain_name
+       | `INACTIVE ->
+         DynDNS.remove_dns_rule self.dns_client dns_rule.ip_address dns_rule.domain_name)
+      >>= fun _->
+      Lwt.return dns_rule.dns_rule_id
+    | None -> Lwt.fail @@ MEException (`DNSRuleNotExisting (`Msg (Printf.sprintf "DNS Rule with id %s not exist in application %s" dns_rule_id appid )))
 
   let remove_dns_rule_for_application appid dns_rule_id self =
     MVar.read self >>= fun self ->
     match%lwt (Yaks_connector.Storage.DNSRules.get_application_dns_rule appid dns_rule_id self.connector) with
     | Some rule ->
-      DynDNS.remove_dns_rule self.dns_client rule.ip_address rule.domain_name
+      (match rule.state with
+       | `ACTIVE ->
+         DynDNS.remove_dns_rule self.dns_client rule.ip_address rule.domain_name
+       | `INACTIVE ->
+         Lwt.return_unit)
       >>= fun _ ->
       Yaks_connector.Storage.DNSRules.remove_application_dns_rule appid dns_rule_id self.connector
       >>= fun _ -> Lwt.return dns_rule_id
@@ -172,6 +194,16 @@ module MEC_Core = struct
     MVar.read self >>= fun self ->
     Yaks_connector.Storage.TrafficRules.add_application_traffic_rule appid traffic_rule.traffic_rule_id traffic_rule self.connector
     >>= fun _ -> Lwt.return traffic_rule.traffic_rule_id
+
+
+  let update_traffic_rule_for_application appid traffic_rule_id (traffic_rule:MEC_Interfaces.traffic_rule) self =
+    MVar.read self >>= fun self ->
+    match%lwt (Yaks_connector.Storage.TrafficRules.get_application_traffic_rule appid traffic_rule_id self.connector) with
+    | Some _ ->
+      Yaks_connector.Storage.TrafficRules.add_application_traffic_rule appid traffic_rule_id traffic_rule self.connector
+      >>= fun _ -> Lwt.return traffic_rule_id
+    | None -> Lwt.fail @@ MEException (`TrafficRuleNotExising (`Msg (Printf.sprintf "Traffic Rule with id %s not exist in application %s" traffic_rule_id appid )))
+
 
   let remove_traffic_rule_for_application appid traffic_rule_id self =
     MVar.read self >>= fun self ->
