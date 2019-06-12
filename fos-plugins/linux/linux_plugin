@@ -688,7 +688,7 @@ class Linux(OSPlugin):
         res = ''
         for line in p.stdout:
             res = res + '{}'.format(line.decode('utf-8'))
-        return res.lower().strip()
+        return '{}'.format(uuid.UUID(res.lower().strip()))
 
     def get_hostname(self):
         res = ''
