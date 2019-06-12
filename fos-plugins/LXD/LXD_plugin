@@ -198,7 +198,7 @@ class LXD(RuntimePluginFDU):
         img_info = {}
         try:
 
-            if fdu.get_image_uri().startwith('lxd://'):
+            if fdu.get_image_uri().startswith('lxd://'):
                 self.logger.info('define_fdu()','Image is coming from LXD repository')
                 img_alias = fdu.get_image_uri()[6:]
                 lxd_img = self.conn.images.c.images.create_from_simplestreams(server=self.IMAGE_SERVER, alias=img_alias)
