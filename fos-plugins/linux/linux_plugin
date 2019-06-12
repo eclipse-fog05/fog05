@@ -267,9 +267,9 @@ class Linux(OSPlugin):
         return True
 
     def local_mgmt_address(self):
-        self.logger.error('local_mgmt_address()', 'Entering function...')
+        self.logger.info('local_mgmt_address()', 'Entering function...')
         mgmt_intf = self.node_conf.get('agent').get('mgmt_interface')
-        self.logger.error('local_mgmt_address()', 'MGMT Interface is {}'.format(mgmt_intf))
+        self.logger.info('local_mgmt_address()', 'MGMT Interface is {}'.format(mgmt_intf))
         matching_if = [x['inft_configuration'] for x in self.nw_devices if x['intf_name'] == mgmt_intf]
         if len(matching_if) == 1:
             if_conf = matching_if[0]
@@ -284,7 +284,7 @@ class Linux(OSPlugin):
         return res
 
     def checksum(self, file_path):
-        self.logger.error('checksum()', 'Calculating SHA256 of {}'.format(file_path))
+        self.logger.info('checksum()', 'Calculating SHA256 of {}'.format(file_path))
         try:
             m = hashlib.sha256()
             with open(file_path, "rb") as f:
@@ -413,7 +413,7 @@ class Linux(OSPlugin):
             self.logger.error('executeCommand()', 'Error: {}'.format(e))
             res = {'error': 0}
         except FileNotFoundError as e:
-            self.logger.error(
+            self.logger.debug(
                 'removeFile()', 'OS Plugin File Not Found {} so don\'t need to remove'.format(e.strerror))
             res = ({'error': e.errno})
         except:
@@ -424,10 +424,10 @@ class Linux(OSPlugin):
 
     def file_exists(self, file_path):
         try:
-            self.logger.error(
+            self.logger.info(
                 'file_exists()', 'Called for: {}'.format(file_path))
             r = os.path.isfile(file_path)
-            self.logger.error('file_exists()', 'Result {}'.format(r))
+            self.logger.info('file_exists()', 'Result {}'.format(r))
             res = {'result': r}
         except TypeError as e:
             self.logger.error('file_exists()', 'Error: {}'.format(e))
@@ -441,14 +441,14 @@ class Linux(OSPlugin):
     def store_file(self, content, file_path, filename):
         content = base64.b64decode(binascii.unhexlify(content)).decode('utf-8')
         try:
-            self.logger.error(
+            self.logger.info(
                 'store_file()', 'Called for: {}/{}'.format(file_path, filename))
             full_path = os.path.join(file_path, filename)
             f = open(full_path, 'w')
             f.write(content)
             f.flush()
             f.close()
-            self.logger.error(
+            self.logger.info(
                 'store_file()', 'Stored: {} bytes'.format(len(content)))
             res = {'result': True}
         except TypeError as e:
@@ -566,7 +566,7 @@ class Linux(OSPlugin):
     def send_sig_int(self, pid):
         if isinstance(pid, str):
             pid = int(pid)
-        self.logger.error('send_sig_int()', 'OS SIGINT to {}'.format(pid))
+        self.logger.info('send_sig_int()', 'OS SIGINT to {}'.format(pid))
         try:
             if self.__check_if_pid_exists(pid) is False:
                 self.logger.error(
@@ -587,7 +587,7 @@ class Linux(OSPlugin):
     def send_sig_kill(self, pid):
         if isinstance(pid, str):
             pid = int(pid)
-        self.logger.error('send_sig_int()', 'OS SIGKILL to {}'.format(pid))
+        self.logger.info('send_sig_int()', 'OS SIGKILL to {}'.format(pid))
         try:
             if self.__check_if_pid_exists(pid) is False:
                 self.logger.error(
