@@ -66,7 +66,7 @@ type computational_requirements =  {
   ?uuid : string option;
   ?name : string option;
   cpu_arch : string;
-  cpu_min_freq : float;
+  cpu_min_freq : int;
   cpu_min_count: int;
   ?gpu_min_count : int option;
   ?fpga_min_count : int option;

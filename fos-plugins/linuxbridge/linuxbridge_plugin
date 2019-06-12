@@ -346,27 +346,56 @@ class LinuxBridge(NetworkPlugin):
         vdev_name = 'br-{}'.format(n_small_id)
         netns_name = 'fosns-{}'.format(n_small_id)
 
-
-
-
-
         properties = {}
-        if self.use_vlan:
-            properties.update({'vlan_id': self.__get_vlan_id(net_uuid, self.vlan_range[0], self.vlan_range[1])})
-            vlan_id = self.__get_vlan_id(net_uuid, self.vlan_range[0], self.vlan_range[1])
-            start_file = self.__generate_vnet_vlan_start_script(n_small_id, net_uuid)
-            shutdown_file = self.__generate_vnet_vlan_stop_script(n_small_id)
+        face = self.overlay_interface
+        if 'face' in manifest:
+            face = manifest['face']
+
+        vni = self.__get_vni(net_uuid)
+        if 'vni' in manifest:
+            vni = manifest['vni']
+
+        mcast_addr = self.__get_mcast_addr(net_uuid)
+        if 'mcast_addr' in manifest:
+            mcast_addr = manifest['mcast_addr']
+
+        vlan_id = self.__get_vlan_id(net_uuid, self.vlan_range[0], self.vlan_range[1])
+        if 'vlan_id' in manifest:
+            vlan_id = manifest['vlan_id']
+
+        overlay = not self.use_vlan
+        if 'overlay' in manifest:
+            overlay = manifest['overlay']
+
+        if overlay:
+            start_file  = self.__generate_vnet_start_script2(n_small_id, net_uuid, vni, mcast_addr, face)
+            shutdown_file = self.__generate_vnet_stop_script2(n_small_id)
+            self.call_os_plugin_function('execute_command',{'command':os.path.join(self.BASE_DIR, start_file),'blocking':True, 'external':True})
+            properties.update({'vxlan_id': vni})
+            properties.update({'mcast_addr': mcast_addr})
+        else:
+            properties.update({'vlan_id': vlan_id})
+            start_file = self.__generate_vnet_vlan_start_script2(n_small_id, net_uuid, vlan_id, face)
+            shutdown_file = self.__generate_vnet_vlan_stop_script2(n_small_id)
             self.call_os_plugin_function('execute_command',{'command':os.path.join(self.BASE_DIR, start_file),'blocking':True, 'external':True})
             properties.update({'vlan_id': vlan_id})
 
-        else:
-            vxlan_id = self.__get_vni(net_uuid)
-            mcast_addr = self.__get_mcast_addr(net_uuid)
-            start_file  = self.__generate_vnet_start_script(n_small_id, net_uuid)
-            shutdown_file = self.__generate_vnet_stop_script(n_small_id)
-            self.call_os_plugin_function('execute_command',{'command':os.path.join(self.BASE_DIR, start_file),'blocking':True, 'external':True})
-            properties.update({'vxlan_id': vxlan_id})
-            properties.update({'mcast_addr': mcast_addr})
+
+        # if self.use_vlan:
+        #     properties.update({'vlan_id': self.__get_vlan_id(net_uuid, self.vlan_range[0], self.vlan_range[1])})
+        #     vlan_id = self.__get_vlan_id(net_uuid, self.vlan_range[0], self.vlan_range[1])
+        #     start_file = self.__generate_vnet_vlan_start_script(n_small_id, net_uuid)
+        #     shutdown_file = self.__generate_vnet_vlan_stop_script(n_small_id)
+        #     self.call_os_plugin_function('execute_command',{'command':os.path.join(self.BASE_DIR, start_file),'blocking':True, 'external':True})
+        #     properties.update({'vlan_id': vlan_id})
+        # else:
+        #     vxlan_id = self.__get_vni(net_uuid)
+        #     mcast_addr = self.__get_mcast_addr(net_uuid)
+        #     start_file  = self.__generate_vnet_start_script(n_small_id, net_uuid)
+        #     shutdown_file = self.__generate_vnet_stop_script(n_small_id)
+        #     self.call_os_plugin_function('execute_command',{'command':os.path.join(self.BASE_DIR, start_file),'blocking':True, 'external':True})
+        #     properties.update({'vxlan_id': vxlan_id})
+        #     properties.update({'mcast_addr': mcast_addr})
 
         properties.update({'virtual_device': vdev_name})
         properties.update({'net_ns': netns_name})
@@ -656,7 +685,62 @@ class LinuxBridge(NetworkPlugin):
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
         self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
         return f_name
+# ########################## NEW SCRIPT CREATION FUNCTIONS:
+    def __generate_vnet_start_script2(self, netid, net_uuid, vxlan_id, mcast_addr, overlay_interface):
 
+        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vnet_create.sh'), 'root':False})
+        net_sh = Environment().from_string(template_sh)
+        net_sh = net_sh.render(net_id=netid, group_id=vxlan_id, mcast_group_address=mcast_addr, wan=overlay_interface)
+        net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
+        f_name = 'start_{}.sh'.format(netid)
+        self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
+        chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
+        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        return f_name
+
+    def __generate_vnet_stop_script2(self, netid):
+        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vnet_destroy.sh'), 'root':False})
+        net_sh = Environment().from_string(template_sh)
+        net_sh = net_sh.render(net_id=netid)
+        net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
+        f_name = 'stop_{}.sh'.format(netid)
+        self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
+        chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
+        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        return f_name
+
+    def __generate_vnet_vlan_start_script2(self, netid, net_uuid, vlan_id, vlan_face):
+
+        vintf = '{}.{}'.format(vlan_face, vlan_id)
+        if not self.check_if_interface_exists(vintf):
+            self.create_vlan_interface(vlan_face, vlan_id)
+
+        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vnet_create_vlan.sh'), 'root':False})
+        net_sh = Environment().from_string(template_sh)
+
+        net_sh = net_sh.render(net_id=netid, vlan_intf=vintf)
+        net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
+        f_name = 'start_{}.sh'.format(netid)
+        self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
+        chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
+        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        return f_name
+
+    def __generate_vnet_vlan_stop_script2(self, netid):
+        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vnet_destroy_vlan.sh'), 'root':False})
+        net_sh = Environment().from_string(template_sh)
+        net_sh = net_sh.render(net_id=netid)
+        net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
+        f_name = 'stop_{}.sh'.format(netid)
+        self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
+        chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
+        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        return f_name
+
+
+
+
+# ###########################
     def __generate_vnet_start_script(self, netid, net_uuid):
 
         vxlan_id = self.__get_vni(net_uuid)

@@ -35,6 +35,11 @@ type virtual_network = {
   net_type : vn_type;
   is_mgmt : bool;
   ?ip_configuration : address_information option;
+  ?overlay : bool option;
+  ?vni: int option;
+  ?mcast_addr: string option;
+  ?vlan_id : int option;
+  ?face : string option;
 }
 
 

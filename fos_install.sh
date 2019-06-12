@@ -13,7 +13,7 @@ MACHINE_TYPE=`uname -m`
 
 
 sudo apt update -qq
-sudo apt install libev4 libev-dev libssl1.0.0 python3-pip python3-dev curl -y
+sudo apt install libev4 libev-dev libssl1.0.0 python3-pip python3-dev curl jq -y
 sudo pip3 install jsonschema
 
 mkdir -p src/agent/_build/default/fos-agent

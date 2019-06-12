@@ -32,6 +32,11 @@ type virtual_network = {
   status: net_state;
   ?properties : json option;
   ?ip_configuration : address_information option;
+  ?overlay : bool option;
+  ?vni: int option;
+  ?mcast_addr: string option;
+  ?vlan_id : int option;
+  ?face : string option;
   }
 
 
