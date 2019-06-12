@@ -84,13 +84,13 @@ module Image : sig
 
 end
 
-(*
-   module Flavor : sig
-   val add : FTypes.computational_requirements_type -> api -> bool Lwt.t
-   val remove : string -> api -> bool Lwt.t
-   val list : api -> (FTypes.computational_requirements_type list) Lwt.t
 
-   end *)
+module Flavor : sig
+  val add : Fdu.computational_requirements -> api -> string Lwt.t
+  val remove : string -> api -> string Lwt.t
+  val list : api -> (Fdu.computational_requirements list) Lwt.t
+
+end
 
 module FIMAPI : sig
 

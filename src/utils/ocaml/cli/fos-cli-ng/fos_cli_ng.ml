@@ -16,7 +16,7 @@ open Lwt.Infix
 open Fos_core
 open Fos_im
 open Fos_fim_api
-open Fos_errors
+open Errors
 
 
 let check s =

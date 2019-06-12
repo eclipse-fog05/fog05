@@ -1,0 +1,60 @@
+(*********************************************************************************
+ * Copyright (c) 2018 ADLINK Technology Inc.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0, or the Apache Software License 2.0
+ * which is available at https://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
+ * Contributors: 1
+ *   Gabriele Baldoni (gabriele (dot) baldoni (at) adlinktech (dot) com ) - OCaml implementation
+ *********************************************************************************)
+
+type json <ocaml module="Yojson.Safe"> = abstract
+(* Plugin Types *)
+
+
+ (* NODE STATUS *)
+
+type node_status = {
+  uuid : string;
+  ram : ram_status;
+  disk : disk_status list;
+  hypervisors : string list;
+  neighbors : neighbor list;
+  (* number_of_fdus: int; *)
+  (* Network Statistics *)
+}
+
+type ram_status = {
+  total : float;
+  free : float;
+}
+
+type disk_status = {
+  mount_point : string;
+  total : float;
+  free : float;
+}
+
+(* NEIGHBOR INFO *)
+
+type neighbor_peer_info = {
+  name : string;
+  id : string;
+}
+
+type neighbor_info = {
+  node : neighbor_peer_info;
+  port : neighbor_peer_info;
+}
+
+type neighbor = {
+  src : neighbor_info;
+  dst : neighbor_info;
+}
+
+
+
+
