@@ -199,9 +199,9 @@ class LXD(RuntimePluginFDU):
         try:
 
             if fdu.get_image_uri().startswith('lxd://'):
-                self.logger.info('define_fdu()','Image is coming from LXD repository')
                 img_alias = fdu.get_image_uri()[6:]
-                lxd_img = self.conn.images.c.images.create_from_simplestreams(server=self.IMAGE_SERVER, alias=img_alias)
+                self.logger.info('define_fdu()','Image is coming from LXD repository: {}'.format(img_alias))
+                lxd_img = self.conn.images.create_from_simplestreams(server=self.IMAGE_SERVER, alias=img_alias)
                 lxd_img.add_alias(fdu_uuid, description='')
                 image_name = ''
                 img_info.update({'uuid': fdu_uuid})
