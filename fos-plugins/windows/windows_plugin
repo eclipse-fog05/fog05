@@ -274,7 +274,7 @@ class Windows(OSPlugin):
 
     def file_exists(self, file_path):
         try:
-            self.logger.error(
+            self.logger.info(
                 'file_exists()', 'Called for: {}'.format(file_path))
             r = os.path.isfile(file_path)
             self.logger.error('file_exists()', 'Result {}'.format(r))
@@ -291,14 +291,14 @@ class Windows(OSPlugin):
     def store_file(self, content, file_path, filename):
         content = base64.b64decode(binascii.unhexlify(content)).decode('utf-8')
         try:
-            self.logger.error(
+            self.logger.info(
                 'store_file()', 'Called for: {}/{}'.format(file_path, filename))
             full_path = os.path.join(file_path, filename)
             f = open(full_path, 'w')
             f.write(content)
             f.flush()
             f.close()
-            self.logger.error(
+            self.logger.info(
                 'store_file()', 'Stored: {} bytes'.format(len(content)))
             res = {'result': True}
         except TypeError as e:
