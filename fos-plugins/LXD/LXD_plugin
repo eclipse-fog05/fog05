@@ -187,7 +187,7 @@ class LXD(RuntimePluginFDU):
 
         image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
 
-        if not self.call_os_plugin_function('file_exists',{'file_path':image_name}):
+        if not self.call_os_plugin_function('file_exists',{'file_path':image_name}) :
             if fdu.get_image_uri().startswith('http'):
                 self.call_os_plugin_function('download_file',{'url':fdu.get_image_uri(),'file_path':image_name})
             elif fdu.get_image_uri().startswith('file://'):
@@ -199,6 +199,7 @@ class LXD(RuntimePluginFDU):
         try:
 
             if fdu.get_image_uri().startwith('lxd://'):
+                self.logger.info('define_fdu()','Image is coming from LXD repository')
                 img_alias = fdu.get_image_uri()[6:]
                 lxd_img = self.conn.images.c.images.create_from_simplestreams(server=self.IMAGE_SERVER, alias=img_alias)
                 lxd_img.add_alias(fdu_uuid, description='')
