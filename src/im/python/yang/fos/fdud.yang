@@ -15,7 +15,7 @@ module fdud {
             enum GPIO;
             enum CAN;
             enum BUS;
-            enum SERIAL;
+            enum COM;
         }
     }
 
@@ -89,13 +89,13 @@ module fdud {
 
         leaf uuid {
             description
-                "UUID for the image";
+              "UUID for the image";
             type string;
         }
 
         leaf name {
             description
-                "Name of the image";
+              "Name of the image";
             type string;
         }
 
@@ -139,7 +139,7 @@ module fdud {
         }
 
         leaf radius {
-             type decimal64 {
+            type decimal64 {
                 fraction-digits 3;
             }
         }
@@ -159,7 +159,6 @@ module fdud {
         }
     }
 
-
     grouping geographical_requirements {
         container position {
             description
@@ -172,7 +171,6 @@ module fdud {
             uses proximity;
         }
     }
-
 
     grouping computational_requirements {
 
@@ -193,9 +191,7 @@ module fdud {
         leaf cpu_min_freq {
             description
               "Minumum CPU freq needed";
-            type decimal64 {
-                fraction-digits 3;
-            }
+            type int64;
         }
 
         leaf cpu_min_count {
@@ -207,7 +203,7 @@ module fdud {
         leaf ram_size_mb {
             description
               "RAM needed";
-             type decimal64 {
+            type decimal64 {
                 fraction-digits 3;
             }
         }
@@ -233,23 +229,20 @@ module fdud {
         }
 
         leaf duty_cycle {
-             type decimal64 {
+            type decimal64 {
                 fraction-digits 3;
             }
         }
-
-        // leaf min_running_time_minutes {
-        //     description
-        //       "Minimum running time in minutes in an hour";
-        //     type int64;
-        // }
-
-        // leaf max_running_time_minutes {
-        //     description
-        //       "Maximun running time in minutes in an hour";
-        //     type int64;
-        // }
-
+    // leaf min_running_time_minutes {
+    // description
+    // "Minimum running time in minutes in an hour";
+    // type int64;
+    // }
+    // leaf max_running_time_minutes {
+    // description
+    // "Maximun running time in minutes in an hour";
+    // type int64;
+    // }
     }
 
     grouping configuration {
@@ -304,7 +297,6 @@ module fdud {
         container virtual_interface {
             uses vif_type;
         }
-
     }
 
     grouping connection_point {
@@ -356,7 +348,7 @@ module fdud {
 
         leaf description {
             description
-                "VDU Description";
+              "VDU Description";
             type string;
         }
 
@@ -372,7 +364,7 @@ module fdud {
             uses command;
         }
 
-        container computational_requirements {
+        container computation_requirements {
             description
               "Computation requirement for this VDU";
             uses computational_requirements;
@@ -399,7 +391,7 @@ module fdud {
 
         leaf migration_kind {
             description
-                "Kind of migration supported by the FDU";
+              "Kind of migration supported by the FDU";
             type migr_kind;
         }
 

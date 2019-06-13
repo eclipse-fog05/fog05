@@ -16,7 +16,7 @@ module vnetd {
         }
     }
 
-    grouping address_inforamtion {
+    grouping address_information {
 
         leaf ip_version {
             type ip_kind;
@@ -64,7 +64,7 @@ module vnetd {
             type vn_type;
         }
 
-        leaf ip_configuration {
+        container ip_configuration {
             uses address_information;
         }
     }
