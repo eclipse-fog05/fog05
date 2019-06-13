@@ -21,7 +21,6 @@ module fdur.rec {
         }
     }
 
-
     typedef net_state {
         type enumeration {
             enum CREATE;
@@ -41,8 +40,6 @@ module fdur.rec {
         }
     }
 
-
-
     grouping interface {
         leaf vintf_name {
             description
@@ -58,9 +55,20 @@ module fdur.rec {
 
         leaf properties {
             type string;
-            // This should be a JSON
+        // This should be a JSON
         }
 
+        leaf phy_face {
+            type string;
+        }
+
+        leaf cp_id {
+            type string;
+        }
+
+        leaf veth_face_name {
+            type string;
+        }
     }
 
     grouping connection_point {
@@ -70,7 +78,7 @@ module fdur.rec {
             type string;
         }
 
-       leaf status {
+        leaf status {
             description
               "True if the int64erface is a management one";
             type net_state;
@@ -78,7 +86,25 @@ module fdur.rec {
 
         leaf properties {
             type string;
-            // This should be a JSON
+        // This should be a JSON
+        }
+
+        leaf veth_face_name {
+            type string;
+        }
+
+        leaf br_name {
+            type string;
+        }
+    }
+
+    grouping accelerators {
+        leaf-list fpga {
+            type string;
+        }
+
+        leaf-list gpu {
+            type string;
         }
     }
 
@@ -86,6 +112,14 @@ module fdur.rec {
         leaf fdu_uuid {
             description
               "UUID of the VDU";
+            type string;
+        }
+
+        leaf node {
+            type string;
+        }
+
+        leaf uuid {
             type string;
         }
 
@@ -100,16 +134,19 @@ module fdur.rec {
             uses interface;
         }
 
-         list connection_points {
+        list connection_points {
             description
               "Internal connection points definited by this VDU";
             key "cp_uuid";
             uses connection_point;
         }
 
-
         leaf error_code {
             type int64;
+        }
+
+        leaf error_msg {
+            type string;
         }
 
         container migration_properties {
@@ -118,9 +155,16 @@ module fdur.rec {
 
         leaf hypervisor_info {
             type string;
-            // Should be JSON
+        // Should be JSON
         }
-       
+
+        container accelerators {
+            uses accelerators;
+        }
+
+        leaf-list io_ports {
+            type string;
+        }
     }
 
     container fdu_record {

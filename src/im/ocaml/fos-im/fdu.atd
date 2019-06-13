@@ -160,6 +160,7 @@ type io_kind = [
   | I2C
   | BUS
   | COM
+  | CAN
 ]
 
 type io_port = {

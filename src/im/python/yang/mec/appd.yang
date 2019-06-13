@@ -26,7 +26,7 @@
         prefix "appd-base";
     }
 
-    container appd-descriptor {
+    container appDDescriptor {
         description
           "Mobile Edge Application Desciptor (AppD).";
         uses appd-base:appd-descriptor;
