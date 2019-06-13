@@ -39,9 +39,8 @@
             enum WEBSOCKET;
         }
     }
-
     grouping tunnel-info {
-        leaf tunnel-type {
+        leaf tunnelType {
             description
               "Type of the tunnel GTP-U, GRE, ...";
             type enumeration {
@@ -50,13 +49,13 @@
             }
         }
 
-        leaf tunnel-dst-address {
+        leaf tunnelDstAddress {
             description
               "Destination address of the tunnel";
             type string;
         }
 
-        leaf tunnel-src-address {
+        leaf tunnelSrcAddress {
             description
               "Source address of the tunnel";
             type string;
@@ -65,7 +64,7 @@
     }
 
     grouping interface-descriptor {
-        leaf interface-type {
+        leaf interfaceType {
             description
               "The type of the interface";
             type enumeration {
@@ -75,20 +74,20 @@
             }
         }
 
-        container tunnel-info {
+        container tunnelInfo {
             description
               "Included only if the destination address type is tunnel";
             uses tunnel-info;
         }
 
-        leaf src-mac-address {
+        leaf srcMACAddress {
             description
               "If the interface type is MAC, the source address
                identifies the MAC address of the interface";
             type string;
         }
 
-        leaf dst-mac-address {
+        leaf dstMACAddress {
             description
               "If the interface is MAC, the destination address
                  identifies the MEC address of the destination,
@@ -96,17 +95,17 @@
             type string;
         }
 
-        leaf dst-ip-address {
+        leaf dstIPAddress {
             description
               "If the interface type is IP, the destination
-               address identifies the IP address of the 
+               address identifies the IP address of the
                destination. Only used for dst interface";
             type string;
         }
     }
 
     grouping traffic-filter {
-        leaf-list src-address {
+        leaf-list srcAddress {
             description
               "An IP address or a range of IP addresses
                For IPv4, the IP address can be and IP address plus mask.
@@ -115,7 +114,7 @@
             type string;
         }
 
-        leaf-list dst-address {
+        leaf-list dstAddress {
             description
               "An IP address or a range of IP addresses
                For IPv4, the IP address can be and IP address plus mask.
@@ -124,81 +123,75 @@
             type string;
         }
 
-        leaf-list src-port {
+        leaf-list srcPort {
             description
               "A port or a range of ports";
             type string;
         }
 
-        leaf-list dst-port {
+        leaf-list dstPort {
             description
               "A port or a range of ports";
             type string;
         }
 
-        leaf-list protocol {
+        leaf-list Protocol {
             description
               "Specify the protocol of the traffic filter";
             type string;
         }
 
-        leaf-list token {
+        leaf-list Token {
             description
               "Used for token based traffic rule";
             type string;
         }
 
-        leaf-list src-tunnel-address {
+        leaf-list srcTunnelAddress {
             description
               "Used for GTP tunnel based traffic rule";
             type string;
         }
 
-        leaf-list tgt-tunnel-address {
+        leaf-list tgtTunnelAddress {
             description
               "Used for GTP tunnel based traffic rule";
             type string;
         }
 
-        leaf-list src-tunnel-port {
+        leaf-list srcTunnelPort {
             description
               "Used for GTP tunnell based traffic rule";
             type string;
         }
 
-        leaf-list dst-tunnel-port {
+        leaf-list dstTunnelPort {
             description
               "Used for GTP tunnell based traffic rule";
             type string;
         }
 
-        leaf qci {
+        leaf qCI {
             description
               "Used to match all packets that have the same QCI";
             type int64;
         }
 
-        leaf dscp {
+        leaf dSCP {
             description
               "Used to match all IPv4 packets that have the same DSCP";
             type int64;
         }
 
-        leaf tc {
+        leaf tC {
             description
               "Used to match all IPv6 packets that have the same TC";
             type int64;
         }
     }
-    grouping security-info {
-        leaf oauth2_info {
-            description
-              "Parameter related to OAuth 2.0 IETF RFC 6749";
-            type string;
-        /* Should be structure for oauth info */
-        }
 
-        leaf-list grant-types {
+    grouping oauth2_info {
+        leaf-list grantTypes {
             description
               "List of supported OAuth 2.0 grant types";
             type enumeration {
@@ -216,6 +209,15 @@
               "The token enpoint";
             type string;
         /* Should be URI */
+        }
+    }
+
+    grouping security-info {
+        container oAuth2Info {
+            description
+              "Parameter related to OAuth 2.0 IETF RFC 6749";
+            uses oauth2_info;
+        /* Should be structure for oauth info */
         }
     }
 
@@ -297,20 +299,20 @@
 
     grouping service-dependency {
 
-        leaf ser-name {
+        leaf serName {
             description
               "The name of the service eg. RINS, LocationService...";
             type string;
         }
 
-        list ser-category {
+        list serCategory {
             description
               "A category reference for the service";
             key "id";
             uses category-ref;
         }
 
-        list ser-transport-dependencies {
+        list serTransportDependencies {
             description
               "Indicates the transport and serialization format";
             key "id";
@@ -323,13 +325,13 @@
 
     grouping service-descriptor {
 
-        leaf ser-name {
+        leaf serName {
             description
               "The name of the service eg. RINS, Location Service, ....";
             type string;
         }
 
-        container ser-category {
+        container serCategory {
             description
               "A category reference for the defined service";
             uses category-ref;
@@ -341,7 +343,7 @@
             type string;
         }
 
-        list transport-supported {
+        list transportSupported {
             description
               "Indicates the transport and serialization supported by the service";
             key "id";
@@ -363,7 +365,7 @@
     }
 
     grouping feature-dependency {
-        leaf feature-name {
+        leaf featureName {
             description
               "The name of the feature eg. UserApps, UEIndentity...";
             type string;
@@ -377,13 +379,13 @@
     }
 
     grouping traffic-rule-descriptor {
-        leaf traffic-rule-id {
+        leaf trafficRuleId {
             description
               "Identifies the traffic rule";
             type string;
         }
 
-        leaf filter-type {
+        leaf filterType {
             description
               "Definition of the filter type: FLOW, the filter matches UE->EPC packets,
                and the reverse packets are handled by the same contex";
@@ -400,7 +402,7 @@
             type int64;
         }
 
-        list traffic-filter {
+        list trafficFilter {
             description
               "The filder used to idenfity specific flow/packets that need to be handled by the MEC host";
             key "id";
@@ -413,7 +415,7 @@
         leaf action {
             description
               "Identifies tha action of the ME host data plane, when a packet matches the traffic filter,
-               the actions include: DROP, FORWARD_DECAPSULATED, FORWARD_AS_IS, PASSTHROUGH, 
+               the actions include: DROP, FORWARD_DECAPSULATED, FORWARD_AS_IS, PASSTHROUGH,
                DUPLICATE_DECAPSULATED, DUPLICATE_AS_IS";
             type enumeration {
                 enum DROP;
@@ -425,7 +427,7 @@
             }
         }
 
-        list dst-interface {
+        list dstInterface {
             description
               "Describes the destination interface information, if the action if FORWARD.
                Some applications require two interfaces, where the first is to the UE side
@@ -441,19 +443,19 @@
 
     grouping dsn-rule-descriptor {
 
-        leaf dns-rule-id {
+        leaf dnsRuleId {
             description
               "Identifies the DNS rule";
             type string;
         }
 
-        leaf domain-name {
+        leaf domainName {
             description
               "FQDN of the DNS rule";
             type string;
         }
 
-        leaf ip-address-type {
+        leaf ipAddressType {
             description
               "Indentifies the IP address type";
             type enumeration {
@@ -462,7 +464,7 @@
             }
         }
 
-        leaf ip-address {
+        leaf ipAddress {
             description
               "IP address given by the DNS rule";
             type string;
@@ -476,8 +478,8 @@
     }
 
     grouping latency-descriptor {
-        // the meaning of the latency is not yet specified, expected to be specified in stage 3 specification 
-        leaf time-unit {
+        // the meaning of the latency is not yet specified, expected to be specified in stage 3 specification
+        leaf timeUnit {
             description
               "Time unit, eg ms.";
             type int32;
@@ -487,6 +489,311 @@
             description
               "The value of the latency";
             type string;
+        }
+    }
+
+    // NFV backports
+    grouping key-value-pair {
+        leaf key {
+            type string;
+        }
+
+        leaf value {
+            type string;
+        }
+    }
+
+    grouping virtual-cpu-pinning-data {
+        leaf virtualCpuPinningPolicy {
+            type enumeration {
+                enum STATIC;
+                enum DYNAMIC;
+            }
+        }
+
+        leaf virtualCpuPinningRule {
+            type string;
+        }
+
+        leaf virtualCpuPolicy {
+            type enumeration {
+                enum DEDICATED;
+                enum SHARED;
+            }
+        }
+    }
+
+    grouping virtual-cpu-data {
+        leaf cpuArchitecture {
+            type string;
+        }
+
+        leaf numVirtualCpu {
+            type string;
+        }
+
+        leaf virtualCpuClock {
+            type int64;
+        }
+
+        leaf virtualCpuOversubscriptionPolicy {
+            type string;
+        }
+
+        leaf-list vduCpuRequirements {
+            type string;
+        }
+
+        container virtualCpuPinning {
+            uses virtual-cpu-pinning-data;
+        }
+    }
+
+    grouping virtual-memory-data {
+        leaf virtualMemSize {
+            type int64;
+        }
+
+        leaf virtualMemOversubscriptionPolicy {
+            type string;
+        }
+
+        leaf-list vduMemRequirements {
+            type string;
+        }
+
+        leaf numaEnabled {
+            type boolean;
+        }
+    }
+
+    grouping block-storage-data {
+        leaf sizeOfStorage {
+            type int64;
+        }
+
+        leaf-list vduStorageRequirements {
+            type string;
+        }
+
+        leaf rdmaEnabled {
+            type boolean;
+        }
+
+        leaf swImageDesc {
+            type string;
+        }
+    }
+
+    grouping object-storage-data {
+        leaf maxSizeOfStorage {
+            type int64;
+        }
+    }
+
+    grouping file-storage-data {
+        leaf sizeOfStorage {
+            type int64;
+        }
+
+        leaf fileSystemProtocol {
+            type string;
+        }
+
+        leaf intVirtualLinkDesk {
+            type string;
+        }
+    }
+
+    grouping virtual-storage-data {
+        leaf id {
+            type string;
+        }
+
+        leaf typeOfStorage {
+            type enumeration {
+                enum BLOCK;
+                enum FILE;
+                enum OBJECT;
+            }
+        }
+
+        container blockStorageData {
+            uses block-storage-data;
+        }
+
+        container objectStorageData {
+            uses object-storage-data;
+        }
+
+        container fileStorageData {
+            uses file-storage-data;
+        }
+    }
+
+    grouping request-additional-capability-data {
+        leaf requestedAdditionalCapabilityName {
+            type string;
+        }
+
+        leaf supportMandatory {
+            type string;
+        }
+
+        leaf minRequestedAdditionalCapabilityVersion {
+            type string;
+        }
+
+        leaf preferredRequestedAdditionalCapabilityVersion {
+            type string;
+        }
+
+        list targetPerformanceParameters {
+            key "key";
+            uses key-value-pair;
+        }
+    }
+
+    grouping logical-node-requirements {
+        leaf id {
+            type string;
+        }
+
+        leaf logicalNodeRequirementDetail {
+            type string;
+        }
+    }
+
+    grouping virtual-compute-descriptor {
+        leaf virtualComputeDescId {
+            type string;
+        }
+
+        container logicalNode {
+            uses logical-node-requirements;
+        }
+
+        leaf computeRequirements {
+            type string;
+        }
+
+        container virtualMemory {
+            uses virtual-memory-data;
+        }
+
+        container virtualCpu {
+            uses virtual-cpu-data;
+        }
+
+        container virtualDisk {
+            uses block-storage-data;
+        }
+    }
+
+    grouping sw-image-descriptor {
+        leaf id {
+            type string;
+        }
+
+        leaf name {
+            type string;
+        }
+
+        leaf version {
+            type string;
+        }
+
+        leaf checksum {
+            type string;
+        }
+
+        leaf containerFormat {
+            type string;
+        }
+
+        leaf diskFormat {
+            type string;
+        }
+
+        leaf minDisk {
+            type int64;
+        }
+
+        leaf minRam {
+            type int64;
+        }
+
+        leaf size {
+            type int64;
+        }
+
+        leaf swImage {
+            type string;
+        }
+
+        leaf operatingSystem {
+            type string;
+        }
+
+        leaf-list supportedVirtualisationEnvironment {
+            type string;
+        }
+    }
+
+    grouping virtual-network-interface-requirement {
+        leaf name {
+            type string;
+        }
+
+        leaf description {
+            type string;
+        }
+
+        leaf supportMandatory {
+            type boolean;
+        }
+
+        leaf networkInterfaceRequirements {
+            type string;
+        }
+
+        leaf nicloRequirements {
+            type string;
+        }
+    }
+
+    grouping terminate-vnf-op-config {
+        leaf minGracefulTerminationTimeout {
+            type int64;
+        }
+
+        leaf maxRecomendedGrafefulTerminationTimeout {
+            type int64;
+        }
+
+        leaf-list parameter {
+            type string;
+        }
+    }
+
+    grouping operate-vnf-op-config {
+        leaf minGracefulStopTimeout {
+            type int64;
+        }
+
+        leaf maxRecomendedGracefulStopTimeout {
+            type int64;
+        }
+
+        leaf-list parameter {
+            type string;
+        }
+    }
+
+    grouping app-external-cpd {
+        list virtualNetworkInterfaceRequirements {
+            key "name";
+            uses virtual-network-interface-requirement;
         }
     }
 }

@@ -26,7 +26,7 @@ module appd-base {
 
     grouping appd-descriptor {
 
-        leaf id {
+        leaf appDId {
             description
               "Identifier for the APPD";
             type string {
@@ -34,58 +34,62 @@ module appd-base {
             }
         }
 
-        leaf name {
+        leaf appName {
             description
               "APPD Name";
             type string;
         }
-        leaf vendor {
+        leaf appProvider {
             description
               "APPD Vendor";
             type string;
         }
 
-        leaf version {
+        leaf appDVersion {
             description
               "Version of the APPD";
             type string;
         }
 
-        leaf soft-version {
+        leaf appSoftVersion {
             description
               "Version of the ME App Software";
             type string;
         }
 
-        leaf-list mec-version {
+        leaf-list mecVersion {
             description
               "Version of MEC System Compatible with this ME App";
             type string;
             min-elements 1;
         }
 
-        leaf description {
+        leaf appInfoName {
+            type string;
+        }
+
+        leaf appDescription {
             description
               "Human readable description of the ME App";
             type string;
         }
 
-        list service-required {
+        list appServiceRequired {
 
             description
               "Descrives services a me app require to run";
-            key "ser-name";
+            key "serName";
             uses meaotypes:service-dependency;
         }
 
-        list service-optional {
+        list appServiceOptional {
             description
               "Describe the service a ME app may use if present";
-            key "ser-name";
+            key "serName";
             uses meaotypes:service-dependency;
         }
 
-        list service-produced {
+        list appServiceeProduced {
             description
               "Descrive the services an ME app is able to produce
                to the platform";
@@ -96,7 +100,7 @@ module appd-base {
             uses meaotypes:service-descriptor;
         }
 
-        list feature-required {
+        list appFeatureRequired {
             description
               "Describes the feature a ME app need to run";
             key "id";
@@ -106,7 +110,7 @@ module appd-base {
             uses meaotypes:feature-dependency;
         }
 
-        list feature-optional {
+        list appFeatureOptional {
             description
               "Describes the feature a ME app may use if available";
             key "id";
@@ -116,11 +120,11 @@ module appd-base {
             uses meaotypes:feature-dependency;
         }
 
-        list transport-dependencies {
+        list transportDependencies {
             description
               "Transports, in any, this applicatiom
                requires to be provided by the platform.
-               These transport will be used by the platform 
+               These transport will be used by the platform
                to deliver services provided by this application.
                Only relevar for ME app that produce services";
             key "id";
@@ -130,24 +134,44 @@ module appd-base {
             uses meaotypes:transport-dependency;
         }
 
-        list traffic-rule {
+        list appTrafficRule {
             description
               "Describes the traffic rule the ME app requires";
-            key "traffic-rule-id";
+            key "trafficRuleId";
             uses meaotypes:traffic-rule-descriptor;
         }
 
-        list dns-rule {
+        list appDNSRule {
             description
               "Describes the DNS rules the ME app requires";
-            key "dns-rule-id";
+            key "dnsRuleId";
             uses meaotypes:dsn-rule-descriptor;
         }
 
-        container latency {
+        container appLatency {
             description
               "Describe the maximum latency tollerated by the ME app";
             uses meaotypes:latency-descriptor;
+        }
+
+        container virtualComputeDescriptor {
+            uses meaotypes:virtual-compute-descriptor;
+        }
+
+        container swImageDescriptor {
+            uses meaotypes:sw-image-descriptor;
+        }
+
+        container appExtCpd {
+            uses meaotypes:app-external-cpd;
+        }
+
+        container terminateAppInstanceOpConfig {
+            uses meaotypes:terminate-vnf-op-config;
+        }
+
+        container changeAppInstanceOpConfig {
+            uses meaotypes:operate-vnf-op-config;
         }
     }
 }
