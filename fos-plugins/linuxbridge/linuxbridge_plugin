@@ -857,7 +857,7 @@ class LinuxBridge(NetworkPlugin):
         template_start = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'dnsmasq.sh'), 'root':False})
         dnsmasq_sh = Environment().from_string(template_start)
 
-        dns_face_ip = address_info.get('subnet').slit('/')[0]
+        dns_face_ip = address_info.get('subnet').split('/')[0]
         dnsmasq_sh = dnsmasq_sh.render(netid=n_small_id, dhcp_conf_path=os.path.join(path, conf), ip=dns_face_ip, mask=addrs[-1])
         dnsmasq_sh = binascii.hexlify(base64.b64encode(bytes(dnsmasq_sh,'utf-8'))).decode()
         self.call_os_plugin_function('store_file',{'content':dnsmasq_sh, 'file_path':path, 'filename':start_file})
