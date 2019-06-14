@@ -388,7 +388,7 @@ let agent verbose_flag debug_flag configuration =
               ) fdu_d.connection_points
             in
             let%lwt rfaces = Lwt_list.map_p (fun (e:FDU.interface) ->
-                let facer = FDU.{vintf_name = e.name; status = `CREATE; if_type = e.virtual_interface.intf_type; phy_face = None; cp_id = None; veth_face_name=None; properties=None} in
+                let facer = FDU.{vintf_name = e.name; status = `CREATE; if_type = e.virtual_interface.intf_type; phy_face = None; cp_id = None; veth_face_name=None; properties=None; mac_address = e.mac_address} in
                 let facer =
                   match e.if_type with
                   | `INTERNAL -> (match e.cp_id with

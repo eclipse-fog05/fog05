@@ -249,6 +249,7 @@ type interface_record = {
   vintf_name : string;
   status : net_state;
   if_type : vintf_t;
+  mac_address : string option;
   ?phy_face : string option;
   ?cp_id : string option;
   ?veth_face_name: string option;
