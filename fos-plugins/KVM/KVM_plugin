@@ -847,7 +847,7 @@ class KVM(RuntimePluginFDU):
                     mem = {
                         'usage': (vm_mem_info['actual']-vm_mem_info.get('unused',0)),
                         'usage_peak': 0,
-                        'swap_usage': vm_mem_info['swap_in'],
+                        'swap_usage': vm_mem_info.get('swap_in',0),
                         'swap_usage_peak':0
                     }
 
