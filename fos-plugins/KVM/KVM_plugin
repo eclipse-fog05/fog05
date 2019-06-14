@@ -853,7 +853,7 @@ class KVM(RuntimePluginFDU):
 
 
                     detailed_state.update({'network': c_net})
-                    detailed_state.update({'cpu': {'usage':dom.getCPUStats(True)['cpu_time']}})
+                    detailed_state.update({'cpu': {'usage':dom.getCPUStats(True)[0]['cpu_time']}})
                     detailed_state.update({'memory': mem})
                     #detailed_state.update({'disk': cs.disk})
 
