@@ -321,7 +321,7 @@ class KVM(RuntimePluginFDU):
                     else:
                         intf_id = 'kvm-{}-{}'.format(fdu.get_short_id(), i)
                         intf_data = self.connector.loc.actual.get_node_port(self.node, self.nm, intf.get('cp_id')).get('properties')
-                        self.logger.debug('configure_fdu()',' KVM Plugin - Configuring FDU - interface data {}'.format(intf_data))
+                        self.logger.info('configure_fdu()',' KVM Plugin - Configuring FDU - interface data {}'.format(intf_data))
                         #####
                         def get_port_descriptor(cpid):
                             parameters = {'cp_uuid': cpid}
