@@ -77,7 +77,7 @@ let getuuid () =
     let ic = Pervasives.open_in "/etc/machine-id" in
     let uuid = input_line ic in
     let _ = close_in ic in
-    uuid
+    String.sub uuid 0 8 ^ "-" ^ String.sub uuid 8 4 ^ "-" ^ String.sub uuid 12 4 ^ "-" ^ String.sub uuid 16 4 ^ "-" ^ String.sub uuid 20 12
   | "DARWIN" ->
     let ic = Unix.open_process_in "ioreg -rd1 -c IOPlatformExpertDevice |  awk '/IOPlatformUUID/ { print $3; }'" in
     let uuid = input_line ic in
