@@ -53,6 +53,10 @@ module fdur.rec {
             type net_state;
         }
 
+        leaf mac_address {
+            type string;
+        }
+
         leaf properties {
             type string;
         // This should be a JSON
