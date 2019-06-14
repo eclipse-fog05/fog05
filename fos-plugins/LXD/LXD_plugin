@@ -344,7 +344,7 @@ class LXD(RuntimePluginFDU):
                                                      'FDU {} is not in DEFINED state'.format(instance_uuid))
         else:
             fdu_uuid = fdu.fdu_uuid
-            record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid,instance_uuid )
+            record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid,instance_uuid)
 
             self.logger.info('configure_fdu()', '[ INFO ] LXD Plugin - Creating profile...')
             try:
@@ -376,6 +376,7 @@ class LXD(RuntimePluginFDU):
                         res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
                     cp.update({'status':'CONNECTED'})
                     # record.get('connection_points').append(cp_id)
+
                 dev, interfaces = self.__generate_custom_profile_devices_configuration(fdu)
                 record.update({'interfaces':interfaces})
                 self.logger.info('configure_fdu()', '[ INFO ] Profile devices {}'.format(dev))
@@ -826,9 +827,31 @@ class LXD(RuntimePluginFDU):
                     c = self.conn.containers.get(instance_name)
                     cs = c.state()
                     detailed_state = {}
-                    c_net = cs.network
-                    if c_net is None:
-                        c_net = []
+                    #c_net = cs.network
+
+                    #{'network':
+                    # {'eth0':
+                    # {'addresses':
+                    # [{'family': 'inet', 'address': '10.68.0.228', 'netmask': '24', 'scope': 'global'}, {'family': 'inet6', 'address': 'fe80::216:67ff:fe09:c5d0', 'netmask': '64', 'scope': 'link'}],
+                    #  'counters': {'bytes_received': 2200, 'bytes_sent': 1793, 'packets_received': 18, 'packets_sent': 12},
+                    # 'hwaddr': '00:16:67:09:c5:d0',
+                    #  'host_name': '',
+                    # 'mtu': 1500,
+                    #  'state': 'up',
+                    #  'type': 'broadcast'}
+                    #
+                    #if c_net is None:
+                    #    c_net = []
+                    c_net = []
+                    for i in record.get('interfaces'):
+                        ip = self.call_nw_plugin_function('get_address', {'mac_address':i.get('mac_address','')})
+                        c_net.append(
+                            {'name': i['vintf_name'],
+                            'mac_address': i.get('mac_address',''),
+                            'address': ip}
+                        )
+
+
                     detailed_state.update({'network': c_net})
                     detailed_state.update({'cpu': cs.cpu})
                     detailed_state.update({'memory': cs.memory})
