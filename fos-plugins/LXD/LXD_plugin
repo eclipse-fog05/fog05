@@ -855,9 +855,9 @@ class LXD(RuntimePluginFDU):
                     detailed_state.update({'network': c_net})
                     detailed_state.update({'cpu': cs.cpu})
                     detailed_state.update({'memory': cs.memory})
-                    detailed_state.update({'disk': cs.disk})
-                    detailed_state.update({'processes': cs.processes})
-                    detailed_state.update({'pid': cs.pid})
+                    #detailed_state.update({'disk': cs.disk})
+                    #detailed_state.update({'processes': cs.processes})
+                    #detailed_state.update({'pid': cs.pid})
                     record.update({'hypervisor_info': detailed_state})
                     self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_id, record)
 
