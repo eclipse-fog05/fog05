@@ -49,16 +49,20 @@ class KVM(RuntimePluginFDU):
             self.connector.loc.actual.get_node_configuration(self.node)
 
         self.logger.info('__init__()', ' Hello from KVM Plugin')
-        self.BASE_DIR = os.path.join(
-            self.agent_conf.get('agent').get('path'),'kvm')
+        self.update_interval =  manifest.get('configuration').get('update_interval', 10)
+
+        self.BASE_DIR = os.path.join(self.agent_conf.get('agent').get('path'),'kvm')
         self.DISK_DIR = 'disks'
         self.IMAGE_DIR = 'images'
         self.LOG_DIR = 'logs'
+
+
         file_dir = os.path.dirname(__file__)
         self.DIR = os.path.abspath(file_dir)
         self.conn = None
         self.images = {}
         self.flavors = {}
+        self.mon_th = {}
         self.nm = self.get_nm_plugin().get('uuid')
         signal.signal(signal.SIGINT, self.__catch_signal)
         signal.signal(signal.SIGTERM, self.__catch_signal)
@@ -316,7 +320,8 @@ class KVM(RuntimePluginFDU):
                             net_cfg.append({'name':intf_name, 'mac':mac, 'dev':real_intf_name})
                     else:
                         intf_id = 'kvm-{}-{}'.format(fdu.get_short_id(), i)
-                        intf_data = self.connector.loc.actual.get_node_port(self.node, self.nm, intf.get('cp_id')).get('properties')
+                        intf_data = self.connector.loc.actual.get_node_port(self.node, self.nm, intf.get('cp_id'))
+                        self.logger.info('configure_fdu()',' KVM Plugin - Configuring FDU - interface data {}'.format(intf_data))
                         #####
                         def get_port_descriptor(cpid):
                             parameters = {'cp_uuid': cpid}
@@ -324,6 +329,7 @@ class KVM(RuntimePluginFDU):
                             return self.call_agent_function(fname, parameters)
                         ####
                         cp_data = get_port_descriptor(intf_data['cp_uuid'])
+                        self.logger.info('configure_fdu()',' KVM Plugin - Configuring FDU - connection point data {}'.format(cp_data))
                         net_data = self.connector.loc.actual.get_node_network(self.node, self.nm, cp_data['pair_id'])
                         #self.call_nw_plugin_function('create_virtual_interface', {'intf_id':intf_id, 'descriptor': intf})
 
@@ -402,6 +408,13 @@ class KVM(RuntimePluginFDU):
             self.current_fdus.update({instance_uuid: fdu})
             self.update_fdu_status(fdu_uuid, instance_uuid, 'CONFIGURE')
             self.logger.info('configure_fdu()', '[ DONE ] KVM Plugin - Configure a VM uuid {}'.format(instance_uuid))
+
+            # TODO: monitoring TBA
+            # this monitoring uses pylxd to get container information
+            mt = threading.Thread(target=self.__monitor_instance, args=(fdu_uuid, instance_uuid, fdu.name),daemon=True)
+            mt.start()
+            self.mon_th.update({instance_uuid:mt})
+            self.logger.info('run_fdu()', '[ DONE ] LXD Plugin - Starting a Monitoring of {}'.format(instance_uuid))
 
 
     def clean_fdu(self, instance_uuid):
@@ -791,6 +804,66 @@ class KVM(RuntimePluginFDU):
 
     def after_migrate_fdu_actions(self, fdu_uuid, dst=False):
         pass
+
+    def __monitor_instance(self, fdu_uuid, instance_id, instance_name):
+        self.logger.info('__monitor_fdu()','[ INFO ] KVM Plugin - Staring monitoring of VM uuid {}'.format(instance_id))
+        while True:
+            time.sleep(self.update_interval)
+            try:
+                record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_id)
+                if record.get('status') not in ['LAND', 'TAKE_OFF','MIGRATE']:
+                    self.logger.info('__monitor_fdu()','[ INFO ] KVM Plugin - Updating status of {}'.format(fdu_uuid))
+                    dom = self.__lookup_by_uuid(instance_id)
+                    if dom is None:
+                        raise Exception('VM not found in hypervisor')
+                    detailed_state = {}
+                    # libvirt cpu
+                    # >>> dom.getCPUStats(True) aggregates
+                    # [{'cpu_time': 64323040921, 'system_time': 15390000000, 'user_time': 5650000000}]
+                    # libvirt mem
+                    # >>> dom.memoryStats()
+                    # {'actual': 8000000, 'swap_in': 0, 'minor_fault': 499519, 'major_fault': 183, 'available': 7624864, 'unused': 7470040, 'rss': 792648, 'swap_out': 0}
+                    # block info
+                    # >>> dom.blockStats('/home/ubuntu/Athonet-sgwmp1.qcow2')
+                    # (106824, 177363456, 396, 9366528, -1) -> reads, bytes read, writes, bytes written, errors
+                    # iface statistics
+                    # >>> tree = ElementTree.fromstring(dom.XMLDesc())
+                    # >>> iface=tree.find('devices/interface/target').get('dev')
+                    # >>> iface
+                    # 'vnet0'
+                    # >>> dom.interfaceStats(iface)
+                    # (40751, 700, 0, 0, 9976, 119, 0, 0) -> bytes read, packets read, read errors, read drops, bytes written, packets written, write error, write drops
+
+                    c_net = []
+                    for i in record.get('interfaces'):
+                        ip = self.call_nw_plugin_function('get_address', {'mac_address':i.get('mac_address','')})
+                        c_net.append(
+                            {'name': i['vintf_name'],
+                            'mac_address': i.get('mac_address',''),
+                            'address': ip}
+                        )
+
+                    vm_mem_info = dom.memoryStats()
+                    mem = {
+                        'usage': (vm_mem_info['actual']-vm_mem_info.get('unused',0)),
+                        'usage_peak': 0,
+                        'swap_usage': vm_mem_info.get('swap_in',0),
+                        'swap_usage_peak':0
+                    }
+
+
+                    detailed_state.update({'network': c_net})
+                    detailed_state.update({'cpu': {'usage':dom.getCPUStats(True)[0]['cpu_time']}})
+                    detailed_state.update({'memory': mem})
+                    #detailed_state.update({'disk': cs.disk})
+
+                    record.update({'hypervisor_info': detailed_state})
+                    self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_id, record)
+
+            except Exception as e:
+                self.logger.error('__monitor_instance()', '[ ERROR ] KVM Plugin - Stopping monitoring of VM uuid {} Error {}'.format(instance_id, e))
+                return
+
 
     def __add_image(self, manifest):
         img_uuid = manifest.get('uuid')
