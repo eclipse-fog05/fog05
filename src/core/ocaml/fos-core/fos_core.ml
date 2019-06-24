@@ -74,10 +74,17 @@ let get_unix_syslog_reporter () =
 let getuuid () =
   match String.uppercase_ascii @@ get_platform () with
   | "LINUX" ->
-    let ic = Pervasives.open_in "/etc/machine-id" in
+    let fname =
+      match Sys.file_exists "/etc/fos/nodeid" with
+      | false -> "/etc/machine-id"
+      | true -> "/etc/fos/nodeid"
+    in
+    let ic = Pervasives.open_in fname in
     let uuid = input_line ic in
     let _ = close_in ic in
-    String.sub uuid 0 8 ^ "-" ^ String.sub uuid 8 4 ^ "-" ^ String.sub uuid 12 4 ^ "-" ^ String.sub uuid 16 4 ^ "-" ^ String.sub uuid 20 12
+    (match String.index_opt uuid '-' with
+     | Some _ ->  uuid
+     | None ->  String.sub uuid 0 8 ^ "-" ^ String.sub uuid 8 4 ^ "-" ^ String.sub uuid 12 4 ^ "-" ^ String.sub uuid 16 4 ^ "-" ^ String.sub uuid 20 12)
   | "DARWIN" ->
     let ic = Unix.open_process_in "ioreg -rd1 -c IOPlatformExpertDevice |  awk '/IOPlatformUUID/ { print $3; }'" in
     let uuid = input_line ic in
