@@ -842,13 +842,24 @@ class LXD(RuntimePluginFDU):
                     #
                     #if c_net is None:
                     #    c_net = []
-                    c_net = []
+                    c_net = {}
                     for i in record.get('interfaces'):
                         ip = self.call_nw_plugin_function('get_address', {'mac_address':i.get('mac_address','')})
-                        c_net.append(
-                            {'name': i['vintf_name'],
-                            'mac_address': i.get('mac_address',''),
-                            'address': ip}
+                        # c_net.append(
+                        #     {'name': i['vintf_name'],
+                        #     'mac_address': i.get('mac_address',''),
+                        #     'address': ip}
+                        # )
+                        c_net.update(
+                            {
+                                i['vintf_name']:
+                                {
+                                'hwaddr': i.get('mac_address',''),
+                                'addresses': [
+                                    {'address': ip}
+                                    ]
+                                }
+                            }
                         )
 
 

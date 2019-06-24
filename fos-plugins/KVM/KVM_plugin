@@ -834,13 +834,24 @@ class KVM(RuntimePluginFDU):
                     # >>> dom.interfaceStats(iface)
                     # (40751, 700, 0, 0, 9976, 119, 0, 0) -> bytes read, packets read, read errors, read drops, bytes written, packets written, write error, write drops
 
-                    c_net = []
+                    c_net = {}
                     for i in record.get('interfaces'):
                         ip = self.call_nw_plugin_function('get_address', {'mac_address':i.get('mac_address','')})
-                        c_net.append(
-                            {'name': i['vintf_name'],
-                            'mac_address': i.get('mac_address',''),
-                            'address': ip}
+                        # c_net.append(
+                        #     {'name': i['vintf_name'],
+                        #     'mac_address': i.get('mac_address',''),
+                        #     'address': ip}
+                        # )
+                        c_net.update(
+                            {
+                                i['vintf_name']:
+                                {
+                                'hwaddr': i.get('mac_address',''),
+                                'addresses': [
+                                    {'address': ip}
+                                    ]
+                                }
+                            }
                         )
 
                     vm_mem_info = dom.memoryStats()
