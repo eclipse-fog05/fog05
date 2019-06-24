@@ -125,3 +125,18 @@ Examples are available in https://github.com/atolab/fog05_demo/tree/master/fim_a
 
 
 REST API for FIM is under development...
+
+
+## Basic CLI Interface
+
+It is also possible to install a CLI interface, just execute
+
+    ./install_cli.sh
+
+
+On a node with the fos CLI interface installed declare the env variable `FOS_YAKS_ENDPOINT`
+and verify the list of the nodes available
+
+    export FOS_YAKS_ENDPOINT="tcp/<address of yaks server>:7887
+    fos fim node list
+
