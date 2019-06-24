@@ -12,11 +12,13 @@
  *********************************************************************************)
 
 type json <ocaml module="Abs_json"> = abstract
-(* Atomit Entity Manifest *)
+(* FDU Manifest *)
 
 type address_information <ocaml module="Fos_types"> = abstract
 
 (* Descriptor Related Types *)
+
+type fdu = descriptor
 
 type descriptor = {
   ?uuid : string option;
@@ -32,7 +34,7 @@ type descriptor = {
   ?configuration : configuration option;
   interfaces : interface list;
   io_ports : io_port list;
-  connection_points : connection_point list;
+  connection_points : connection_point_descriptor list;
   depends_on : string list;
 }
 
@@ -125,6 +127,7 @@ type interface = {
   ?mac_address : string option;
   virtual_interface : vif_type;
   ?cp_id : string option;
+  ?ext_cp_id : string option;
 }
 
 type vif_type = {
@@ -169,10 +172,6 @@ type io_port = {
   min_io_ports : int
 }
 
-type connection_point = {
-  uuid: string;
-  ?pair_id : string option;
-}
 
 type storage_kind = [
   | BLOCK
@@ -204,149 +203,6 @@ type connection_point_descriptor = {
   ?port_security_enabled: bool option;
   ?internal_vld_ref : string option;
 }
-
-(* VLD at ETSI NFV *)
-
-type vl_kind = [
-  | ELINE
-  | ELAN
-]
-
-type internal_virtual_link_descriptor = {
-  id : string;
-  name : string;
-  ?short_name : string option;
-  ?description : string option;
-  ?vl_type : vl_kind option;
-  ?root_bandwidth : int option;
-  ?leaf_bandwidth : int option;
-  int_cps : string list;
-}
-
-(* CPD as ETSI NFV IFA 011 *)
-(*
-type layer_protocols = [
-  | ETHERNET
-  | MPLS
-  | ODU2
-  | IPV4
-  | IPV6
-  | PSEUDOWIRE
-]
-
-type cp_roles = [
-  | ROOT
-  | LEAF
-]
-
-
-type address_kind = [
-  | MAC
-  | IP
-]
-
-type ip_address_kind = [
-  | IPV4
-  | IPV6
-]
-
-
-type virtual_network_interface_requirement = {
-  name : string;
-  descripttion : string;
-  support_mandatory : bool;
-  requirement : string;
-}
-
-type l3_address_datas = {
-  ip_address_assignment : bool;
-  floating_ip_activated : bool;
-  ip_address_type : ip_address_kind;
-  number_of_ip_address : int;
-}
-
-type address_datas = {
-  address_type : address_kind;
-  l2_address_data : string;
-  l3_address_data : l3_address_datas;
-}
-
-type connection_point_descriptor = {
-  cpd_id : string;
-  layer_protocol : layer_protocols;
-  cp_role : cp_roles;
-  description : string;
-  address_data : address_datas;
-} *)
-
-
-(*
-  A VnfExtCpd is a type of Cpd and describes an external interface, a.k.a external CP, exposed by this VNF enabling connection with a VL.
-  A VnfExtCpd inherits from the Cpd Class (see clause 7.1.6.3). All attributes of the Cpd are also attributes of the VnfExtCpd.
-  When the VnfExtCpd is mapped to a VduCpd, the values for the attributes type, subType and description shall be identical for both elements.
-*)
-
-(* type vnf_ext_cpd {
-    cpd_id : string;
-    layer_protocol : layer_protocols;
-    cp_role : cp_roles;
-    description : string;
-    address_data : address_datas;
-    (* New attributes *)
-    int_virtual_link_desc : string; (* Refers to an internal VLD *)
-    int_cpd : string; (* Refers to an internal Cpd, either int_virtual_link_desc or int_cpd shall be present *)
-    virtual_network_interface_requirements : virtual_network_interface_requirement list;
-   } *)
-
-
-
-(* VLD as ETSI NFV IFA 011 *)
-
-
-(* type vl_flow_pattern_kind = [
-   | LINE
-   | MESH
-   | TREE
-   ]
-
-   type vl_flavour_bitrate_requirements = {
-   root : int;
-   leaf : int;
-   }
-
-   type vl_flavour_qos = {
-   latency : int; (* latency in ms *)
-   packet_delay_variation: int; (* jitter in ms *)
-   packet_loss_ration : float;
-   }
-
-   type vl_flavour = {
-   flavour_id : string;
-   bitrate_requirement : vl_flavour_bitrate_requirements;
-   qos : vl_flavour_qos;
-   }
-
-   type vl_connectivity_type = {
-   layer_protocol : layer_protocols;
-   flow_pattern : vl_flow_pattern_kind;
-   }
-
-   type vnf_monitoring_paramter = {
-   id : string;
-   name : string;
-   performance_metric : string;
-   }
-
-   type vnf_virtual_link_desc = {
-   virtual_link_desc_id : string;
-   virtual_link_desc_flavour : vl_flavour;
-   connectivity_type : vl_connectivity_type;
-   test_access : string;
-   description : string;
-   monitoring_parameter : vnf_monitoring_paramter list;
-   } *)
-
-
 
 (* Record Related Types *)
 
