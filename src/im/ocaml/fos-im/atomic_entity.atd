@@ -1,0 +1,87 @@
+(*********************************************************************************
+ * Copyright (c) 2018 ADLINK Technology Inc.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0, or the Apache Software License 2.0
+ * which is available at https://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
+ * Contributors: 1
+ *   Gabriele Baldoni (gabriele (dot) baldoni (at) adlinktech (dot) com ) - OCaml implementation
+ *********************************************************************************)
+
+type json <ocaml module="Abs_json"> = abstract
+(* Atomit Entity Manifest *)
+
+type fdu <ocaml module="Fdu"> = abstract
+
+(* Descriptor Related Types *)
+
+type descriptor = {
+  ?uuid : string option;
+  name : string;
+  ?description : string option;
+  fdus : fdu list;
+  internal_virtual_links : internal_virtual_link_descriptor list;
+  connection_points : connection_point_descriptor list;
+  depends_on : string list;
+}
+
+(* CPD as ETSI NFV *)
+
+type cp_kind = [
+  | VPORT
+]
+
+type connection_point_descriptor = {
+  name : string;
+  id : string;
+  ?short_name : string option;
+  ?cp_type : cp_kind option;
+  ?port_security_enabled: bool option;
+  ?internal_vld_ref : string option;
+}
+
+(* VLD at ETSI NFV *)
+
+type vl_kind = [
+  | ELINE
+  | ELAN
+]
+
+
+type ip_kind = [
+  | IPV4
+  | IPV6
+]
+
+type address_information = {
+  ip_version : ip_kind;
+  subnet : string;   (*  X.X.X.X/Y*)
+  ?gateway : string option; (* X.X.X.X *)
+  dhcp_enable :  bool;
+  ?dhcp_range : string option; (* X.X.X.X,X.X.X.Z *)
+  ?dns : string option; (* X.X.X.X,X.X.X.Z,.... *)
+}
+
+
+type internal_virtual_link_descriptor = {
+  id : string;
+  name : string;
+  ?short_name : string option;
+  ?description : string option;
+  ?vl_type : vl_kind option;
+  ?root_bandwidth : int option;
+  ?leaf_bandwidth : int option;
+  int_cps : string list;
+  (* From fog05 *)
+  ?ip_configuration : address_information option;
+  (* filled by Orchestrator *)
+  ?uuid : string option;
+  ?overlay : bool option;
+  ?vni: int option;
+  ?mcast_addr: string option;
+  ?vlan_id : int option;
+  ?face : string option;
+}
