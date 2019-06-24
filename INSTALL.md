@@ -137,6 +137,6 @@ It is also possible to install a CLI interface, just execute
 On a node with the fos CLI interface installed declare the env variable `FOS_YAKS_ENDPOINT`
 and verify the list of the nodes available
 
-    export FOS_YAKS_ENDPOINT="tcp/<address of yaks server>:7887
+    export FOS_YAKS_ENDPOINT="tcp/<address of yaks server>:7887"
     fos fim node list
 
