@@ -29,6 +29,8 @@ module JSON = Abs_json
 module Errors = Fos_errors
 module FDU = Fdu
 
+module AtomicEntity = Atomic_entity
+
 module MEC = Mec
 module NFV = Nfv
 module MEC_Interfaces = Mec_interfaces
@@ -75,7 +77,8 @@ let fdu_of_mecapp (mecapp:MEC.appd_descriptor) =
         vpci = "0:0:0";
         bandwidth = 100;
       };
-      cp_id = None
+      cp_id = None;
+      ext_cp_id = None;
     };
     FDU.{
       name = "eth1";
@@ -87,7 +90,8 @@ let fdu_of_mecapp (mecapp:MEC.appd_descriptor) =
         vpci = "0:0:0";
         bandwidth = 100;
       };
-      cp_id = None
+      cp_id = None;
+      ext_cp_id = None;
     };
   ]
   in

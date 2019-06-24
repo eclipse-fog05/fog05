@@ -118,11 +118,17 @@ module MakeGAD(P: sig val prefix: string end) = struct
   let get_tenant_configuration_path sysid tenantid =
     create_path [P.prefix; sysid; "tenants"; tenantid; "configuration"]
 
+  let get_atomic_entity_info_path sysid tenantid aeid =
+    create_path [P.prefix; sysid; "tenants"; tenantid; "catalog"; "atommic-entity"; aeid; "info"]
+
+  let get_all_atomic_entity_selector sysid tenantid =
+    create_selector [P.prefix; sysid; "tenants"; tenantid; "catalog"; "atomic-entity"; "*"; "info"]
+
   let get_fdu_info_path sysid tenantid fduid =
-    create_path [P.prefix; sysid; "tenants"; tenantid; "fdu"; fduid; "info"]
+    create_path [P.prefix; sysid; "tenants"; tenantid; "catalog"; "fdu"; fduid; "info"]
 
   let get_all_fdu_selector sysid tenantid =
-    create_selector [P.prefix; sysid; "tenants"; tenantid; "fdu"; "*"; "info"]
+    create_selector [P.prefix; sysid; "tenants"; tenantid; "catalog"; "fdu"; "*"; "info"]
 
   let get_all_nodes_selector sysid tenantid =
     create_selector [P.prefix; sysid; "tenants"; tenantid; "nodes"; "*"; "info"]
@@ -236,9 +242,13 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let ps = Yaks.Path.to_string path in
     List.nth (String.split_on_char '/' ps) 4
 
+  let extract_aeid_from_path path =
+    let ps = Yaks.Path.to_string path in
+    List.nth (String.split_on_char '/' ps) 7
+
   let extract_fduid_from_path path =
     let ps = Yaks.Path.to_string path in
-    List.nth (String.split_on_char '/' ps) 6
+    List.nth (String.split_on_char '/' ps) 7
 
   let extract_netid_from_path path =
     let ps = Yaks.Path.to_string path in
@@ -442,6 +452,51 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let p = get_node_configuration_path sysid tenantid nodeid in
     let value = Yaks.Value.StringValue (FAgentTypes.string_of_configuration nodeconf )in
     Yaks.Workspace.put p value connector.ws
+
+  let get_all_atomic_entities sysid tenantid connector =
+    MVar.read connector >>= fun connector ->
+    let s = get_all_atomic_entity_selector sysid tenantid in
+    Yaks.Workspace.get s  connector.ws
+    >>= fun res ->
+    match res with
+    | [] ->
+      Lwt.return []
+    | _ ->
+      Lwt.return @@ List.map (fun (k,_) -> extract_aeid_from_path k) res
+
+  let get_atomic_entity_info sysid tenantid aeid connector =
+    MVar.read connector >>= fun connector ->
+    let s = Yaks.Selector.of_path @@ get_atomic_entity_info_path sysid tenantid aeid in
+    Yaks.Workspace.get s connector.ws
+    >>= fun res ->
+    match res with
+    | [] -> Lwt.return None
+    | _ ->
+      let _,v = (List.hd res) in
+      try
+        Lwt.return @@ Some (AtomicEntity.descriptor_of_string (Yaks.Value.to_string v))
+      with
+      | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _ ->
+        Lwt.fail @@ FException (`InternalError (`Msg ("Value is not well formatted in get_fdu_info") ))
+      | exn -> Lwt.fail exn
+
+  let add_atomic_entity_info sysid tenantid aeid aeinfo connector =
+    MVar.read connector >>= fun connector ->
+    let p = get_atomic_entity_info_path sysid tenantid aeid in
+    let value = Yaks.Value.StringValue (AtomicEntity.string_of_descriptor aeinfo )in
+    Yaks.Workspace.put p value connector.ws
+
+  let remove_atomic_entity_info sysid tenantid aeid connector =
+    MVar.read connector >>= fun connector ->
+    let p = get_atomic_entity_info_path sysid tenantid aeid in
+    Yaks.Workspace.remove p connector.ws
+
+  let observe_atomic_entities sysid tenantid callback connector =
+    MVar.guarded connector @@ fun connector ->
+    let s = get_all_atomic_entity_selector sysid tenantid in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback AtomicEntity.descriptor_of_string extract_aeid_from_path) s connector.ws in
+    let ls = List.append connector.listeners [subid] in
+    MVar.return subid {connector with listeners = ls}
 
 
   let get_all_fdus sysid tenantid connector =
@@ -698,7 +753,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
   let add_port sysid tenantid portid port_info connector =
     let p = get_network_port_info_path sysid tenantid portid in
     MVar.read connector >>= fun connector ->
-    Yaks.Workspace.put p (Yaks.Value.StringValue (FDU.string_of_connection_point port_info)) connector.ws
+    Yaks.Workspace.put p (Yaks.Value.StringValue (FDU.string_of_connection_point_descriptor port_info)) connector.ws
 
   let get_port sysid tenantid portid connector =
     let s = Yaks.Selector.of_path @@ get_network_port_info_path sysid tenantid portid in
@@ -709,12 +764,12 @@ module MakeGAD(P: sig val prefix: string end) = struct
     | [] ->
       Lwt.return None
     | _ -> let _,v = List.hd kvs in
-      Lwt.return @@ Some (FDU.connection_point_of_string (Yaks.Value.to_string v))
+      Lwt.return @@ Some (FDU.connection_point_descriptor_of_string (Yaks.Value.to_string v))
 
   let observe_ports sysid tenantid callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = get_network_ports_selector sysid tenantid in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback FDU.connection_point_of_string extract_portid_from_path) s connector.ws in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback FDU.connection_point_descriptor_of_string extract_portid_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
@@ -732,7 +787,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     | [] -> Lwt.return []
     | _ ->
       Lwt_list.map_p (
-        fun (_,v )-> Lwt.return  @@ FDU.connection_point_of_string (Yaks.Value.to_string v)) kvs
+        fun (_,v )-> Lwt.return  @@ FDU.connection_point_descriptor_of_string (Yaks.Value.to_string v)) kvs
 
   (* Node Network records *)
 
