@@ -1,0 +1,119 @@
+{
+    "uuid": "db101a31-2045-4482-97dd-8c566491eab2",
+    "name": "test_atomic_entity",
+    "description": "this is a simple atomic entity composed by two LXD containers",
+    "fdus": [
+        {
+            "name": "testOne",
+            "computation_requirements": {
+                "cpu_arch": "x86_64",
+                "cpu_min_freq": 0.0,
+                "cpu_min_count": 1,
+                "ram_size_mb": 128.0,
+                "storage_size_gb": 5.0
+            },
+            "base_image": {
+                "uri": "lxd://alpine/3.6",
+                "checksum": "",
+                "format": ""
+            },
+            "hypervisor": "LXD",
+            "migration_kind": "LIVE",
+            "interfaces": [
+                {
+                    "name": "eth0",
+                    "is_mgmt": true,
+                    "if_type": "EXTERNAL",
+                    "virtual_interface": {
+                        "intf_type": "VIRTIO",
+                        "vpci": "0:0:0",
+                        "bandwidth": 10
+                    },
+                    "ext_cp_id": "test-ext-cp0"
+                },
+                {
+                    "name": "eth1",
+                    "is_mgmt": false,
+                    "if_type": "INTERNAL",
+                    "virtual_interface": {
+                        "intf_type": "VIRTIO",
+                        "vpci": "0:0:0",
+                        "bandwidth": 10
+                    },
+                    "cp_id": "test-cp1"
+                }
+            ],
+            "io_ports": [],
+            "connection_points": [
+                {
+                    "id": "test-cp1",
+                    "name": "test-internal-cp1"
+                }
+            ],
+            "depends_on": []
+        },
+        {
+            "name": "testTwo",
+            "computation_requirements": {
+                "cpu_arch": "x86_64",
+                "cpu_min_freq": 0.0,
+                "cpu_min_count": 1,
+                "ram_size_mb": 128.0,
+                "storage_size_gb": 5.0
+            },
+            "base_image": {
+                "uri": "lxd://alpine/3.6",
+                "checksum": "",
+                "format": ""
+            },
+            "hypervisor": "LXD",
+            "migration_kind": "LIVE",
+            "interfaces": [
+                {
+                    "name": "eth1",
+                    "is_mgmt": false,
+                    "if_type": "INTERNAL",
+                    "virtual_interface": {
+                        "intf_type": "VIRTIO",
+                        "vpci": "0:0:0",
+                        "bandwidth": 10
+                    },
+                    "cp_id": "test-cp2"
+                }
+            ],
+            "io_ports": [],
+            "connection_points": [
+                {
+                    "id": "test-cp2",
+                    "name": "test-internal-cp2"
+                }
+            ],
+            "depends_on": []
+        }
+    ],
+    "internal_virtual_links": [
+        {
+            "id": "internal",
+            "name": "internal-vl",
+            "ip_configuration": {
+                "ip_version": "IPV4",
+                "subnet": "192.168.234.0/24",
+                "gateway": "192.168.234.1",
+                "dhcp_enable": true,
+                "dhcp_range": "192.168.234.2,192.168.234.100",
+                "dns": "8.8.8.8,8.8.4.4"
+            },
+            "int_cps": [
+                "test-cp1",
+                "test-cp2"
+            ]
+        }
+    ],
+    "connection_points": [
+        {
+            "id": "test-ext-cp0",
+            "name": "test-ext-cp0"
+        }
+    ],
+    "depends_on": []
+}

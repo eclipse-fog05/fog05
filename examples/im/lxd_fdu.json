@@ -18,7 +18,7 @@
     "interfaces": [
         {
             "name": "eth0",
-            "is_mgmt": false,
+            "is_mgmt": true,
             "if_type": "INTERNAL",
             "mac_address": "be:ef:be:ef:00:01",
             "virtual_interface": {
@@ -26,14 +26,26 @@
                 "vpci": "0:0:0",
                 "bandwidth": 10
             },
-            "cp_id": "2192bb19-a3f7-4b59-9473-eeec9573fb3b"
+            "ext_cp_id": "test-ext-cp0"
+        },
+        {
+            "name": "eth1",
+            "is_mgmt": true,
+            "if_type": "INTERNAL",
+            "mac_address": "be:ef:be:ef:00:02",
+            "virtual_interface": {
+                "intf_type": "VIRTIO",
+                "vpci": "0:0:0",
+                "bandwidth": 10
+            },
+            "cp_id": "test-cp1"
         }
     ],
     "io_ports": [],
     "connection_points": [
         {
-            "uuid": "2192bb19-a3f7-4b59-9473-eeec9573fb3b",
-            "pair_id": "6cc2aa30-1dcf-4c93-a57e-433fd0bd498e"
+            "id": "test-cp1",
+            "name": "test-internal-cp1"
         }
     ],
     "depends_on": []
