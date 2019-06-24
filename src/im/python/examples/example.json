@@ -1,13 +1,23 @@
 {
-    "appd-descriptor": {
-        "id": "example-meapp1",
-        "name": "example_mec_application",
-        "vendor": "ADLINK",
-        "version": "1.0",
-        "soft-version": "",
-        "mec-version": [
-            "1"
-        ],
-        "description": "Simple MEC Application"
+    "appDId": "example-meapp1",
+    "appName": "example_mec_application",
+    "appProvider": "ADLINK",
+    "appDVersion": "1.0",
+    "appSoftVersion": "",
+    "mecVersion": [
+        "1"
+    ],
+    "appDescription": "Simple MEC Application",
+    "appServiceRequired": [],
+    "appServiceOptional": [],
+    "appServiceProduced": [],
+    "appFeatureRequired": [],
+    "appFeatureOptional": [],
+    "transportDependencies": [],
+    "appTrafficRule": [],
+    "appDNSRule": [],
+    "appLatency": {
+        "timeUnit": 10,
+        "latency": "ms"
     }
 }

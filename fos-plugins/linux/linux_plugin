@@ -665,23 +665,8 @@ class Linux(OSPlugin):
         return {'result':self.nw_devices}
 
     def get_uuid(self):
-        # $ blkid / dev / sda1
-        # /dev/sda1: LABEL = '/'  UUID = 'ee7cf0a0-1922-401b-a1ae-6ec9261484c0' SEC_TYPE = 'ext2' TYPE = 'ext3'
-        # generate uuid from this or from cpuid or mb uuid from /sys/class/dmi/id/product_uuid
-        '''
-
-        uuid_regex = r"PARTUUID=\"(.{0,37})\""
-        p = psutil.Popen('sudo blkid /dev/sda1'.split(), stdout=PIPE)
-        res = ""
-        for line in p.stdout:
-            res = str(res+"%s" % line)
-        m = re.search(uuid_regex, res)
-        if m:
-            found = m.group(1)
-        return found
-        :return:
-        '''
-
+        if os.path.isfile('/etc/fos/nodeid'):
+            return read_file('/etc/fos/nodeid')
         # p = psutil.Popen('sudo cat /sys/class/dmi/id/product_uuid'.split(), stdout=PIPE)
         p = psutil.Popen('sudo cat /etc/machine-id'.split(), stdout=PIPE)
         # p = psutil.Popen('sudo cat '.split(), stdout=PIPE)
