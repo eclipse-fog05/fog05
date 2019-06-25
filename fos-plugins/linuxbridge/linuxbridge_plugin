@@ -31,6 +31,7 @@ import base64
 import binascii
 import hashlib
 import psutil
+import netifaces
 from jinja2 import Environment
 from fog05.interfaces.NetworkPlugin import *
 from fog05 import Yaks_Connector
@@ -135,7 +136,11 @@ class LinuxBridge(NetworkPlugin):
             'connect_cp_to_vnetwork': self.connect_cp_to_vnetwork,
             'disconnect_cp': self.disconnect_cp,
             'delete_port': self.delete_port,
-            'get_address': self.get_address
+            'get_address': self.get_address,
+            'create_floating_ip': self.create_floating_ip,
+            'delete_floating_ip': self.delete_floating_ip,
+            'assign_floating_ip': self.assign_floating_ip,
+            'remove_floating_ip': self.remove_floating_ip
         }
 
         for k in d:
@@ -594,6 +599,79 @@ class LinuxBridge(NetworkPlugin):
         if network_uuid is None:
             return self.networks
         return self.networks.get(network_uuid)
+
+
+    # FLOATING IPs #
+
+    def create_floating_ip(self):
+        self.logger.info('create_floating_ip()', 'Creating new floating IP')
+        ip_id = '{}'.format(uuid.uuid4())
+        ip_small_id = ip_id.split('-')[0]
+        vface = 'fl-{}'.format(ip_small_id)
+        face = self.overlay_interface
+        cmd = "sudo ip link add {} link {} type macvlan mode vepa"
+        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':True})
+        cmd = "sudo dhclient {}".format(vface)
+        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':True})
+        try:
+            addr = netifaces.ifaddresses(vface)[2][0]['addr']
+        except:
+            self.logger.error('create_floating_ip()','Unable to retrieve address for floating interface')
+            addr = ''
+        float_record = {
+            'uuid':ip_id,
+            'ip_version':'IPV4',
+            'address':addr,
+            'face':face,
+            'vface':vface,
+            'cp_id':''
+        }
+        self.logger.info('create_floating_ip()',' [ DONE ] New floating IP created {}'.format(float_record))
+        self.connector.loc.actual.add_node_floating_ip(self.node, self.uuid, ip_id, float_record)
+        return {'result':float_record}
+
+    def delete_floating_ip(self, ip_id):
+        self.logger.info('delete_floating_ip()', 'Deting floating IP  {}'.format(ip_id))
+        ip_small_id = ip_id.split('-')[0]
+        vface = 'fl-{}'.format(ip_small_id)
+        cmd = 'sudo ip link del {}'.format(vface)
+        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':True})
+        rec = self.connector.loc.actual.get_node_floating_ip(self.node, self.uuid, ip_id)
+        self.connector.loc.actual.remove_node_floating_ip(self.node, self.uuid, ip_id)
+        self.logger.info('delete_floating_ip()', '[DONE] Deletted IP {}'.format(ip_id))
+        return {'result': rec}
+
+    def assign_floating_ip(self, ip_id, cp_id):
+        self.logger.info('assign_floating_ip()', 'Assigning floating IP {} to {}'.format(ip_id, cp_id))
+        rec = self.connector.loc.actual.get_node_floating_ip(self.node, self.uuid, ip_id)
+        if rec is None:
+            self.logger.error('assign_floating_ip()', 'Not found IP: {}'.format(ip_id))
+            return {'error': 11}
+        cp_ip = '' #how to get IP from CP
+        cmd = 'sudo iptables -t nat -A PREROUTING -d {} -j DNAT --to {}'.format(rec['vface'], cp_ip)
+        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':True})
+        rec.update({'cp_id':cp_id})
+        self.connector.loc.actual.add_node_floating_ip(self.node, self.uuid, ip_id, rec)
+        self.logger.info('assign_floating_ip()', '[DONE] assigned floating IP {} to {}'.format(ip_id, cp_id))
+        return {'result': rec}
+
+
+
+    def remove_floating_ip(self, ip_id, cp_id):
+        self.logger.info('remove_floating_ip()', 'Removing floating IP {} from {}'.format(ip_id, cp_id))
+        rec = self.connector.loc.actual.get_node_floating_ip(self.node, self.uuid, ip_id)
+        if rec is None:
+            self.logger.error('remove_floating_ip()', 'Not found IP: {}'.format(ip_id))
+            return {'error': 11}
+        cp_ip = '' #how to get IP from CP
+        cmd = 'sudo iptables -t nat -D PREROUTING -d {} -j DNAT --to {}'.format(rec['vface'], cp_ip)
+        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':True})
+        rec.update({'cp_id':''})
+        self.connector.loc.actual.add_node_floating_ip(self.node, self.uuid, ip_id, rec)
+        self.logger.info('remove_floating_ip()', '[DONE] removed floating IP {} from {}'.format(ip_id, cp_id))
+        return {'result': rec}
+
+    # ============ #
 
 
     def __cird2block(self, cird):

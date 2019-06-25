@@ -186,6 +186,16 @@ class GAD(object):
             'flavor', '*', 'info'
         ])
 
+    def get_node_network_floating_ip_info_path(self, sysid, tenantid, nodeid, ipid):
+         return Constants.create_path([
+            self.prefix, sysid, 'tenants', tenantid, 'nodes', nodeid,
+            'networks', 'floating-ips', ipid, 'info'])
+
+    def get_node_all_network_floating_ips_selector(self, sysid, tenantid, nodeid):
+         return Constants.create_path([
+            self.prefix, sysid, 'tenants', tenantid, 'nodes', nodeid,
+            'networks', 'floating-ips', "*", 'info'])
+
 
     def extract_userid_from_path(self, path):
         return path.split('/')[4]
@@ -207,6 +217,9 @@ class GAD(object):
 
     def extract_node_instanceid_from_path(self, path):
         return path.split('/')[10]
+
+    def extract_node_floatingid_from_path(self, path):
+        return path.split('/')[9]
 
     def get_sys_info(self, sysid):
         s = self.get_sys_info_path(sysid)
@@ -625,6 +638,34 @@ class GAD(object):
             d.append(json.loads(kvs[0][1].get_value()))
         return d
 
+    # FLOATING IP
+    def add_node_floating_ip(self, sysid, tenantid, nodeid,floatingid, ip_info):
+
+        p = self.get_node_network_floating_ip_info_path(sysid, tenantid, nodeid, floatingid)
+        v = Value(json.dumps(ip_info), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def remove_node_floating_ip(self, sysid, tenantid, nodeid, floatingid):
+        p = self.get_node_network_floating_ip_info_path(sysid, tenantid, nodeid, floatingid)
+        return self.ws.remove(p)
+
+    def get_node_floating_ip(self, sysid, tenantid, nodeid,  floatingid):
+        p = self.get_node_network_floating_ip_info_path(sysid, tenantid, nodeid, floatingid)
+        res = self.ws.get(p)
+        if len(res) == 0:
+            return None
+        else:
+            v = res[0][1]
+            return json.loads(v.get_value())
+
+    def get_all_node_floating_ips(self, sysid, tenantid, nodeid):
+        s = self.get_node_all_network_floating_ips_selector(sysid, tenantid, nodeid)
+        kvs = self.ws.get(s)
+        d = []
+        for n in kvs:
+            d.append(json.loads(kvs[0][1].get_value()))
+        return d
+
 
 
 class LAD(object):
@@ -760,6 +801,15 @@ class LAD(object):
         return Constants.create_path(
             [self.prefix, nodeid, 'network_managers',
              pluginid, 'ports', portid, 'info'])
+
+    def get_node_network_floating_ip_info_path(self, nodeid, pluginid, ipid):
+        return Constants.create_path([self.prefix, nodeid,
+            'network_managers',pluginid , 'floating-ips', ipid, 'info'])
+
+    def get_node_all_network_floating_ips_selector(self, nodeid, pluginid):
+        return Constants.create_path([self.prefix, nodeid,
+            'network_managers', pluginid , 'floating-ips', "*", 'info'])
+
 
 
     def get_agent_exec_path(self, nodeid, func_name):
@@ -1115,6 +1165,44 @@ class LAD(object):
     def observe_node_ports(self, nodeid, pluginid, callback):
         s = self.get_node_networks_port_selector(nodeid, pluginid)
 
+        def cb(kvs):
+            if len(kvs) == 0:
+                raise ValueError('Listener received empty datas')
+            else:
+                v = kvs[0][1].get_value()
+                if v is not None:
+                    callback(json.loads(v.value))
+        subid = self.ws.subscribe(s, cb)
+        self.listeners.append(subid)
+        return subid
+    # FLOATING IPs
+
+    def add_node_floating_ip(self, nodeid, pluginid, ipid, ipinfo):
+        p = self.get_node_network_floating_ip_info_path(nodeid, pluginid, ipid)
+        v = Value(json.dumps(ipinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def remove_node_floating_ip(self, nodeid, pluginid, ipid):
+        p = self.get_node_network_floating_ip_info_path(nodeid, pluginid, ipid)
+        return self.ws.remove(p)
+
+    def get_node_floating_ip(self, nodeid, pluginid, ipid):
+        s = self.get_node_network_floating_ip_info_path(nodeid, pluginid, ipid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            return None
+        return json.loads(res[0][1].get_value())
+
+    def get_all_node_floating_ips(self, nodeid, pluginid):
+        s = self.get_node_all_network_floating_ips_selector(nodeid, pluginid)
+        kvs = self.ws.get(s)
+        d = []
+        for n in kvs:
+            d.append(json.loads(kvs[0][1].get_value()))
+        return d
+
+    def observe_node_floating_ip(self, nodeid, pluginid, callback):
+        s = self.get_node_all_network_floating_ips_selector(nodeid, pluginid)
         def cb(kvs):
             if len(kvs) == 0:
                 raise ValueError('Listener received empty datas')

@@ -8,7 +8,7 @@ all:
 	echo "Nothing to do"
 
 install:
-	sudo pip3 install jinja2
+	sudo pip3 install jinja2 netifaces psutil
 ifeq "$(wildcard $(LB_PLUGIN_DIR))" ""
 	sudo cp -r ../linuxbridge /etc/fos/plugins/
 else
