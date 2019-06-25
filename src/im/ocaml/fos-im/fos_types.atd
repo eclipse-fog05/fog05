@@ -46,7 +46,23 @@ type virtual_network = {
 type vn_type = [
   | ELINE
   | ELAN
- ]
+]
+
+
+
+type floating_ip = {
+  uuid : string;
+  ip_version : ip_kind;
+  address : string;
+}
+
+
+type floating_ip_record = {
+  uuid : string;
+  ip_version : ip_kind;
+  address : string;
+  face : string;
+}
 
 (* This are the old entities/atomic entities *)
 

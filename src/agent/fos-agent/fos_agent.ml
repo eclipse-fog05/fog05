@@ -228,7 +228,7 @@ let agent verbose_flag debug_flag configuration =
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - eval_get_port_info - Getting info for port %s" cp_uuid ) in
     try%lwt
       let%lwt descriptor = Yaks_connector.Global.Actual.get_port sys_id Yaks_connector.default_tenant_id cp_uuid state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
-      let js = FAgentTypes.json_of_string @@ FDU.string_of_connection_point  descriptor in
+      let js = FAgentTypes.json_of_string @@ FDU.string_of_connection_point_descriptor  descriptor in
       let eval_res = FAgentTypes.{result = Some js ; error=None} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
@@ -237,9 +237,9 @@ let agent verbose_flag debug_flag configuration =
       let%lwt fdu_ids = Yaks_connector.Global.Actual.get_all_fdus sys_id Yaks_connector.default_tenant_id state.yaks in
       let%lwt cps = Lwt_list.filter_map_p (fun e ->
           let%lwt fdu =  Yaks_connector.Global.Actual.get_fdu_info sys_id Yaks_connector.default_tenant_id e state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
-          let%lwt c = Lwt_list.filter_map_p (fun (cp:FDU.connection_point) ->
-              let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - eval_get_port_info - %s == %s ? %d " cp.uuid cp_uuid (String.compare cp.uuid  cp_uuid)) in
-              if (String.compare cp.uuid cp_uuid) == 0 then  Lwt.return @@ Some cp
+          let%lwt c = Lwt_list.filter_map_p (fun (cp:FDU.connection_point_descriptor) ->
+              let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - eval_get_port_info - %s == %s ? %d " cp.id cp_uuid (String.compare cp.id  cp_uuid)) in
+              if (String.compare cp.id cp_uuid) == 0 then  Lwt.return @@ Some cp
               else Lwt.return None
             ) fdu.connection_points
           in Lwt.return @@ List.nth_opt c 0
@@ -247,7 +247,7 @@ let agent verbose_flag debug_flag configuration =
       in
       try%lwt
         let cp = List.hd cps in
-        let js = FAgentTypes.json_of_string @@ FDU.string_of_connection_point cp in
+        let js = FAgentTypes.json_of_string @@ FDU.string_of_connection_point_descriptor cp in
         let eval_res = FAgentTypes.{result = Some js ; error=None} in
         Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
       with
@@ -380,10 +380,10 @@ let agent verbose_flag debug_flag configuration =
             let pl = List.hd matching_plugins in
             let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-FDU - Calling %s plugin" pl.name) in
             (* Here we should at least update the record interfaces and connection points *)
-            let%lwt ncpids = Lwt_list.map_p (fun (e:FDU.connection_point) -> Lwt.return (e.uuid, Apero.Uuid.to_string @@ Apero.Uuid.make ())) fdu_d.connection_points in
-            let%lwt rcps = Lwt_list.map_p (fun (e:FDU.connection_point) ->
-                let rcpid = List.assoc e.uuid ncpids in
-                let cpr = FDU.{uuid =  rcpid; status = `CREATE; cp_uuid = e.uuid; veth_face_name = None; br_name = None; properties = None } in
+            let%lwt ncpids = Lwt_list.map_p (fun (e:FDU.connection_point_descriptor) -> Lwt.return (e.id, Apero.Uuid.to_string @@ Apero.Uuid.make ())) fdu_d.connection_points in
+            let%lwt rcps = Lwt_list.map_p (fun (e:FDU.connection_point_descriptor) ->
+                let rcpid = List.assoc e.id ncpids in
+                let cpr = FDU.{uuid =  rcpid; status = `CREATE; cp_uuid = e.id; veth_face_name = None; br_name = None; properties = None } in
                 Lwt.return cpr
               ) fdu_d.connection_points
             in
@@ -472,7 +472,7 @@ let agent verbose_flag debug_flag configuration =
          Lwt.return_unit)
 
   in
-  let cb_gd_cp self (cp:FDU.connection_point option) (is_remove:bool) (uuid:string option) =
+  let cb_gd_cp self (cp:FDU.connection_point_descriptor option) (is_remove:bool) (uuid:string option) =
     let%lwt net_p = get_network_plugin self in
     match is_remove with
     | false ->
@@ -481,8 +481,8 @@ let agent verbose_flag debug_flag configuration =
           MVar.read self >>= fun self ->
           let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-CP - ##############") in
           let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-CP - CP Updated! Agent will update actual store and call the right plugin!") in
-          let%lwt _ = Yaks_connector.Global.Actual.add_port sys_id Yaks_connector.default_tenant_id cp.uuid cp self.yaks in
-          let record = FDU.{cp_uuid = cp.uuid; uuid = cp.uuid; status = `CREATE; properties = None; veth_face_name = None; br_name = None} in
+          let%lwt _ = Yaks_connector.Global.Actual.add_port sys_id Yaks_connector.default_tenant_id cp.id cp self.yaks in
+          let record = FDU.{cp_uuid = cp.id; uuid = cp.id; status = `CREATE; properties = None; veth_face_name = None; br_name = None} in
           Yaks_connector.Local.Desired.add_node_port (Apero.Option.get self.configuration.agent.uuid) net_p record.cp_uuid record self.yaks
           >>= Lwt.return
         | None -> Lwt.return_unit)
@@ -719,6 +719,13 @@ let agent verbose_flag debug_flag configuration =
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_network_info" (eval_get_network_info state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_port_info" (eval_get_port_info state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_image_info" (eval_get_image_info state) yaks in
+  (* TODO Implement those evals *)
+  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "add_port_to_network" (eval_get_image_info state) yaks in
+  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "remove_port_from_network" (eval_get_image_info state) yaks in
+  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "create_floating_ip" (eval_get_image_info state) yaks in
+  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "delete_floating_ip" (eval_get_image_info state) yaks in
+  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "assign_floating_ip" (eval_get_image_info state) yaks in
+  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "remove_floating_ip" (eval_get_image_info state) yaks in
   (* Constraint Eval  *)
   let%lwt _ = Yaks_connector.LocalConstraint.Actual.add_agent_eval uuid "get_fdu_info" (eval_get_fdu_info state) yaks in
   (* Registering listeners *)

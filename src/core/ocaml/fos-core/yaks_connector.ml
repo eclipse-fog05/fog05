@@ -154,8 +154,6 @@ module MakeGAD(P: sig val prefix: string end) = struct
   let get_node_plugin_eval_path sysid tenantid nodeid pluginid func_name =
     create_path [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid; "plugins"; pluginid; "exec"; func_name]
 
-  (* UPDATED PATH WITH INSTANCE *)
-
   let get_node_fdu_info_path sysid tenantid nodeid fduid instanceid =
     create_path [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid; "fdu"; fduid; "instances"; instanceid ;"info"]
 
@@ -171,8 +169,6 @@ module MakeGAD(P: sig val prefix: string end) = struct
   let get_fdu_instance_selector sysid tenantid instanceid =
     create_selector [P.prefix; sysid; "tenants"; tenantid; "nodes"; "*"; "fdu"; "*"; "instances"; instanceid; "info"]
 
-  (* ###### *)
-
   let get_node_network_port_info_path sysid tenantid nodeid portid =
     create_path [P.prefix; sysid; "tenants"; tenantid;"nodes"; nodeid; "networks"; "ports"; portid; "info"]
 
@@ -184,6 +180,12 @@ module MakeGAD(P: sig val prefix: string end) = struct
 
   let get_node_network_info_path sysid tenantid nodeid networkid =
     create_path [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid; "networks"; networkid; "info"]
+
+  let get_node_network_floating_ip_info_path sysid tenantid nodeid floatingid =
+    create_path [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid; "networks"; "floating-ips"; floatingid; "info"]
+
+  let get_all_node_network_floating_ips_selector sysid tenantid nodeid =
+    create_selector [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid; "networks"; "floating-ips"; "*"; "info"]
 
   let get_all_entities_selector sysid tenantid =
     create_selector [P.prefix; sysid; "tenants"; tenantid; "entities"; "*"; "info"]
@@ -232,6 +234,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
 
   let get_all_node_flavor_selector sysid tenantid nodeid =
     create_selector [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid; "flavor"; "*"; "info"]
+
 
 
   let extract_userid_from_path path =
@@ -290,13 +293,17 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let ps = Yaks.Path.to_string path in
     List.nth (String.split_on_char '/' ps) 9
 
+  let extract_node_floatingid_from_path path =
+    let ps = Yaks.Path.to_string path in
+    List.nth (String.split_on_char '/' ps) 9
+
   let extract_node_imageid_from_path path =
     let ps = Yaks.Path.to_string path in
     List.nth (String.split_on_char '/' ps) 8
 
   let extract_node_flavorid_from_path path =
     let ps = Yaks.Path.to_string path in
-    List.nth (String.split_on_char '/' ps) 8
+    List.nth (String.split_on_char '/' ps) 9
 
 
   let get_sys_info sysid connector =
@@ -868,6 +875,46 @@ module MakeGAD(P: sig val prefix: string end) = struct
       Lwt_list.map_p (
         fun (_,v )-> Lwt.return  @@ FDU.connection_point_record_of_string (Yaks.Value.to_string v)) kvs
 
+  (* Floating IPs *)
+
+  let add_node_floating_ip sysid tenantid nodeid floatingid ip_info connector =
+    let p = get_node_network_floating_ip_info_path sysid tenantid nodeid floatingid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.put p (Yaks.Value.StringValue (FTypes.string_of_floating_ip ip_info)) connector.ws
+
+  let get_node_floatin_ip sysid tenantid nodeid floatingid connector =
+    let s = Yaks.Selector.of_path @@ get_node_network_floating_ip_info_path sysid tenantid nodeid floatingid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.get s connector.ws
+    >>= fun kvs ->
+    match kvs with
+    | [] -> Lwt.return None
+    | _ -> let _,v = List.hd kvs in
+      Lwt.return @@ Some (FTypes.floating_ip_of_string (Yaks.Value.to_string v))
+
+  let observe_node_floating_ips sysid tenantid nodeid callback connector =
+    MVar.guarded connector @@ fun connector ->
+    let s = get_all_node_network_floating_ips_selector sysid tenantid nodeid in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback FTypes.floating_ip_of_string extract_node_floatingid_from_path) s connector.ws in
+    let ls = List.append connector.listeners [subid] in
+    MVar.return subid {connector with listeners = ls}
+
+  let remove_node_floating_ip sysid tenantid nodeid floatingid connector =
+    let p = get_node_network_floating_ip_info_path sysid tenantid floatingid nodeid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.remove p connector.ws
+
+  let get_all_node_floating_ips sysid tenantid nodeid connector =
+    let s = get_all_node_network_floating_ips_selector sysid tenantid nodeid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.get s connector.ws
+    >>= fun kvs ->
+    match kvs with
+    | [] -> Lwt.return []
+    | _ ->
+      Lwt_list.map_p (
+        fun (_,v )-> Lwt.return  @@ FTypes.floating_ip_of_string (Yaks.Value.to_string v)) kvs
+
   (* Global Images *)
 
   let add_image sysid tenantid imageid imageinfo connector =
@@ -1062,8 +1109,6 @@ module MakeLAD(P: sig val prefix: string end) = struct
   let get_node_runtime_fdus_selector nodeid pluginid =
     create_selector [P.prefix; nodeid; "runtimes"; pluginid; "fdu"; "*"; "info"]
 
-  (* Update Path with instances *)
-
   let get_node_fdus_selector nodeid =
     create_selector [P.prefix; nodeid; "runtimes"; "*"; "fdu"; "*"; "instances"; "*"; "info"]
 
@@ -1100,7 +1145,6 @@ module MakeLAD(P: sig val prefix: string end) = struct
   let get_node_networks_find_selector nodeid netid =
     create_path [P.prefix; nodeid; "network_managers"; "*"; "networks"; netid; "info"]
 
-
   let get_node_network_info_path nodeid pluginid networkid =
     create_path [P.prefix; nodeid; "network_managers"; pluginid;"networks"; networkid; "info"]
 
@@ -1110,6 +1154,12 @@ module MakeLAD(P: sig val prefix: string end) = struct
   let get_node_network_ports_selector nodeid pluginid =
     create_selector [P.prefix; nodeid; "network_managers"; pluginid; "ports"; "*"; "info"]
 
+  let get_node_network_floating_ip_info_path nodeid pluginid floatingid =
+    create_path [P.prefix; nodeid; "network_managers"; pluginid; "floating-ips"; floatingid; "info"]
+
+  let get_node_network_floating_ips_selector nodeid pluginid =
+    create_selector [P.prefix; nodeid; "network_managers"; pluginid; "floating-ips"; "*"; "info"]
+
   let get_node_os_exec_path nodeid func_name =
     create_path [P.prefix; nodeid; "os"; "exec"; func_name]
 
@@ -1118,6 +1168,38 @@ module MakeLAD(P: sig val prefix: string end) = struct
 
   let get_agent_exec_path nodeid func_name =
     create_path [P.prefix; nodeid; "agent"; "exec"; func_name]
+
+  (* NM Evals *)
+
+  let get_node_nw_exec_eval_with_params nodeid nm_id func_name (params: (string * string) list) =
+    (* let rec assoc2args base index list =
+       (if index = 0 then
+       let k,v = List.hd list in
+       let b = base ^ "(" ^ k ^ "=" ^ v in
+       assoc2args b (index+1) list
+       else
+       if index < List.length list then
+       let k,v = List.nth list index in
+       let b  = base ^ ";" ^ k ^ "=" ^ v in
+       assoc2args b (index+1) list
+       else
+       base ^ ")")
+       in *)
+    let rec assoc2args base index list =
+      let len = List.length list in
+      match index with
+      | 0 ->
+        let k,v = List.hd list in
+        let b = base ^ "(" ^ k ^ "=" ^ v in
+        assoc2args b (index+1) list
+      | n when n < len ->
+        let k,v = List.nth list index in
+        let b  = base ^ ";" ^ k ^ "=" ^ v in
+        assoc2args b (index+1) list
+      | _-> base ^ ")"
+    in  let  p = assoc2args "" 0 params in
+    let f = func_name ^ "?" ^ p in
+    create_selector [P.prefix; nodeid; "network_managers"; nm_id; "exec"; f]
 
   let extract_nodeid_from_path path =
     let ps = Yaks.Path.to_string path in
@@ -1148,6 +1230,10 @@ module MakeLAD(P: sig val prefix: string end) = struct
     List.nth (String.split_on_char '/' ps) 6
 
   let extract_portid_from_path path =
+    let ps = Yaks.Path.to_string path in
+    List.nth (String.split_on_char '/' ps) 6
+
+  let extract_floatingid_from_path path =
     let ps = Yaks.Path.to_string path in
     List.nth (String.split_on_char '/' ps) 6
 
@@ -1188,6 +1274,19 @@ module MakeLAD(P: sig val prefix: string end) = struct
     let ls = List.append connector.evals [p] in
     MVar.return Lwt.return_unit {connector with evals = ls}
 
+  let exec_nm_eval nodeid nm_id func_name parametes connector =
+    MVar.read connector >>= fun connector ->
+    let s = get_node_nw_exec_eval_with_params  nodeid nm_id func_name parametes in
+    Yaks.Workspace.eval s connector
+    >>= fun res ->
+    match res with
+    | [] -> Lwt.return None
+    | (_,v)::_ ->
+      try
+        Lwt.return @@ Some (Agent_types.eval_result_of_string (Yaks.Value.to_string v))
+      with
+      | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _ ->
+        Lwt.fail @@ FException (`InternalError (`Msg ("Value is not well formatted in exec_nm_eval") ))
 
   let observe_node_plugins nodeid callback connector =
     MVar.guarded connector @@ fun connector ->
@@ -1380,6 +1479,36 @@ module MakeLAD(P: sig val prefix: string end) = struct
   let remove_node_port nodeid pluginid portid connector =
     MVar.read connector >>= fun connector ->
     let p = get_node_network_port_info_path nodeid pluginid portid in
+    Yaks.Workspace.remove p connector.ws
+
+  (* Floating IPs *)
+
+  let observe_node_floating_ips nodeid callback connector =
+    MVar.guarded connector @@ fun connector ->
+    let s = get_node_network_floating_ips_selector nodeid "*" in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback FTypes.floating_ip_record_of_string extract_portid_from_path) s connector.ws in
+    let ls = List.append connector.listeners [subid] in
+    MVar.return subid {connector with listeners = ls}
+
+  let add_node_floating_ip nodeid pluginid floatingid ip_info connector =
+    MVar.read connector >>= fun connector ->
+    let p = get_node_network_floating_ip_info_path nodeid pluginid floatingid in
+    let value = Yaks.Value.StringValue (FTypes.string_of_floating_ip_record ip_info) in
+    Yaks.Workspace.put p value connector.ws
+
+  let get_node_floating_ip nodeid pluginid floatingid connector =
+    MVar.read connector >>= fun connector ->
+    let s = Yaks.Selector.of_path @@ get_node_network_floating_ip_info_path nodeid pluginid floatingid in
+    let%lwt data = Yaks.Workspace.get s connector.ws in
+    match data with
+    | [] -> Lwt.return None
+    | _ ->
+      let _,v = List.hd data in
+      Lwt.return @@  Some (FTypes.floating_ip_record_of_string (Yaks.Value.to_string v))
+
+  let remove_node_floating_ip nodeid pluginid floatingid connector =
+    MVar.read connector >>= fun connector ->
+    let p = get_node_network_floating_ip_info_path nodeid pluginid floatingid in
     Yaks.Workspace.remove p connector.ws
 
 end
@@ -1652,5 +1781,6 @@ end
 module LocalConstraint = struct
   module Actual = MakeCLAD(struct let prefix  = local_constraint_actual_prefix end )
   module Desired = MakeCLAD(struct let prefix = local_constaint_desired_prefix end)
+
 
 end
