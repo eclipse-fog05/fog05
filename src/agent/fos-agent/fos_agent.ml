@@ -853,7 +853,7 @@ let agent verbose_flag debug_flag configuration =
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_network_info" (eval_get_network_info state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_port_info" (eval_get_port_info state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_image_info" (eval_get_image_info state) yaks in
-  (* TODO Implement those evals *)
+  (* Network Mgmt Evals *)
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "add_port_to_network" (eval_connect_cp_to_network state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "remove_port_from_network" (eval_remove_cp_from_network state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "create_floating_ip" (eval_create_floating_ip state) yaks in
