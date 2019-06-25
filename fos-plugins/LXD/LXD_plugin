@@ -201,8 +201,13 @@ class LXD(RuntimePluginFDU):
             if fdu.get_image_uri().startswith('lxd://'):
                 img_alias = fdu.get_image_uri()[6:]
                 self.logger.info('define_fdu()','Image is coming from LXD repository: {}'.format(img_alias))
-                lxd_img = self.conn.images.create_from_simplestreams(server=self.IMAGE_SERVER, alias=img_alias)
-                lxd_img.add_alias(fdu_uuid, description='')
+                try:
+                    lxd_img = self.conn.images.create_from_simplestreams(server=self.IMAGE_SERVER, alias=img_alias)
+                    lxd_img.add_alias(fdu_uuid, description='')
+                except LXDAPIException as e:
+                    if '{}'.format(e) == 'Image with same fingerprint already exists':
+                            self.logger.info('define_fdu()', '[ INFO ] LXD Plugin - Image with same fingerprint already exists')
+                            pass
                 image_name = ''
                 img_info.update({'uuid': fdu_uuid})
                 img_info.update({'name': '{}_img'.format(fdu.name)})
