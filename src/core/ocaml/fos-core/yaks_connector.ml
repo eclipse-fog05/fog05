@@ -119,10 +119,10 @@ module MakeGAD(P: sig val prefix: string end) = struct
     create_path [P.prefix; sysid; "tenants"; tenantid; "configuration"]
 
   let get_atomic_entity_info_path sysid tenantid aeid =
-    create_path [P.prefix; sysid; "tenants"; tenantid; "catalog"; "atommic-entity"; aeid; "info"]
+    create_path [P.prefix; sysid; "tenants"; tenantid; "catalog"; "atommic-entities"; aeid; "info"]
 
   let get_all_atomic_entity_selector sysid tenantid =
-    create_selector [P.prefix; sysid; "tenants"; tenantid; "catalog"; "atomic-entity"; "*"; "info"]
+    create_selector [P.prefix; sysid; "tenants"; tenantid; "catalog"; "atomic-entities"; "*"; "info"]
 
   let get_fdu_info_path sysid tenantid fduid =
     create_path [P.prefix; sysid; "tenants"; tenantid; "catalog"; "fdu"; fduid; "info"]

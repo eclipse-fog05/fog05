@@ -50,13 +50,21 @@ class GAD(object):
         return Constants.create_path(
             [self.prefix, sysid, 'tenants', tenantid, 'configuration'])
 
+    def get_atomic_entity_info_path(self, sysid, tenantid, aeid):
+        return Constants.create_path([self.prefix, sysid, 'tenants',
+            tenantid, 'catalog', 'atomic-entities', aeid, 'info'])
+
+    def get_all_atomic_entities_selector(self, sysid, tenantid):
+        return Constants.create_path([self.prefix, sysid, 'tenants',
+            tenantid, 'catalog', 'atomic-entities', '*', 'info'])
+
     def get_fdu_info_path(self, sysid, tenantid, fduid):
         return Constants.create_path([self.prefix, sysid, 'tenants',
-            tenantid, "fdu", fduid, "info"])
+            tenantid, 'catalog', 'fdu', fduid, 'info'])
 
     def get_all_fdu_selector(self, sysid, tenantid):
         return Constants.create_path([self.prefix, sysid, 'tenants',
-            tenantid, 'fdu', '*', 'info'])
+            tenantid, 'catalog', 'fdu', '*', 'info'])
 
     def get_all_nodes_selector(self, sysid, tenantid):
         return Constants.create_path(
@@ -194,7 +202,7 @@ class GAD(object):
     def get_node_all_network_floating_ips_selector(self, sysid, tenantid, nodeid):
          return Constants.create_path([
             self.prefix, sysid, 'tenants', tenantid, 'nodes', nodeid,
-            'networks', 'floating-ips', "*", 'info'])
+            'networks', 'floating-ips', '*', 'info'])
 
 
     def extract_userid_from_path(self, path):
@@ -203,8 +211,11 @@ class GAD(object):
     def extract_tenantid_from_path(self, path):
         return path.split('/')[4]
 
+    def extract_aeid_from_path(self, path):
+        return path.split('/')[7]
+
     def extract_fduid_from_path(self, path):
-        return path.split('/')[6]
+        return path.split('/')[7]
 
     def extract_nodeid_from_path(self, path):
         return path.split('/')[6]
@@ -443,7 +454,7 @@ class GAD(object):
             return list(xs)
 
     def get_node_fdu_instances(self, sysid, tenantid, nodeid, fduid):
-        p = self.get_node_fdu_info_path(sysid, tenantid, nodeid, fduid, "*")
+        p = self.get_node_fdu_info_path(sysid, tenantid, nodeid, fduid, '*')
         kvs = self.ws.get(p)
         if len(kvs) == 0:
             return []
@@ -454,14 +465,14 @@ class GAD(object):
         return list(xs)
 
     def get_node_fdu_instance(self, sysid, tenantid, nodeid, instanceid):
-        p = self.get_node_fdu_info_path(sysid, tenantid, nodeid, "*", instanceid)
+        p = self.get_node_fdu_info_path(sysid, tenantid, nodeid, '*', instanceid)
         kvs = self.ws.get(p)
         if len(kvs) == 0:
             return None
         return json.loads(kvs[0][1].get_value())
 
     def get_fdu_instance_node(self, sysid, tenantid, instanceid):
-        p = self.get_node_fdu_info_path(sysid, tenantid, '*', "*", instanceid)
+        p = self.get_node_fdu_info_path(sysid, tenantid, '*', '*', instanceid)
         kvs = self.ws.get(p)
         if len(kvs) == 0:
             return None
@@ -479,7 +490,7 @@ class GAD(object):
         return self.ws.remove(p)
 
     def get_fdu_nodes(self, sysid, tenantid, fduid):
-        s = self.get_node_fdu_info_path(sysid, tenantid, "*", fduid, "*")
+        s = self.get_node_fdu_info_path(sysid, tenantid, '*', fduid, '*')
         res = self.ws.get(s)
         if len(res) == 0:
             return []
@@ -789,7 +800,7 @@ class LAD(object):
     def get_node_networks_port_selector(self, nodeid, pluginid):
         return Constants.create_path(
             [self.prefix, nodeid, 'network_managers',
-             pluginid, 'ports', '*',"info"])
+             pluginid, 'ports', '*','info'])
 
     def get_node_network_info_path(self, nodeid, pluginid, networkid):
         return Constants.create_path(
@@ -808,7 +819,7 @@ class LAD(object):
 
     def get_node_all_network_floating_ips_selector(self, nodeid, pluginid):
         return Constants.create_path([self.prefix, nodeid,
-            'network_managers', pluginid , 'floating-ips', "*", 'info'])
+            'network_managers', pluginid , 'floating-ips', '*', 'info'])
 
 
 
@@ -897,7 +908,7 @@ class LAD(object):
             nodeid, func_name, parameters)
         res = self.ws.eval(s)
         if len(res) == 0:
-            raise ValueError("Empty data on exec_agent_eval")
+            raise ValueError('Empty data on exec_agent_eval')
         else:
             return json.loads(res[0][1].get_value())
 
@@ -906,7 +917,7 @@ class LAD(object):
             nodeid, func_name, parameters)
         res = self.ws.eval(s)
         if len(res) == 0:
-            raise ValueError("Empty data on exec_os_eval")
+            raise ValueError('Empty data on exec_os_eval')
         else:
             return json.loads(res[0][1].get_value())
 
@@ -925,7 +936,7 @@ class LAD(object):
             nodeid, nm_uuid, func_name, parameters)
         res = self.ws.eval(s)
         if len(res) == 0:
-            raise ValueError("Empty data on exec_os_eval")
+            raise ValueError('Empty data on exec_os_eval')
         else:
             return json.loads(res[0][1].get_value())
 
@@ -934,7 +945,7 @@ class LAD(object):
             nodeid, pluginid, func_name, parameters)
         res = self.ws.eval(s)
         if len(res) == 0:
-            raise ValueError("Empty data on exec_os_eval")
+            raise ValueError('Empty data on exec_os_eval')
         else:
             return json.loads(res[0][1].get_value())
 
@@ -1004,7 +1015,7 @@ class LAD(object):
         s = self.get_node_configuration_path(nodeid)
         res = self.ws.get(s)
         if len(res) == 0:
-            raise ValueError("Empty data on get_node_configuration")
+            raise ValueError('Empty data on get_node_configuration')
         return json.loads(res[0][1].get_value())
 
     def observe_node_plugins(self, nodeid, callback):
@@ -1039,14 +1050,14 @@ class LAD(object):
         s = self.get_node_info_path(nodeid)
         res = self.ws.get(s)
         if len(res) == 0:
-            raise ValueError("Empty data on get_node_info")
+            raise ValueError('Empty data on get_node_info')
         return json.loads(res[0][1].get_value())
 
     def get_node_os_info(self, nodeid):
         s = self.get_node_os_info_path(nodeid)
         res = self.ws.get(s)
         if len(res) == 0:
-            raise ValueError("Empty data on get_node_os_info")
+            raise ValueError('Empty data on get_node_os_info')
         return json.loads(res[0][1].get_value())
 
     def add_node_os_info(self, nodeid, osinfo):
@@ -1254,7 +1265,7 @@ class CLAD(object):
         return '('+b+')'
 
     def get_node_selector(self):
-        return Constants.create_path([self.prefix, "*", "info"])
+        return Constants.create_path([self.prefix, '*', 'info'])
 
     def get_node_info_path(self, nodeid):
         return Constants.create_path([self.prefix, nodeid, 'info'])
@@ -1380,7 +1391,7 @@ class CLAD(object):
             nodeid, func_name, parameters)
         res = self.ws.eval(s)
         if len(res) == 0:
-            raise ValueError("Empty data on exec_agent_eval")
+            raise ValueError('Empty data on exec_agent_eval')
         else:
             return json.loads(res[0][1].get_value())
 
@@ -1389,7 +1400,7 @@ class CLAD(object):
             nodeid, func_name, parameters)
         res = self.ws.eval(s)
         if len(res) == 0:
-            raise ValueError("Empty data on exec_os_eval")
+            raise ValueError('Empty data on exec_os_eval')
         else:
             return json.loads(res[0][1].get_value())
 
@@ -1398,7 +1409,7 @@ class CLAD(object):
             nodeid, pluginid, func_name, parameters)
         res = self.ws.eval(s)
         if len(res) == 0:
-            raise ValueError("Empty data on exec_os_eval")
+            raise ValueError('Empty data on exec_os_eval')
         else:
             return json.loads(res[0][1].get_value())
 
@@ -1434,7 +1445,7 @@ class CLAD(object):
         s = self.get_node_configuration_path(nodeid)
         res = self.ws.get(s)
         if len(res) == 0:
-            raise ValueError("Empty data on get_node_configuration")
+            raise ValueError('Empty data on get_node_configuration')
         return json.loads(res[0][1].get_value())
 
     def observe_node_plugins(self, nodeid, callback):
@@ -1469,14 +1480,14 @@ class CLAD(object):
         s = self.get_node_info_path(nodeid)
         res = self.ws.get(s)
         if len(res) == 0:
-            raise ValueError("Empty data on get_node_info")
+            raise ValueError('Empty data on get_node_info')
         return json.loads(res[0][1].get_value())
 
     def get_node_os_info(self, nodeid):
         s = self.get_node_os_info_path(nodeid)
         res = self.ws.get(s)
         if len(res) == 0:
-            raise ValueError("Empty data on get_node_os_info")
+            raise ValueError('Empty data on get_node_os_info')
         return json.loads(res[0][1].get_value())
 
     def add_node_os_info(self, nodeid, osinfo):
