@@ -313,6 +313,104 @@ let agent verbose_flag debug_flag configuration =
     | _ -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
+  (* NM Floating IPs *)
+  let eval_create_floating_ip self (props:Apero.properties) =
+    ignore props;
+    MVar.read self >>= fun state ->
+    let%lwt net_p = get_network_plugin self in
+    try%lwt
+      let fname = "create_floating_ip" in
+      Yaks_connector.Local.Actual.exec_nm_eval (Apero.Option.get state.configuration.agent.uuid) net_p fname [] state.yaks
+      >>= fun res ->
+      match res with
+      | Some r ->
+        (* Convertion from record *)
+        let floating_r = FTypes.floating_ip_record_of_string @@ JSON.to_string (Apero.Option.get r.result) in
+        let floating = FTypes.{uuid = floating_r.uuid; ip_version = floating_r.ip_version; address = floating_r.address} in
+        Yaks_connector.Global.Actual.add_node_floating_ip sys_id Yaks_connector.default_tenant_id (Apero.Option.get state.configuration.agent.uuid) floating.uuid floating state.yaks
+        >>= fun _ ->
+        let eval_res = FAgentTypes.{result = Some (JSON.of_string (FTypes.string_of_floating_ip floating)) ; error=None} in
+        Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+      |  None -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
+        Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+    with
+    | _ -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
+      Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+  in
+  let eval_delete_floating_ip self (props:Apero.properties) =
+    MVar.read self >>= fun state ->
+    let%lwt net_p = get_network_plugin self in
+    try%lwt
+      let ip_id = Apero.Option.get @@ Apero.Properties.get "floating_uuid" props in
+      let parameters = [("ip_id",ip_id)] in
+      let fname = "delete_floating_ip" in
+      Yaks_connector.Local.Actual.exec_nm_eval (Apero.Option.get state.configuration.agent.uuid) net_p fname parameters state.yaks
+      >>= fun res ->
+      match res with
+      | Some r ->
+        (* Convertion from record *)
+        let floating_r = FTypes.floating_ip_record_of_string @@ JSON.to_string (Apero.Option.get r.result) in
+        let floating = FTypes.{uuid = floating_r.uuid; ip_version = floating_r.ip_version; address = floating_r.address} in
+        Yaks_connector.Global.Actual.add_node_floating_ip sys_id Yaks_connector.default_tenant_id (Apero.Option.get state.configuration.agent.uuid) floating.uuid floating state.yaks
+        >>= fun _ ->
+        let eval_res = FAgentTypes.{result = Some (JSON.of_string (FTypes.string_of_floating_ip floating)) ; error=None} in
+        Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+      |  None -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
+        Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+    with
+    | _ -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
+      Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+  in
+  let eval_assign_floating_ip self (props:Apero.properties) =
+    MVar.read self >>= fun state ->
+    let%lwt net_p = get_network_plugin self in
+    try%lwt
+      let ip_id = Apero.Option.get @@ Apero.Properties.get "floating_uuid" props in
+      let cp_id = Apero.Option.get @@ Apero.Properties.get "cp_uuid" props in
+      let parameters = [("ip_id",ip_id);("cp_id",cp_id)] in
+      let fname = "assign_floating_ip" in
+      Yaks_connector.Local.Actual.exec_nm_eval (Apero.Option.get state.configuration.agent.uuid) net_p fname parameters state.yaks
+      >>= fun res ->
+      match res with
+      | Some r ->
+        (* Convertion from record *)
+        let floating_r = FTypes.floating_ip_record_of_string @@ JSON.to_string (Apero.Option.get r.result) in
+        let floating = FTypes.{uuid = floating_r.uuid; ip_version = floating_r.ip_version; address = floating_r.address} in
+        Yaks_connector.Global.Actual.add_node_floating_ip sys_id Yaks_connector.default_tenant_id (Apero.Option.get state.configuration.agent.uuid) floating.uuid floating state.yaks
+        >>= fun _ ->
+        let eval_res = FAgentTypes.{result = Some (JSON.of_string (FTypes.string_of_floating_ip floating)) ; error=None} in
+        Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+      |  None -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
+        Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+    with
+    | _ -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
+      Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+  in
+  let eval_remove_floating_ip self (props:Apero.properties) =
+    MVar.read self >>= fun state ->
+    let%lwt net_p = get_network_plugin self in
+    try%lwt
+      let ip_id = Apero.Option.get @@ Apero.Properties.get "floating_uuid" props in
+      let cp_id = Apero.Option.get @@ Apero.Properties.get "cp_uuid" props in
+      let parameters = [("ip_id",ip_id);("cp_id",cp_id)] in
+      let fname = "remove_floating_ip" in
+      Yaks_connector.Local.Actual.exec_nm_eval (Apero.Option.get state.configuration.agent.uuid) net_p fname parameters state.yaks
+      >>= fun res ->
+      match res with
+      | Some r ->
+        (* Convertion from record *)
+        let floating_r = FTypes.floating_ip_record_of_string @@ JSON.to_string (Apero.Option.get r.result) in
+        let floating = FTypes.{uuid = floating_r.uuid; ip_version = floating_r.ip_version; address = floating_r.address} in
+        Yaks_connector.Global.Actual.add_node_floating_ip sys_id Yaks_connector.default_tenant_id (Apero.Option.get state.configuration.agent.uuid) floating.uuid floating state.yaks
+        >>= fun _ ->
+        let eval_res = FAgentTypes.{result = Some (JSON.of_string (FTypes.string_of_floating_ip floating)) ; error=None} in
+        Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+      |  None -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
+        Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+    with
+    | _ -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
+      Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+  in
   (* Listeners *)
   (* Global Desired *)
   let cb_gd_plugin self (pl:FTypes.plugin option) (is_remove:bool) (uuid:string option) =
@@ -758,10 +856,10 @@ let agent verbose_flag debug_flag configuration =
   (* TODO Implement those evals *)
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "add_port_to_network" (eval_connect_cp_to_network state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "remove_port_from_network" (eval_remove_cp_from_network state) yaks in
-  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "create_floating_ip" (eval_get_image_info state) yaks in
-  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "delete_floating_ip" (eval_get_image_info state) yaks in
-  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "assign_floating_ip" (eval_get_image_info state) yaks in
-  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "remove_floating_ip" (eval_get_image_info state) yaks in
+  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "create_floating_ip" (eval_create_floating_ip state) yaks in
+  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "delete_floating_ip" (eval_delete_floating_ip state) yaks in
+  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "assign_floating_ip" (eval_assign_floating_ip state) yaks in
+  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "remove_floating_ip" (eval_remove_floating_ip state) yaks in
   (* Constraint Eval  *)
   let%lwt _ = Yaks_connector.LocalConstraint.Actual.add_agent_eval uuid "get_fdu_info" (eval_get_fdu_info state) yaks in
   (* Registering listeners *)
@@ -853,4 +951,3 @@ let info =
   Cmdliner.Term.info "agent" ~version:"%%VERSION%%" ~doc ~exits:Cmdliner.Term.default_exits ~man
 
 let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
-
