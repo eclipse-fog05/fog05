@@ -855,7 +855,7 @@ class LXD(RuntimePluginFDU):
                         if ip == '':
                             lxd_net_info_addrs = cs.network[i['vintf_name']]['addresses']
                             for a in lxd_net_info_addrs:
-                                if a['familty'] == 'inet':
+                                if a['family'] == 'inet':
                                     ip = a['address']
                         # c_net.append(
                         #     {'name': i['vintf_name'],
