@@ -771,6 +771,11 @@ class LAD(object):
             [self.prefix, nodeid, 'runtimes', '*', 'fdu', '*',
                 'instances', instanceid, 'info'])
 
+    def get_node_all_fdus_instances_selector(self, nodeid):
+        return Constants.create_path(
+            [self.prefix, nodeid, 'runtimes', "*", 'fdu', '*',
+            'instances','*','info'])
+
     def get_node_image_info_path(self, nodeid, pluginid, imgid):
         return Constants.create_path(
             [self.prefix, nodeid, 'runtimes', pluginid,
@@ -1087,6 +1092,13 @@ class LAD(object):
         if len(res) == 0:
             return []
         return list(map(lambda x: self.extract_node_instanceid_from_path(x[0]), res))
+
+    def get_node_all_fdus_instances(self, nodeid):
+        p = self.get_node_all_fdus_instances_selector(nodeid)
+        res = self.ws.get(p)
+        if len(res) == 0:
+            return []
+        return list(map (lambda x: json.loads(x[1]), res))
 
     def add_node_image(self, nodeid, pluginid, imgid, imginfo):
         p = self.get_node_image_info_path(nodeid, pluginid, imgid)

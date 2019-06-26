@@ -850,6 +850,12 @@ class LXD(RuntimePluginFDU):
                     c_net = {}
                     for i in record.get('interfaces'):
                         ip = self.call_nw_plugin_function('get_address', {'mac_address':i.get('mac_address','')})
+                        # Getting address from LXD if unable from network manager, eg. if connected to physical device/lxd bridge
+                        if ip == '':
+                            lxd_net_info_addrs = cs.network[i['vintf_name']]['addresses']
+                            for a in lxd_net_info_addrs:
+                                if a['familty'] == 'inet':
+                                    ip = a['address']
                         # c_net.append(
                         #     {'name': i['vintf_name'],
                         #     'mac_address': i.get('mac_address',''),
