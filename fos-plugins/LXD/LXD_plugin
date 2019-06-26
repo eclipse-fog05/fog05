@@ -129,6 +129,7 @@ class LXD(RuntimePluginFDU):
         self.logger.info(
             'stop_runtime()', 'LXD Plugin - Destroying {} running FDUs'.format(len(self.current_fdus)))
         for k in list(self.current_fdus.keys()):
+            # TODO verify this
             try:
                 fdu = self.current_fdus.get(k)
                 self.__force_fdu_termination(k)
@@ -930,6 +931,7 @@ class LXD(RuntimePluginFDU):
         interfaces = []
         for intf in fdu.get_interfaces():
             intf_name = intf.get('vintf_name')
+            self.logger.info('__generate_custom_profile_devices_configuration()','Interface Info {}'.format(intf))
             mac = intf.get('mac_address', self.__generate_random_mac())
             if intf.get('if_type').upper() in ['PHYSICAL','BRIDGED']:
                 real_intf_name = intf.get('phy_face')
