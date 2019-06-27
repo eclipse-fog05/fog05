@@ -365,6 +365,7 @@ class FIMAPI(object):
                 n, pid = p
                 if pid == cp_uuid:
                     port_info = self.connector.glob.actual.get_node_network_port(self. sysid, self.tenantid, n, pid)
+                    node = n
             if node is None or port_info is None:
                 raise ValueError('Connection point {} not found'.format(cp_uuid))
             res = self.connector.glob.actual.remove_node_port_from_network(self.sysid, self.tenantid, node, port_info['uuid'])
