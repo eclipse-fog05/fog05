@@ -616,7 +616,7 @@ class LinuxBridge(NetworkPlugin):
         cmd = "sudo ip link add {} link {} type macvlan mode vepa".format(vface, face)
         self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':True})
         cmd = "sudo dhclient {}".format(vface)
-        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':True})
+        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':False, 'external':True})
         try:
             addr = netifaces.ifaddresses(vface)[2][0]['addr']
         except:

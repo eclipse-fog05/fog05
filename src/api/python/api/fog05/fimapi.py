@@ -378,7 +378,7 @@ class FIMAPI(object):
             return self.connector.glob.actual.add_node_floatingip(self.sysid, self.tenantid, nodeid)
 
         def delete_floating_ip(self, nodeid, ip_id):
-            return self.connector.glob.actual.remove_node_floating_ip(self.sysid, self.tenantid, nodeid, ip_id)
+            return self.connector.glob.actual.remove_node_floatingip(self.sysid, self.tenantid, nodeid, ip_id)
 
         def list(self):
             '''
