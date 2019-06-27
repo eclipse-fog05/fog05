@@ -613,7 +613,7 @@ class LinuxBridge(NetworkPlugin):
         ip_small_id = ip_id.split('-')[0]
         vface = 'fl-{}'.format(ip_small_id)
         face = self.overlay_interface
-        cmd = "sudo ip link add {} link {} type macvlan mode vepa"
+        cmd = "sudo ip link add {} link {} type macvlan mode vepa".format(vface, face)
         self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':True})
         cmd = "sudo dhclient {}".format(vface)
         self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':True})
