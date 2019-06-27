@@ -854,12 +854,12 @@ let agent verbose_flag debug_flag configuration custom_uuid =
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_port_info" (eval_get_port_info state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_image_info" (eval_get_image_info state) yaks in
   (* Network Mgmt Evals *)
-  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "add_port_to_network" (eval_connect_cp_to_network state) yaks in
-  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "remove_port_from_network" (eval_remove_cp_from_network state) yaks in
-  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "create_floating_ip" (eval_create_floating_ip state) yaks in
-  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "delete_floating_ip" (eval_delete_floating_ip state) yaks in
-  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "assign_floating_ip" (eval_assign_floating_ip state) yaks in
-  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "remove_floating_ip" (eval_remove_floating_ip state) yaks in
+  let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "add_port_to_network" (eval_connect_cp_to_network state) yaks in
+  let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "remove_port_from_network" (eval_remove_cp_from_network state) yaks in
+  let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "create_floating_ip" (eval_create_floating_ip state) yaks in
+  let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "delete_floating_ip" (eval_delete_floating_ip state) yaks in
+  let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "assign_floating_ip" (eval_assign_floating_ip state) yaks in
+  let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "remove_floating_ip" (eval_remove_floating_ip state) yaks in
   (* Constraint Eval  *)
   let%lwt _ = Yaks_connector.LocalConstraint.Actual.add_agent_eval uuid "get_fdu_info" (eval_get_fdu_info state) yaks in
   (* Registering listeners *)

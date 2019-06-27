@@ -342,10 +342,34 @@ class FIMAPI(object):
                 self.sysid, self.tenantid, cp_uuid, manifest)
 
         def connect_cp_to_network(self, cp_uuid, net_uuid):
-            pass
+            ports = self.connector.glob.actual.get_all_nodes_network_ports(self.sysid, self.tenantid)
+            node = None
+            port_info = None
+            for p in ports:
+                n, pid = p
+                if pid == cp_uuid:
+                    port_info = self.connector.glob.actual.get_node_network_port(self. sysid, self.tenantid, n, pid)
+            if node is None and port_info is None:
+                raise ValueError('Connection point {} not found'.format(cp_uuid))
+            res = self.connector.glob.actual.add_node_port_to_network(self.sysid, self.tenantid, node, port_info['uuid'], net_uuid)
+            if res.get('result') is not None:
+                return cp_uuid
+            raise ValueError('Error connecting: {}'.format(res['error']))
 
         def disconnect_cp(self, cp_uuid):
-            pass
+            ports = self.connector.glob.actual.get_all_nodes_network_ports(self.sysid, self.tenantid)
+            node = None
+            port_info = None
+            for p in ports:
+                n, pid = p
+                if pid == cp_uuid:
+                    port_info = self.connector.glob.actual.get_node_network_port(self. sysid, self.tenantid, n, pid)
+            if node is None and port_info is None:
+                raise ValueError('Connection point {} not found'.format(cp_uuid))
+            res = self.connector.glob.actual.remove_node_port_from_network(self.sysid, self.tenantid, node, port_info['uuid'])
+            if res.get('result') is not None:
+                return cp_uuid
+            raise ValueError('Error connecting: {}'.format(res['error']))
 
         def list(self):
             '''
