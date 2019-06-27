@@ -100,7 +100,7 @@ class GAD(object):
         return Constants.create_path([self.prefix, sysid, 'tenants', tenantid,
                                       'nodes', nodeid, 'plugins',
                                       pluginid, 'exec', func_name])
-    # Updated paths with instances
+
     def get_node_fdu_info_path(self, sysid, tenantid, nodeid, fduid, instanceid):
         return Constants.create_path([self.prefix, sysid, 'tenants', tenantid,
                                       'nodes', nodeid, 'fdu',fduid ,
@@ -204,6 +204,45 @@ class GAD(object):
             self.prefix, sysid, 'tenants', tenantid, 'nodes', nodeid,
             'networks', 'floating-ips', '*', 'info'])
 
+    def get_node_network_ports_selector(self, sysid, tenantid):
+        return Constants.create_path(
+            [self.prefix, sysid, 'tenants', tenantid,
+            'nodes', '*', 'networks', 'ports', '*', 'info'])
+
+    def get_node_network_port_info_path(self, sysid, tenantid, nodeid, portid):
+        return Constants.create_path(
+            [self.prefix, sysid, 'tenants', tenantid,
+            'nodes', nodeid, 'networks', 'ports', portid, 'info'])
+
+
+        # TODO: this should be in the YAKS api in the creation of a selector
+    def dict2args(self, d):
+        i = 0
+        b = ''
+        for k in d:
+            v = d.get(k)
+            if isinstance(v,(dict, list)):
+                v = json.dumps(v)
+            if i == 0:
+                b = b + '{}={}'.format(k, v)
+            else:
+                b = b + ';{}={}'.format(k, v)
+            i = i + 1
+        return '('+b+')'
+
+    def get_agent_exec_path(self, sysid, tenantid, nodeid, func_name):
+        return Constants.create_path([self.prefix, sysid, "tenants",
+        tenantid, "nodes", nodeid, 'agent', 'exec', func_name])
+
+    def get_agent_exec_path_with_params(self, sysid, tenantid, nodeid, func_name, params):
+        if len(params) > 0:
+            p = self.dict2args(params)
+            f = func_name + '?' + p
+        else:
+            f = func_name
+        return Constants.create_path([self.prefix, sysid, "tenants",
+        tenantid, "nodes", nodeid, 'agent', 'exec',f])
+
 
     def extract_userid_from_path(self, path):
         return path.split('/')[4]
@@ -228,6 +267,9 @@ class GAD(object):
 
     def extract_node_instanceid_from_path(self, path):
         return path.split('/')[10]
+
+    def extract_node_port_id_from_path(self, path):
+        return path.split('/')[9]
 
     def extract_node_floatingid_from_path(self, path):
         return path.split('/')[9]
@@ -676,6 +718,50 @@ class GAD(object):
         for n in kvs:
             d.append(json.loads(kvs[0][1].get_value()))
         return d
+
+    def get_all_nodes_network_ports(self, sysid, tenantid):
+        s = self.get_node_network_ports_selector(sysid, tenantid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            return []
+        xs = map(lambda x:
+         (self.extract_nodeid_from_path(x[0]),
+         self.extract_node_port_id_from_path(x[0]))
+         ,res)
+        return list(xs)
+
+    def get_node_network_port(self, sysid, tenantid, nodeid,  portid):
+        p = self.get_node_network_port_info_path(sysid, tenantid, nodeid, portid)
+        res = self.ws.get(p)
+        if len(res) == 0:
+            return None
+        else:
+            v = res[0][1]
+            return json.loads(v.get_value())
+
+
+
+    # Agent Evals
+
+    def add_node_port_to_network(self, sysid, tenantid,  nodeid, portid, network_id):
+        fname = "add_port_to_network"
+        params = {'cp_uuid': portid, 'network_uuid':network_id}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_os_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def remove_node_port_from_network(self, sysid, tenantid, nodeid, portid):
+        fname = "remove_port_from_network"
+        params = {'cp_uuid': portid}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_os_eval')
+        else:
+            return json.loads(res[0][1].get_value())
 
 
 

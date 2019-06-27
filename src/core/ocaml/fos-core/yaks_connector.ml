@@ -235,7 +235,8 @@ module MakeGAD(P: sig val prefix: string end) = struct
   let get_all_node_flavor_selector sysid tenantid nodeid =
     create_selector [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid; "flavor"; "*"; "info"]
 
-
+  let get_agent_exec_path sysid tenantid nodeid func_name =
+    create_path [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid; "agent"; "exec"; func_name]
 
   let extract_userid_from_path path =
     let ps = Yaks.Path.to_string path in
@@ -1076,6 +1077,17 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
+  (* Agent Evals *)
+  let add_agent_eval sysid tenantid nodeid func_name func connector =
+    MVar.guarded connector @@ fun connector ->
+    let p = get_agent_exec_path sysid tenantid nodeid func_name in
+    let cb _ props =
+      let%lwt r = func props in
+      Lwt.return @@ Yaks.Value.StringValue r
+    in
+    let%lwt _ = Yaks.Workspace.register_eval p cb connector.ws in
+    let ls = List.append connector.evals [p] in
+    MVar.return Lwt.return_unit {connector with evals = ls}
 
 
 end

@@ -510,13 +510,17 @@ class LinuxBridge(NetworkPlugin):
 
     # eval
     def disconnect_cp(self, cp_id):
+        self.logger.info('disconnect_cp()','Disconnecting CP {}'.format(cp_id))
         cp_info = self.ports.get(cp_id)
         if cp_info is None:
             self.logger.error('disconnect_interface',
             'Connection point does not exist')
             return {'error':-2}
+        self.logger.info('disconnect_cp()','CP info {}'.format(cp_info))
         ext_cp = cp_info.get('ext_name')
         cmd = 'sudo ip link set dev {} nomaster'.format(ext_cp)
+        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
+        self.logger.info('disconnect_cp()','Disconnected CP {}'.format(cp_id))
         return {'result':{'int':cp_id, 'ext':None}}
 
 
