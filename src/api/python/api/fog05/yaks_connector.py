@@ -204,12 +204,12 @@ class GAD(object):
             self.prefix, sysid, 'tenants', tenantid, 'nodes', nodeid,
             'networks', 'floating-ips', '*', 'info'])
 
-    def get_network_ports_selector(self, sysid, tenantid):
+    def get_node_network_ports_selector(self, sysid, tenantid):
         return Constants.create_path(
             [self.prefix, sysid, 'tenants', tenantid,
             'nodes', '*', 'networks', 'ports', '*', 'info'])
 
-    def get_network_port_info_path(self, sysid, tenantid, nodeid, portid):
+    def get_node_network_port_info_path(self, sysid, tenantid, nodeid, portid):
         return Constants.create_path(
             [self.prefix, sysid, 'tenants', tenantid,
             'nodes', nodeid, 'networks', 'ports', portid, 'info'])
@@ -720,7 +720,7 @@ class GAD(object):
         return d
 
     def get_all_nodes_network_ports(self, sysid, tenantid):
-        s = self.get_network_ports_selector(sysid, tenantid)
+        s = self.get_node_network_ports_selector(sysid, tenantid)
         res = self.ws.get(s)
         if len(res) == 0:
             return []
@@ -731,7 +731,7 @@ class GAD(object):
         return list(xs)
 
     def get_node_network_port(self, sysid, tenantid, nodeid,  portid):
-        p = self.get_network_port_info_path(sysid, tenantid, nodeid, portid)
+        p = self.get_node_network_port_info_path(sysid, tenantid, nodeid, portid)
         res = self.ws.get(p)
         if len(res) == 0:
             return None
