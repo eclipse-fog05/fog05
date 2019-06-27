@@ -774,7 +774,7 @@ class GAD(object):
 
     def remove_node_floatingip(self, sysid, tenantid, nodeid, ipid):
         fname = "delete_floating_ip"
-        params = {'ip_id': ipid}
+        params = {'floating_uuid': ipid}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
         res = self.ws.eval(s)
         if len(res) == 0:
