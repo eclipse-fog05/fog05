@@ -279,10 +279,13 @@ let agent verbose_flag debug_flag configuration custom_uuid =
   in
   (* NM Evals *)
   let eval_connect_cp_to_network self (props:Apero.properties) =
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CONNECT-CP - ##############") in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CONNECT-CP - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let%lwt net_p = get_network_plugin self in
     let cp_id = Apero.Option.get @@ Apero.Properties.get "cp_uuid" props in
     let net_id = Apero.Option.get @@ Apero.Properties.get "network_uuid" props in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CONNECT-CP - # NetManager: %s" net_p) in
     try%lwt
       let parameters = [("cp_id",cp_id);("vnet_id", net_id)] in
       let fname = "connect_cp_to_vnetwork" in
@@ -297,9 +300,12 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   let eval_remove_cp_from_network self (props:Apero.properties) =
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DISCONNECT-CP - ##############") in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DISCONNECT-CP - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let%lwt net_p = get_network_plugin self in
     let cp_id = Apero.Option.get @@ Apero.Properties.get "cp_uuid" props in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DISCONNECT-CP - # NetManager: %s" net_p) in
     try%lwt
       let parameters = [("cp_id",cp_id)] in
       let fname = "disconnect_cp" in
