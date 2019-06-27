@@ -763,6 +763,25 @@ class GAD(object):
         else:
             return json.loads(res[0][1].get_value())
 
+    def add_node_floatingip(self, sysid, tenantid, nodeid):
+        fname = "create_floating_ip"
+        s = self.get_agent_exec_path(sysid, tenantid, nodeid, fname)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_os_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def remove_node_floatingip(self, sysid, tenantid, nodeid, ipid):
+        fname = "delete_floating_ip"
+        params = {'ip_id': ipid}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_os_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
 
 
 class LAD(object):
