@@ -374,7 +374,10 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       |  None -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
         Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
-    | _ ->
+    | e ->
+      let msg = Printexc.to_string e
+      and stack = Printexc.get_backtrace () in
+      Printf.eprintf "there was an error: %s%s\n" msg stack;
       let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-NEW-FLOATING-IP - # ERROR WHEN DELETING FLOATING IP") in
       let eval_res = FAgentTypes.{result = None ; error=Some 22} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
