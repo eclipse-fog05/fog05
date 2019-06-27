@@ -71,41 +71,40 @@ let get_unix_syslog_reporter () =
   | _ -> failwith "[ ERRO ] Operating System not recognized!"
 
 
-let getuuid () =
-  match String.uppercase_ascii @@ get_platform () with
-  | "LINUX" ->
-    let fname =
-      match Sys.file_exists "/etc/fos/nodeid" with
-      | false -> "/etc/machine-id"
-      | true -> "/etc/fos/nodeid"
-    in
-    let ic = Pervasives.open_in fname in
-    let uuid = input_line ic in
-    let _ = close_in ic in
-    (match String.index_opt uuid '-' with
-     | Some _ ->  uuid
-     | None ->  String.sub uuid 0 8 ^ "-" ^ String.sub uuid 8 4 ^ "-" ^ String.sub uuid 12 4 ^ "-" ^ String.sub uuid 16 4 ^ "-" ^ String.sub uuid 20 12)
-  | "DARWIN" ->
-    let ic = Unix.open_process_in "ioreg -rd1 -c IOPlatformExpertDevice |  awk '/IOPlatformUUID/ { print $3; }'" in
-    let uuid = input_line ic in
-    let _ = close_in ic in
-    String.sub uuid 1 ((String.length uuid)-2)
-  | "WINDOWS" ->
-    (* uuid_regex = r"UUID.+\r\r\n(.{0,36})"
-       p = psutil.Popen('wmic csproduct get UUID'.split(), stdout=PIPE)
-       uuid is group 1
-    *)
-    ""
-  | _ -> failwith "[ ERRO ] Operating System not recognized!"
+let getuuid (uuid:string option) () =
+  match uuid with
+  | Some id -> id
+  | None ->
+    (match String.uppercase_ascii @@ get_platform () with
+     | "LINUX" ->
+       let fname = "/etc/machine-id" in
+       let ic = Pervasives.open_in fname in
+       let uuid = input_line ic in
+       let _ = close_in ic in
+       (match String.index_opt uuid '-' with
+        | Some _ ->  uuid
+        | None ->  String.sub uuid 0 8 ^ "-" ^ String.sub uuid 8 4 ^ "-" ^ String.sub uuid 12 4 ^ "-" ^ String.sub uuid 16 4 ^ "-" ^ String.sub uuid 20 12)
+     | "DARWIN" ->
+       let ic = Unix.open_process_in "ioreg -rd1 -c IOPlatformExpertDevice |  awk '/IOPlatformUUID/ { print $3; }'" in
+       let uuid = input_line ic in
+       let _ = close_in ic in
+       String.sub uuid 1 ((String.length uuid)-2)
+     | "WINDOWS" ->
+       (* uuid_regex = r"UUID.+\r\r\n(.{0,36})"
+          p = psutil.Popen('wmic csproduct get UUID'.split(), stdout=PIPE)
+          uuid is group 1
+       *)
+       ""
+     | _ -> failwith "[ ERRO ] Operating System not recognized!")
 
 
-let load_config filename =
+let load_config filename customid =
   let cont = read_file filename in
   let conf = FAgentTypes.configuration_of_string cont in
   let conf =
     match conf.agent.uuid with
     | Some _ -> conf
-    | None -> {conf with agent = {conf.agent with uuid = Some( getuuid () )} }
+    | None -> {conf with agent = {conf.agent with uuid = Some( getuuid  customid () )} }
   in
   conf
 
