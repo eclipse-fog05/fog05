@@ -118,7 +118,7 @@ let main_loop state promise =
 
 
 
-let agent verbose_flag debug_flag configuration =
+let agent verbose_flag debug_flag configuration custom_uuid =
   let level, reporter = (match verbose_flag with
       | true -> Apero.Result.get @@ Logs.level_of_string "debug" ,  (Logs_fmt.reporter ())
       | false -> Apero.Result.get @@ Logs.level_of_string "error",  (Fos_core.get_unix_syslog_reporter ())
@@ -128,7 +128,7 @@ let agent verbose_flag debug_flag configuration =
   Logs.set_reporter reporter;
   let prom,c = Lwt.wait () in
   let _ = register_handlers c () in
-  let conf = load_config configuration in
+  let conf = load_config configuration custom_uuid in
   let conf = match conf.agent.system with
     | Some _ -> conf
     | None -> {conf with agent = {conf.agent with uuid = Some( Yaks_connector.default_system_id )} }
@@ -896,7 +896,7 @@ let agent verbose_flag debug_flag configuration =
 
 (* AGENT CMD  *)
 
-let start verbose_flag daemon_flag debug_flag configuration_path =
+let start verbose_flag daemon_flag debug_flag configuration_path custom_uuid =
   (* ignore verbose_flag; ignore daemon_flag; ignore configuration_path; *)
   (* match daemon_flag with
      | true ->
@@ -921,7 +921,7 @@ let start verbose_flag daemon_flag debug_flag configuration_path =
      | false -> Lwt_main.run @@ agent verbose_flag debug_flag configuration_path
   *)
   ignore daemon_flag;
-  Lwt_main.run @@ agent verbose_flag debug_flag configuration_path
+  Lwt_main.run @@ agent verbose_flag debug_flag configuration_path custom_uuid
 
 let verbose =
   let doc = "Set verbose output." in
@@ -930,6 +930,10 @@ let verbose =
 let daemon =
   let doc = "Set daemon" in
   Cmdliner.Arg.(value & flag & info ["d";"daemon"] ~doc)
+
+let id =
+  let doc = "Set custom node ID" in
+  Cmdliner.Arg.(value & opt (some string) None & info ["i";"id"] ~doc)
 
 let debug =
   let doc = "Set debug (not load spawner)" in
@@ -940,7 +944,7 @@ let config =
   Cmdliner.Arg.(value & opt string "/etc/fos/agent.json" & info ["c";"conf"] ~doc)
 
 
-let agent_t = Cmdliner.Term.(const start $ verbose $ daemon $ debug $ config)
+let agent_t = Cmdliner.Term.(const start $ verbose $ daemon $ debug $ config $ id)
 
 let info =
   let doc = "fog05 | The Fog-Computing IaaS" in

@@ -146,7 +146,10 @@ class LXD(RuntimePluginFDU):
             try:
                 img = self.conn.images.get_by_alias(k)
                 imgd = self.images[k]
-                self.call_os_plugin_function('remove_file',{'file_path':os.path.join(self.BASE_DIR, self.IMAGE_DIR, imgd['base_image'])})
+                try:
+                    self.call_os_plugin_function('remove_file',{'file_path':os.path.join(self.BASE_DIR, self.IMAGE_DIR, imgd['base_image'])})
+                except ValueError:
+                     self.logger.info('stop_runtime()', 'Removing Image file {} not exist'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, imgd['base_image'])))
                 img.delete()
             except LXDAPIException as e:
                 self.logger.error('stop_runtime()', 'Error {}'.format(e))
