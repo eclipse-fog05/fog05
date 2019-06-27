@@ -745,7 +745,7 @@ class GAD(object):
 
     def add_node_port_to_network(self, sysid, tenantid,  nodeid, portid, network_id):
         fname = "add_port_to_network"
-        params = {'cp_uuid': portid, 'vnet_id':network_id}
+        params = {'cp_uuid': portid, 'network_uuid':network_id}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
         res = self.ws.eval(s)
         if len(res) == 0:
