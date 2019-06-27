@@ -326,7 +326,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-NEW-FLOATING-IP - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let%lwt net_p = get_network_plugin self in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DISCONNECT-CP - # NetManager: %s" net_p) in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-NEW-FLOATING-IP - # NetManager: %s" net_p) in
     try%lwt
       let fname = "create_floating_ip" in
       Yaks_connector.Local.Actual.exec_nm_eval (Apero.Option.get state.configuration.agent.uuid) net_p fname [] state.yaks
@@ -343,7 +343,9 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       |  None -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
         Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
-    | _ -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
+    | _ ->
+      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-NEW-FLOATING-IP - # ERROR WHEN CREATING FLOATING IP") in
+      let eval_res = FAgentTypes.{result = None ; error=Some 22} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   let eval_delete_floating_ip self (props:Apero.properties) =
