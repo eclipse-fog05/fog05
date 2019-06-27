@@ -279,10 +279,13 @@ let agent verbose_flag debug_flag configuration custom_uuid =
   in
   (* NM Evals *)
   let eval_connect_cp_to_network self (props:Apero.properties) =
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CONNECT-CP - ##############") in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CONNECT-CP - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let%lwt net_p = get_network_plugin self in
     let cp_id = Apero.Option.get @@ Apero.Properties.get "cp_uuid" props in
     let net_id = Apero.Option.get @@ Apero.Properties.get "network_uuid" props in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CONNECT-CP - # NetManager: %s" net_p) in
     try%lwt
       let parameters = [("cp_id",cp_id);("vnet_id", net_id)] in
       let fname = "connect_cp_to_vnetwork" in
@@ -297,9 +300,12 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   let eval_remove_cp_from_network self (props:Apero.properties) =
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DISCONNECT-CP - ##############") in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DISCONNECT-CP - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let%lwt net_p = get_network_plugin self in
     let cp_id = Apero.Option.get @@ Apero.Properties.get "cp_uuid" props in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DISCONNECT-CP - # NetManager: %s" net_p) in
     try%lwt
       let parameters = [("cp_id",cp_id)] in
       let fname = "disconnect_cp" in
@@ -854,12 +860,12 @@ let agent verbose_flag debug_flag configuration custom_uuid =
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_port_info" (eval_get_port_info state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_image_info" (eval_get_image_info state) yaks in
   (* Network Mgmt Evals *)
-  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "add_port_to_network" (eval_connect_cp_to_network state) yaks in
-  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "remove_port_from_network" (eval_remove_cp_from_network state) yaks in
-  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "create_floating_ip" (eval_create_floating_ip state) yaks in
-  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "delete_floating_ip" (eval_delete_floating_ip state) yaks in
-  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "assign_floating_ip" (eval_assign_floating_ip state) yaks in
-  let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "remove_floating_ip" (eval_remove_floating_ip state) yaks in
+  let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "add_port_to_network" (eval_connect_cp_to_network state) yaks in
+  let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "remove_port_from_network" (eval_remove_cp_from_network state) yaks in
+  let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "create_floating_ip" (eval_create_floating_ip state) yaks in
+  let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "delete_floating_ip" (eval_delete_floating_ip state) yaks in
+  let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "assign_floating_ip" (eval_assign_floating_ip state) yaks in
+  let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "remove_floating_ip" (eval_remove_floating_ip state) yaks in
   (* Constraint Eval  *)
   let%lwt _ = Yaks_connector.LocalConstraint.Actual.add_agent_eval uuid "get_fdu_info" (eval_get_fdu_info state) yaks in
   (* Registering listeners *)
