@@ -267,10 +267,11 @@ class LinuxBridge(NetworkPlugin):
 
     # this is an eval
     def delete_virtual_interface(self, intf_id):
+        self.logger.error('delete_virtual_interface','{} has to be deleted'.format(intf_id))
         intf_info = self.intfs.get(intf_id)
         if intf_info is None:
             self.logger.error('delete_virtual_interface','{} does not exist'.format(intf_id))
-            return False
+            return {'error':12}
         stop_file = intf_info.get('stop')
         if intf_info.get('descriptor').get('cp_id') is not None:
             cpid = intf_info.get('descriptor').get('cp_id')
@@ -279,6 +280,7 @@ class LinuxBridge(NetworkPlugin):
         self.call_os_plugin_function('remove_file',{'file_path':stop_file})
         self.call_os_plugin_function('remove_file',{'file_path':intf_info.get('start')})
         self.intfs.pop(intf_id)
+        self.logger.error('delete_virtual_interface','{} removed'.format(intf_id))
         return {'result':intf_id}
 
     # this is an eval
