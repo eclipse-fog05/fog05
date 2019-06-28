@@ -1200,6 +1200,9 @@ module MakeLAD(P: sig val prefix: string end) = struct
     let f = func_name ^ "?" ^ p in
     create_selector [P.prefix; nodeid; "network_managers"; nm_id; "exec"; f]
 
+  let get_node_nw_exec_eval nodeid nm_id func_name =
+    create_selector [P.prefix; nodeid; "network_managers"; nm_id; "exec"; func_name]
+
   let extract_nodeid_from_path path =
     let ps = Yaks.Path.to_string path in
     List.nth (String.split_on_char '/' ps) 2
@@ -1275,7 +1278,10 @@ module MakeLAD(P: sig val prefix: string end) = struct
 
   let exec_nm_eval nodeid nm_id func_name parametes connector =
     MVar.read connector >>= fun connector ->
-    let s = get_node_nw_exec_eval_with_params  nodeid nm_id func_name parametes in
+    let s = match parametes with
+      | [] -> get_node_nw_exec_eval  nodeid nm_id func_name
+      | _ -> get_node_nw_exec_eval_with_params  nodeid nm_id func_name parametes
+    in
     Yaks.Workspace.eval s connector.ws
     >>= fun res ->
     match res with

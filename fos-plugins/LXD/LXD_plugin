@@ -427,7 +427,7 @@ class LXD(RuntimePluginFDU):
                 self.write_fdu_error(fdu_uuid, instance_uuid, 2, e)
                 return
 
-            self.logger.info('undefine_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(fdu.uuid))
+            self.logger.info('configure_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(fdu.uuid))
             self.logger.info('configure_fdu()', '[ DONE ] LXD Plugin - Creating Container...')
 
             fdu.on_configured(config)
@@ -538,7 +538,7 @@ class LXD(RuntimePluginFDU):
                                                      'FDU {} is not in RUNNING state'.format(instance_uuid))
         else:
             fdu_uuid = fdu.fdu_uuid
-            self.logger.info('undefine_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(instance_uuid))
+            self.logger.info('stop_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(instance_uuid))
             c = self.conn.containers.get(fdu.name)
             # self.mon_th.pop(fdu_uuid)
             try:
@@ -548,7 +548,7 @@ class LXD(RuntimePluginFDU):
                 while c.status != 'Stopped':
                     c.sync()
             except Exception as e:
-                    self.logger.info('run_fdu()', '[ ERR ] LXD Plugin - {}'.format(e))
+                    self.logger.info('stop_fdu()', '[ ERR ] LXD Plugin - {}'.format(e))
                     fdu.status = 'ERROR'
                     self.current_fdus.update({instance_uuid: fdu})
                     self.write_fdu_error(fdu_uuid, instance_uuid, 5, e)
@@ -573,7 +573,7 @@ class LXD(RuntimePluginFDU):
                                                      'FDU {} is not in RUNNING state'.format(instance_uuid))
         else:
             fdu_uuid = fdu.fdu_uuid
-            self.logger.info('undefine_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(instance_uuid))
+            self.logger.info('pause_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(instance_uuid))
             c = self.conn.containers.get(fdu.name)
             c.freeze()
 
@@ -595,7 +595,7 @@ class LXD(RuntimePluginFDU):
                                                      'FDU {} is not in PAUSED state'.format(instance_uuid))
         else:
             fdu_uuid = fdu.fdu_uuid
-            self.logger.info('undefine_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(fdu.name.replace('_','-')[:63]))
+            self.logger.info('resume_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(fdu.name.replace('_','-')[:63]))
             c = self.conn.containers.get(fdu.name)
             c.unfreeze()
 

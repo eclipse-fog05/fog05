@@ -322,14 +322,18 @@ let agent verbose_flag debug_flag configuration custom_uuid =
   (* NM Floating IPs *)
   let eval_create_floating_ip self (props:Apero.properties) =
     ignore props;
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-NEW-FLOATING-IP - ##############") in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-NEW-FLOATING-IP - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let%lwt net_p = get_network_plugin self in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-NEW-FLOATING-IP - # NetManager: %s" net_p) in
     try%lwt
       let fname = "create_floating_ip" in
       Yaks_connector.Local.Actual.exec_nm_eval (Apero.Option.get state.configuration.agent.uuid) net_p fname [] state.yaks
       >>= fun res ->
       match res with
       | Some r ->
+        let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-NEW-FLOATING-IP - GOT RESPONSE FROM EVAL %s" (FAgentTypes.string_of_eval_result r)) in
         (* Convertion from record *)
         let floating_r = FTypes.floating_ip_record_of_string @@ JSON.to_string (Apero.Option.get r.result) in
         let floating = FTypes.{uuid = floating_r.uuid; ip_version = floating_r.ip_version; address = floating_r.address} in
@@ -340,12 +344,17 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       |  None -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
         Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
-    | _ -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
+    | _ ->
+      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-NEW-FLOATING-IP - # ERROR WHEN CREATING FLOATING IP") in
+      let eval_res = FAgentTypes.{result = None ; error=Some 22} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   let eval_delete_floating_ip self (props:Apero.properties) =
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEL-FLOATING-IP - ##############") in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEL-FLOATING-IP - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let%lwt net_p = get_network_plugin self in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEL-FLOATING-IP - # NetManager: %s" net_p) in
     try%lwt
       let ip_id = Apero.Option.get @@ Apero.Properties.get "floating_uuid" props in
       let parameters = [("ip_id",ip_id)] in
@@ -354,6 +363,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       >>= fun res ->
       match res with
       | Some r ->
+        let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEL-FLOATING-IP - GOT RESPONSE FROM EVAL %s" (FAgentTypes.string_of_eval_result r)) in
         (* Convertion from record *)
         let floating_r = FTypes.floating_ip_record_of_string @@ JSON.to_string (Apero.Option.get r.result) in
         let floating = FTypes.{uuid = floating_r.uuid; ip_version = floating_r.ip_version; address = floating_r.address} in
@@ -364,10 +374,17 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       |  None -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
         Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
-    | _ -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
+    | e ->
+      let msg = Printexc.to_string e
+      and stack = Printexc.get_backtrace () in
+      Printf.eprintf "there was an error: %s%s\n" msg stack;
+      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-NEW-FLOATING-IP - # ERROR WHEN DELETING FLOATING IP") in
+      let eval_res = FAgentTypes.{result = None ; error=Some 22} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   let eval_assign_floating_ip self (props:Apero.properties) =
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ASSOC-FLOATING-IP - ##############") in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ASSOC-FLOATING-IP - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let%lwt net_p = get_network_plugin self in
     try%lwt
@@ -393,6 +410,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   let eval_remove_floating_ip self (props:Apero.properties) =
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-REMOVE-FLOATING-IP - ##############") in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-REMOVE-FLOATING-IP - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let%lwt net_p = get_network_plugin self in
     try%lwt
@@ -960,4 +979,5 @@ let info =
   in
   Cmdliner.Term.info "agent" ~version:"%%VERSION%%" ~doc ~exits:Cmdliner.Term.default_exits ~man
 
+let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
 let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
