@@ -303,7 +303,7 @@ class Native(RuntimePluginFDU):
                         template_xml = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'run_native_unix2.sh'), 'root':False})
                         na_script = Environment().from_string(template_xml)
                         cmd = '{} {}'.format(fdu.command, ' '.join(fdu.args))
-                        na_script = na_script.render(command=cmd, outfile=pid_file)
+                        na_script = na_script.render(command=cmd, outfile=pid_file, path=native_dir)
                         na_script = binascii.hexlify(base64.b64encode(bytes(na_script, 'utf-8'))).decode()
                         self.logger.info('run_fdu()', '[ INFO ] Lenght of runscript is {}'.format(len(na_script)))
                         self.call_os_plugin_function('store_file',{'content':na_script, 'file_path':native_dir, 'filename':f_name})
