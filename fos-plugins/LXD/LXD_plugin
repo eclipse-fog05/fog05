@@ -463,7 +463,9 @@ class LXD(RuntimePluginFDU):
                 intf_name = intf.get('vintf_name')
                 if intf.get('if_type').upper() not in ['PHYSICAL','BRIDGED']:
                     intf_id = 'lxd-{}-{}'.format(fdu.get_short_id(), i)
+                    self.logger.info('clean_fdu()','Asking for the deletion of virtual interface {}'.format(intf_id))
                     self.call_nw_plugin_function('delete_virtual_interface',{'intf_id':intf_id})
+                    self.logger.info('clean_fdu()','virtual interface {} removed'.format(intf_id))
                 else:
                     real_intf_name = intf.get('phy_face')
                     self.call_os_plugin_function('set_interface_available', {'intf_name': real_intf_name})
@@ -471,6 +473,7 @@ class LXD(RuntimePluginFDU):
             for cp in fdu.get_connection_points():
                 self.logger.info('clean_fdu()', 'LXD Plugin - CP: {}'.format(cp))
                 cp_id = cp.get('uuid')
+                self.logger.info('clean_fdu()','Asking for the deletion of connetion_point {}'.format(cp_id))
                 cp = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
                 cp.update({'status':'DESTROY'})
                 self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id, cp)
