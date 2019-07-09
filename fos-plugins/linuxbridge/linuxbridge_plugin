@@ -704,12 +704,11 @@ class LinuxBridge(NetworkPlugin):
             intfs = i['interfaces']
             for intf in intfs:
                 if intf.get('cp_id') is not None and intf.get('cp_id') != '':
-                    if intf.get('cp_id') == cp_rec['uuid']:
+                    if intf.get('cp_id') == cp_rec['cp_uuid']:
                         i_name = intf['vintf_name']
                         hv_info = i['hypervisor_info']
                         if len(hv_info) > 0:
                             cp_ip = hv_info['network'][i_name]['addresses'][0]['address']
-        self.logger.info('__get_cp_ip()', 'IP for {} -> {}'.format(cp_id, cp_ip))
         return cp_ip
 
     def __cird2block(self, cird):
