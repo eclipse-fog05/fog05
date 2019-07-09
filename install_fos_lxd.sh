@@ -57,14 +57,6 @@ sudo sh -c "cat /etc/machine-id | xargs -i  jq  '.configuration.nodeid = \"{}\"'
 
 sudo make -C src/utils/python/rest_proxy install
 
-
-
-git clone https://github.com/atolab/yaks-python
-cd yaks-python
-git checkout 0.2
-sudo pip3 uninstall yaks -y
-sudo make install
-
 sudo systemctl daemon-reload
 
 sudo systemctl start yaks
