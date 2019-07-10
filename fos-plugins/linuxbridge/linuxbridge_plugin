@@ -679,7 +679,7 @@ class LinuxBridge(NetworkPlugin):
             return {'error': 11}
         cp_ip = self.__get_cp_ip(cp_id)
         if cp_ip == '':
-            self.logger.error('remove_floating_ip()', 'Connection point {} as not IP'.format(ip_id))
+            self.logger.error('remove_floating_ip()', 'Connection point {} has no IP'.format(ip_id))
             return {'error': 11}
         cmd = 'sudo iptables -t nat -D PREROUTING -d {} -j DNAT --to {}'.format(rec['vface'], cp_ip)
         self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':True})
@@ -701,7 +701,7 @@ class LinuxBridge(NetworkPlugin):
             intfs = i['interfaces']
             for intf in intfs:
                 if intf.get('cp_id') is not None and intf.get('cp_id') != '':
-                    if intf.get('cp_id') == cp_rec['cp_uuid']:
+                    if intf.get('cp_id') == cp_rec['uuid']:
                         i_name = intf['vintf_name']
                         hv_info = i['hypervisor_info']
                         if len(hv_info) > 0:
