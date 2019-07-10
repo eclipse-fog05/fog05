@@ -1223,7 +1223,7 @@ class LAD(object):
         res = self.ws.get(p)
         if len(res) == 0:
             return []
-        return list(map (lambda x: json.loads(x[1]), res))
+        return list(map (lambda x: json.loads(x[1].get_value()), res))
 
     def add_node_image(self, nodeid, pluginid, imgid, imginfo):
         p = self.get_node_image_info_path(nodeid, pluginid, imgid)
