@@ -709,6 +709,7 @@ class LinuxBridge(NetworkPlugin):
                         hv_info = i['hypervisor_info']
                         if len(hv_info) > 0:
                             cp_ip = hv_info['network'][i_name]['addresses'][0]['address']
+        self.logger.info('__get_cp_ip()', 'IP for {} -> {}'.format(cp_id, cp_ip))
         return cp_ip
 
     def __cird2block(self, cird):
