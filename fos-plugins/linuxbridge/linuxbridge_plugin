@@ -697,6 +697,7 @@ class LinuxBridge(NetworkPlugin):
         fdus = self.connector.loc.actual.get_node_all_fdus_instances(self.node)
         cp_ip = ''
         for i in fdus:
+            self.logger.info('__get_cp_ip()', 'Scanning FDUs Record: {}'.format(i))
             intfs = i['interfaces']
             for intf in intfs:
                 if intf.get('cp_id') is not None and intf.get('cp_id') != '':
