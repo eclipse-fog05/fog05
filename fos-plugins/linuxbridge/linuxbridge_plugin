@@ -704,7 +704,7 @@ class LinuxBridge(NetworkPlugin):
             intfs = i['interfaces']
             for intf in intfs:
                 if intf.get('cp_id') is not None and intf.get('cp_id') != '':
-                    if intf.get('cp_id') == cp_rec['cp_uuid']:
+                    if intf.get('cp_id') == cp_rec['uuid']:
                         i_name = intf['vintf_name']
                         hv_info = i['hypervisor_info']
                         if len(hv_info) > 0:
