@@ -1,6 +1,7 @@
 # -*-Makefile-*-
 
 WD := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))));
+UUID = $(shell ./to_uuid.sh)
 
 ETC_FOS_DIR = /etc/fos/
 VAR_FOS_DIR = /var/fos/
@@ -25,6 +26,7 @@ else
 	sudo ln -sf /etc/fos/plugins/LXD/LXD_plugin /usr/bin/fos_lxd
 endif
 	sudo cp /etc/fos/plugins/LXD/fos_lxd.service /lib/systemd/system/
+	sudo sh -c "echo $(UUID) | xargs -i  jq  '.configuration.nodeid = \"{}\"' /etc/fos/plugins/LXD/LXD_plugin.json > /tmp/LXD_plugin.tmp && mv /tmp/LXD_plugin.tmp /etc/fos/plugins/LXD/LXD_plugin.json"
 
 
 uninstall:
