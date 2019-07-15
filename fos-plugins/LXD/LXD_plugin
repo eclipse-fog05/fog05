@@ -56,6 +56,8 @@ class LXD(RuntimePluginFDU):
 
         self.IMAGE_SERVER = "https://images.linuxcontainers.org/"
 
+        self.UBUNTU_IMAGE_SERVER = "https://cloud-images.ubuntu.com/releases"
+
         file_dir = os.path.dirname(__file__)
         self.DIR = os.path.abspath(file_dir)
         self.update_interval =  manifest.get('configuration').get('update_interval', 10)
@@ -177,6 +179,7 @@ class LXD(RuntimePluginFDU):
         # TODO this as to be fixed
         fdu.comp_requirements = descriptor.get('computation_requirements')
         fdu.image = descriptor.get('image')
+        fdu.conf = descriptor.get('configuration')
         ####
 
         if self.is_uuid(fdu.get_image_uri()):
@@ -204,11 +207,16 @@ class LXD(RuntimePluginFDU):
         img_info = {}
         try:
 
-            if fdu.get_image_uri().startswith('lxd://'):
-                img_alias = fdu.get_image_uri()[6:]
-                self.logger.info('define_fdu()','Image is coming from LXD repository: {}'.format(img_alias))
+            if fdu.get_image_uri().startswith('lxd://') or fdu.get_image_uri().startswith('ubuntu://'):
                 try:
-                    lxd_img = self.conn.images.create_from_simplestreams(server=self.IMAGE_SERVER, alias=img_alias)
+                    if fdu.get_image_uri().startswith('lxd://'):
+                        img_alias = fdu.get_image_uri()[6:]
+                        self.logger.info('define_fdu()','Image is coming from LXD repository: {}'.format(img_alias))
+                        lxd_img = self.conn.images.create_from_simplestreams(server=self.IMAGE_SERVER, alias=img_alias)
+                    else:
+                        img_alias = fdu.get_image_uri()[9:]
+                        self.logger.info('define_fdu()','Image is coming from Ubuntu repository: {}'.format(img_alias))
+                        lxd_img = self.conn.images.create_from_simplestreams(server=self.UBUNTU_IMAGE_SERVER, alias=img_alias)
                     lxd_img.add_alias(fdu_uuid, description='')
                 except LXDAPIException as e:
                     if '{}'.format(e) == 'Image with same fingerprint already exists':
@@ -363,11 +371,7 @@ class LXD(RuntimePluginFDU):
                 custom_profile_for_fdu = self.conn.profiles.create(instance_uuid)
 
 
-                if fdu.configuration is not None:
-                    if fdu.configuration.get('conf_type') in ['CLOUD_INIT']:
-                        c_init_file = fdu.configuration.get('script')
-                        user_data = self.__generate_custom_profile_userdata_configuration(fdu.c_init_file)
-                        custom_profile_for_fdu.config = user_data
+
 
                 conf = {'environment.FOSUUID': fdu_uuid,
                         'environment.FOSINSTANCEUUID': instance_uuid,
@@ -375,6 +379,14 @@ class LXD(RuntimePluginFDU):
                         'limits.cpu': str(fdu.comp_requirements.get('cpu_min_count')),
                         'limits.memory':'{}MB'.format(int(fdu.comp_requirements.get('ram_size_mb')))
                         }
+
+                if fdu.conf is not None:
+                    if fdu.conf.get('conf_type') in ['CLOUD_INIT']:
+                        c_init_file = fdu.conf.get('script')
+                        self.logger.info('configure_fdu()', '[ INFO ] LXD Plugin - FDU has configuration: {}'.format(c_init_file))
+                        conf = self.__generate_custom_profile_userdata_configuration(c_init_file, conf)
+
+
                 for cp in fdu.get_connection_points():
                     cp_id = cp.get('uuid')
                     # cp_record = {
@@ -902,9 +914,9 @@ class LXD(RuntimePluginFDU):
                 self.logger.error('__monitor_instance()', '[ ERROR ] LXD Plugin - Stopping monitoring of Container uuid {} Error {}'.format(instance_id, e))
                 return
 
-    def __generate_custom_profile_userdata_configuration(self, userdata):
-        userdata = {'user.user-data': userdata}
-        return userdata
+    def __generate_custom_profile_userdata_configuration(self, userdata, config):
+        config.update({'user.user-data': userdata})
+        return config
 
     def __generate_custom_profile_devices_configuration(self, fdu):
         '''
