@@ -656,6 +656,49 @@ let agent verbose_flag debug_flag configuration custom_uuid =
          Yaks_connector.Global.Actual.remove_port sys_id Yaks_connector.default_system_id cpid self.yaks  >>= Lwt.return
        | None -> Lwt.return_unit)
   in
+  let cb_gd_router self (router:Router.descriptor option) (is_remove:bool) (uuid:string option) =
+    let%lwt net_p = get_network_plugin self in
+    match is_remove with
+    | false ->
+      (match router with
+       | Some router ->
+         MVar.read self >>= fun self ->
+         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-ROUTER - ##############") in
+         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-ROUTER - vRouter Updated! Agent will update actual store and call the right plugin!") in
+         (* Converting to record *)
+         let rid = (Apero.Option.get_or_default router.uuid (Apero.Uuid.to_string (Apero.Uuid.make ()))) in
+         let%lwt port_records = Lwt_list.mapi_p (fun i (e:Router.router_port) ->
+             match e.port_type with
+             | `EXTERNAL ->
+               let%lwt res = Yaks_connector.Local.Actual.exec_nm_eval (Apero.Option.get self.configuration.agent.uuid) net_p "get_overlay_interface" [] self.yaks  in
+               let face =(JSON.to_string (Apero.Option.get (Apero.Option.get res).result)) in
+               let wan_face = Printf.sprintf "r-%s-e%d" (List.hd (String.split_on_char '-' rid)) i in
+               Lwt.return Router.{port_type = `EXTERNAL; faces = [wan_face]; ext_face = Some face; ip_address = ""; pair_id = None}
+             | `INTERNAL ->
+               let face_i = Printf.sprintf "r-%s-e%d-i" (List.hd (String.split_on_char '-' rid)) i in
+               let face_e = Printf.sprintf "r-%s-e%d-e" (List.hd (String.split_on_char '-' rid)) i in
+               Lwt.return Router.{port_type = `INTERNAL; faces = [face_i; face_e]; ip_address = ""; ext_face = None; pair_id = e.vnet_id}
+           ) router.ports
+         in
+         let vrouter_ns =  Printf.sprintf "r-%s-ns" (List.hd (String.split_on_char '-' rid))  in
+         let router_record = Router.{uuid = rid; state = `CREATE; ports = port_records; router_ns = vrouter_ns; nodeid = (Apero.Option.get self.configuration.agent.uuid)} in
+         Yaks_connector.Local.Desired.add_node_router (Apero.Option.get self.configuration.agent.uuid) net_p  router_record.uuid router_record self.yaks
+         >>= Lwt.return
+       | None -> Lwt.return_unit)
+    | true ->
+      (match uuid with
+       | Some routerid -> MVar.read self >>= fun self ->
+         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-ROUTER - ##############") in
+         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-ROUTER - vRouter Removed!") in
+         let%lwt router_info = Yaks_connector.Local.Actual.get_node_router (Apero.Option.get self.configuration.agent.uuid) net_p routerid self.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
+         let router_info = {router_info with state = `DESTROY} in
+         Yaks_connector.Local.Desired.add_node_router (Apero.Option.get self.configuration.agent.uuid) net_p routerid router_info self.yaks
+       (* Yaks_connector.Global.Actual.reove_ sys_id Yaks_connector.default_tenant_id routerid self.yaks >>= Lwt.return *)
+       | None ->
+         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-ROUTER - vRouter NO UUID!!!!") in
+         Lwt.return_unit)
+
+  in
   (* Local Actual *)
   let cb_la_net self (net:FTypesRecord.virtual_network option) (is_remove:bool) (uuid:string option) =
     let%lwt net_p = get_network_plugin self in
@@ -701,6 +744,34 @@ let agent verbose_flag debug_flag configuration custom_uuid =
          Yaks_connector.Local.Desired.remove_node_port (Apero.Option.get self.configuration.agent.uuid) net_p cpid self.yaks >>= Lwt.return
        | None -> Lwt.return_unit)
 
+  in
+  let cb_la_net self (router:Router.record option) (is_remove:bool) (uuid:string option) =
+    let%lwt net_p = get_network_plugin self in
+    match is_remove with
+    | false ->
+      (match router with
+       | Some router ->
+         MVar.read self >>= fun self ->
+         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-ROUTER - ##############") in
+         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-ROUTER - vRouter Updated! Advertising on GA") in
+         let nid = (Apero.Option.get self.configuration.agent.uuid) in
+         (match router.state with
+          | `DESTROY -> Yaks_connector.Global.Actual.remove_node_router sys_id Yaks_connector.default_tenant_id nid router.uuid self.yaks
+          | _ ->
+            (* Convert to back to descriptor *)
+            let%lwt ports = Lwt_list.map_p (fun (e:Router.router_port_record) ->
+                Lwt.return Router.{port_type = e.port_type; vnet_id = e.pair_id; ip_address = Some e.ip_address}
+              ) router.ports
+            in
+            let router_desc = Router.{uuid = Some router.uuid; ports = ports; } in
+            Yaks_connector.Global.Actual.add_node_router sys_id Yaks_connector.default_tenant_id nid router.uuid router_desc self.yaks >>= Lwt.return)
+       | None -> Lwt.return_unit)
+    | true ->
+      (match uuid with
+       | Some routerid ->
+         MVar.read self >>= fun self ->
+         Yaks_connector.Local.Desired.remove_node_router (Apero.Option.get self.configuration.agent.uuid) net_p routerid self.yaks >>= Lwt.return
+       | None -> Lwt.return_unit)
   in
   let cb_la_plugin self (pl:FTypes.plugin option) (is_remove:bool) (uuid:string option) =
     match is_remove with
@@ -901,6 +972,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
   let%lwt _ = Yaks_connector.Global.Desired.observe_ports sys_id Yaks_connector.default_tenant_id (cb_gd_cp state) yaks in
   let%lwt _ = Yaks_connector.Global.Desired.observe_images sys_id Yaks_connector.default_tenant_id (cb_gd_image state) yaks in
   let%lwt _ = Yaks_connector.Global.Desired.observe_flavors sys_id Yaks_connector.default_tenant_id (cb_gd_flavor state) yaks in
+  (* Global Actual with NodeID *)
+  let%lwt _ = Yaks_connector.Global.Desired.observe_node_routers sys_id Yaks_connector.default_tenant_id uuid (cb_gd_router state) yaks in
   (* Local Actual Listeners *)
   let%lwt _ = Yaks_connector.Local.Actual.observe_node_plugins uuid (cb_la_plugin state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.observe_node_info uuid (cb_la_ni state) yaks in
