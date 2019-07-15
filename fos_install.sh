@@ -5,6 +5,15 @@
 # git checkout 0.2-devel
 
 
+function to_uuid() {
+	first=$(echo $1 | cut -c -8)
+	second=$(echo $1 | cut -c 9-12)
+	third=$(echo $1 | cut -c 13-16)
+	fourth=$(echo $1 | cut -c 17-20)
+	fifth=$(echo $1 | cut -c 21-)
+	echo $first-$second-$third-$fourth-$fifth
+}
+
 
 
 MACHINE_TYPE=`uname -m`
@@ -33,7 +42,9 @@ rm -rf /tmp/fos.tar.gz
 
 sudo make install
 
-sudo sh -c "cat /etc/machine-id | xargs -i  jq  '.configuration.nodeid = \"{}\"' /etc/fos/plugins/linux/linux_plugin.json > /tmp/linux_plugin.tmp && mv /tmp/linux_plugin.tmp /etc/fos/plugins/linux/linux_plugin.json"
+uuid=$(to_uuid $(cat '/etc/machine-id'))
+
+sudo sh -c "echo $uuid | xargs -i  jq  '.configuration.nodeid = \"{}\"' /etc/fos/plugins/linux/linux_plugin.json > /tmp/linux_plugin.tmp && mv /tmp/linux_plugin.tmp /etc/fos/plugins/linux/linux_plugin.json"
 
 echo 'You may want to install the other plugins, look at the fos-plugins directory!'
 
