@@ -56,6 +56,8 @@ class LXD(RuntimePluginFDU):
 
         self.IMAGE_SERVER = "https://images.linuxcontainers.org/"
 
+        self.UBUNTU_IMAGE_SERVER = "https://cloud-images.ubuntu.com/releases"
+
         file_dir = os.path.dirname(__file__)
         self.DIR = os.path.abspath(file_dir)
         self.update_interval =  manifest.get('configuration').get('update_interval', 10)
@@ -205,11 +207,16 @@ class LXD(RuntimePluginFDU):
         img_info = {}
         try:
 
-            if fdu.get_image_uri().startswith('lxd://'):
+            if fdu.get_image_uri().startswith('lxd://') or fdu.get_image_uri().startswith('ubuntu://'):
                 img_alias = fdu.get_image_uri()[6:]
-                self.logger.info('define_fdu()','Image is coming from LXD repository: {}'.format(img_alias))
+
                 try:
-                    lxd_img = self.conn.images.create_from_simplestreams(server=self.IMAGE_SERVER, alias=img_alias)
+                    if fdu.get_image_uri().startswith('lxd://'):
+                        self.logger.info('define_fdu()','Image is coming from LXD repository: {}'.format(img_alias))
+                        lxd_img = self.conn.images.create_from_simplestreams(server=self.IMAGE_SERVER, alias=img_alias)
+                    else:
+                        self.logger.info('define_fdu()','Image is coming from Ubuntu repository: {}'.format(img_alias))
+                        lxd_img = self.conn.images.create_from_simplestreams(server=self.UBUNTU_IMAGE_SERVER, alias=img_alias)
                     lxd_img.add_alias(fdu_uuid, description='')
                 except LXDAPIException as e:
                     if '{}'.format(e) == 'Image with same fingerprint already exists':
