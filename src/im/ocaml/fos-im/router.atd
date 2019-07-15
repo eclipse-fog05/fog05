@@ -42,5 +42,6 @@ type record = {
   uuid : string;
   ports : router_port_record list;
   net_ns : string;
+  nodeid :  string
 
 }

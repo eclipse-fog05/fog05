@@ -175,6 +175,12 @@ module MakeGAD(P: sig val prefix: string end) = struct
   let get_node_network_ports_selector sysid tenantid nodeid =
     create_selector [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid;"networks"; "ports"; "*"; "info"]
 
+  let get_node_network_router_info_path sysid tenantid nodeid routerid =
+    create_path [P.prefix; sysid; "tenants"; tenantid;"nodes"; nodeid; "networks"; "routers"; routerid; "info"]
+
+  let get_node_network_routers_selector sysid tenantid nodeid =
+    create_selector [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid;"networks"; "routers"; "*"; "info"]
+
   let get_all_node_networks_selector sysid tenantid nodeid =
     create_selector [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid; "networks"; "*"; "info"]
 
@@ -210,6 +216,12 @@ module MakeGAD(P: sig val prefix: string end) = struct
 
   let get_network_ports_selector sysid tenantid  =
     create_selector [P.prefix; sysid; "tenants"; tenantid; "networks"; "ports"; "*"; "info"]
+
+  let get_network_router_info_path sysid tenantid routerid =
+    create_path [P.prefix; sysid; "tenants"; tenantid; "networks"; "routers"; routerid; "info"]
+
+  let get_network_routers_selector sysid tenantid =
+    create_selector [P.prefix; sysid; "tenants"; tenantid; "networks"; "routers"; "*"; "info"]
 
   let get_image_info_path sysid tenantid imageid =
     create_path [P.prefix; sysid; "tenants"; tenantid; "image"; imageid; "info"]
@@ -270,6 +282,10 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let ps = Yaks.Path.to_string path in
     List.nth (String.split_on_char '/' ps) 7
 
+  let extract_routerid_from_path path =
+    let ps = Yaks.Path.to_string path in
+    List.nth (String.split_on_char '/' ps) 7
+
   let extract_nodeid_from_path path =
     let ps = Yaks.Path.to_string path in
     List.nth (String.split_on_char '/' ps) 6
@@ -291,6 +307,10 @@ module MakeGAD(P: sig val prefix: string end) = struct
     List.nth (String.split_on_char '/' ps) 8
 
   let extract_node_portid_from_path path =
+    let ps = Yaks.Path.to_string path in
+    List.nth (String.split_on_char '/' ps) 9
+
+  let extract_node_routerid_from_path path =
     let ps = Yaks.Path.to_string path in
     List.nth (String.split_on_char '/' ps) 9
 
@@ -797,6 +817,48 @@ module MakeGAD(P: sig val prefix: string end) = struct
       Lwt_list.map_p (
         fun (_,v )-> Lwt.return  @@ FDU.connection_point_of_string (Yaks.Value.to_string v)) kvs
 
+  (*  *)
+
+  let add_router sysid tenantid routerid router_info connector =
+    let p = get_network_router_info_path sysid tenantid routerid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.put p (Yaks.Value.StringValue (Router.string_of_descriptor router_info)) connector.ws
+
+  let get_router sysid tenantid routerid connector =
+    let s = Yaks.Selector.of_path @@ get_network_router_info_path sysid tenantid routerid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.get s connector.ws
+    >>= fun kvs ->
+    match kvs with
+    | [] ->
+      Lwt.return None
+    | _ -> let _,v = List.hd kvs in
+      Lwt.return @@ Some (Router.descriptor_of_string (Yaks.Value.to_string v))
+
+  let observe_routers sysid tenantid callback connector =
+    MVar.guarded connector @@ fun connector ->
+    let s = get_network_routers_selector sysid tenantid in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Router.descriptor_of_string extract_routerid_from_path) s connector.ws in
+    let ls = List.append connector.listeners [subid] in
+    MVar.return subid {connector with listeners = ls}
+
+  let remove_router sysid tenantid routerid connector =
+    let p = get_network_router_info_path sysid tenantid routerid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.remove p connector.ws
+
+  let get_all_routers sysid tenantid connector =
+    let s = get_network_routers_selector sysid tenantid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.get s connector.ws
+    >>= fun kvs ->
+    match kvs with
+    | [] -> Lwt.return []
+    | _ ->
+      Lwt_list.map_p (
+        fun (_,v )-> Lwt.return  @@ Router.descriptor_of_string (Yaks.Value.to_string v)) kvs
+
+
   (* Node Network records *)
 
   let add_node_network sysid tenantid nodeid netid net_info connector =
@@ -875,6 +937,48 @@ module MakeGAD(P: sig val prefix: string end) = struct
     | _ ->
       Lwt_list.map_p (
         fun (_,v )-> Lwt.return  @@ FDU.connection_point_record_of_string (Yaks.Value.to_string v)) kvs
+
+  (*  *)
+
+
+  let add_node_router sysid tenantid nodeid routerid router_info connector =
+    let p = get_node_network_router_info_path sysid tenantid nodeid routerid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.put p (Yaks.Value.StringValue (Router.string_of_descriptor router_info)) connector.ws
+
+  let get_router sysid tenantid nodeid routerid connector =
+    let s = Yaks.Selector.of_path @@ get_node_network_router_info_path sysid tenantid nodeid routerid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.get s connector.ws
+    >>= fun kvs ->
+    match kvs with
+    | [] ->
+      Lwt.return None
+    | _ -> let _,v = List.hd kvs in
+      Lwt.return @@ Some (Router.descriptor_of_string (Yaks.Value.to_string v))
+
+  let observe_node_routers sysid tenantid nodeid callback connector =
+    MVar.guarded connector @@ fun connector ->
+    let s = get_node_network_routers_selector sysid tenantid nodeid in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Router.descriptor_of_string extract_routerid_from_path) s connector.ws in
+    let ls = List.append connector.listeners [subid] in
+    MVar.return subid {connector with listeners = ls}
+
+  let remove_node_router sysid tenantid nodeid routerid connector =
+    let p = get_node_network_router_info_path sysid tenantid nodeid routerid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.remove p connector.ws
+
+  let get_all_node_routers sysid tenantid nodeid connector =
+    let s = get_node_network_routers_selector sysid tenantid nodeid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.get s connector.ws
+    >>= fun kvs ->
+    match kvs with
+    | [] -> Lwt.return []
+    | _ ->
+      Lwt_list.map_p (
+        fun (_,v )-> Lwt.return  @@ Router.descriptor_of_string (Yaks.Value.to_string v)) kvs
 
   (* Floating IPs *)
 
@@ -1165,6 +1269,12 @@ module MakeLAD(P: sig val prefix: string end) = struct
 
   let get_node_network_ports_selector nodeid pluginid =
     create_selector [P.prefix; nodeid; "network_managers"; pluginid; "ports"; "*"; "info"]
+
+  let get_node_network_router_info_path nodeid pluginid routerid =
+    create_path [P.prefix; nodeid; "network_managers"; pluginid; "routers"; routerid; "info"]
+
+  let get_node_network_routers_selector nodeid pluginid =
+    create_selector [P.prefix; nodeid; "network_managers"; pluginid; "routers"; "*"; "info"]
 
   let get_node_network_floating_ip_info_path nodeid pluginid floatingid =
     create_path [P.prefix; nodeid; "network_managers"; pluginid; "floating-ips"; floatingid; "info"]
@@ -1484,6 +1594,37 @@ module MakeLAD(P: sig val prefix: string end) = struct
   let remove_node_port nodeid pluginid portid connector =
     MVar.read connector >>= fun connector ->
     let p = get_node_network_port_info_path nodeid pluginid portid in
+    Yaks.Workspace.remove p connector.ws
+
+  (*  *)
+
+  let observe_node_router nodeid callback connector =
+    MVar.guarded connector @@ fun connector ->
+    let s = get_node_network_routers_selector nodeid "*" in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Router.record_of_string extract_portid_from_path) s connector.ws in
+    let ls = List.append connector.listeners [subid] in
+    MVar.return subid {connector with listeners = ls}
+
+  let add_node_router nodeid pluginid routerid routerinfo connector =
+    MVar.read connector >>= fun connector ->
+    let p = get_node_network_router_info_path nodeid pluginid routerid in
+    let value = Yaks.Value.StringValue (Router.string_of_record routerinfo) in
+    Yaks.Workspace.put p value connector.ws
+
+  let get_node_router nodeid pluginid routerid connector =
+    MVar.read connector >>= fun connector ->
+    let s = Yaks.Selector.of_path @@ get_node_network_router_info_path nodeid pluginid routerid in
+    let%lwt data = Yaks.Workspace.get s connector.ws in
+    match data with
+    | [] -> Lwt.return None
+    (* Lwt.fail @@ FException (`InternalError (`Msg ("get_node_port received empty data!!") )) *)
+    | _ ->
+      let _,v = List.hd data in
+      Lwt.return @@  Some (Router.record_of_string (Yaks.Value.to_string v))
+
+  let remove_node_router nodeid pluginid routerid connector =
+    MVar.read connector >>= fun connector ->
+    let p = get_node_network_router_info_path nodeid pluginid routerid in
     Yaks.Workspace.remove p connector.ws
 
   (* Floating IPs *)
