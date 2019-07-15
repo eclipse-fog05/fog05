@@ -208,13 +208,13 @@ class LXD(RuntimePluginFDU):
         try:
 
             if fdu.get_image_uri().startswith('lxd://') or fdu.get_image_uri().startswith('ubuntu://'):
-                img_alias = fdu.get_image_uri()[6:]
-
                 try:
                     if fdu.get_image_uri().startswith('lxd://'):
+                        img_alias = fdu.get_image_uri()[6:]
                         self.logger.info('define_fdu()','Image is coming from LXD repository: {}'.format(img_alias))
                         lxd_img = self.conn.images.create_from_simplestreams(server=self.IMAGE_SERVER, alias=img_alias)
                     else:
+                        img_alias = fdu.get_image_uri()[9:]
                         self.logger.info('define_fdu()','Image is coming from Ubuntu repository: {}'.format(img_alias))
                         lxd_img = self.conn.images.create_from_simplestreams(server=self.UBUNTU_IMAGE_SERVER, alias=img_alias)
                     lxd_img.add_alias(fdu_uuid, description='')
