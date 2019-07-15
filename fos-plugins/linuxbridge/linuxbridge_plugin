@@ -181,6 +181,7 @@ class LinuxBridge(NetworkPlugin):
 
 
     def get_address(self, mac_address):
+        self.logger.info('get_address()', 'Linux Bridge Plugin - Getting IP address for  {}'.format(mac_address))
 
         # LEASE FILE FORMAT
         # 1560518377 00:16:3e:5e:a8:fa 192.168.123.13 holy-gar 01:00:16:3e:5e:a8:fa
@@ -197,8 +198,10 @@ class LinuxBridge(NetworkPlugin):
                     for l in res:
                         tok = l.split(' ')
                         if tok[1] == mac_address:
+                            self.logger.info('get_address()', 'Linux Bridge Plugin - IP address for {} is '.format(mac_address, tok[2]))
                             return {'result': tok[2]}
-            continue
+
+        self.logger.info('get_address()', 'Linux Bridge Plugin - Unable to get IP address for {} '.format(mac_address))
         return {'result': ''}
 
 
