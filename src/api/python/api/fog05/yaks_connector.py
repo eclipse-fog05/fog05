@@ -1066,7 +1066,7 @@ class LAD(object):
             nodeid, nm_uuid, func_name, parameters)
         res = self.ws.eval(s)
         if len(res) == 0:
-            raise ValueError('Empty data on exec_os_eval')
+            raise ValueError('Empty data on exec_nw_eval')
         else:
             return json.loads(res[0][1].get_value())
 
