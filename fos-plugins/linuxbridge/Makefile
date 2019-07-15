@@ -1,6 +1,7 @@
 # -*-Makefile-*-
 
 WD := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))));
+UUID = $(shell ./to_uuid.sh)
 
 LB_PLUGIN_DIR = /etc/fos/plugins/linuxbridge
 LB_PLUGIN_CONFFILE = /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json
@@ -19,6 +20,7 @@ else
 	sudo ln -sf /etc/fos/plugins/linuxbridge/linuxbridge_plugin /usr/bin/fos_linuxbridge
 endif
 	sudo cp /etc/fos/plugins/linuxbridge/fos_linuxbridge.service /lib/systemd/system/
+	sudo sh -c "echo $(UUID) | xargs -i  jq  '.configuration.nodeid = \"{}\"' /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json > /tmp/linuxbridge_plugin.tmp && mv /tmp/linuxbridge_plugin.tmp /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json"
 
 
 uninstall:
