@@ -231,8 +231,8 @@ class GAD(object):
         return '('+b+')'
 
     def get_agent_exec_path(self, sysid, tenantid, nodeid, func_name):
-        return Constants.create_path([self.prefix, sysid, "tenants",
-        tenantid, "nodes", nodeid, 'agent', 'exec', func_name])
+        return Constants.create_path([self.prefix, sysid, 'tenants',
+        tenantid, 'nodes', nodeid, 'agent', 'exec', func_name])
 
     def get_agent_exec_path_with_params(self, sysid, tenantid, nodeid, func_name, params):
         if len(params) > 0:
@@ -240,8 +240,8 @@ class GAD(object):
             f = func_name + '?' + p
         else:
             f = func_name
-        return Constants.create_path([self.prefix, sysid, "tenants",
-        tenantid, "nodes", nodeid, 'agent', 'exec',f])
+        return Constants.create_path([self.prefix, sysid, 'tenants',
+        tenantid, 'nodes', nodeid, 'agent', 'exec',f])
 
 
     def extract_userid_from_path(self, path):
@@ -744,41 +744,61 @@ class GAD(object):
     # Agent Evals
 
     def add_node_port_to_network(self, sysid, tenantid,  nodeid, portid, network_id):
-        fname = "add_port_to_network"
+        fname = 'add_port_to_network'
         params = {'cp_uuid': portid, 'network_uuid':network_id}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
         res = self.ws.eval(s)
         if len(res) == 0:
-            raise ValueError('Empty data on exec_os_eval')
+            raise ValueError('Empty data on exec_agent_eval')
         else:
             return json.loads(res[0][1].get_value())
 
     def remove_node_port_from_network(self, sysid, tenantid, nodeid, portid):
-        fname = "remove_port_from_network"
+        fname = 'remove_port_from_network'
         params = {'cp_uuid': portid}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
         res = self.ws.eval(s)
         if len(res) == 0:
-            raise ValueError('Empty data on exec_os_eval')
+            raise ValueError('Empty data on exec_agent_eval')
         else:
             return json.loads(res[0][1].get_value())
 
     def add_node_floatingip(self, sysid, tenantid, nodeid):
-        fname = "create_floating_ip"
+        fname = 'create_floating_ip'
         s = self.get_agent_exec_path(sysid, tenantid, nodeid, fname)
         res = self.ws.eval(s)
         if len(res) == 0:
-            raise ValueError('Empty data on exec_os_eval')
+            raise ValueError('Empty data on exec_agent_eval')
         else:
             return json.loads(res[0][1].get_value())
 
     def remove_node_floatingip(self, sysid, tenantid, nodeid, ipid):
-        fname = "delete_floating_ip"
+        fname = 'delete_floating_ip'
         params = {'floating_uuid': ipid}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
         res = self.ws.eval(s)
         if len(res) == 0:
-            raise ValueError('Empty data on exec_os_eval')
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def assign_node_floating_ip(self, sysid, tenantid, nodeid, ipid, cpid):
+        fname = 'assign_floating_ip'
+        params = {'floating_uuid': ipid, 'cp_uuid': cpid}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def retain_node_floating_ip(self, sysid, tenantid, nodeid, ipid, cpid):
+        fname = 'remove_floating_ip'
+        params = {'floating_uuid': ipid, 'cp_uuid': cpid}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
         else:
             return json.loads(res[0][1].get_value())
 
@@ -878,7 +898,7 @@ class LAD(object):
 
     def get_node_all_fdus_instances_selector(self, nodeid):
         return Constants.create_path(
-            [self.prefix, nodeid, 'runtimes', "*", 'fdu', '*',
+            [self.prefix, nodeid, 'runtimes', '*', 'fdu', '*',
             'instances','*','info'])
 
     def get_node_image_info_path(self, nodeid, pluginid, imgid):
@@ -1046,7 +1066,7 @@ class LAD(object):
             nodeid, nm_uuid, func_name, parameters)
         res = self.ws.eval(s)
         if len(res) == 0:
-            raise ValueError('Empty data on exec_os_eval')
+            raise ValueError('Empty data on exec_nw_eval')
         else:
             return json.loads(res[0][1].get_value())
 
@@ -1203,7 +1223,7 @@ class LAD(object):
         res = self.ws.get(p)
         if len(res) == 0:
             return []
-        return list(map (lambda x: json.loads(x[1]), res))
+        return list(map (lambda x: json.loads(x[1].get_value()), res))
 
     def add_node_image(self, nodeid, pluginid, imgid, imginfo):
         p = self.get_node_image_info_path(nodeid, pluginid, imgid)

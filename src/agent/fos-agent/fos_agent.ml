@@ -403,10 +403,12 @@ let agent verbose_flag debug_flag configuration custom_uuid =
         >>= fun _ ->
         let eval_res = FAgentTypes.{result = Some (JSON.of_string (FTypes.string_of_floating_ip floating)) ; error=None} in
         Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
-      |  None -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
+      |  None -> let eval_res = FAgentTypes.{result = None ; error=Some 33} in
+        let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-ASSOC-FLOATING-IP - EVAL RETURNED NONE") in
         Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
-    | _ -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
+    | exn -> let eval_res = FAgentTypes.{result = None ; error=Some 22} in
+      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-ASSOC-FLOATING-IP - EXCEPTION: %s" (Printexc.to_string exn)) in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   let eval_remove_floating_ip self (props:Apero.properties) =
@@ -430,10 +432,12 @@ let agent verbose_flag debug_flag configuration custom_uuid =
         >>= fun _ ->
         let eval_res = FAgentTypes.{result = Some (JSON.of_string (FTypes.string_of_floating_ip floating)) ; error=None} in
         Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
-      |  None -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
+      |  None -> let eval_res = FAgentTypes.{result = None ; error=Some 33} in
+        let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-REMOVE-FLOATING-IP - EVAL RETURNED NONE") in
         Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
-    | _ -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
+    | exn -> let eval_res = FAgentTypes.{result = None ; error=Some 22} in
+      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-REMOVE-FLOATING-IP - EXCEPTION: %s" (Printexc.to_string exn)) in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   (* Listeners *)

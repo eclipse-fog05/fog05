@@ -831,13 +831,13 @@ class LXD(RuntimePluginFDU):
         pass
 
     def __monitor_instance(self, fdu_uuid, instance_id, instance_name):
-        self.logger.info('__monitor_fdu()','[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(instance_id))
+        self.logger.info('__monitor_instance()','[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(instance_id))
         while True:
             time.sleep(self.update_interval)
             try:
                 record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_id)
                 if record.get('status') not in ['LAND', 'TAKE_OFF','MIGRATE']:
-                    self.logger.info('__monitor_fdu()','[ INFO ] LXD Plugin - Updating status of {}'.format(fdu_uuid))
+                    self.logger.info('__monitor_instance()','[ INFO ] LXD Plugin - Updating status of {}'.format(fdu_uuid))
                     c = self.conn.containers.get(instance_name)
                     cs = c.state()
                     detailed_state = {}
@@ -858,7 +858,10 @@ class LXD(RuntimePluginFDU):
                     #    c_net = []
                     c_net = {}
                     for i in record.get('interfaces'):
-                        ip = self.call_nw_plugin_function('get_address', {'mac_address':i.get('mac_address','')})
+                        try:
+                            ip = self.call_nw_plugin_function('get_address', {'mac_address':i.get('mac_address','')})
+                        except ValueError:
+                            ip = ''
                         # Getting address from LXD if unable from network manager, eg. if connected to physical device/lxd bridge
                         if ip == '':
                             lxd_net_info_addrs = cs.network[i['vintf_name']]['addresses']

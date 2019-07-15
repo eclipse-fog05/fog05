@@ -181,6 +181,7 @@ class LinuxBridge(NetworkPlugin):
 
 
     def get_address(self, mac_address):
+        self.logger.info('get_address()', 'Linux Bridge Plugin - Getting IP address for  {}'.format(mac_address))
 
         # LEASE FILE FORMAT
         # 1560518377 00:16:3e:5e:a8:fa 192.168.123.13 holy-gar 01:00:16:3e:5e:a8:fa
@@ -197,8 +198,10 @@ class LinuxBridge(NetworkPlugin):
                     for l in res:
                         tok = l.split(' ')
                         if tok[1] == mac_address:
+                            self.logger.info('get_address()', 'Linux Bridge Plugin - IP address for {} is '.format(mac_address, tok[2]))
                             return {'result': tok[2]}
-            continue
+
+        self.logger.info('get_address()', 'Linux Bridge Plugin - Unable to get IP address for {} '.format(mac_address))
         return {'result': ''}
 
 
@@ -648,6 +651,10 @@ class LinuxBridge(NetworkPlugin):
         return {'result': rec}
 
     def assign_floating_ip(self, ip_id, cp_id):
+        # fagent: [ERROR] [FOS-AGENT] - EV-ASSOC-FLOATING-IP - EXCEPTION: (Failure
+        # "[YAS]:
+        # EVAL on /alfos/a2d358aa-af2b-42cb-8d23-a89e88b97e5c/network_managers/d42b4163-af35-423a-acb4-a228290cf0be/exec/assign_floating_ip?(ip_id=c02eea4f-6f35-4a87-b8bb-b9ba617e8214;cp_id=a47a8819-72e5-4b4e-86fd-fc30c9fda68b):
+        # ErrNo 400")
         self.logger.info('assign_floating_ip()', 'Assigning floating IP {} to {}'.format(ip_id, cp_id))
         rec = self.connector.loc.actual.get_node_floating_ip(self.node, self.uuid, ip_id)
         if rec is None:
@@ -675,7 +682,7 @@ class LinuxBridge(NetworkPlugin):
             return {'error': 11}
         cp_ip = self.__get_cp_ip(cp_id)
         if cp_ip == '':
-            self.logger.error('remove_floating_ip()', 'Connection point {} as not IP'.format(ip_id))
+            self.logger.error('remove_floating_ip()', 'Connection point {} has no IP'.format(ip_id))
             return {'error': 11}
         cmd = 'sudo iptables -t nat -D PREROUTING -d {} -j DNAT --to {}'.format(rec['vface'], cp_ip)
         self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':True})
@@ -689,17 +696,20 @@ class LinuxBridge(NetworkPlugin):
 
     def __get_cp_ip(self, cp_id):
         cp_rec = self.connector.loc.actual.get_node_port(self.node, self.uuid, cp_id)
+        self.logger.info('__get_cp_ip()', 'Get connection point IP for {} Record: {}'.format(cp_id, cp_rec))
         fdus = self.connector.loc.actual.get_node_all_fdus_instances(self.node)
         cp_ip = ''
         for i in fdus:
+            self.logger.info('__get_cp_ip()', 'Scanning FDUs Record: {}'.format(i))
             intfs = i['interfaces']
             for intf in intfs:
                 if intf.get('cp_id') is not None and intf.get('cp_id') != '':
-                    if intf.get('cp_id') == cp_id:
+                    if intf.get('cp_id') == cp_rec['uuid']:
                         i_name = intf['vintf_name']
                         hv_info = i['hypervisor_info']
                         if len(hv_info) > 0:
-                            cp_id = hv_info['network']['i_name']['addresses'][0]['address']
+                            cp_ip = hv_info['network'][i_name]['addresses'][0]['address']
+        self.logger.info('__get_cp_ip()', 'IP for {} -> {}'.format(cp_id, cp_ip))
         return cp_ip
 
     def __cird2block(self, cird):
