@@ -20,8 +20,7 @@
 sudo ip netns add fosns-{{ net_id }}
 sudo ip link add br-{{ net_id }} type bridge
 
-sudo ip link add br-{{ net_id }}-ns type bridge
-sudo ip link set br-{{ net_id }}-ns netns fosns-{{ net_id }}
+sudo ip netns exec  fosns-{{ net_id }} ip link add br-{{ net_id }}-ns type bridge
 
 sudo ip link add l-{{ net_id }}-i type veth peer name l-{{ net_id }}-e
 sudo ip link set l-{{ net_id }}-e netns fosns-{{ net_id }}

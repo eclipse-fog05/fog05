@@ -672,6 +672,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
              | `EXTERNAL ->
                let%lwt res = Yaks_connector.Local.Actual.exec_nm_eval (Apero.Option.get self.configuration.agent.uuid) net_p "get_overlay_interface" [] self.yaks  in
                let face =(JSON.to_string (Apero.Option.get (Apero.Option.get res).result)) in
+               (* This is a bad example of removing the escape characters, the JSON.string  *)
+               let face = String.sub face 1 ((String.length face)-2) in
                let wan_face = Printf.sprintf "r-%s-e%d" (List.hd (String.split_on_char '-' rid)) i in
                Lwt.return Router.{port_type = `EXTERNAL; faces = [wan_face]; ext_face = Some face; ip_address = ""; pair_id = None}
              | `INTERNAL ->
@@ -850,30 +852,30 @@ let agent verbose_flag debug_flag configuration custom_uuid =
   (* let cb_gd_cnode_fdu self nodeid (fdu:FDU.record option) (is_remove:bool) (uuid:string option) =
      match is_remove with
      | false ->
-      (match fdu with
-       | Some fdu ->
-         MVar.read self >>= fun self ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-CNODE-FDU - ##############") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-CNODE-FDU - FDU Updated! Agent will call the right plugin!") in
-         let%lwt fdu_d = Yaks_connector.Global.Actual.get_fdu_info sys_id Yaks_connector.default_tenant_id fdu.fdu_uuid self.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
-         let fdu_type = Fos_im.string_of_hv_type fdu_d.hypervisor in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-CNODE-FDU - FDU Type %s" fdu_type) in
-         let%lwt plugins = Yaks_connector.LocalConstraint.Actual.get_node_plugins nodeid self.yaks in
-         Lwt_list.iter_p (fun e ->
-             let%lwt pl = Yaks_connector.LocalConstraint.Actual.get_node_plugin nodeid e self.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
-             if String.uppercase_ascii (pl.name) = String.uppercase_ascii (fdu_type) then
-               let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-FDU - Calling %s plugin" pl.name) in
-               Yaks_connector.LocalConstraint.Desired.add_node_fdu nodeid pl.uuid fdu.fdu_uuid fdu self.yaks >>= Lwt.return
-             else
-               Lwt.return_unit
-           ) plugins >>= Lwt.return
-       | None -> Lwt.return_unit)
+     (match fdu with
+     | Some fdu ->
+     MVar.read self >>= fun self ->
+     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-CNODE-FDU - ##############") in
+     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-CNODE-FDU - FDU Updated! Agent will call the right plugin!") in
+     let%lwt fdu_d = Yaks_connector.Global.Actual.get_fdu_info sys_id Yaks_connector.default_tenant_id fdu.fdu_uuid self.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
+     let fdu_type = Fos_im.string_of_hv_type fdu_d.hypervisor in
+     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-CNODE-FDU - FDU Type %s" fdu_type) in
+     let%lwt plugins = Yaks_connector.LocalConstraint.Actual.get_node_plugins nodeid self.yaks in
+     Lwt_list.iter_p (fun e ->
+     let%lwt pl = Yaks_connector.LocalConstraint.Actual.get_node_plugin nodeid e self.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
+     if String.uppercase_ascii (pl.name) = String.uppercase_ascii (fdu_type) then
+     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-FDU - Calling %s plugin" pl.name) in
+     Yaks_connector.LocalConstraint.Desired.add_node_fdu nodeid pl.uuid fdu.fdu_uuid fdu self.yaks >>= Lwt.return
+     else
+     Lwt.return_unit
+     ) plugins >>= Lwt.return
+     | None -> Lwt.return_unit)
      | true ->
-      (match uuid with
-       | Some fduid -> MVar.read self >>= fun self ->
-         Lwt.return_unit
-       (* Yaks_connector.Global.Desired.remove_node_fdu sys_id Yaks_connector.default_tenant_id nodeid fduid self.yaks >>= Lwt.return *)
-       | None -> Lwt.return_unit)
+     (match uuid with
+     | Some fduid -> MVar.read self >>= fun self ->
+     Lwt.return_unit
+     (* Yaks_connector.Global.Desired.remove_node_fdu sys_id Yaks_connector.default_tenant_id nodeid fduid self.yaks >>= Lwt.return *)
+     | None -> Lwt.return_unit)
      in *)
   (* Constrained Nodes Local *)
   let cb_lac_node_fdu self _ (fdu:FDU.record option) (is_remove:bool) (uuid:string option) =
@@ -1005,21 +1007,21 @@ let start verbose_flag daemon_flag debug_flag configuration_path custom_uuid =
      | true ->
      let pid = Unix.fork () in
      if pid=0 then
-      begin
-        let tmp = Filename.get_temp_dir_name () in
-        let pid_file = Filename.concat tmp "fos_agent.pid" in
-        let agent_out_file = Filename.concat tmp "fos_agent.out" in
-        let agent_err_file = Filename.concat tmp "fos_agent.err" in
-        let mpid = Unix.getpid () in
-        let pid_out = open_out pid_file in
-        ignore @@ Printf.fprintf pid_out "%d" mpid;
-        ignore @@ close_out pid_out;
-        let file_out = open_out agent_out_file in
-        let file_err = open_out agent_err_file in
-        ignore @@ Unix.dup2 (Unix.descr_of_out_channel file_out) Unix.stdout;
-        ignore @@ Unix.dup2 (Unix.descr_of_out_channel file_err) Unix.stderr;
-        Lwt_main.run @@ agent verbose_flag debug_flag configuration_path
-      end
+     begin
+     let tmp = Filename.get_temp_dir_name () in
+     let pid_file = Filename.concat tmp "fos_agent.pid" in
+     let agent_out_file = Filename.concat tmp "fos_agent.out" in
+     let agent_err_file = Filename.concat tmp "fos_agent.err" in
+     let mpid = Unix.getpid () in
+     let pid_out = open_out pid_file in
+     ignore @@ Printf.fprintf pid_out "%d" mpid;
+     ignore @@ close_out pid_out;
+     let file_out = open_out agent_out_file in
+     let file_err = open_out agent_err_file in
+     ignore @@ Unix.dup2 (Unix.descr_of_out_channel file_out) Unix.stdout;
+     ignore @@ Unix.dup2 (Unix.descr_of_out_channel file_err) Unix.stderr;
+     Lwt_main.run @@ agent verbose_flag debug_flag configuration_path
+     end
      else exit 0
      | false -> Lwt_main.run @@ agent verbose_flag debug_flag configuration_path
   *)
