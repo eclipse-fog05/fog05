@@ -772,7 +772,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       (match uuid with
        | Some routerid ->
          MVar.read self >>= fun self ->
-         Yaks_connector.Local.Desired.remove_node_router (Apero.Option.get self.configuration.agent.uuid) net_p routerid self.yaks >>= Lwt.return
+         Yaks_connector.Global.Actual.remove_node_router sys_id Yaks_connector.default_tenant_id (Apero.Option.get self.configuration.agent.uuid) routerid self.yaks >>= Lwt.return
        | None -> Lwt.return_unit)
   in
   let cb_la_plugin self (pl:FTypes.plugin option) (is_remove:bool) (uuid:string option) =

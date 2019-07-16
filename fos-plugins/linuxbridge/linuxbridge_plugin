@@ -184,6 +184,8 @@ class LinuxBridge(NetworkPlugin):
             self.delete_virtual_network(k)
         for k in list(self.bridges.keys()):
             self.delete_virtual_bridge(k)
+        for k in list(self.routers.keys()):
+            self.delete_router(k)
 
 
     def get_overlay_face(self):

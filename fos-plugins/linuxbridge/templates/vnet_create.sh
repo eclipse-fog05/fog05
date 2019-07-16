@@ -27,6 +27,8 @@ sudo ip link set l-{{ net_id }}-e netns fosns-{{ net_id }}
 sudo ip link set l-{{ net_id }}-i master br-{{ net_id }}
 sudo ip link set l-{{ net_id }}-i up
 
+
+sudo ip netns exec  fosns-{{ net_id }} ip link set br-{{ net_id }}-ns up
 sudo ip netns exec fosns-{{ net_id }} ip link set l-{{ net_id }}-e master br-{{ net_id }}-ns
 sudo ip netns exec fosns-{{ net_id }} ip link set l-{{ net_id }}-e up
 
