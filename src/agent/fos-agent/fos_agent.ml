@@ -679,7 +679,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
              | `INTERNAL ->
                let face_i = Printf.sprintf "r-%s-e%d-i" (List.hd (String.split_on_char '-' rid)) i in
                let face_e = Printf.sprintf "r-%s-e%d-e" (List.hd (String.split_on_char '-' rid)) i in
-               Lwt.return Router.{port_type = `INTERNAL; faces = [face_i; face_e]; ip_address = ""; ext_face = None; pair_id = e.vnet_id}
+               Lwt.return Router.{port_type = `INTERNAL; faces = [face_i; face_e]; ip_address = Apero.Option.get_or_default e.ip_address ""; ext_face = None; pair_id = e.vnet_id}
            ) router.ports
          in
          let vrouter_ns =  Printf.sprintf "r-%s-ns" (List.hd (String.split_on_char '-' rid))  in
