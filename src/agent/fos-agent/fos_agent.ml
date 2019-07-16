@@ -745,7 +745,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
        | None -> Lwt.return_unit)
 
   in
-  let cb_la_net self (router:Router.record option) (is_remove:bool) (uuid:string option) =
+  let cb_la_router self (router:Router.record option) (is_remove:bool) (uuid:string option) =
     let%lwt net_p = get_network_plugin self in
     match is_remove with
     | false ->
@@ -981,6 +981,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
   let%lwt _ = Yaks_connector.Local.Actual.observe_node_fdu uuid (cb_la_node_fdu state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.observe_node_network uuid (cb_la_net state) yaks in
   let%lwt _ = Yaks_connector.Local.Actual.observe_node_port uuid (cb_la_cp state) yaks in
+  let%lwt _ = Yaks_connector.Local.Actual.observe_node_router uuid (cb_la_router state) yaks in
   let%lwt _ = Yaks_connector.LocalConstraint.Actual.observe_nodes (cb_lac_nodes state) yaks in
   (* let load_spawner_fun =
      let spawner_path = "_build/default/src/fos/fos-spawner/spawner.exe" in

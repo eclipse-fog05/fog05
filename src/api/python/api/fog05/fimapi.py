@@ -328,6 +328,7 @@ class FIMAPI(object):
             self.connector.glob.desired.remove_network(
                 self.sysid, self.tenantid, net_uuid)
 
+
         def add_connection_point(self, cp_descriptor):
             cp_descriptor.update({'status': 'add'})
             cp_id = cp_descriptor.get('uuid')
@@ -373,6 +374,15 @@ class FIMAPI(object):
                 return cp_uuid
             raise ValueError('Error connecting: {}'.format(res['error']))
 
+        def add_router(self, nodeid, manifest):
+            router_id = manifest.get('uuid')
+            self.connector.glob.desired.add_node_network_router(
+                self.sysid, self.tenantid, nodeid, router_id, manifest)
+
+
+        def remove_router(self, node_id, router_id):
+            self.connector.glob.desired.remove_node_network_router(
+                self.sysid, self.tenantid, node_id, router_id)
 
         def create_floating_ip(self, nodeid):
             return self.connector.glob.actual.add_node_floatingip(self.sysid, self.tenantid, nodeid)

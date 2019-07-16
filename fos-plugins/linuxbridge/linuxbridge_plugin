@@ -84,6 +84,7 @@ class LinuxBridge(NetworkPlugin):
         self.intfs = {}
         self.ports = {}
         self.bridges = {}
+        self.routers = {}
 
         signal.signal(signal.SIGINT, self.__catch_signal)
         signal.signal(signal.SIGTERM, self.__catch_signal)
@@ -369,6 +370,163 @@ class LinuxBridge(NetworkPlugin):
         self.ports.pop(cp_id)
         self.connector.loc.actual.remove_node_port(self.node, self.uuid, cp_id)
 
+
+    def create_router(self, record):
+        router_id = record.get('uuid')
+        self.logger.info('create_router()', 'Creating {} Record: {}'.format(router_id, record))
+        # {
+        #   'uuid':'12345678-1234-1234-1234-123456789012',
+        #   'state':'CREATE',
+        #   'router_ns': 'r-12345678-ns',
+        #   'nodeid': ''12345678-1234-1234-1234-123456789012',
+        #   'ports': [
+        #       {
+        #          'port_type':'EXTERNAL',
+        #          'ext_face':'ens2',
+        #          'ip_address':'',
+        #          'faces':['r-12345678-e0']
+        #       },
+        #       {
+        #          'port_type':'INTERNAL',
+        #          'faces': [ 'r-12345678-e1-i', 'r-12345678-e1-e'],
+        #          'ip_address': '192.168.123.1/24',
+        #          'pair_id': '12345678-1234-1234-1234-123456789012'
+        #       }
+        #   ]
+        # }
+
+        self.logger.info('create_router()', 'Creating Router NS: {}'.format(record['router_ns']))
+        cmd_new_ns = 'sudo ip netns add {}'.format(record['router_ns'])
+        cmd_ns_forwarding = 'sudo ip netns exec {} sysctl -w net.ipv4.ip_forward=1'.format(record['router_ns'])
+        self.call_os_plugin_function('execute_command', {'command':cmd_new_ns, 'blocking':True, 'external':True})
+        self.call_os_plugin_function('execute_command', {'command':cmd_ns_forwarding, 'blocking':True, 'external':True})
+        ext_face = ''
+        for p in record['ports']:
+
+            if p['port_type'] == 'EXTERNAL':
+                cmd_add_macvlan = 'sudo ip link add {} link {} type macvlan mode vepa'.format(p['faces'][0], p['ext_face'])
+                cmd_port_to_ns = 'sudo ip link set {} netns {}'.format(p['faces'][0], record['router_ns'])
+                cmd_port_up = 'sudo ip netns exec {} ip link set {} up'.format(record['router_ns'], p['faces'][0])
+
+                self.logger.info('create_router()', 'Creating EXTERNAL PORT: {} and assiging to router NS {}'.format(p['faces'][0], record['router_ns']))
+                self.call_os_plugin_function('execute_command', {'command':cmd_add_macvlan, 'blocking':True, 'external':True})
+                self.call_os_plugin_function('execute_command', {'command':cmd_port_to_ns, 'blocking':True, 'external':True})
+                self.call_os_plugin_function('execute_command', {'command':cmd_port_up, 'blocking':True, 'external':True})
+                if p['ip_address'] == '':
+
+                    self.logger.info('create_router()', 'Asking address for face: {}'.format(p['faces'][0]))
+
+                    cmd_dhcp_client = 'sudo ip netns exec {} dhclient {}'.format(record['router_ns'], p['faces'][0])
+                    self.call_os_plugin_function('execute_command', {'command':cmd_dhcp_client, 'blocking':True, 'external':True})
+
+                    cmd_get_address = 'sudo ip netns exec {} fos_get_address {}'.format(record['router_ns'], p['faces'][0])
+
+                    addr = self.call_os_plugin_function('execute_command', {'command':cmd_get_address, 'blocking':True, 'external':False})['record']
+
+                    p.update({'ip_address':addr})
+                else:
+                    self.logger.info('create_router()', 'Assing {} address for face: {}'.format(p['ip_address'], p['faces'][0]))
+                    cmd_add_addr = 'sudo ip netns exec {} ip addr add {} dev {}'.format(record['router_ns'], p['ip_address'], p['faces'][0])
+                    self.call_os_plugin_function('execute_command', {'command':cmd_add_addr, 'blocking':True, 'external':True})
+                self.logger.info('create_router()', 'Router EXTERNAL PORT Created: {}'.format(p['faces'][0]))
+                ext_face = p['faces'][0]
+
+            elif p['port_type'] == 'INTERNAL':
+                self.logger.info('create_router()', 'Creating INTERNAL PORT: {}<->{}'.format(p['faces'][0], p['faces'][1]))
+
+                cmd_veth_pair = 'sudo ip link add {} type veth peer name {}'.format(p['faces'][0], p['faces'][1])
+                cmd_i_face_to_ns = 'sudo ip link set {} netns {}'.format(p['faces'][0], record['router_ns'])
+                cmd_i_face_up = 'sudo ip netns exec {} ip link set {} up'.format(record['router_ns'], p['faces'][0])
+
+                self.call_os_plugin_function('execute_command', {'command':cmd_veth_pair, 'blocking':True, 'external':True})
+                self.call_os_plugin_function('execute_command', {'command':cmd_i_face_to_ns, 'blocking':True, 'external':True})
+                self.call_os_plugin_function('execute_command', {'command':cmd_i_face_up, 'blocking':True, 'external':True})
+
+                net_record = self.networks.get(p['pair_id'])
+                net_ns = net_record['properties']['net_ns']
+                net_dev = net_record['properties']['virtual_device']
+
+                cmd_e_face_to_ns = 'sudo ip link set {} netns {}'.format(p['faces'][1], net_ns)
+                cmd_e_face_up = 'sudo ip netns exec {} ip link set {} up'.format(net_ns, p['faces'][1])
+                cmd_e_face_master = 'sudo ip netns exec {} ip link set {} master {}'.format(net_ns, p['faces'][1], net_dev)
+
+                self.call_os_plugin_function('execute_command', {'command':cmd_e_face_to_ns, 'blocking':True, 'external':True})
+                self.call_os_plugin_function('execute_command', {'command':cmd_e_face_up, 'blocking':True, 'external':True})
+                self.call_os_plugin_function('execute_command', {'command':cmd_e_face_master, 'blocking':True, 'external':True})
+
+                if p['ip_address'] == '':
+
+                    self.logger.info('create_router()', 'Asking address for face: {}'.format(p['faces'][0]))
+                    cmd_dhcp_client = 'sudo ip netns exec {} dhclient {}'.format(record['router_ns'],p['faces'][0])
+                    self.call_os_plugin_function('execute_command', {'command':cmd_dhcp_client, 'blocking':True, 'external':True})
+
+                    cmd_get_address = 'sudo ip netns exec {} fos_get_address {}'.format(record['router_ns'], p['faces'][0])
+
+                    addr = self.call_os_plugin_function('execute_command', {'command':cmd_get_address, 'blocking':True, 'external':False})['record']
+
+                    p.update({'ip_address':addr})
+                else:
+                    self.logger.info('create_router()', 'Assing {} address for face: {}'.format(p['ip_address'], p['faces'][0]))
+                    cmd_add_addr = 'sudo ip netns exec {} ip addr add {} dev {}'.format(record['router_ns'], p['ip_address'], p['faces'][0])
+                    self.call_os_plugin_function('execute_command', {'command':cmd_add_addr, 'blocking':True, 'external':True})
+
+                self.logger.info('create_router()', 'Setting iptables rules...')
+
+                cmd_iptables_nat = 'sudo ip netns exec {} iptables -t nat -A POSTROUTING -s {} -o {} -j MASQUERADE'.format(record['router_ns'], p['ip_address'], ext_face)
+                cmd_iptables_forward_in = 'sudo ip netns exec {} iptables -A FORWARD -i {} -o {} -j ACCEPT'.format(record['router_ns'], ext_face, p['faces'][0])
+                cmd_iptables_forward_out = 'sudo ip netns exec {} iptables -A FORWARD -o {} -i {} -j ACCEPT'.format(record['router_ns'], ext_face, p['faces'][0])
+
+                self.call_os_plugin_function('execute_command', {'command':cmd_iptables_nat, 'blocking':True, 'external':True})
+                self.call_os_plugin_function('execute_command', {'command':cmd_iptables_forward_in, 'blocking':True, 'external':True})
+                self.call_os_plugin_function('execute_command', {'command':cmd_iptables_forward_out, 'blocking':True, 'external':True})
+
+
+            else:
+                self.logger.error('create_router()', 'Router port_type is not recognized: {}'.format(p['port_type']))
+
+        self.logger.info('create_router()', 'Router {} created!'.format(router_id))
+        self.routers.update({router_id: record})
+        self.connector.loc.actual.add_node_router(self.node, self.uuid, router_id, record)
+
+
+    def delete_router(self, router_id):
+        router_info = self.routers.get(router_id)
+        if router_info is None:
+            self.logger.error('delete_router()','Router {} does not exist'.format(router_id))
+            return False
+        self.logger.info('delete_router()', 'Removing Router {}'.format(router_id))
+        for p in router_info['faces']:
+            if p['port_type'] == 'EXTERNAL':
+                self.logger.info('delete_router()', 'Removing External Face {}'.format(p['faces'][0]))
+                cmd_remove_face = 'sudo ip netns exec {} ip link del {}'.format(router_info['router_ns'], p['faces'][0])
+
+                self.call_os_plugin_function('execute_command', {'command':cmd_remove_face, 'blocking':True, 'external':True})
+
+                self.logger.info('delete_router()', 'Removed External Face {}'.format(p['faces'][0]))
+
+            elif p['port'] == 'INTERNAL':
+                self.logger.info('delete_router()', 'Removing Internal Face {}'.format(p['faces'][0]))
+
+                net_record = self.networks.get(p['pair_id'])
+                net_ns = net_record['properties']['net_ns']
+
+                cmd_remove_face = 'sudo ip netns exec {} ip link del {}'.format(net_ns, p['faces'][1])
+
+                self.call_os_plugin_function('execute_command', {'command':cmd_remove_face, 'blocking':True, 'external':True})
+
+                self.logger.info('delete_router()', 'Removed Internal Face {}'.format(p['faces'][0]))
+            else:
+                self.logger.error('create_router()', 'Router port_type is not recognized: {}'.format(p['port_type']))
+
+
+
+        cmd_ns_rem = 'sudo ip netns del {}'.format(router_info['router_ns'])
+        self.call_os_plugin_function('execute_command', {'command':cmd_ns_rem, 'blocking':True, 'external':True})
+
+
+        self.logger.info('delete_router()', 'Router {} deleted'.format(router_id))
+        self.routers.pop(router_id)
+        self.connector.loc.actual.remove_node_router(self.node, self.uuid, router_id)
 
 
     # network_name, net_uuid, ip_range=None, has_dhcp=False, gateway=None,
@@ -786,6 +944,20 @@ class LinuxBridge(NetworkPlugin):
             self.create_port(port_info)
         else:
             self.logger.info('__port_observer()', 'Linux Bridge Plugin - Action not recognized : {}'.format(action))
+
+
+    def __router_observer(self, router_info):
+        self.logger.info('__router_observer()', 'Linux Bridge Plugin - New Action of a Router - Router Info: {}'.format(router_info))
+        action = router_info.get('state')
+        router_uuid = router_info.get('uuid')
+        if action == 'DESTROY':
+            self.logger.info('__router_observer()', 'Linux Bridge Plugin - This is a remove for : {}'.format(router_info))
+            self.delete_router(router_uuid)
+        elif action == 'CREATE':
+            self.logger.info('__router_observer()', 'Linux Bridge Plugin - This is a add for : {}'.format(router_info))
+            self.create_router(router_info)
+        else:
+            self.logger.info('__router_observer()', 'Linux Bridge Plugin - Action not recognized : {}'.format(action))
 
 
     def __generate_interface_create_script(self, internal_name, external_name, name):
