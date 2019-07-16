@@ -378,6 +378,12 @@ class FIMAPI(object):
             router_id = manifest.get('uuid')
             self.connector.glob.desired.add_node_network_router(
                 self.sysid, self.tenantid, nodeid, router_id, manifest)
+            router_info = self.connector.glob.actual.get_node_network_router(
+                self.sysid, self.tenantid, nodeid, router_id)
+            while router_info is None:
+                    router_info = self.connector.glob.actual.get_node_network_router(
+                self.sysid, self.tenantid, nodeid, router_id)
+            return router_info
 
 
         def remove_router(self, node_id, router_id):
