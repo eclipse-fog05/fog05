@@ -157,6 +157,8 @@ class LinuxBridge(NetworkPlugin):
             self.node, self.uuid, self.__net_observer)
         self.connector.loc.desired.observe_node_ports(
             self.node, self.uuid, self.__port_observer)
+        self.connector.loc.desired.observe_node_routers(
+            self.node, self.uuid, self.__router_observer)
         self.manifest.update({'pid': self.pid})
         self.manifest.update({'status': 'running'})
         self.connector.loc.actual.add_node_plugin(
@@ -444,7 +446,7 @@ class LinuxBridge(NetworkPlugin):
 
                 net_record = self.networks.get(p['pair_id'])
                 net_ns = net_record['properties']['net_ns']
-                net_dev = net_record['properties']['virtual_device']
+                net_dev = net_record['properties']['virtual_device'] + '-ns'
 
                 cmd_e_face_to_ns = 'sudo ip link set {} netns {}'.format(p['faces'][1], net_ns)
                 cmd_e_face_up = 'sudo ip netns exec {} ip link set {} up'.format(net_ns, p['faces'][1])
