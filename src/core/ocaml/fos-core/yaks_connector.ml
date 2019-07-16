@@ -960,7 +960,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
   let observe_node_routers sysid tenantid nodeid callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = get_node_network_routers_selector sysid tenantid nodeid in
-    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Router.descriptor_of_string extract_routerid_from_path) s connector.ws in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Router.descriptor_of_string extract_node_routerid_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 

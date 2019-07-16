@@ -510,7 +510,7 @@ class LinuxBridge(NetworkPlugin):
 
                 self.logger.info('delete_router()', 'Removed External Face {}'.format(p['faces'][0]))
 
-            elif p['port'] == 'INTERNAL':
+            elif p['port_type'] == 'INTERNAL':
                 self.logger.info('delete_router()', 'Removing Internal Face {}'.format(p['faces'][0]))
 
                 net_record = self.networks.get(p['pair_id'])
