@@ -423,7 +423,9 @@ class LinuxBridge(NetworkPlugin):
 
                     cmd_get_address = 'sudo ip netns exec {} fos_get_address {}'.format(record['router_ns'], p['faces'][0])
 
-                    addr = self.call_os_plugin_function('execute_command', {'command':cmd_get_address, 'blocking':True, 'external':False})['record']
+                    addr = self.call_os_plugin_function('execute_command', {'command':cmd_get_address, 'blocking':True, 'external':False})
+                    self.logger.info('create_router()', 'Returing: {}'.format(addr))
+                    addr = addr[0]['result']
 
                     p.update({'ip_address':addr})
                 else:
