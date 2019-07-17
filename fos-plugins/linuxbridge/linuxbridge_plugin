@@ -550,13 +550,21 @@ class LinuxBridge(NetworkPlugin):
         if record is None:
             self.logger.error('add_port_to_router()','Router {} does not exist'.format(router_id))
             return {'error': 404}
-        port_id = len(record['ports'])
+
 
         # Sorting ports to have always the same order
         ports = sorted(record['ports'], key=lambda k: k['port_type']+k['faces'][0])
         record.update({'ports': ports})
 
+
         ext_face = ports[0]['faces'][0]
+
+        # getting next port id
+        if ports[-1]['port_type'] == 'INTERNAL':
+            port_id = int(ports[-1]['faces'][0][12:-2])
+        else:
+            port_id = int(ports[-1]['faces'][0][11:])
+
 
         if port_type.upper() == 'EXTERNAL':
             pass
