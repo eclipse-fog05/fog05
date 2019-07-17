@@ -495,7 +495,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     let%lwt net_p = get_network_plugin self in
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEL-ROUTER-PORT - # NetManager: %s" net_p) in
     try%lwt
-      let fname = "create_floating_ip" in
+      let fname = "remove_router_port" in
       let rid = Apero.Option.get @@ Apero.Properties.get "router_id" props in
       let vid = Apero.Option.get @@ Apero.Properties.get "vnet_id" props in
       let parameters = [("router_id", rid); ("vnet_id", vid)] in
