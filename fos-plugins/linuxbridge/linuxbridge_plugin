@@ -1047,7 +1047,7 @@ class LinuxBridge(NetworkPlugin):
         self.logger.info('assign_floating_ip()', 'Moving the virtual interface to default namespace')
 
         cmd = 'sudo ip netns exec {} iptables -t nat -D PREROUTING -d {} -j DNAT --to {}'.format(router['router_ns'], rec['address'].split('/')[0], cp_ip)
-        cmd_to_default_ns = 'sudo ip netns exec {} ip link {} set netns 1'.format(router['router_ns'],rec['vface'])
+        cmd_to_default_ns = 'sudo ip netns exec {} ip link set {} netns 1'.format(router['router_ns'],rec['vface'])
         cmd_assign_ip = 'sudo ip addr add {} dev {}'.format(rec['address'], rec['vface'])
 
 
