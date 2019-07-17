@@ -1092,7 +1092,7 @@ class LinuxBridge(NetworkPlugin):
         netid = ''
         self.logger.info('__get_cp_routers()', 'Scanning FDU Interfaces')
         for c in fdud['connection_points']:
-            if c['uuid'] == cp_rec['uuid']:
+            if c['uuid'] == cp_rec['cp_uuid']:
                 netid = c['pair_id']
 
         self.logger.info('__get_cp_routers()', 'CP is connected to {}'.format(netid))
