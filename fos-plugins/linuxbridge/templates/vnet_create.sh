@@ -19,6 +19,19 @@
 
 sudo ip netns add fosns-{{ net_id }}
 sudo ip link add br-{{ net_id }} type bridge
+
+sudo ip netns exec  fosns-{{ net_id }} ip link add br-{{ net_id }}-ns type bridge
+
+sudo ip link add l-{{ net_id }}-i type veth peer name l-{{ net_id }}-e
+sudo ip link set l-{{ net_id }}-e netns fosns-{{ net_id }}
+sudo ip link set l-{{ net_id }}-i master br-{{ net_id }}
+sudo ip link set l-{{ net_id }}-i up
+
+
+sudo ip netns exec  fosns-{{ net_id }} ip link set br-{{ net_id }}-ns up
+sudo ip netns exec fosns-{{ net_id }} ip link set l-{{ net_id }}-e master br-{{ net_id }}-ns
+sudo ip netns exec fosns-{{ net_id }} ip link set l-{{ net_id }}-e up
+
 sudo ip link add name vxl-{{ net_id }} type vxlan id {{ group_id }} group {{ mcast_group_address }} dstport 4789 dev {{ wan }}
 sudo ip link set dev vxl-{{ net_id }} master br-{{ net_id }}
 sudo ip link set up dev br-{{ net_id }}

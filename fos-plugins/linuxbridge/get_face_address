@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+
+# Copyright (c) 2014,2018 ADLINK Technology Inc.
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
+# which is available at https://www.apache.org/licenses/LICENSE-2.0.
+#
+# SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
+#
+# Contributors: Gabriele Baldoni, ADLINK Technology Inc. - LinuxBridge plugin
+
+import sys
+import netifaces
+import socket
+
+
+def get_net_size(netmask):
+    binary_str = ''
+    for octet in netmask:
+        binary_str += bin(int(octet))[2:].zfill(8)
+    return str(len(binary_str.rstrip('0')))
+
+def ip_mask_to_cird(ip, mask):
+
+    try:
+        socket.inet_aton(ip)
+        socket.inet_aton(mask)
+    except:
+        return "0.0.0.0/0"
+
+    ip = ip.split('.')
+    mask = mask.split('.')
+    net_start = [str(int(ip[x])) for x in range(0, 4)]
+    return '.'.join(net_start) + '/' + get_net_size(mask)
+
+def main(face):
+    try:
+        addr = netifaces.ifaddresses(face)[2][0]['addr']
+        mask = netifaces.ifaddresses(face)[2][0]['netmask']
+        addr = ip_mask_to_cird(addr, mask)
+
+    except:
+        addr = '0.0.0.0/0'
+    print(addr)
+
+
+if __name__ == '__main__':
+    main(sys.argv[1])

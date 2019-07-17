@@ -328,6 +328,7 @@ class FIMAPI(object):
             self.connector.glob.desired.remove_network(
                 self.sysid, self.tenantid, net_uuid)
 
+
         def add_connection_point(self, cp_descriptor):
             cp_descriptor.update({'status': 'add'})
             cp_id = cp_descriptor.get('uuid')
@@ -372,6 +373,33 @@ class FIMAPI(object):
             if res.get('result') is not None:
                 return cp_uuid
             raise ValueError('Error connecting: {}'.format(res['error']))
+
+        def add_router(self, nodeid, manifest):
+            router_id = manifest.get('uuid')
+            self.connector.glob.desired.add_node_network_router(
+                self.sysid, self.tenantid, nodeid, router_id, manifest)
+            router_info = self.connector.glob.actual.get_node_network_router(
+                self.sysid, self.tenantid, nodeid, router_id)
+            while router_info is None:
+                    router_info = self.connector.glob.actual.get_node_network_router(
+                self.sysid, self.tenantid, nodeid, router_id)
+            return router_info
+
+
+        def remove_router(self, node_id, router_id):
+            self.connector.glob.desired.remove_node_network_router(
+                self.sysid, self.tenantid, node_id, router_id)
+
+        def add_router_port(self, nodeid, router_id, port_type, vnet_id=None, ip_address=None):
+            if port_type.upper() not in ['EXTERNAL', 'INTERNAL']:
+                raise ValueError("port_type can be only one of : INTERNAL, EXTERNAL")
+
+            port_type = port_type.upper()
+            return self.connector.glob.actual.add_port_to_router(self.sysid, self.tenantid, nodeid, router_id, port_type, vnet_id, ip_address)
+
+        def remove_router_port(self, nodeid, router_id, vnet_id):
+            return self.connector.glob.actual.remove_port_from_router(self.sysid, self.tenantid, nodeid, router_id, vnet_id)
+
 
 
         def create_floating_ip(self, nodeid):
