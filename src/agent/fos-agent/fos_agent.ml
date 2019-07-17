@@ -440,6 +440,90 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-REMOVE-FLOATING-IP - EXCEPTION: %s" (Printexc.to_string exn)) in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
+  let eval_add_router_port self (props:Apero.properties) =
+    ignore props;
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ADD-ROUTER-PORT - ##############") in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ADD-ROUTER-PORT - Properties: %s" (Apero.Properties.to_string props) ) in
+    MVar.read self >>= fun state ->
+    let%lwt net_p = get_network_plugin self in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ADD-ROUTER-PORT - # NetManager: %s" net_p) in
+    try%lwt
+      let fname = "add_router_port" in
+      let rid = Apero.Option.get @@ Apero.Properties.get "router_id" props in
+      let port_type = Apero.Option.get @@ Apero.Properties.get "port_type" props in
+      let parameters = [("router_id", rid); ("port_type", port_type)] in
+      let parameters =
+        match Apero.Properties.get "vnet_id" props with
+        | Some vid -> parameters @ [("vnet_id",vid)]
+        | None -> parameters
+      in
+      let parameters =
+        match Apero.Properties.get "ip_address" props with
+        | Some ip -> parameters @ [("ip_address",ip)]
+        | None -> parameters
+      in
+      Yaks_connector.Local.Actual.exec_nm_eval (Apero.Option.get state.configuration.agent.uuid) net_p fname parameters state.yaks
+      >>= fun res ->
+      match res with
+      | Some r ->
+        let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ADD-ROUTER-PORT - GOT RESPONSE FROM EVAL %s" (FAgentTypes.string_of_eval_result r)) in
+        (* Convertion from record *)
+        let router = Router.record_of_string @@ JSON.to_string (Apero.Option.get r.result) in
+        let%lwt ports = Lwt_list.map_p (fun (e:Router.router_port_record) ->
+            Lwt.return Router.{port_type = e.port_type; vnet_id = e.pair_id; ip_address = Some e.ip_address}
+          ) router.ports
+        in
+        let router_desc = Router.{uuid = Some router.uuid; ports = ports; } in
+        (*  *)
+        Yaks_connector.Global.Actual.add_node_router sys_id Yaks_connector.default_tenant_id  (Apero.Option.get state.configuration.agent.uuid) router.uuid router_desc state.yaks
+        >>= fun _ ->
+        let eval_res = FAgentTypes.{result = Some (JSON.of_string (Router.string_of_record router)) ; error=None} in
+        Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+      |  None -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
+        Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+    with
+    | _ ->
+      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-ADD-ROUTER-PORT - # ERROR WHEN ADDING ROUTER PORT") in
+      let eval_res = FAgentTypes.{result = None ; error=Some 22} in
+      Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+  in
+  let eval_remove_router_port self (props:Apero.properties) =
+    ignore props;
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEL-ROUTER-PORT - ##############") in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEL-ROUTER-PORT - Properties: %s" (Apero.Properties.to_string props) ) in
+    MVar.read self >>= fun state ->
+    let%lwt net_p = get_network_plugin self in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEL-ROUTER-PORT - # NetManager: %s" net_p) in
+    try%lwt
+      let fname = "create_floating_ip" in
+      let rid = Apero.Option.get @@ Apero.Properties.get "router_id" props in
+      let vid = Apero.Option.get @@ Apero.Properties.get "vnet_id" props in
+      let parameters = [("router_id", rid); ("vnet_id", vid)] in
+      Yaks_connector.Local.Actual.exec_nm_eval (Apero.Option.get state.configuration.agent.uuid) net_p fname parameters state.yaks
+      >>= fun res ->
+      match res with
+      | Some r ->
+        let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEL-ROUTER-PORT - GOT RESPONSE FROM EVAL %s" (FAgentTypes.string_of_eval_result r)) in
+        (* Convertion from record *)
+        let router = Router.record_of_string @@ JSON.to_string (Apero.Option.get r.result) in
+        let%lwt ports = Lwt_list.map_p (fun (e:Router.router_port_record) ->
+            Lwt.return Router.{port_type = e.port_type; vnet_id = e.pair_id; ip_address = Some e.ip_address}
+          ) router.ports
+        in
+        let router_desc = Router.{uuid = Some router.uuid; ports = ports; } in
+        (*  *)
+        Yaks_connector.Global.Actual.add_node_router sys_id Yaks_connector.default_tenant_id  (Apero.Option.get state.configuration.agent.uuid) router.uuid router_desc state.yaks
+        >>= fun _ ->
+        let eval_res = FAgentTypes.{result = Some (JSON.of_string (Router.string_of_record router)) ; error=None} in
+        Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+      |  None -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
+        Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+    with
+    | _ ->
+      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-DEL-ROUTER-PORT - # ERROR WHEN REMOVING ROUTER PORT") in
+      let eval_res = FAgentTypes.{result = None ; error=Some 22} in
+      Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+  in
   (* Listeners *)
   (* Global Desired *)
   let cb_gd_plugin self (pl:FTypes.plugin option) (is_remove:bool) (uuid:string option) =
@@ -962,6 +1046,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
   let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "delete_floating_ip" (eval_delete_floating_ip state) yaks in
   let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "assign_floating_ip" (eval_assign_floating_ip state) yaks in
   let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "remove_floating_ip" (eval_remove_floating_ip state) yaks in
+  let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "add_router_port" (eval_add_router_port state) yaks in
+  let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "remove_router_port" (eval_remove_router_port state) yaks in
   (* Constraint Eval  *)
   let%lwt _ = Yaks_connector.LocalConstraint.Actual.add_agent_eval uuid "get_fdu_info" (eval_get_fdu_info state) yaks in
   (* Registering listeners *)

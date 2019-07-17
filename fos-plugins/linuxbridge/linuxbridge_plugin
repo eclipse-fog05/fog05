@@ -138,6 +138,8 @@ class LinuxBridge(NetworkPlugin):
             'disconnect_cp': self.disconnect_cp,
             'delete_port': self.delete_port,
             'get_address': self.get_address,
+            'add_router_port': self.add_port_to_router,
+            'remove_router_port': self.remove_port_from_router,
             'create_floating_ip': self.create_floating_ip,
             'delete_floating_ip': self.delete_floating_ip,
             'assign_floating_ip': self.assign_floating_ip,

@@ -887,6 +887,31 @@ class GAD(object):
         else:
             return json.loads(res[0][1].get_value())
 
+    def add_port_to_router(self, sysid, tenantid, nodeid, router_id, port_type, vnet_id=None, ip_address=None):
+        fname = 'add_router_port'
+        params = {'router_id': router_id, "port_type": port_type}
+        if vnet_id is not None and vnet_id is not '':
+            params.update({'vnet_id': vnet_id})
+        if ip_address is not None and ip_address is not '':
+            params.update({'ip_address': ip_address})
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def remove_port_from_router(self, sysid, tenantid, nodeid, router_id, vnet_id):
+        fname = 'remove_router_port'
+        params = {'router_id': router_id, "vnet_id": vnet_id}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+
 
 
 class LAD(object):

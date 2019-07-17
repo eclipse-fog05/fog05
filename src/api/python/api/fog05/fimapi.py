@@ -390,6 +390,18 @@ class FIMAPI(object):
             self.connector.glob.desired.remove_node_network_router(
                 self.sysid, self.tenantid, node_id, router_id)
 
+        def add_router_port(self, nodeid, router_id, port_type, vnet_id=None, ip_address=None):
+            if port_type.upper() not in ['EXTERNAL', 'INTERNAL']:
+                raise ValueError("port_type can be only one of : INTERNAL, EXTERNAL")
+
+            port_type = port_type.upper()
+            return self.connector.glob.actual.add_port_to_router(self.sysid, self.tenantid, nodeid, router_id, port_type, vnet_id, ip_address)
+
+        def remove_router_port(self, nodeid, router_id, vnet_id):
+            return self.connector.glob.actual.remove_port_from_router(self.sysid, self.tenantid, nodeid, router_id, vnet_id)
+
+
+
         def create_floating_ip(self, nodeid):
             return self.connector.glob.actual.add_node_floatingip(self.sysid, self.tenantid, nodeid)
 
