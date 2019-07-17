@@ -85,6 +85,7 @@ class LinuxBridge(NetworkPlugin):
         self.ports = {}
         self.bridges = {}
         self.routers = {}
+        self.floating_ips = {}
 
         signal.signal(signal.SIGINT, self.__catch_signal)
         signal.signal(signal.SIGTERM, self.__catch_signal)
@@ -188,6 +189,8 @@ class LinuxBridge(NetworkPlugin):
             self.delete_virtual_bridge(k)
         for k in list(self.routers.keys()):
             self.delete_router(k)
+        for k in list(self.floating_ips.keys()):
+            self.delete_floating_ip(k)
 
 
     def get_overlay_face(self):
@@ -611,7 +614,7 @@ class LinuxBridge(NetworkPlugin):
 
                 addr = self.call_os_plugin_function('execute_command', {'command':cmd_get_address, 'blocking':True, 'external':False})
 
-                port_record.update({'ip_address':addr.strip()})
+                port_record.update({'ip_address':addr.strip().replace("\\n","")})
             else:
                 self.logger.info('add_port_to_router()', 'Assing {} address for face: {}'.format(ip_address, iface))
                 cmd_add_addr = 'sudo ip netns exec {} ip addr add {} dev {}'.format(record['router_ns'], ip_address, iface)
@@ -947,6 +950,8 @@ class LinuxBridge(NetworkPlugin):
         self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':False, 'external':True})
         try:
             addr = netifaces.ifaddresses(vface)[2][0]['addr']
+            mask = netifaces.ifaddresses(face)[2][0]['netmask']
+            addr = self.__ip_mask2cird(addr, mask)
         except:
             self.logger.error('create_floating_ip()','Unable to retrieve address for floating interface')
             addr = ''
@@ -956,10 +961,12 @@ class LinuxBridge(NetworkPlugin):
             'address':addr,
             'face':face,
             'vface':vface,
-            'cp_id':''
+            'cp_id':'',
+            'router_id':''
         }
         self.logger.info('create_floating_ip()',' [ DONE ] New floating IP created {}'.format(float_record))
         self.connector.loc.actual.add_node_floating_ip(self.node, self.uuid, ip_id, float_record)
+        self.floating_ips.update({ip_id: float_record})
         return {'result':float_record}
 
     def delete_floating_ip(self, ip_id):
@@ -971,28 +978,55 @@ class LinuxBridge(NetworkPlugin):
         rec = self.connector.loc.actual.get_node_floating_ip(self.node, self.uuid, ip_id)
         self.connector.loc.actual.remove_node_floating_ip(self.node, self.uuid, ip_id)
         self.logger.info('delete_floating_ip()', '[DONE] Deletted IP {}'.format(ip_id))
+        self.floating_ips.pop(ip_id)
         return {'result': rec}
 
     def assign_floating_ip(self, ip_id, cp_id):
-        # fagent: [ERROR] [FOS-AGENT] - EV-ASSOC-FLOATING-IP - EXCEPTION: (Failure
-        # "[YAS]:
-        # EVAL on /alfos/a2d358aa-af2b-42cb-8d23-a89e88b97e5c/network_managers/d42b4163-af35-423a-acb4-a228290cf0be/exec/assign_floating_ip?(ip_id=c02eea4f-6f35-4a87-b8bb-b9ba617e8214;cp_id=a47a8819-72e5-4b4e-86fd-fc30c9fda68b):
-        # ErrNo 400")
         self.logger.info('assign_floating_ip()', 'Assigning floating IP {} to {}'.format(ip_id, cp_id))
         rec = self.connector.loc.actual.get_node_floating_ip(self.node, self.uuid, ip_id)
         if rec is None:
             self.logger.error('assign_floating_ip()', 'Not found IP: {}'.format(ip_id))
-            return {'error': 11}
+            return {'error': 404}
 
         cp_ip = self.__get_cp_ip(cp_id)
         if cp_ip == '':
             self.logger.error('assign_floating_ip()', 'Connection point {} as not IP'.format(ip_id))
-            return {'error': 11}
-        cmd = 'sudo iptables -t nat -A PREROUTING -d {} -j DNAT --to {}'.format(rec['vface'], cp_ip)
+            return {'error': 404}
+
+        self.logger.info('assign_floating_ip()', 'Getting CP external connections')
+        fitered_routers = []
+        elegible_routers = self.__get_cp_routers(cp_id)
+
+        for r in elegible_routers:
+            self.logger.info('assign_floating_ip()', 'Applying filter to router: {}'.format(r))
+            for p in r['ports']:
+                if p['port_type'] == 'EXTERNAL' and self.__ip2cidr(p['ip_address']) == self.__ip2cidr(rec['address']):
+                    fitered_routers.append(r)
+
+        if len(fitered_routers) == 0:
+            self.logger.error('assign_floating_ip()', 'Connection point unreachable from external networks!')
+            return {'error': 404}
+
+        self.logger.info('assign_floating_ip()', 'Filtered routers: {}'.format(len(fitered_routers)))
+        router = fitered_routers[0]
+
+        self.logger.error('assign_floating_ip()', 'Moving the virtual interface to router namespace')
+
+        cmd_move_face_to_ns = 'sudo ip link set {} netns {}'.format(rec['vface'], router['router_ns'])
+        cmd_dev_up = 'sudo ip netns exec {} ip link set {} up'.format(router['router_ns'], rec['vface'])
+        cmd_reassing_ip = 'sudo ip netns exec {} ip addr add {} dev {}'.format(router['router_ns'], rec['address'], rec['vface'])
+        cmd = 'sudo ip netns exec {} iptables -t nat -A PREROUTING -d {} -j DNAT --to {}'.format(router['router_ns'], rec['address'].split('/')[0], cp_ip)
+
+        self.call_os_plugin_function('execute_command',{'command':cmd_move_face_to_ns,'blocking':True, 'external':True})
+        self.call_os_plugin_function('execute_command',{'command':cmd_dev_up,'blocking':True, 'external':True})
+        self.call_os_plugin_function('execute_command',{'command':cmd_reassing_ip,'blocking':True, 'external':True})
         self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':True})
+
         rec.update({'cp_id':cp_id})
+        rec.update({'router_id':router['uuid']})
         self.connector.loc.actual.add_node_floating_ip(self.node, self.uuid, ip_id, rec)
         self.logger.info('assign_floating_ip()', '[DONE] assigned floating IP {} to {}'.format(ip_id, cp_id))
+        self.floating_ips.update({ip_id: rec})
         return {'result': rec}
 
 
@@ -1002,16 +1036,30 @@ class LinuxBridge(NetworkPlugin):
         rec = self.connector.loc.actual.get_node_floating_ip(self.node, self.uuid, ip_id)
         if rec is None:
             self.logger.error('remove_floating_ip()', 'Not found IP: {}'.format(ip_id))
-            return {'error': 11}
+            return {'error': 404}
         cp_ip = self.__get_cp_ip(cp_id)
         if cp_ip == '':
             self.logger.error('remove_floating_ip()', 'Connection point {} has no IP'.format(ip_id))
-            return {'error': 11}
-        cmd = 'sudo iptables -t nat -D PREROUTING -d {} -j DNAT --to {}'.format(rec['vface'], cp_ip)
+            return {'error': 404}
+
+        router = self.routers[rec['router_id']]
+
+        self.logger.info('assign_floating_ip()', 'Moving the virtual interface to default namespace')
+
+        cmd = 'sudo ip netns exec {} iptables -t nat -D PREROUTING -d {} -j DNAT --to {}'.format(router['router_ns'], rec['address'].split('/')[0], cp_ip)
+        cmd_to_default_ns = 'sudo ip netns exec {} ip link set {} netns 1'.format(router['router_ns'],rec['vface'])
+        cmd_assign_ip = 'sudo ip addr add {} dev {}'.format(rec['address'], rec['vface'])
+
+
         self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':True})
+        self.call_os_plugin_function('execute_command',{'command':cmd_to_default_ns,'blocking':True, 'external':True})
+        self.call_os_plugin_function('execute_command',{'command':cmd_assign_ip,'blocking':True, 'external':True})
+
         rec.update({'cp_id':''})
+        rec.update({'router_id':''})
         self.connector.loc.actual.add_node_floating_ip(self.node, self.uuid, ip_id, rec)
         self.logger.info('remove_floating_ip()', '[DONE] removed floating IP {} from {}'.format(ip_id, cp_id))
+        self.floating_ips.update({ip_id: rec})
         return {'result': rec}
 
     # ============ #
@@ -1022,8 +1070,8 @@ class LinuxBridge(NetworkPlugin):
         self.logger.info('__get_cp_ip()', 'Get connection point IP for {} Record: {}'.format(cp_id, cp_rec))
         fdus = self.connector.loc.actual.get_node_all_fdus_instances(self.node)
         cp_ip = ''
+        self.logger.info('__get_cp_ip()', 'Scanning FDUs')
         for i in fdus:
-            self.logger.info('__get_cp_ip()', 'Scanning FDUs Record: {}'.format(i))
             intfs = i['interfaces']
             for intf in intfs:
                 if intf.get('cp_id') is not None and intf.get('cp_id') != '':
@@ -1034,6 +1082,50 @@ class LinuxBridge(NetworkPlugin):
                             cp_ip = hv_info['network'][i_name]['addresses'][0]['address']
         self.logger.info('__get_cp_ip()', 'IP for {} -> {}'.format(cp_id, cp_ip))
         return cp_ip
+
+    def __get_cp_routers(self, cp_id):
+        cp_rec = self.connector.loc.actual.get_node_port(self.node, self.uuid, cp_id)
+        self.logger.info('__get_cp_routers()', 'Get connection point IP for {} Record: {}'.format(cp_id, cp_rec))
+        fdus = self.connector.loc.actual.get_node_all_fdus_instances(self.node)
+
+        elegible_routers = []
+
+        fdu_id = ''
+        self.logger.info('__get_cp_routers()', 'Scanning FDUs')
+        for i in fdus:
+            intfs = i['interfaces']
+            for intf in intfs:
+                if intf.get('cp_id') is not None and intf.get('cp_id') != '':
+                    if intf.get('cp_id') == cp_rec['uuid']:
+                        fdu_id = i['fdu_uuid']
+        if fdu_id is '':
+            return elegible_routers
+
+        fdud =  self.get_fdu_descriptor(fdu_id)
+        netid = ''
+        self.logger.info('__get_cp_routers()', 'Scanning FDU Interfaces')
+        for c in fdud['connection_points']:
+            if c['uuid'] == cp_rec['cp_uuid']:
+                netid = c['pair_id']
+
+        self.logger.info('__get_cp_routers()', 'CP is connected to {}'.format(netid))
+        if netid is '':
+            return elegible_routers
+
+
+        for r in self.routers:
+            router = self.routers[r]
+            for p in router['ports']:
+                if p['port_type'] == 'INTERNAL' and p.get('pair_id','') == netid:
+                    elegible_routers.append(router)
+
+        self.logger.info('__get_cp_routers()', 'Got {} elegible routers'.format(len(elegible_routers)))
+        return elegible_routers
+
+    def get_fdu_descriptor(self, fduid):
+        parameters = {'fdu_uuid': fduid}
+        fname = 'get_fdu_info'
+        return self.call_agent_function(fname, parameters)
 
     def __cird2block(self, cird):
         '''
@@ -1054,6 +1146,16 @@ class LinuxBridge(NetworkPlugin):
         return socket.inet_ntoa(struct.pack('>I', start + 1)), socket.inet_ntoa(
             struct.pack('>I', start + 2)), socket.inet_ntoa(struct.pack('>I', end - 1)), netmask
 
+
+    def __ip2cidr(self, ip):
+        (ip, cidr) = ip.split('/')
+        cidr = int(cidr)
+        host_bits = 32 - cidr
+        i = struct.unpack('>I', socket.inet_aton(ip))[0]
+        start = (i >> host_bits) << host_bits
+        return socket.inet_ntoa(struct.pack('>I', start))+'/'+str(cidr)
+
+
     def __get_net_size(self, netmask):
         binary_str = ''
         for octet in netmask:
@@ -1071,6 +1173,20 @@ class LinuxBridge(NetworkPlugin):
         ip = ip.split('.')
         mask = mask.split('.')
         net_start = [str(int(ip[x]) & int(mask[x])) for x in range(0, 4)]
+        return '.'.join(net_start) + '/' + self.__get_net_size(mask)
+
+
+    def __ip_mask2cird(self,ip, mask):
+
+        try:
+            socket.inet_aton(ip)
+            socket.inet_aton(mask)
+        except:
+            return "0.0.0.0/0"
+
+        ip = ip.split('.')
+        mask = mask.split('.')
+        net_start = [str(int(ip[x])) for x in range(0, 4)]
         return '.'.join(net_start) + '/' + self.__get_net_size(mask)
 
 
