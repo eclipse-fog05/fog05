@@ -611,7 +611,7 @@ class LinuxBridge(NetworkPlugin):
 
                 addr = self.call_os_plugin_function('execute_command', {'command':cmd_get_address, 'blocking':True, 'external':False})
 
-                port_record.update({'ip_address':addr.strip()})
+                port_record.update({'ip_address':addr.strip().replace("\\n","")})
             else:
                 self.logger.info('add_port_to_router()', 'Assing {} address for face: {}'.format(ip_address, iface))
                 cmd_add_addr = 'sudo ip netns exec {} ip addr add {} dev {}'.format(record['router_ns'], ip_address, iface)
