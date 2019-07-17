@@ -1008,7 +1008,7 @@ class LinuxBridge(NetworkPlugin):
         self.logger.error('assign_floating_ip()', 'Moving the virtual interface to router namespace')
         cmd_move_face_to_ns = 'sudo ip link set {} netns {}'.format(rec['vface'], router['router_ns'])
         cmd_reassing_ip = 'sudo ip netns exec {} ip addr add {} dev {}'.format(router['router_ns'], rec['address'], rec['vface'])
-        cmd = 'sudo ip netns exec {} iptables -t nat -A PREROUTING -i {} -j DNAT --to {}'.format(router['router_ns'], rec['vface'], cp_ip)
+        cmd = 'sudo ip netns exec {} iptables -t nat -A PREROUTING -d {} -j DNAT --to {}'.format(router['router_ns'], rec['address'].split('/')[0], cp_ip)
 
         self.call_os_plugin_function('execute_command',{'command':cmd_move_face_to_ns,'blocking':True, 'external':True})
         self.call_os_plugin_function('execute_command',{'command':cmd_reassing_ip,'blocking':True, 'external':True})
@@ -1037,7 +1037,7 @@ class LinuxBridge(NetworkPlugin):
 
         self.logger.info('assign_floating_ip()', 'Moving the virtual interface to default namespace')
 
-        cmd = 'sudo ip netns exec {} iptables -t nat -D PREROUTING -i {} -j DNAT --to {}'.format(router['router_ns'],rec['vface'], cp_ip)
+        cmd = 'sudo ip netns exec {} iptables -t nat -D PREROUTING -d {} -j DNAT --to {}'.format(router['router_ns'], rec['address'].split('/')[0], cp_ip)
         cmd_to_default_ns = 'sudo ip netns exec {} ip link {} set netns 1'.format(router['router_ns'],rec['vface'])
         cmd_assign_ip = 'sudo ip addr add {} dev {}'.format(rec['address'], rec['vface'])
 
