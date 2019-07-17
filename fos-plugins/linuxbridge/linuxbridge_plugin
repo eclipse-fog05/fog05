@@ -551,15 +551,16 @@ class LinuxBridge(NetworkPlugin):
             self.logger.error('add_port_to_router()','Router {} does not exist'.format(router_id))
             return {'error': 404}
 
-
+        self.logger.info('add_port_to_router()', 'Sorting ports')
         # Sorting ports to have always the same order
         ports = sorted(record['ports'], key=lambda k: k['port_type']+k['faces'][0])
         record.update({'ports': ports})
 
-
+        self.logger.info('add_port_to_router()', 'Selecting external face ports')
         ext_face = ports[0]['faces'][0]
 
         # getting next port id
+        self.logger.info('add_port_to_router()', 'Selecting new port id')
         if ports[-1]['port_type'] == 'INTERNAL':
             port_id = int(ports[-1]['faces'][0][12:-2])+1
         else:
