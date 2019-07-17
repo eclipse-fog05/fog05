@@ -991,7 +991,9 @@ class LinuxBridge(NetworkPlugin):
         self.logger.info('assign_floating_ip()', 'Getting CP external connections')
         fitered_routers = []
         elegible_routers = self.__get_cp_routers(cp_id)
+
         for r in elegible_routers:
+            self.logger.info('assign_floating_ip()', 'Applying filter to router: {}'.format(r))
             for p in r['ports']:
                 if p['port_type'] == 'EXTERNAL' and self.__ip2cidr(p['ip_address']) == self.__ip2cidr(rec['address']):
                     fitered_routers.append(r)
@@ -1000,6 +1002,7 @@ class LinuxBridge(NetworkPlugin):
             self.logger.error('assign_floating_ip()', 'Connection point unreachable from external networks!')
             return {'error': 404}
 
+        self.logger.info('assign_floating_ip()', 'Filtered routers'.format(len(fitered_routers)))
         router = fitered_routers[0]
 
         self.logger.error('assign_floating_ip()', 'Moving the virtual interface to router namespace')
