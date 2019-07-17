@@ -85,6 +85,7 @@ class LinuxBridge(NetworkPlugin):
         self.ports = {}
         self.bridges = {}
         self.routers = {}
+        self.floating_ips = {}
 
         signal.signal(signal.SIGINT, self.__catch_signal)
         signal.signal(signal.SIGTERM, self.__catch_signal)
@@ -188,6 +189,8 @@ class LinuxBridge(NetworkPlugin):
             self.delete_virtual_bridge(k)
         for k in list(self.routers.keys()):
             self.delete_router(k)
+        for k in list(self.floating_ips.keys()):
+            self.delete_floating_ip(k)
 
 
     def get_overlay_face(self):
@@ -963,6 +966,7 @@ class LinuxBridge(NetworkPlugin):
         }
         self.logger.info('create_floating_ip()',' [ DONE ] New floating IP created {}'.format(float_record))
         self.connector.loc.actual.add_node_floating_ip(self.node, self.uuid, ip_id, float_record)
+        self.floating_ips.update({ip_id: float_record})
         return {'result':float_record}
 
     def delete_floating_ip(self, ip_id):
@@ -974,6 +978,7 @@ class LinuxBridge(NetworkPlugin):
         rec = self.connector.loc.actual.get_node_floating_ip(self.node, self.uuid, ip_id)
         self.connector.loc.actual.remove_node_floating_ip(self.node, self.uuid, ip_id)
         self.logger.info('delete_floating_ip()', '[DONE] Deletted IP {}'.format(ip_id))
+        self.floating_ips.pop(ip_id)
         return {'result': rec}
 
     def assign_floating_ip(self, ip_id, cp_id):
@@ -1002,7 +1007,7 @@ class LinuxBridge(NetworkPlugin):
             self.logger.error('assign_floating_ip()', 'Connection point unreachable from external networks!')
             return {'error': 404}
 
-        self.logger.info('assign_floating_ip()', 'Filtered routers'.format(len(fitered_routers)))
+        self.logger.info('assign_floating_ip()', 'Filtered routers: {}'.format(len(fitered_routers)))
         router = fitered_routers[0]
 
         self.logger.error('assign_floating_ip()', 'Moving the virtual interface to router namespace')
@@ -1021,6 +1026,7 @@ class LinuxBridge(NetworkPlugin):
         rec.update({'router_id':router['uuid']})
         self.connector.loc.actual.add_node_floating_ip(self.node, self.uuid, ip_id, rec)
         self.logger.info('assign_floating_ip()', '[DONE] assigned floating IP {} to {}'.format(ip_id, cp_id))
+        self.floating_ips.update({ip_id: rec})
         return {'result': rec}
 
 
@@ -1053,6 +1059,7 @@ class LinuxBridge(NetworkPlugin):
         rec.update({'router_id':''})
         self.connector.loc.actual.add_node_floating_ip(self.node, self.uuid, ip_id, rec)
         self.logger.info('remove_floating_ip()', '[DONE] removed floating IP {} from {}'.format(ip_id, cp_id))
+        self.floating_ips.update({ip_id: rec})
         return {'result': rec}
 
     # ============ #
