@@ -1006,11 +1006,14 @@ class LinuxBridge(NetworkPlugin):
         router = fitered_routers[0]
 
         self.logger.error('assign_floating_ip()', 'Moving the virtual interface to router namespace')
+
         cmd_move_face_to_ns = 'sudo ip link set {} netns {}'.format(rec['vface'], router['router_ns'])
+        cmd_dev_up = 'sudo ip netns exec {} ip link set {} up'.format(router['router_ns'], rec['vface'])
         cmd_reassing_ip = 'sudo ip netns exec {} ip addr add {} dev {}'.format(router['router_ns'], rec['address'], rec['vface'])
         cmd = 'sudo ip netns exec {} iptables -t nat -A PREROUTING -d {} -j DNAT --to {}'.format(router['router_ns'], rec['address'].split('/')[0], cp_ip)
 
         self.call_os_plugin_function('execute_command',{'command':cmd_move_face_to_ns,'blocking':True, 'external':True})
+        self.call_os_plugin_function('execute_command',{'command':cmd_dev_up,'blocking':True, 'external':True})
         self.call_os_plugin_function('execute_command',{'command':cmd_reassing_ip,'blocking':True, 'external':True})
         self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':True})
 
