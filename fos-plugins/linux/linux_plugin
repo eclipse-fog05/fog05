@@ -300,9 +300,9 @@ class Linux(OSPlugin):
 
     def execute_command(self, command, blocking=False, external=False):
         if isinstance(blocking, str):
-            root = bool(distutils.util.strtobool(blocking))
+            blocking = bool(distutils.util.strtobool(blocking))
         if isinstance(external, str):
-            root = bool(distutils.util.strtobool(external))
+            external = bool(distutils.util.strtobool(external))
         try:
             self.logger.info('execute_command()', 'OS Plugin executing command {}'.format(command))
             r = ''

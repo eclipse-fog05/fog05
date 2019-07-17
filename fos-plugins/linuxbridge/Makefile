@@ -18,6 +18,8 @@ else
 	sudo cp ../linuxbridge/linuxbridge_plugin /etc/fos/plugins/linuxbridge/
 	sudo cp ../linuxbridge/README.md /etc/fos/plugins/linuxbridge/
 	sudo ln -sf /etc/fos/plugins/linuxbridge/linuxbridge_plugin /usr/bin/fos_linuxbridge
+	sudo cp ../linuxbridge/get_face_address /etc/fos/plugins/linuxbridge/get_face_address
+	sudo ln -sf /etc/fos/plugins/linuxbridge/get_face_address /usr/bin/fos_get_address
 endif
 	sudo cp /etc/fos/plugins/linuxbridge/fos_linuxbridge.service /lib/systemd/system/
 	sudo sh -c "echo $(UUID) | xargs -i  jq  '.configuration.nodeid = \"{}\"' /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json > /tmp/linuxbridge_plugin.tmp && mv /tmp/linuxbridge_plugin.tmp /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json"
