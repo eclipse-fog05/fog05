@@ -564,7 +564,7 @@ class LinuxBridge(NetworkPlugin):
         if ports[-1]['port_type'] == 'INTERNAL':
             port_id = int(ports[-1]['faces'][0][12:-2])+1
         else:
-            port_id = int(ports[-1]['faces'][0][11:])+1
+            port_id = int(ports[-1]['faces'][0][12:])+1
 
 
         if port_type.upper() == 'EXTERNAL':
