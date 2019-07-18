@@ -300,9 +300,9 @@ class Linux(OSPlugin):
 
     def execute_command(self, command, blocking=False, external=False):
         if isinstance(blocking, str):
-            root = bool(distutils.util.strtobool(blocking))
+            blocking = bool(distutils.util.strtobool(blocking))
         if isinstance(external, str):
-            root = bool(distutils.util.strtobool(external))
+            external = bool(distutils.util.strtobool(external))
         try:
             self.logger.info('execute_command()', 'OS Plugin executing command {}'.format(command))
             r = ''
@@ -314,7 +314,10 @@ class Linux(OSPlugin):
                 if blocking:
                     p.wait()
                 for line in p.stdout:
-                    r = r + str(line)
+                    if isinstance(line, bytes):
+                        r = r + line.decode()
+                    else:
+                        r = r + str(line)
                     self.logger.debug('execute_command()', str(line))
             res = {'result': r}
         except TypeError as e:

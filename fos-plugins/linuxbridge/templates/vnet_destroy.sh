@@ -20,6 +20,7 @@ sudo ip link set br-{{ net_id }} down
 sudo ip link set vxl-{{ net_id }} down
 sudo ip link del br-{{ net_id }}
 sudo ip link del vxl-{{ net_id }}
+sudo ip link del l-{{ net_id }}-i
 sudo ip netns del fosns-{{ net_id }}
 
 

@@ -28,6 +28,7 @@ module JSON = Abs_json
 
 module Errors = Fos_errors
 module FDU = Fdu
+module Router = Router
 
 module AtomicEntity = Atomic_entity
 

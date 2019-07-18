@@ -328,6 +328,7 @@ class FIMAPI(object):
             self.connector.glob.desired.remove_network(
                 self.sysid, self.tenantid, net_uuid)
 
+
         def add_connection_point(self, cp_descriptor):
             cp_descriptor.update({'status': 'add'})
             cp_id = cp_descriptor.get('uuid')
@@ -342,10 +343,77 @@ class FIMAPI(object):
                 self.sysid, self.tenantid, cp_uuid, manifest)
 
         def connect_cp_to_network(self, cp_uuid, net_uuid):
-            pass
+            ports = self.connector.glob.actual.get_all_nodes_network_ports(self.sysid, self.tenantid)
+            node = None
+            port_info = None
+            for p in ports:
+                n, pid = p
+                if pid == cp_uuid:
+                    port_info = self.connector.glob.actual.get_node_network_port(self. sysid, self.tenantid, n, pid)
+                    node = n
+            if node is None or port_info is None:
+                raise ValueError('Connection point {} not found'.format(cp_uuid))
+            res = self.connector.glob.actual.add_node_port_to_network(self.sysid, self.tenantid, node, port_info['uuid'], net_uuid)
+            if res.get('result') is not None:
+                return cp_uuid
+            raise ValueError('Error connecting: {}'.format(res['error']))
 
         def disconnect_cp(self, cp_uuid):
-            pass
+            ports = self.connector.glob.actual.get_all_nodes_network_ports(self.sysid, self.tenantid)
+            node = None
+            port_info = None
+            for p in ports:
+                n, pid = p
+                if pid == cp_uuid:
+                    port_info = self.connector.glob.actual.get_node_network_port(self. sysid, self.tenantid, n, pid)
+                    node = n
+            if node is None or port_info is None:
+                raise ValueError('Connection point {} not found'.format(cp_uuid))
+            res = self.connector.glob.actual.remove_node_port_from_network(self.sysid, self.tenantid, node, port_info['uuid'])
+            if res.get('result') is not None:
+                return cp_uuid
+            raise ValueError('Error connecting: {}'.format(res['error']))
+
+        def add_router(self, nodeid, manifest):
+            router_id = manifest.get('uuid')
+            self.connector.glob.desired.add_node_network_router(
+                self.sysid, self.tenantid, nodeid, router_id, manifest)
+            router_info = self.connector.glob.actual.get_node_network_router(
+                self.sysid, self.tenantid, nodeid, router_id)
+            while router_info is None:
+                    router_info = self.connector.glob.actual.get_node_network_router(
+                self.sysid, self.tenantid, nodeid, router_id)
+            return router_info
+
+
+        def remove_router(self, node_id, router_id):
+            self.connector.glob.desired.remove_node_network_router(
+                self.sysid, self.tenantid, node_id, router_id)
+
+        def add_router_port(self, nodeid, router_id, port_type, vnet_id=None, ip_address=None):
+            if port_type.upper() not in ['EXTERNAL', 'INTERNAL']:
+                raise ValueError("port_type can be only one of : INTERNAL, EXTERNAL")
+
+            port_type = port_type.upper()
+            return self.connector.glob.actual.add_port_to_router(self.sysid, self.tenantid, nodeid, router_id, port_type, vnet_id, ip_address)
+
+        def remove_router_port(self, nodeid, router_id, vnet_id):
+            return self.connector.glob.actual.remove_port_from_router(self.sysid, self.tenantid, nodeid, router_id, vnet_id)
+
+
+
+        def create_floating_ip(self, nodeid):
+            return self.connector.glob.actual.add_node_floatingip(self.sysid, self.tenantid, nodeid)
+
+        def delete_floating_ip(self, nodeid, ip_id):
+            return self.connector.glob.actual.remove_node_floatingip(self.sysid, self.tenantid, nodeid, ip_id)
+
+
+        def assign_floating_ip(self, nodeid, ip_id, cp_id):
+            return self.connector.glob.actual.assign_node_floating_ip(self.sysid, self.tenantid, nodeid, ip_id, cp_id)
+
+        def retain_floating_ip(self, nodeid, ip_id, cp_id):
+            return self.connector.glob.actual.retain_node_floating_ip(self.sysid, self.tenantid, nodeid, ip_id, cp_id)
 
         def list(self):
             '''

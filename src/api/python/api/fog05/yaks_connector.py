@@ -52,11 +52,11 @@ class GAD(object):
 
     def get_atomic_entity_info_path(self, sysid, tenantid, aeid):
         return Constants.create_path([self.prefix, sysid, 'tenants',
-            tenantid, 'catalog', 'atomic-entity', aeid, 'info'])
+            tenantid, 'catalog', 'atomic-entities', aeid, 'info'])
 
-    def get_all_atomic_entity_selector(self, sysid, tenantid):
+    def get_all_atomic_entities_selector(self, sysid, tenantid):
         return Constants.create_path([self.prefix, sysid, 'tenants',
-            tenantid, 'catalog', 'atomic-entity', '*', 'info'])
+            tenantid, 'catalog', 'atomic-entities', '*', 'info'])
 
     def get_fdu_info_path(self, sysid, tenantid, fduid):
         return Constants.create_path([self.prefix, sysid, 'tenants',
@@ -100,7 +100,7 @@ class GAD(object):
         return Constants.create_path([self.prefix, sysid, 'tenants', tenantid,
                                       'nodes', nodeid, 'plugins',
                                       pluginid, 'exec', func_name])
-    # Updated paths with instances
+
     def get_node_fdu_info_path(self, sysid, tenantid, nodeid, fduid, instanceid):
         return Constants.create_path([self.prefix, sysid, 'tenants', tenantid,
                                       'nodes', nodeid, 'fdu',fduid ,
@@ -150,6 +150,16 @@ class GAD(object):
             self.prefix,sysid ,'tenants', tenantid,'networks','ports',
             '*', 'info'])
 
+    def get_network_router_info_path(self, sysid, tenantid, routerid):
+        return Constants.create_path(
+            [self.prefix, sysid, 'tenants',
+             tenantid, 'networks', 'routers', routerid, 'info'])
+
+    def get_all_routers_selector(self, sysid, tenantid):
+        return Constants.create_path([
+            self.prefix,sysid ,'tenants', tenantid,'networks','routers',
+            '*', 'info'])
+
     def get_image_info_path(self, sysid, tenantid, imageid):
         return Constants.create_path([
             self.prefix, sysid, 'tenants', tenantid, 'image', imageid, 'info'
@@ -194,6 +204,65 @@ class GAD(object):
             'flavor', '*', 'info'
         ])
 
+    def get_node_network_floating_ip_info_path(self, sysid, tenantid, nodeid, ipid):
+         return Constants.create_path([
+            self.prefix, sysid, 'tenants', tenantid, 'nodes', nodeid,
+            'networks', 'floating-ips', ipid, 'info'])
+
+    def get_node_all_network_floating_ips_selector(self, sysid, tenantid, nodeid):
+         return Constants.create_path([
+            self.prefix, sysid, 'tenants', tenantid, 'nodes', nodeid,
+            'networks', 'floating-ips', '*', 'info'])
+
+    def get_node_network_ports_selector(self, sysid, tenantid):
+        return Constants.create_path(
+            [self.prefix, sysid, 'tenants', tenantid,
+            'nodes', '*', 'networks', 'ports', '*', 'info'])
+
+    def get_node_network_port_info_path(self, sysid, tenantid, nodeid, portid):
+        return Constants.create_path(
+            [self.prefix, sysid, 'tenants', tenantid,
+            'nodes', nodeid, 'networks', 'ports', portid, 'info'])
+
+    def get_node_network_routers_selector(self, sysid, tenantid, nodeid):
+        return Constants.create_path(
+            [self.prefix, sysid, 'tenants', tenantid,
+            'nodes', nodeid, 'networks', 'routers', '*', 'info'])
+
+    def get_node_network_router_info_path(self, sysid, tenantid, nodeid, routerid):
+        return Constants.create_path(
+            [self.prefix, sysid, 'tenants', tenantid,
+            'nodes', nodeid, 'networks', 'routers', routerid, 'info'])
+
+
+    # TODO: this should be in the YAKS api in the creation of a selector
+    def dict2args(self, d):
+        i = 0
+        b = ''
+        for k in d:
+            v = d.get(k)
+            if isinstance(v,(dict, list)):
+                v = json.dumps(v)
+            if i == 0:
+                b = b + '{}={}'.format(k, v)
+            else:
+                b = b + ';{}={}'.format(k, v)
+            i = i + 1
+        return '('+b+')'
+
+    def get_agent_exec_path(self, sysid, tenantid, nodeid, func_name):
+        return Constants.create_path([self.prefix, sysid, 'tenants',
+        tenantid, 'nodes', nodeid, 'agent', 'exec', func_name])
+
+    def get_agent_exec_path_with_params(self, sysid, tenantid, nodeid, func_name, params):
+        if len(params) > 0:
+            p = self.dict2args(params)
+            f = func_name + '?' + p
+        else:
+            f = func_name
+        return Constants.create_path([self.prefix, sysid, 'tenants',
+        tenantid, 'nodes', nodeid, 'agent', 'exec',f])
+
 
     def extract_userid_from_path(self, path):
         return path.split('/')[4]
@@ -221,6 +290,15 @@ class GAD(object):
 
     def extract_node_instanceid_from_path(self, path):
         return path.split('/')[10]
+
+    def extract_node_port_id_from_path(self, path):
+        return path.split('/')[9]
+
+    def extract_node_router_id_from_path(self, path):
+        return path.split('/')[9]
+
+    def extract_node_floatingid_from_path(self, path):
+        return path.split('/')[9]
 
     def get_sys_info(self, sysid):
         s = self.get_sys_info_path(sysid)
@@ -564,6 +642,30 @@ class GAD(object):
             d.append(json.loads(k[1].get_value()))
         return d
 
+    def get_network_router(self, sysid, tenantid, routerid):
+        s = self.get_network_router_info_path(sysid, tenantid, routerid)
+        kvs = self.ws.get(s)
+        if len(kvs) == 0:
+            return None
+        return json.loads(kvs[0][1].get_value())
+
+    def add_network_router(self, sysid, tenantid, routerid, routerinfo):
+        p = self.get_network_router_info_path(sysid, tenantid, routerid)
+        v = Value(json.dumps(routerinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def remove_network_router(self, sysid, tenantid, routerid):
+        p = self.get_network_router_info_path(sysid, tenantid, routerid)
+        return self.ws.remove(p)
+
+    def get_all_network_router(self, sysid, tenantid):
+        p = self.get_all_routers_selector(sysid, tenantid)
+        kvs = self.ws.get(p)
+        d = []
+        for k in kvs:
+            d.append(json.loads(k[1].get_value()))
+        return d
+
     def get_network(self, sysid, tenantid, netid):
         s = self.get_network_info_path(sysid, tenantid, netid)
         kvs = self.ws.get(s)
@@ -692,6 +794,180 @@ class GAD(object):
             d.append(json.loads(kvs[0][1].get_value()))
         return d
 
+    # FLOATING IP
+    def add_node_floating_ip(self, sysid, tenantid, nodeid,floatingid, ip_info):
+
+        p = self.get_node_network_floating_ip_info_path(sysid, tenantid, nodeid, floatingid)
+        v = Value(json.dumps(ip_info), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def remove_node_floating_ip(self, sysid, tenantid, nodeid, floatingid):
+        p = self.get_node_network_floating_ip_info_path(sysid, tenantid, nodeid, floatingid)
+        return self.ws.remove(p)
+
+    def get_node_floating_ip(self, sysid, tenantid, nodeid,  floatingid):
+        p = self.get_node_network_floating_ip_info_path(sysid, tenantid, nodeid, floatingid)
+        res = self.ws.get(p)
+        if len(res) == 0:
+            return None
+        else:
+            v = res[0][1]
+            return json.loads(v.get_value())
+
+    def get_all_node_floating_ips(self, sysid, tenantid, nodeid):
+        s = self.get_node_all_network_floating_ips_selector(sysid, tenantid, nodeid)
+        kvs = self.ws.get(s)
+        d = []
+        for n in kvs:
+            d.append(json.loads(kvs[0][1].get_value()))
+        return d
+
+    def get_all_nodes_network_ports(self, sysid, tenantid):
+        s = self.get_node_network_ports_selector(sysid, tenantid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            return []
+        xs = map(lambda x:
+         (self.extract_nodeid_from_path(x[0]),
+         self.extract_node_port_id_from_path(x[0]))
+         ,res)
+        return list(xs)
+
+    def get_node_network_port(self, sysid, tenantid, nodeid,  portid):
+        p = self.get_node_network_port_info_path(sysid, tenantid, nodeid, portid)
+        res = self.ws.get(p)
+        if len(res) == 0:
+            return None
+        else:
+            v = res[0][1]
+            return json.loads(v.get_value())
+
+    #  Routers
+
+    def get_node_network_router(self, sysid, tenantid, nodeid, routerid):
+        s = self.get_node_network_router_info_path(sysid, tenantid, nodeid, routerid)
+        kvs = self.ws.get(s)
+        if len(kvs) == 0:
+            return None
+        return json.loads(kvs[0][1].get_value())
+
+    def add_node_network_router(self, sysid, tenantid, nodeid, routerid, routerinfo):
+        p = self.get_node_network_router_info_path(sysid, tenantid, nodeid, routerid)
+        v = Value(json.dumps(routerinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def remove_node_network_router(self, sysid, tenantid, nodeid, routerid):
+        p = self.get_node_network_router_info_path(sysid, tenantid, nodeid, routerid)
+        return self.ws.remove(p)
+
+    def get_all_node_network_routers(self, sysid, tenantid, nodeid):
+        p = self.get_node_network_routers_selector(sysid, tenantid, nodeid)
+        kvs = self.ws.get(p)
+        d = []
+        for k in kvs:
+            d.append(json.loads(k[1].get_value()))
+        return d
+
+    def observe_node_routers(self, sysid, tenantid, nodeid, callback):
+        s = self.get_node_network_routers_selector(sysid, tenantid, nodeid)
+
+        def cb(kvs):
+            if len(kvs) == 0:
+                raise ValueError('Listener received empty datas')
+            else:
+                v = kvs[0][1].get_value()
+                if v is not None:
+                    callback(json.loads(v.value))
+        subid = self.ws.subscribe(s, cb)
+        self.listeners.append(subid)
+        return subid
+
+    # Agent Evals
+
+    def add_node_port_to_network(self, sysid, tenantid,  nodeid, portid, network_id):
+        fname = 'add_port_to_network'
+        params = {'cp_uuid': portid, 'network_uuid':network_id}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def remove_node_port_from_network(self, sysid, tenantid, nodeid, portid):
+        fname = 'remove_port_from_network'
+        params = {'cp_uuid': portid}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def add_node_floatingip(self, sysid, tenantid, nodeid):
+        fname = 'create_floating_ip'
+        s = self.get_agent_exec_path(sysid, tenantid, nodeid, fname)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def remove_node_floatingip(self, sysid, tenantid, nodeid, ipid):
+        fname = 'delete_floating_ip'
+        params = {'floating_uuid': ipid}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def assign_node_floating_ip(self, sysid, tenantid, nodeid, ipid, cpid):
+        fname = 'assign_floating_ip'
+        params = {'floating_uuid': ipid, 'cp_uuid': cpid}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def retain_node_floating_ip(self, sysid, tenantid, nodeid, ipid, cpid):
+        fname = 'remove_floating_ip'
+        params = {'floating_uuid': ipid, 'cp_uuid': cpid}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def add_port_to_router(self, sysid, tenantid, nodeid, router_id, port_type, vnet_id=None, ip_address=None):
+        fname = 'add_router_port'
+        params = {'router_id': router_id, "port_type": port_type}
+        if vnet_id is not None and vnet_id is not '':
+            params.update({'vnet_id': vnet_id})
+        if ip_address is not None and ip_address is not '':
+            params.update({'ip_address': ip_address})
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def remove_port_from_router(self, sysid, tenantid, nodeid, router_id, vnet_id):
+        fname = 'remove_router_port'
+        params = {'router_id': router_id, "vnet_id": vnet_id}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+
 
 
 class LAD(object):
@@ -786,6 +1062,11 @@ class LAD(object):
             [self.prefix, nodeid, 'runtimes', '*', 'fdu', '*',
                 'instances', instanceid, 'info'])
 
+    def get_node_all_fdus_instances_selector(self, nodeid):
+        return Constants.create_path(
+            [self.prefix, nodeid, 'runtimes', '*', 'fdu', '*',
+            'instances','*','info'])
+
     def get_node_image_info_path(self, nodeid, pluginid, imgid):
         return Constants.create_path(
             [self.prefix, nodeid, 'runtimes', pluginid,
@@ -827,6 +1108,31 @@ class LAD(object):
         return Constants.create_path(
             [self.prefix, nodeid, 'network_managers',
              pluginid, 'ports', portid, 'info'])
+
+    def get_node_networks_port_selector(self, nodeid, pluginid):
+        return Constants.create_path(
+            [self.prefix, nodeid, 'network_managers',
+             pluginid, 'ports', '*','info'])
+
+    def get_node_network_router_info_path(self, nodeid, pluginid,
+                                        routerid):
+        return Constants.create_path(
+            [self.prefix, nodeid, 'network_managers',
+             pluginid, 'routers', routerid, 'info'])
+
+    def get_node_network_routers_selector(self, nodeid, pluginid):
+        return Constants.create_path(
+            [self.prefix, nodeid, 'network_managers',
+             pluginid, 'routers', '*','info'])
+
+    def get_node_network_floating_ip_info_path(self, nodeid, pluginid, ipid):
+        return Constants.create_path([self.prefix, nodeid,
+            'network_managers',pluginid , 'floating-ips', ipid, 'info'])
+
+    def get_node_all_network_floating_ips_selector(self, nodeid, pluginid):
+        return Constants.create_path([self.prefix, nodeid,
+            'network_managers', pluginid , 'floating-ips', '*', 'info'])
+
 
 
     def get_agent_exec_path(self, nodeid, func_name):
@@ -897,6 +1203,9 @@ class LAD(object):
 
     def extract_node_instanceid_from_path(self, path):
         return path.split('/')[8]
+
+    def extract_node_routerid_from_path(self, path):
+        return path.split('/')[6]
 
 
     def add_os_eval(self, nodeid, func_name, func):
@@ -1094,6 +1403,13 @@ class LAD(object):
             return []
         return list(map(lambda x: self.extract_node_instanceid_from_path(x[0]), res))
 
+    def get_node_all_fdus_instances(self, nodeid):
+        p = self.get_node_all_fdus_instances_selector(nodeid)
+        res = self.ws.get(p)
+        if len(res) == 0:
+            return []
+        return list(map (lambda x: json.loads(x[1].get_value()), res))
+
     def add_node_image(self, nodeid, pluginid, imgid, imginfo):
         p = self.get_node_image_info_path(nodeid, pluginid, imgid)
         v = Value(json.dumps(imginfo), encoding=Encoding.STRING)
@@ -1125,6 +1441,8 @@ class LAD(object):
     def remove_node_flavor(self, nodeid, pluginid, flvid):
         p = self.get_node_flavor_info_path(nodeid, pluginid, flvid)
         return self.ws.remove(p)
+
+    #  Network
 
     def observe_node_networks(self, nodeid, pluginid, callback):
         s = self.get_node_netwoks_selector(nodeid, pluginid)
@@ -1163,6 +1481,16 @@ class LAD(object):
         p = self.get_node_network_info_path(nodeid, pluginid, netid)
         return self.ws.remove(p)
 
+    def get_all_node_networks(self, nodeid, pluginid):
+        s = self.get_node_netwoks_selector(nodeid, pluginid)
+        kvs = self.ws.get(s)
+        d = []
+        for n in kvs:
+            d.append(json.loads(kvs[0][1].get_value()))
+        return d
+
+    # Ports
+
     def add_node_port(self, nodeid, pluginid, portid, portinfo):
         p = self.get_node_network_port_info_path(nodeid, pluginid, portid)
         v = Value(json.dumps(portinfo), encoding=Encoding.STRING)
@@ -1185,6 +1513,93 @@ class LAD(object):
         def cb(kvs):
             if len(kvs) == 0:
                 raise ValueError('Listener received empty data')
+            else:
+                v = kvs[0][1].get_value()
+                if v is not None:
+                    callback(json.loads(v.value))
+        subid = self.ws.subscribe(s, cb)
+        self.listeners.append(subid)
+        return subid
+
+    def get_all_node_ports(self, nodeid, pluginid):
+        s = self.get_node_networks_port_selector(nodeid, pluginid)
+        kvs = self.ws.get(s)
+        d = []
+        for n in kvs:
+            d.append(json.loads(kvs[0][1].get_value()))
+        return d
+
+    # Routers
+
+    def add_node_router(self, nodeid, pluginid, routerid, routerinfo):
+        p = self.get_node_network_router_info_path(nodeid, pluginid, routerid)
+        v = Value(json.dumps(routerinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def remove_node_router(self, nodeid, pluginid, routerid):
+        p = self.get_node_network_router_info_path(nodeid, pluginid, routerid)
+        return self.ws.remove(p)
+
+    def get_node_router(self, nodeid, pluginid, routerid):
+        s = self.get_node_network_router_info_path(nodeid, pluginid, routerid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            return None
+        return json.loads(res[0][1].get_value())
+
+    def observe_node_routers(self, nodeid, pluginid, callback):
+        s = self.get_node_network_routers_selector(nodeid, pluginid)
+
+        def cb(kvs):
+            if len(kvs) == 0:
+                raise ValueError('Listener received empty datas')
+            else:
+                v = kvs[0][1].get_value()
+                if v is not None:
+                    callback(json.loads(v.value))
+        subid = self.ws.subscribe(s, cb)
+        self.listeners.append(subid)
+        return subid
+
+    def get_all_node_routers(self, nodeid, pluginid):
+        s = self.get_node_network_routers_selector(nodeid, pluginid)
+        kvs = self.ws.get(s)
+        d = []
+        for n in kvs:
+            d.append(json.loads(kvs[0][1].get_value()))
+        return d
+
+    # FLOATING IPs
+
+    def add_node_floating_ip(self, nodeid, pluginid, ipid, ipinfo):
+        p = self.get_node_network_floating_ip_info_path(nodeid, pluginid, ipid)
+        v = Value(json.dumps(ipinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def remove_node_floating_ip(self, nodeid, pluginid, ipid):
+        p = self.get_node_network_floating_ip_info_path(nodeid, pluginid, ipid)
+        return self.ws.remove(p)
+
+    def get_node_floating_ip(self, nodeid, pluginid, ipid):
+        s = self.get_node_network_floating_ip_info_path(nodeid, pluginid, ipid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            return None
+        return json.loads(res[0][1].get_value())
+
+    def get_all_node_floating_ips(self, nodeid, pluginid):
+        s = self.get_node_all_network_floating_ips_selector(nodeid, pluginid)
+        kvs = self.ws.get(s)
+        d = []
+        for n in kvs:
+            d.append(json.loads(kvs[0][1].get_value()))
+        return d
+
+    def observe_node_floating_ip(self, nodeid, pluginid, callback):
+        s = self.get_node_all_network_floating_ips_selector(nodeid, pluginid)
+        def cb(kvs):
+            if len(kvs) == 0:
+                raise ValueError('Listener received empty datas')
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:

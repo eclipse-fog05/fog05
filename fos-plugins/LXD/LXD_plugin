@@ -56,6 +56,8 @@ class LXD(RuntimePluginFDU):
 
         self.IMAGE_SERVER = "https://images.linuxcontainers.org/"
 
+        self.UBUNTU_IMAGE_SERVER = "https://cloud-images.ubuntu.com/releases"
+
         file_dir = os.path.dirname(__file__)
         self.DIR = os.path.abspath(file_dir)
         self.update_interval =  manifest.get('configuration').get('update_interval', 10)
@@ -129,6 +131,7 @@ class LXD(RuntimePluginFDU):
         self.logger.info(
             'stop_runtime()', 'LXD Plugin - Destroying {} running FDUs'.format(len(self.current_fdus)))
         for k in list(self.current_fdus.keys()):
+            # TODO verify this
             try:
                 fdu = self.current_fdus.get(k)
                 self.__force_fdu_termination(k)
@@ -144,6 +147,11 @@ class LXD(RuntimePluginFDU):
                 'stop_runtime()', 'Removing Image {}'.format(k))
             try:
                 img = self.conn.images.get_by_alias(k)
+                imgd = self.images[k]
+                try:
+                    self.call_os_plugin_function('remove_file',{'file_path':os.path.join(self.BASE_DIR, self.IMAGE_DIR, imgd['base_image'])})
+                except ValueError:
+                     self.logger.info('stop_runtime()', 'Removing Image file {} not exist'.format(os.path.join(self.BASE_DIR, self.IMAGE_DIR, imgd['base_image'])))
                 img.delete()
             except LXDAPIException as e:
                 self.logger.error('stop_runtime()', 'Error {}'.format(e))
@@ -171,6 +179,7 @@ class LXD(RuntimePluginFDU):
         # TODO this as to be fixed
         fdu.comp_requirements = descriptor.get('computation_requirements')
         fdu.image = descriptor.get('image')
+        fdu.conf = descriptor.get('configuration')
         ####
 
         if self.is_uuid(fdu.get_image_uri()):
@@ -198,11 +207,21 @@ class LXD(RuntimePluginFDU):
         img_info = {}
         try:
 
-            if fdu.get_image_uri().startswith('lxd://'):
-                img_alias = fdu.get_image_uri()[6:]
-                self.logger.info('define_fdu()','Image is coming from LXD repository: {}'.format(img_alias))
-                lxd_img = self.conn.images.create_from_simplestreams(server=self.IMAGE_SERVER, alias=img_alias)
-                lxd_img.add_alias(fdu_uuid, description='')
+            if fdu.get_image_uri().startswith('lxd://') or fdu.get_image_uri().startswith('ubuntu://'):
+                try:
+                    if fdu.get_image_uri().startswith('lxd://'):
+                        img_alias = fdu.get_image_uri()[6:]
+                        self.logger.info('define_fdu()','Image is coming from LXD repository: {}'.format(img_alias))
+                        lxd_img = self.conn.images.create_from_simplestreams(server=self.IMAGE_SERVER, alias=img_alias)
+                    else:
+                        img_alias = fdu.get_image_uri()[9:]
+                        self.logger.info('define_fdu()','Image is coming from Ubuntu repository: {}'.format(img_alias))
+                        lxd_img = self.conn.images.create_from_simplestreams(server=self.UBUNTU_IMAGE_SERVER, alias=img_alias)
+                    lxd_img.add_alias(fdu_uuid, description='')
+                except LXDAPIException as e:
+                    if '{}'.format(e) == 'Image with same fingerprint already exists':
+                            self.logger.info('define_fdu()', '[ INFO ] LXD Plugin - Image with same fingerprint already exists')
+                            pass
                 image_name = ''
                 img_info.update({'uuid': fdu_uuid})
                 img_info.update({'name': '{}_img'.format(fdu.name)})
@@ -352,11 +371,7 @@ class LXD(RuntimePluginFDU):
                 custom_profile_for_fdu = self.conn.profiles.create(instance_uuid)
 
 
-                if fdu.configuration is not None:
-                    if fdu.configuration.get('conf_type') in ['CLOUD_INIT']:
-                        c_init_file = fdu.configuration.get('script')
-                        user_data = self.__generate_custom_profile_userdata_configuration(fdu.c_init_file)
-                        custom_profile_for_fdu.config = user_data
+
 
                 conf = {'environment.FOSUUID': fdu_uuid,
                         'environment.FOSINSTANCEUUID': instance_uuid,
@@ -364,6 +379,14 @@ class LXD(RuntimePluginFDU):
                         'limits.cpu': str(fdu.comp_requirements.get('cpu_min_count')),
                         'limits.memory':'{}MB'.format(int(fdu.comp_requirements.get('ram_size_mb')))
                         }
+
+                if fdu.conf is not None:
+                    if fdu.conf.get('conf_type') in ['CLOUD_INIT']:
+                        c_init_file = fdu.conf.get('script')
+                        self.logger.info('configure_fdu()', '[ INFO ] LXD Plugin - FDU has configuration: {}'.format(c_init_file))
+                        conf = self.__generate_custom_profile_userdata_configuration(c_init_file, conf)
+
+
                 for cp in fdu.get_connection_points():
                     cp_id = cp.get('uuid')
                     # cp_record = {
@@ -416,7 +439,7 @@ class LXD(RuntimePluginFDU):
                 self.write_fdu_error(fdu_uuid, instance_uuid, 2, e)
                 return
 
-            self.logger.info('undefine_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(fdu.uuid))
+            self.logger.info('configure_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(fdu.uuid))
             self.logger.info('configure_fdu()', '[ DONE ] LXD Plugin - Creating Container...')
 
             fdu.on_configured(config)
@@ -452,7 +475,9 @@ class LXD(RuntimePluginFDU):
                 intf_name = intf.get('vintf_name')
                 if intf.get('if_type').upper() not in ['PHYSICAL','BRIDGED']:
                     intf_id = 'lxd-{}-{}'.format(fdu.get_short_id(), i)
+                    self.logger.info('clean_fdu()','Asking for the deletion of virtual interface {}'.format(intf_id))
                     self.call_nw_plugin_function('delete_virtual_interface',{'intf_id':intf_id})
+                    self.logger.info('clean_fdu()','virtual interface {} removed'.format(intf_id))
                 else:
                     real_intf_name = intf.get('phy_face')
                     self.call_os_plugin_function('set_interface_available', {'intf_name': real_intf_name})
@@ -460,6 +485,7 @@ class LXD(RuntimePluginFDU):
             for cp in fdu.get_connection_points():
                 self.logger.info('clean_fdu()', 'LXD Plugin - CP: {}'.format(cp))
                 cp_id = cp.get('uuid')
+                self.logger.info('clean_fdu()','Asking for the deletion of connetion_point {}'.format(cp_id))
                 cp = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
                 cp.update({'status':'DESTROY'})
                 self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id, cp)
@@ -527,7 +553,7 @@ class LXD(RuntimePluginFDU):
                                                      'FDU {} is not in RUNNING state'.format(instance_uuid))
         else:
             fdu_uuid = fdu.fdu_uuid
-            self.logger.info('undefine_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(instance_uuid))
+            self.logger.info('stop_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(instance_uuid))
             c = self.conn.containers.get(fdu.name)
             # self.mon_th.pop(fdu_uuid)
             try:
@@ -537,7 +563,7 @@ class LXD(RuntimePluginFDU):
                 while c.status != 'Stopped':
                     c.sync()
             except Exception as e:
-                    self.logger.info('run_fdu()', '[ ERR ] LXD Plugin - {}'.format(e))
+                    self.logger.info('stop_fdu()', '[ ERR ] LXD Plugin - {}'.format(e))
                     fdu.status = 'ERROR'
                     self.current_fdus.update({instance_uuid: fdu})
                     self.write_fdu_error(fdu_uuid, instance_uuid, 5, e)
@@ -562,7 +588,7 @@ class LXD(RuntimePluginFDU):
                                                      'FDU {} is not in RUNNING state'.format(instance_uuid))
         else:
             fdu_uuid = fdu.fdu_uuid
-            self.logger.info('undefine_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(instance_uuid))
+            self.logger.info('pause_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(instance_uuid))
             c = self.conn.containers.get(fdu.name)
             c.freeze()
 
@@ -584,7 +610,7 @@ class LXD(RuntimePluginFDU):
                                                      'FDU {} is not in PAUSED state'.format(instance_uuid))
         else:
             fdu_uuid = fdu.fdu_uuid
-            self.logger.info('undefine_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(fdu.name.replace('_','-')[:63]))
+            self.logger.info('resume_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(fdu.name.replace('_','-')[:63]))
             c = self.conn.containers.get(fdu.name)
             c.unfreeze()
 
@@ -817,13 +843,13 @@ class LXD(RuntimePluginFDU):
         pass
 
     def __monitor_instance(self, fdu_uuid, instance_id, instance_name):
-        self.logger.info('__monitor_fdu()','[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(instance_id))
+        self.logger.info('__monitor_instance()','[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(instance_id))
         while True:
             time.sleep(self.update_interval)
             try:
                 record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_id)
                 if record.get('status') not in ['LAND', 'TAKE_OFF','MIGRATE']:
-                    self.logger.info('__monitor_fdu()','[ INFO ] LXD Plugin - Updating status of {}'.format(fdu_uuid))
+                    self.logger.info('__monitor_instance()','[ INFO ] LXD Plugin - Updating status of {}'.format(fdu_uuid))
                     c = self.conn.containers.get(instance_name)
                     cs = c.state()
                     detailed_state = {}
@@ -844,7 +870,16 @@ class LXD(RuntimePluginFDU):
                     #    c_net = []
                     c_net = {}
                     for i in record.get('interfaces'):
-                        ip = self.call_nw_plugin_function('get_address', {'mac_address':i.get('mac_address','')})
+                        try:
+                            ip = self.call_nw_plugin_function('get_address', {'mac_address':i.get('mac_address','')})
+                        except ValueError:
+                            ip = ''
+                        # Getting address from LXD if unable from network manager, eg. if connected to physical device/lxd bridge
+                        if ip == '':
+                            lxd_net_info_addrs = cs.network[i['vintf_name']]['addresses']
+                            for a in lxd_net_info_addrs:
+                                if a['family'] == 'inet':
+                                    ip = a['address']
                         # c_net.append(
                         #     {'name': i['vintf_name'],
                         #     'mac_address': i.get('mac_address',''),
@@ -879,9 +914,9 @@ class LXD(RuntimePluginFDU):
                 self.logger.error('__monitor_instance()', '[ ERROR ] LXD Plugin - Stopping monitoring of Container uuid {} Error {}'.format(instance_id, e))
                 return
 
-    def __generate_custom_profile_userdata_configuration(self, userdata):
-        userdata = {'user.user-data': userdata}
-        return userdata
+    def __generate_custom_profile_userdata_configuration(self, userdata, config):
+        config.update({'user.user-data': userdata})
+        return config
 
     def __generate_custom_profile_devices_configuration(self, fdu):
         '''
@@ -919,6 +954,7 @@ class LXD(RuntimePluginFDU):
         interfaces = []
         for intf in fdu.get_interfaces():
             intf_name = intf.get('vintf_name')
+            self.logger.info('__generate_custom_profile_devices_configuration()','Interface Info {}'.format(intf))
             mac = intf.get('mac_address', self.__generate_random_mac())
             if intf.get('if_type').upper() in ['PHYSICAL','BRIDGED']:
                 real_intf_name = intf.get('phy_face')

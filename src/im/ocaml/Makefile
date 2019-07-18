@@ -11,6 +11,7 @@ atd:
 	atdgen -t fos-im/fos_records_types.atd
 	atdgen -j-std fos-im/fos_records_types.atd
 
+	atdgen -j-std fos-im/router.atd
 	# atdgen -t fos-im/fdu.atd
 	atdgen -j-std fos-im/atomic_entity.atd
 	atdgen -j-std fos-im/fdu.atd
@@ -31,6 +32,7 @@ clean:
 	rm -rf fos-im/atomic_entity*.ml*
 	rm -rf fos-im/nfv*.ml*
 	rm -rf fos-im/mec*.ml*
+	rm -rf fos-im/router*.ml*
 	dune clean
 	rm -rf ./_build
 

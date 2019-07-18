@@ -1,5 +1,14 @@
 #!/usr/bin/env bash
 
+function to_uuid() {
+	first=$(echo $1 | cut -c -8)
+	second=$(echo $1 | cut -c 9-12)
+	third=$(echo $1 | cut -c 13-16)
+	fourth=$(echo $1 | cut -c 17-20)
+	fifth=$(echo $1 | cut -c 21-)
+	echo $first-$second-$third-$fourth-$fifth
+}
+
 git clone https://github.com/eclipse/fog05
 cd fog05
 
@@ -41,11 +50,13 @@ rm -rf /tmp/fos.tar.gz
 
 sudo make install
 
-sudo sh -c "cat /etc/machine-id | xargs -i  jq  '.configuration.nodeid = \"{}\"' /etc/fos/plugins/linux/linux_plugin.json > /tmp/linux_plugin.tmp && mv /tmp/linux_plugin.tmp /etc/fos/plugins/linux/linux_plugin.json"
+uuid=$(to_uuid $(cat '/etc/machine-id'))
+
+sudo sh -c "echo $uuid | xargs -i  jq  '.configuration.nodeid = \"{}\"' /etc/fos/plugins/linux/linux_plugin.json > /tmp/linux_plugin.tmp && mv /tmp/linux_plugin.tmp /etc/fos/plugins/linux/linux_plugin.json"
 
 sudo make -C fos-plugins/linuxbridge install
 
-sudo sh -c "cat /etc/machine-id | xargs -i  jq  '.configuration.nodeid = \"{}\"' /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json > /tmp/linuxbridge.tmp && mv /tmp/linuxbridge.tmp /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json"
+sudo sh -c "echo $uuid | xargs -i  jq  '.configuration.nodeid = \"{}\"' /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json > /tmp/linuxbridge.tmp && mv /tmp/linuxbridge.tmp /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json"
 
 DP_FACE=$(awk '$2 == 00000000 { print $1 }' /proc/net/route | head -n 1)
 
@@ -53,17 +64,9 @@ sudo sh -c "jq '.configuration.dataplane_interface = \"$DP_FACE\"' /etc/fos/plug
 
 sudo make -C fos-plugins/LXD install
 
-sudo sh -c "cat /etc/machine-id | xargs -i  jq  '.configuration.nodeid = \"{}\"' /etc/fos/plugins/LXD/LXD_plugin.json > /tmp/lxd.tmp && mv /tmp/lxd.tmp /etc/fos/plugins/LXD/LXD_plugin.json"
+sudo sh -c "echo $uuid | xargs -i  jq  '.configuration.nodeid = \"{}\"' /etc/fos/plugins/LXD/LXD_plugin.json > /tmp/lxd.tmp && mv /tmp/lxd.tmp /etc/fos/plugins/LXD/LXD_plugin.json"
 
 sudo make -C src/utils/python/rest_proxy install
-
-
-
-git clone https://github.com/atolab/yaks-python
-cd yaks-python
-git checkout 0.2
-sudo pip3 uninstall yaks -y
-sudo make install
 
 sudo systemctl daemon-reload
 
