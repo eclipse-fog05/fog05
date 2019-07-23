@@ -360,8 +360,8 @@ class LXD(RuntimePluginFDU):
                 conf = {'environment.FOSUUID': fdu_uuid,
                         'environment.FOSINSTANCEUUID': instance_uuid,
                         'environment.FOSNODEUUID': self.node,
-                        'limits.cpu': str(fdu.comp_requirements.get('cpu_min_count')),
-                        'limits.memory':'{}MB'.format(int(fdu.comp_requirements.get('ram_size_mb')))
+                        'limits.cpu': str(fdu.get_computation_requirements().get('cpu_min_count')),
+                        'limits.memory':'{}MB'.format(int(fdu.get_computation_requirements().get('ram_size_mb')))
                         }
 
                 if fdu.get_configuration() is not None:
@@ -372,7 +372,7 @@ class LXD(RuntimePluginFDU):
 
 
                 for cp in fdu.get_connection_points():
-                    cp_id = cp.uuid
+                    cp_id = cp.get('uuid')
                     # cp_record = {
                     #     'cp_uuid':cp_id,
                     #     'status':'CREATE'
@@ -381,7 +381,7 @@ class LXD(RuntimePluginFDU):
                     res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
                     while res is None:
                         res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
-                    cp.status = 'CONNECTED'
+                    cp.update({'status' :'CONNECTED'})
                     # record.get('connection_points').append(cp_id)
 
                 dev, interfaces = self.__generate_custom_profile_devices_configuration(fdu)
@@ -469,10 +469,10 @@ class LXD(RuntimePluginFDU):
                 i += 1
             for cp in fdu.get_connection_points():
                 self.logger.info('clean_fdu()', 'LXD Plugin - CP: {}'.format(cp))
-                cp_id = cp.uuid
+                cp_id = cp.get('uuid')
                 self.logger.info('clean_fdu()','Asking for the deletion of connetion_point {}'.format(cp_id))
                 cp = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
-                cp.status = 'DESTROY'
+                cp.update({'status' :'DESTROY'})
                 self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id, cp)
                 # self.nm.delete_port(cp_id)
 
@@ -741,9 +741,9 @@ class LXD(RuntimePluginFDU):
                     self.logger.info('define_fdu()', '[ ERRO ] LXD Plugin - Container uuid: {}'.format(fdu_uuid))
                     return
 
-            # cpu = fdu.comp_requirements.get('cpu_min_count')
-            # mem = fdu.comp_requirements.get('ram_size_mb')
-            # disk_size = fdu.comp_requirements.get('storage_size_gb')
+            # cpu = fdu.get_computation_requirements().get('cpu_min_count')
+            # mem = fdu.get_computation_requirements().get('ram_size_mb')
+            # disk_size = fdu.get_computation_requirements().get('storage_size_gb')
             # flavor = {
             #     'name': '{}_flavor'.format(fdu.name),
             #     'uuid': fdu_uuid,
@@ -752,7 +752,7 @@ class LXD(RuntimePluginFDU):
             #     'disk_size': disk_size,
             #     'type':'lxd'
             #     }
-            # fdu.comp_requirements.update({'uuid': fdu_uuid})
+            # fdu.get_computation_requirements().update({'uuid': fdu_uuid})
 
             # fl_uuid  = flavor.get('uuid')
             # self.flavors.update({fl_uuid: flavor})
@@ -760,7 +760,7 @@ class LXD(RuntimePluginFDU):
 
             # vNetwork configurations
             for cp in fdu.get_connection_points().values():
-                cp_id = cp.uuid
+                cp_id = cp.get('uuid')
                 # cp_record = {
                 #     'cp_uuid':cp_id,
                 #     'status':'CREATE'}
@@ -768,7 +768,7 @@ class LXD(RuntimePluginFDU):
                 res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
                 while res is None:
                     res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
-                cp.status = 'CONNECTED'
+                cp.update({'status' :'CONNECTED'})
             i = 0
             for intf in fdu.get_interfaces().values():
                 intf_name = intf.get('vintf_name')
@@ -944,7 +944,7 @@ class LXD(RuntimePluginFDU):
         lxd_version = self.conn.host_info['environment']['server_version']
         if version.parse(lxd_version) >= version.parse('2.20'):
             st_n = 'root'
-            st_v = json.loads(str(template_disk % ('/', 'default', int(fdu.comp_requirements.get('storage_size_gb')))))
+            st_v = json.loads(str(template_disk % ('/', 'default', int(fdu.get_computation_requirements().get('storage_size_gb')))))
             devices.update({st_n: st_v})
             # if fdu.storage is None or len(fdu.storage) == 0:
             #     st_n = 'root'

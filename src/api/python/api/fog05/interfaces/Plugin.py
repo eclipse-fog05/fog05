@@ -224,7 +224,7 @@ class Plugin(object):
         return os
 
     def get_agent(self):
-        self.os = Plugin.Agent( self.connector, self.node)
+        self.agent = Plugin.Agent( self.connector, self.node)
         return self.agent
 
     def get_local_mgmt_address(self):
