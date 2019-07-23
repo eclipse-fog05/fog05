@@ -40,7 +40,7 @@ type fdu = descriptor
 type descriptor = {
   id : string;
   name : string;
-  ?uuid : string
+  ?uuid : string option;
   ?description : string option;
   ?image : image option;
   ?command : command option; (* Present only if hypervisor_type is BARE *)
