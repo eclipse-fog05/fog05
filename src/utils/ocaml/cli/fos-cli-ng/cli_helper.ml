@@ -67,7 +67,7 @@ let get_all_node_fdus node_uuid yconnector =
   Yaks_connector.Global.Actual.get_node_fdus ysystem ytenant node_uuid yconnector
 
 let get_all_fdus  yconnector =
-  Yaks_connector.Global.Actual.get_all_fdus ysystem ytenant yconnector
+  Yaks_connector.Global.Actual.get_catalog_all_fdus ysystem ytenant yconnector
 
 (*
 let get_all_networks yserver =

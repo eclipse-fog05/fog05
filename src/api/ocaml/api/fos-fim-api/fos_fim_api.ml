@@ -87,8 +87,8 @@ module Network = struct
   let list_networks api =
     Yaks_connector.Global.Actual.get_all_networks api.sysid api.tenantid api.yconnector
 
-  let add_connection_point (descriptor:FDU.connection_point) api =
-    let cpid = descriptor.uuid in
+  let add_connection_point (descriptor:User.Descriptors.FDU.connection_point_descriptor) api =
+    let cpid = descriptor.id in
     Yaks_connector.Global.Desired.add_port api.sysid api.tenantid cpid descriptor api.yconnector
     >>= fun _ -> Lwt.return true
 
@@ -104,14 +104,14 @@ module FDU = struct
 
 
   let rec wait_fdu_onboarding sysid tenantid fduid api =
-    Yaks_connector.Global.Actual.get_fdu_info sysid tenantid fduid api.yconnector
+    Yaks_connector.Global.Actual.get_catalog_fdu_info sysid tenantid fduid api.yconnector
     >>= fun r ->
     match r with
     | Some _ -> Lwt.return_unit
     | None -> wait_fdu_onboarding sysid tenantid fduid api
 
   let rec wait_fdu_offloading sysid tenantid fduid api =
-    Yaks_connector.Global.Actual.get_fdu_info sysid tenantid fduid api.yconnector
+    Yaks_connector.Global.Actual.get_catalog_fdu_info sysid tenantid fduid api.yconnector
     >>= fun r ->
     match r with
     | Some _ -> wait_fdu_offloading sysid tenantid fduid api
@@ -147,7 +147,7 @@ module FDU = struct
     let%lwt record = Yaks_connector.Global.Actual.get_node_instance_info api.sysid api.tenantid nodeid instanceid api.yconnector in
     match record with
     | Some record ->
-      let fduid =  record.fdu_uuid in
+      let fduid =  record.fdu_id in
       let record = {record with status = state } in
       let%lwt  _ = Yaks_connector.Global.Desired.add_node_fdu api.sysid api.tenantid nodeid fduid instanceid record api.yconnector in
       (match wait with
@@ -158,13 +158,9 @@ module FDU = struct
     | None -> raise @@ FException (`InternalError (`Msg ("Unable to find record for this instance" ) ))
 
 
-  let onboard (fdu:FDU.descriptor) ?(wait=true) api =
-    let fduid =
-      match fdu.uuid with
-      | Some fduid -> fduid
-      | None -> Apero.Uuid.to_string @@ Apero.Uuid.make_from_alias fdu.name
-    in
-    let%lwt _ = Yaks_connector.Global.Desired.add_fdu_info api.sysid api.tenantid fduid fdu api.yconnector in
+  let onboard (fdu:User.Descriptors.FDU.descriptor) ?(wait=true) api =
+    let fduid = fdu.id in
+    let%lwt _ = Yaks_connector.Global.Desired.add_catalog_fdu_info api.sysid api.tenantid fduid fdu api.yconnector in
     match wait with
     | true ->
       let%lwt _ = wait_fdu_onboarding api.sysid api.tenantid fduid api in
@@ -174,7 +170,7 @@ module FDU = struct
 
 
   let offload fduid ?(wait=true) api =
-    let%lwt _ = Yaks_connector.Global.Desired.remove_fdu_info api.sysid api.tenantid fduid api.yconnector in
+    let%lwt _ = Yaks_connector.Global.Desired.remove_catalog_fdu_info api.sysid api.tenantid fduid api.yconnector in
     match wait with
     | true ->
       let%lwt _ = wait_fdu_offloading api.sysid api.tenantid fduid api in
@@ -182,10 +178,20 @@ module FDU = struct
     | false -> Lwt.return fduid
 
   let define fduid nodeid ?(wait=true) api =
-    let%lwt _ = Yaks_connector.Global.Actual.get_fdu_info api.sysid api.tenantid fduid api.yconnector in
-    let ar = FDU.{fpga = []; gpu= []} in
+    let%lwt fdud = Yaks_connector.Global.Actual.get_catalog_fdu_info api.sysid api.tenantid fduid api.yconnector in
+    let fdud = Apero.Option.get fdud in
+    (* let ar = Infra.Descriptors.FDU.{fpga = []; gpu= []} in *)
     let instance_uuid = Apero.Uuid.to_string @@ Apero.Uuid.make () in
-    let record = FDU.{uuid = Some instance_uuid; fdu_uuid = fduid; node = nodeid; status = `DEFINE; interfaces =  []; connection_points = []; error_code = None; error_msg = None; migration_properties = None; hypervisor_info = Fos_im.JSON.create_empty (); accelerators = ar; io_ports = [] } in
+    let record = Infra.Descriptors.FDU.{uuid = instance_uuid; fdu_id = fduid; status = `DEFINE; interfaces =  [];
+                                        connection_points = []; error_code = None; error_msg = None; migration_properties = None;
+                                        hypervisor_info = Fos_im.JSON.create_empty (); io_ports = [];
+                                        computation_requirements = fdud.computation_requirements;
+                                        geographical_requirements=fdud.geographical_requirements;
+                                        image = fdud.image; command = fdud.command;
+                                        hypervisor = fdud.hypervisor; migration_kind=fdud.migration_kind;
+                                        configuration = fdud.configuration; depends_on = fdud.depends_on;
+                                        energy_requirements = fdud.energy_requirements; storage = [];
+                                       } in
     let%lwt _ = Yaks_connector.Global.Desired.add_node_fdu api.sysid api.tenantid nodeid fduid instance_uuid record api.yconnector in
     match wait with
     | true ->
@@ -203,7 +209,7 @@ module FDU = struct
     let%lwt record = Yaks_connector.Global.Actual.get_node_instance_info api.sysid api.tenantid nodeid instanceid api.yconnector in
     match record with
     | Some record ->
-      let fduid =  record.fdu_uuid in
+      let fduid =  record.fdu_id in
       let record = {record with status = `UNDEFINE } in
       let%lwt  _ = Yaks_connector.Global.Desired.add_node_fdu api.sysid api.tenantid nodeid fduid instanceid record api.yconnector in
       (match wait with
@@ -260,7 +266,7 @@ module FDU = struct
     Yaks_connector.Global.Actual.get_fdu_nodes api.sysid api.tenantid fduid api.yconnector
 
   let info fduid api =
-    match%lwt Yaks_connector.Global.Actual.get_fdu_info api.sysid api.tenantid fduid api.yconnector with
+    match%lwt Yaks_connector.Global.Actual.get_catalog_fdu_info api.sysid api.tenantid fduid api.yconnector with
     | Some descriptor -> Lwt.return descriptor
     | None -> raise @@ FException (`InternalError (`Msg ("Unable to find descriptor for this FDU" ) ))
 
@@ -278,8 +284,8 @@ module FDU = struct
     | None -> raise @@ FException (`InternalError (`Msg ("Unable to find record for this instance" ) ))
 
   let list api =
-    Yaks_connector.Global.Actual.get_all_fdus api.sysid api.tenantid api.yconnector >>=
-    Lwt_list.filter_map_p (fun e -> Yaks_connector.Global.Actual.get_fdu_info api.sysid api.tenantid e api.yconnector)
+    Yaks_connector.Global.Actual.get_catalog_all_fdus api.sysid api.tenantid api.yconnector >>=
+    Lwt_list.filter_map_p (fun e -> Yaks_connector.Global.Actual.get_catalog_fdu_info api.sysid api.tenantid e api.yconnector)
 
   let instance_list fduid ?(nodeid="*") api =
     Yaks_connector.Global.Actual.get_node_fdu_instances api.sysid api.tenantid nodeid fduid api.yconnector
@@ -297,7 +303,7 @@ end
 
 module Image = struct
 
-  let add (descriptor:Fdu.image) api =
+  let add (descriptor:Base.Descriptors.FDU.image) api =
     let imgid = (match descriptor.uuid with
         | Some id -> id
         | None -> Apero.Uuid.to_string (Apero.Uuid.make ()) ) in
@@ -314,7 +320,7 @@ end
 
 
 module Flavor = struct
-  let add (descriptor:Fdu.computational_requirements) api =
+  let add (descriptor:Base.Descriptors.FDU.computational_requirements) api =
     let flv_id = (match descriptor.uuid with
         | Some id -> id
         | None -> Apero.Uuid.to_string (Apero.Uuid.make ()) ) in

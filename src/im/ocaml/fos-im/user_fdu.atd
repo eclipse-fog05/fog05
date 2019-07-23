@@ -1,0 +1,95 @@
+(*********************************************************************************
+ * Copyright (c) 2018 ADLINK Technology Inc.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0, or the Apache Software License 2.0
+ * which is available at https://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
+ * Contributors: 1
+ *   Gabriele Baldoni (gabriele (dot) baldoni (at) adlinktech (dot) com ) - IM Updates
+ *********************************************************************************)
+(* FDU User Types *)
+type json <ocaml module="Abs_json"> = abstract
+
+
+type image <ocaml module="Base_fdu"> = abstract
+type command <ocaml module="Base_fdu"> = abstract
+type computational_requirements <ocaml module="Base_fdu"> = abstract
+type geographical_requirements <ocaml module="Base_fdu"> = abstract
+type energy_requirements <ocaml module="Base_fdu"> = abstract
+type position <ocaml module="Base_fdu"> = abstract
+type proximity <ocaml module="Base_fdu"> = abstract
+type migr_kind <ocaml module="Base_fdu"> = abstract
+type hv_kind <ocaml module="Base_fdu"> = abstract
+type conf_types <ocaml module="Base_fdu"> = abstract
+type configuration <ocaml module="Base_fdu"> = abstract
+type vif_type <ocaml module="Base_fdu"> = abstract
+type intf_t <ocaml module="Base_fdu"> = abstract
+type vintf_t <ocaml module="Base_fdu"> = abstract
+type io_kind <ocaml module="Base_fdu"> = abstract
+type io_port <ocaml module="Base_fdu"> = abstract
+type storage_kind <ocaml module="Base_fdu"> = abstract
+type cp_kind <ocaml module="Base_fdu"> = abstract
+
+(* Descriptor Related Types *)
+
+type fdu = descriptor
+
+type descriptor = {
+  id : string;
+  name : string;
+  ?uuid : string
+  ?description : string option;
+  ?image : image option;
+  ?command : command option; (* Present only if hypervisor_type is BARE *)
+  storage : storage_descriptor list;
+  computation_requirements : computational_requirements;
+  ?geographical_requirements : geographical_requirements option;
+  ?energy_requirements : energy_requirements option;
+  hypervisor : hv_kind;
+  migration_kind :  migr_kind;
+  ?configuration : configuration option;
+  interfaces : interface list;
+  io_ports : io_port list;
+  connection_points : connection_point_descriptor list;
+  depends_on : string list;
+}
+
+type interface = {
+  name : string;
+  is_mgmt : bool;
+  if_type : intf_t;
+  ?mac_address : string option;
+  virtual_interface : vif_type;
+  ?cp_id : string option;
+  ?ext_cp_id : string option;
+}
+
+
+type storage_descriptor = {
+  id : string;
+  storage_type : storage_kind;
+  size : int; (* in GB *)
+  ?file_system_protocol : string option; (* only in case of FILE storage *)
+  ?cp_id : string option; (* only in case of FILE storage *)
+}
+
+
+(* CPD as ETSI NFV *)
+
+type connection_point_descriptor = {
+  name : string;
+  id : string;
+  ?short_name : string option;
+  ?cp_type : cp_kind option;
+  ?port_security_enabled: bool option;
+  ?internal_vld_ref : string option;
+}
+
+
+
+
+
+

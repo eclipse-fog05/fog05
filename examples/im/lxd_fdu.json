@@ -1,17 +1,17 @@
 {
-    "uuid": "1e57bb0e-cb41-4b23-bca3-1fa761a83c02",
-    "name": "test",
+    "id": "lxd-example-fdu",
+    "name": "example_fdu",
     "computation_requirements": {
         "cpu_arch": "x86_64",
-        "cpu_min_freq": 0.0,
+        "cpu_min_freq": 0,
         "cpu_min_count": 1,
         "ram_size_mb": 128.0,
         "storage_size_gb": 10.0
     },
     "base_image": {
-        "uri": "file:///home/ubuntu/alpine.tar.gz",
-        "checksum": "21f436639dda7941a26d1eb0c5427862fd19910b",
-        "format": "tar.gz"
+        "uri": "lxd://alpine/3.6",
+        "checksum": "",
+        "format": ""
     },
     "hypervisor": "LXD",
     "migration_kind": "LIVE",
@@ -26,22 +26,11 @@
                 "vpci": "0:0:0",
                 "bandwidth": 10
             },
-            "ext_cp_id": "test-ext-cp0"
-        },
-        {
-            "name": "eth1",
-            "is_mgmt": true,
-            "if_type": "INTERNAL",
-            "mac_address": "be:ef:be:ef:00:02",
-            "virtual_interface": {
-                "intf_type": "VIRTIO",
-                "vpci": "0:0:0",
-                "bandwidth": 10
-            },
             "cp_id": "test-cp1"
         }
     ],
     "io_ports": [],
+    "storage": [],
     "connection_points": [
         {
             "id": "test-cp1",

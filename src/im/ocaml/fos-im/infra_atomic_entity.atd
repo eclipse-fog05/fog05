@@ -8,69 +8,45 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
  * Contributors: 1
- *   Gabriele Baldoni (gabriele (dot) baldoni (at) adlinktech (dot) com ) - OCaml implementation
+ *   Gabriele Baldoni (gabriele (dot) baldoni (at) adlinktech (dot) com ) - IM Update
  *********************************************************************************)
 
-type json <ocaml module="Abs_json"> = abstract
-(* Atomit Entity Manifest *)
+(* Atomic Entity Infrastructure Information *)
 
-type fdu <ocaml module="Fdu"> = abstract
+type json <ocaml module="Abs_json"> = abstract
+
+type fdu <ocaml module="Infra_fdu"> = abstract
+
+type cp_kind <ocaml module="Base_atomic_entity"> = abstract
+type vl_kind <ocaml module="Base_atomic_entity"> = abstract
+type address_information <ocaml module="Base_atomic_entity"> = abstract
 
 (* Descriptor Related Types *)
 
-type descriptor = {
-  ?uuid : string option;
-  name : string;
-  ?description : string option;
+type record = {
+  uuid : string;
   fdus : fdu list;
-  internal_virtual_links : internal_virtual_link_descriptor list;
-  connection_points : connection_point_descriptor list;
+  atomic_entity_id : string;
+  internal_virtual_links : internal_virtual_link_record list;
+  connection_points : connection_point_record list;
   depends_on : string list;
 }
 
 (* CPD as ETSI NFV *)
 
-type cp_kind = [
-  | VPORT
-]
-
-type connection_point_descriptor = {
-  name : string;
-  id : string;
-  ?short_name : string option;
+type connection_point_record = {
+  uuid : string;
+  cp_id : string;
   ?cp_type : cp_kind option;
   ?port_security_enabled: bool option;
   ?internal_vld_ref : string option;
 }
 
-(* VLD at ETSI NFV *)
+(* VLD as ETSI NFV *)
 
-type vl_kind = [
-  | ELINE
-  | ELAN
-]
-
-
-type ip_kind = [
-  | IPV4
-  | IPV6
-]
-
-type address_information = {
-  ip_version : ip_kind;
-  subnet : string;   (*  X.X.X.X/Y*)
-  ?gateway : string option; (* X.X.X.X *)
-  dhcp_enable :  bool;
-  ?dhcp_range : string option; (* X.X.X.X,X.X.X.Z *)
-  ?dns : string option; (* X.X.X.X,X.X.X.Z,.... *)
-}
-
-
-type internal_virtual_link_descriptor = {
-  id : string;
-  name : string;
-  ?short_name : string option;
-  ?description : string option;
+type internal_virtual_link_record = {
+  uuid : string;
+  internal_vl_id : string;
   ?vl_type : vl_kind option;
   ?root_bandwidth : int option;
   ?leaf_bandwidth : int option;
@@ -78,7 +54,6 @@ type internal_virtual_link_descriptor = {
   (* From fog05 *)
   ?ip_configuration : address_information option;
   (* filled by Orchestrator *)
-  ?uuid : string option;
   ?overlay : bool option;
   ?vni: int option;
   ?mcast_addr: string option;

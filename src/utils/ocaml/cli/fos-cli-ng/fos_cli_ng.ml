@@ -17,7 +17,7 @@ open Fos_core
 open Fos_im
 open Fos_fim_api
 open Errors
-
+open Fos_im
 
 let check s =
   let n = String.length s in
@@ -139,7 +139,7 @@ let image_add api descriptor =
   match descriptor with
   | Some path ->
     let cont = read_file path in
-    let res = Cli_helper.check_descriptor cont Fos_im.FDU.image_of_string in
+    let res = Cli_helper.check_descriptor cont Base.Descriptors.FDU.image_of_string in
     (match res with
      | Ok descriptor ->
        Image.add descriptor api >>= Lwt_io.printf "%s\n"
@@ -173,7 +173,7 @@ let descriptor_image descriptor =
   | Some path ->
     let%lwt _ = Lwt_io.printf "Check descriptor %s\n" path in
     let cont = read_file path in
-    let res = Cli_helper.check_descriptor cont Fos_im.FDU.image_of_string  in
+    let res = Cli_helper.check_descriptor cont Base.Descriptors.FDU.image_of_string  in
     (match res with
      | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
      | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
@@ -184,7 +184,7 @@ let descriptor_flavor descriptor =
   | Some path ->
     let%lwt _ = Lwt_io.printf "Check descriptor %s\n" path in
     let cont = read_file path in
-    let res = Cli_helper.check_descriptor cont Fos_im.FDU.computational_requirements_of_string  in
+    let res = Cli_helper.check_descriptor cont Base.Descriptors.FDU.computational_requirements_of_string  in
     (match res with
      | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
      | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
@@ -195,7 +195,7 @@ let descriptor_fdu descriptor =
   | Some path ->
     let%lwt _ = Lwt_io.printf "Check descriptor %s\n" path in
     let cont = read_file path in
-    let res = Cli_helper.check_descriptor cont Fos_im.FDU.descriptor_of_string in
+    let res = Cli_helper.check_descriptor cont User.Descriptors.FDU.descriptor_of_string in
     (match res with
      | Ok _ -> Lwt_io.printf "Manifest is Ok\n"
      | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
@@ -226,7 +226,7 @@ let add_fdu_descriptor_to_catalog api (descriptor:string option) =
   match descriptor with
   | Some dp ->
     let d = read_file dp in
-    let fdu = Fos_im.FDU.descriptor_of_string d in
+    let fdu = User.Descriptors.FDU.descriptor_of_string d in
     FDU.onboard fdu api  >>= fun res ->
     Lwt_io.printf "%s\n" res
   | None -> Lwt_io.printf "Manifest parameter missing!!\n"
@@ -315,8 +315,8 @@ let fdu_migrate instanceid destinationid  =
 
 
 let fdu_list api =
-  let print_fdu (f:Fos_im.FDU.descriptor) =
-    Lwt_io.printf "FDU ID: %s Descriptor %s\n" (Apero.Option.get f.uuid) (Fos_im.FDU.string_of_descriptor f)
+  let print_fdu (f:User.Descriptors.FDU.descriptor) =
+    Lwt_io.printf "FDU ID: %s Descriptor %s\n" f.id (User.Descriptors.FDU.string_of_descriptor f)
   in
   FDU.list api >>=
   Lwt_list.iter_p print_fdu
@@ -363,23 +363,26 @@ let fdu_cmd api action nodeid fduid instanceid destid descriptor =
 
 
 let parser component cmd action netid imgid nodeid fduid instanceid destid descriptor =
-  let%lwt fimapi = Cli_helper.yapi () in
   match String.lowercase_ascii component with
   | "fim" ->
     (match cmd with
      | "fdu" ->
+       let%lwt fimapi = Cli_helper.yapi () in
        fdu_cmd fimapi action nodeid fduid instanceid destid descriptor
      | "network" ->
+       let%lwt fimapi = Cli_helper.yapi () in
        network_cmd fimapi action descriptor netid
      | "plugin" ->
        plugin_cmd action nodeid None descriptor
      | "image" ->
+       let%lwt fimapi = Cli_helper.yapi () in
        image_cmd fimapi action descriptor imgid
      | "flavor" ->
        Lwt.return_unit
      | "descriptor" ->
        descriptor_cmd action descriptor
      | "node" ->
+       let%lwt fimapi = Cli_helper.yapi () in
        node_cmd fimapi action nodeid
      | _ -> Lwt_io.printf "%s Is not a command\n" cmd)
   | _ -> Lwt_io.printf "%s not implemented\n" component

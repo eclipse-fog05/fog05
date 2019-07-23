@@ -10,13 +10,16 @@ LINUX_PLUGIN_CONFFILE = /etc/fos/plugins/linux/linux_plugin.json
 
 all:
 
-
+	make -C src/im/python
 	make -C src/im/ocaml install
 	make -C src/core/ocaml install
 	make -C src/agent/;
 
 install:
 
+	pip3 uninstall fog05_im fog05 -y
+
+	make -C src/im/python install
 	make -C src/api/python/api install
 	# make -C src/api/ocaml/api install
 ifeq "$(wildcard $(ETC_FOS_DIR))" ""

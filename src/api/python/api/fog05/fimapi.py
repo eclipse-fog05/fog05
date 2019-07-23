@@ -19,11 +19,14 @@
 # import fnmatch
 # import time
 import uuid
+import random
 from fog05.yaks_connector import Yaks_Connector
 from fog05.interfaces import Constants
 # from jsonschema import validate, ValidationError
 # from enum import Enum
 # from fog05 import Schemas
+from fog05.interfaces.FDU import FDU
+from fog05.interfaces.InfraFDU import InfraFDU
 from mvar import MVar
 import time
 
@@ -477,48 +480,18 @@ class FIMAPI(object):
             while fdu_info is None:
                     fdu_info = self.connector.glob.actual.get_node_fdu_instance(
                 self.sysid, self.tenantid, '*', instanceid)
-            es = fdu_info.get('status')
+            fdu = InfraFDU(fdu_info)
+            es = fdu.get_status()
             while es.upper() not in [state, 'ERROR']:
                 fdu_info = self.connector.glob.actual.get_node_fdu_instance(
                 self.sysid, self.tenantid, '*', instanceid)
-                es = fdu_info.get('status')
+                fdu = InfraFDU(fdu_info)
+                es = fdu.get_status()
 
             if es.upper() == 'ERROR':
                 raise ValueError('Unable to change state to {} for FDU Instance: {} Errno: {} Msg: {}'.format(
                     state, instanceid,fdu_info.get('error_code'), fdu_info.get('error_msg')))
             return fdu_info
-
-        def __wait_fdu(self, fdu_uuid):
-            '''
-
-            Function used to wait if an instance changest state
-             (eg. configured -> run) or goes to error state
-
-            :param node_uuid
-            :param fdu_uuid
-            :param state the new expected state
-
-            :return dict {'status':<new status>,
-                            'fdu_uuid':fdu_uuid}
-
-            '''
-
-            local_var = MVar()
-
-            def cb(fdu_info):
-                local_var.put(fdu_info)
-
-            fdu_info = self.connector.glob.actual.get_fdu_info(
-                self.sysid, self.tenantid, fdu_uuid)
-            while fdu_info is None:
-                fdu_info = self.connector.glob.actual.get_fdu_info(
-                    self.sysid, self.tenantid, fdu_uuid)
-            # while fdu_info is None:
-            #     fdu_info = local_var.get()
-            res = {
-                'fdu_uuid': fdu_uuid
-            }
-            return res
 
         def onboard(self, descriptor, wait=True):
             '''
@@ -529,14 +502,18 @@ class FIMAPI(object):
             :return the fdu uuid
 
             '''
-            fduid = descriptor.get('uuid')
+            nodes = self.connector.glob.get_all_nodes(self.sysid, self.tenantid)
+            if len(nodes) == 0:
+                raise SystemError("No nodes in the system!")
+            n = random.choice(nodes)
+
+            fduid = descriptor.get_uuid()
             if fduid is None:
                 fduid = '{}'.format(uuid.uuid4())
-            self.connector.glob.desired.add_fdu_info(
-                self.sysid, self.tenantid, fduid, descriptor)
-            if wait:
-                self.__wait_fdu(fduid)
-            return fduid
+                descriptor.set_uuid(fduid)
+            res = self.connector.glob.actual.onboard_fdu_from_node(self.sysid, self.tenantid, n, descriptor.get_uuid(), descriptor.to_json())
+            return res
+
 
         def offload(self, fdu_uuid, wait=True):
             '''
@@ -567,22 +544,9 @@ class FIMAPI(object):
                 self.sysid, self.tenantid, fduid)
             if desc is None:
                 raise ValueError('FDU with this UUID not found in the catalog')
-            inst_id = '{}'.format(uuid.uuid4())
-            record = {'fdu_uuid': fduid,
-                      'node':node_uuid,
-                      'uuid':inst_id,
-                      'status': 'DEFINE',
-                      'interfaces': [],
-                      'io_ports':[],
-                      'accelerators':{'fpga':[], 'gpu':[]},
-                      'connection_points': [],
-                      'hypervisor_info' : {}
-                      }
-            res = self.connector.glob.desired.add_node_fdu(
-                self.sysid, self.tenantid, node_uuid, fduid, inst_id ,record)
-            if wait:
-                self.__wait_node_fdu_state_change(inst_id,  'DEFINE')
-            return inst_id
+
+            res = self.connector.glob.actual.define_fdu_in_node(self.sysid, self.tenantid, node_uuid, fduid)
+            return res
 
 
         def undefine(self, instanceid, wait=True):
@@ -601,11 +565,13 @@ class FIMAPI(object):
 
             record = self.connector.glob.actual.get_node_fdu_instance(
                 self.sysid, self.tenantid, node, instanceid)
-            record.update({'status': 'UNDEFINE'})
 
-            fduid = record.get('fdu_uuid')
-            self.connector.glob.desired.add_node_fdu(
-                self.sysid, self.tenantid, node, fduid, instanceid, record)
+            record = InfraFDU(record)
+
+            record.set_status('UNDEFINE')
+            fduid = record.get_fdu_id()
+
+            self.connector.glob.desired.add_node_fdu(self.sysid, self.tenantid, node, fduid, instanceid, record.to_json())
             return instanceid
 
         def configure(self, instanceid, wait=True):
@@ -624,10 +590,13 @@ class FIMAPI(object):
 
             record = self.connector.glob.actual.get_node_fdu_instance(
                 self.sysid, self.tenantid, node, instanceid)
-            record.update({'status': 'CONFIGURE'})
-            fduid = record.get('fdu_uuid')
-            res = self.connector.glob.desired.add_node_fdu(
-                self.sysid, self.tenantid, node, fduid, instanceid, record)
+
+            record = InfraFDU(record)
+
+            record.set_status('CONFIGURE')
+            fduid = record.get_fdu_id()
+
+            res = self.connector.glob.desired.add_node_fdu(self.sysid, self.tenantid, node, fduid, instanceid, record.to_json())
             if wait:
                 self.__wait_node_fdu_state_change(instanceid,  'CONFIGURE')
             return res
@@ -649,10 +618,13 @@ class FIMAPI(object):
 
             record = self.connector.glob.actual.get_node_fdu_instance(
                 self.sysid, self.tenantid, node, instanceid)
-            record.update({'status': 'CLEAN'})
-            fduid = record.get('fdu_uuid')
-            res = self.connector.glob.desired.add_node_fdu(
-                self.sysid, self.tenantid, node, fduid, instanceid, record)
+
+            record = InfraFDU(record)
+
+            record.set_status('CLEAN')
+            fduid = record.get_fdu_id()
+
+            res = self.connector.glob.desired.add_node_fdu(self.sysid, self.tenantid, node, fduid, instanceid, record.to_json())
             if wait:
                 self.__wait_node_fdu_state_change(instanceid,  'DEFINE')
             return res
@@ -674,10 +646,13 @@ class FIMAPI(object):
 
             record = self.connector.glob.actual.get_node_fdu_instance(
                 self.sysid, self.tenantid, node, instanceid)
-            record.update({'status': 'RUN'})
-            fduid = record.get('fdu_uuid')
-            res = self.connector.glob.desired.add_node_fdu(
-                self.sysid, self.tenantid, node, fduid, instanceid, record)
+
+            record = InfraFDU(record)
+
+            record.set_status('RUN')
+            fduid = record.get_fdu_id()
+
+            res = self.connector.glob.desired.add_node_fdu(self.sysid, self.tenantid, node, fduid, instanceid, record.to_json())
             if wait:
                 self.__wait_node_fdu_state_change(instanceid,  'RUN')
             return res
@@ -699,10 +674,13 @@ class FIMAPI(object):
 
             record = self.connector.glob.actual.get_node_fdu_instance(
                 self.sysid, self.tenantid, node, instanceid)
-            record.update({'status': 'STOP'})
-            fduid = record.get('fdu_uuid')
-            res = self.connector.glob.desired.add_node_fdu(
-                self.sysid, self.tenantid, node, fduid, instanceid, record)
+
+            record = InfraFDU(record)
+
+            record.set_status('STOP')
+            fduid = record.get_fdu_id()
+
+            res = self.connector.glob.desired.add_node_fdu(self.sysid, self.tenantid, node, fduid, instanceid, record.to_json())
             if wait:
                 self.__wait_node_fdu_state_change(instanceid,  'CONFIGURE')
             return res
@@ -724,10 +702,13 @@ class FIMAPI(object):
 
             record = self.connector.glob.actual.get_node_fdu_instance(
                 self.sysid, self.tenantid, node, instanceid)
-            record.update({'status': 'PAUSE'})
-            fduid = record.get('fdu_uuid')
-            res = self.connector.glob.desired.add_node_fdu(
-                self.sysid, self.tenantid, node, fduid, instanceid, record)
+
+            record = InfraFDU(record)
+
+            record.set_status('PAUSE')
+            fduid = record.get_fdu_id()
+
+            res = self.connector.glob.desired.add_node_fdu(self.sysid, self.tenantid, node, fduid, instanceid, record.to_json())
             if wait:
                 self.__wait_node_fdu_state_change(instanceid,  'PAUSE')
             return res
@@ -747,12 +728,16 @@ class FIMAPI(object):
             if node is None:
                 raise ValueError('Unable to find node for this instanceid')
 
+
             record = self.connector.glob.actual.get_node_fdu_instance(
                 self.sysid, self.tenantid, node, instanceid)
-            record.update({'status': 'RESUME'})
-            fduid = record.get('fdu_uuid')
-            res = self.connector.glob.desired.add_node_fdu(
-                self.sysid, self.tenantid, node, fduid, instanceid, record)
+
+            record = InfraFDU(record)
+
+            record.set_status('RESUME')
+            fduid = record.get_fdu_id()
+
+            res = self.connector.glob.desired.add_node_fdu(self.sysid, self.tenantid, node, fduid, instanceid, record.to_json())
             if wait:
                 self.__wait_node_fdu_state_change(instanceid,  'RUN')
             return res
@@ -778,24 +763,24 @@ class FIMAPI(object):
                 raise ValueError('Unable to find node for this instanceid')
             record = self.connector.glob.actual.get_node_fdu_instance(
                 self.sysid, self.tenantid, node, instanceid)
-            fduid = record.get('fdu_uuid')
-            src_record = record.copy()
-            dst_record = record.copy()
-            migr_properties = {
-                'destination':destination_node_uuid,
-                'source':node
-            }
 
-            src_record.update({'status': 'TAKE_OFF'})
-            dst_record.update({'status':'LAND'})
-            src_record.update({'migration_properties':migr_properties})
-            dst_record.update({'migration_properties':migr_properties})
+            src_record = InfraFDU(record)
+            dst_record = InfraFDU(record)
+
+            fduid = record.get_fdu_id()
+
+            src_record.set_status('TAKE_OFF')
+            dst_record.set_status('LAND')
+
+            src_record.set_migration_properties(node, destination_node_uuid)
+            dst_record.set_migration_properties(node, destination_node_uuid)
+
 
             self.connector.glob.desired.add_node_fdu(self.sysid, self.tenantid,
                                                 destination_node_uuid,
-                                                fduid, instanceid, dst_record)
+                                                fduid, instanceid, dst_record.to_json())
             self.connector.glob.desired.add_node_fdu(self.sysid, self.tenantid,
-                                                node, fduid, instanceid, src_record)
+                                                node, fduid, instanceid, src_record.to_json())
 
             if wait:
                 self.__wait_node_fdu_state_change(instanceid, 'RUN')

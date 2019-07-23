@@ -35,44 +35,6 @@ let register_handlers completer () =
   Lwt_unix.on_signal Sys.sigterm (
     fun _ -> Lwt.wakeup_later completer ())
 
-let rec print_spawner_output process =
-  Lwt_io.read_line_opt process#stdout
-  >>= fun line ->
-  (match line with
-   | None -> Lwt.return_unit
-   | Some s -> Lwt_io.printf "{SPAWNER OUTPUT} - %s\n" s)
-  >>= fun _ -> print_spawner_output process
-
-let load_spawner path state =
-  MVar.guarded state @@ fun self ->
-  let cmd = Lwt_process.shell (Printf.sprintf "%s -c %s -v" path (List.nth self.cli_parameters 0))in
-  let p = Lwt_process.open_process_full cmd in
-  MVar.return (p, cmd) {self with spawner = Some p}
-
-
-let rec check_spawner_pid process cmd state n =
-  let open Unix in
-  process#status >>= fun s ->
-  match s with
-  | WEXITED 2 | WSIGNALED 2 ->
-    let%lwt _ = Lwt_io.printf "[FOSAGENT]: Spawner PID: %d died, Killed by SIGINT\n" process#pid in
-    Lwt.return_unit
-  | _ ->
-    if n < max_tentatives then
-      (
-        let%lwt _ = Lwt_io.printf "[FOSAGENT]: Spawner process %d extied, launch number %d\n" process#pid n in
-        let p = Lwt_process.open_process_full cmd in
-        MVar.guarded state @@ fun self ->
-        let _ = check_spawner_pid p cmd state (n+1) in
-        MVar.return () {self with spawner = Some p})
-    else
-      let%lwt _ = Lwt_io.printf "[FOSAGENT]: Spawner process %d extied, no more tentatives are available\n" process#pid in
-      MVar.guarded state @@ fun self ->
-      Lwt.wakeup_later self.completer ();
-      MVar.return () {self with spawner = None}
-
-
-
 let react_to_plugins loader data =
   ignore loader;
   Lwt_io.printf ">>>> [FOS] OBSERVER\n"
@@ -174,26 +136,28 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     MVar.read self >>= fun state ->
     let fdu_uuid = Apero.Option.get @@ Apero.Properties.get "fdu_uuid" props in
     try%lwt
-      let%lwt descriptor = Yaks_connector.Global.Actual.get_fdu_info sys_id Yaks_connector.default_tenant_id fdu_uuid state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
-      let js = FAgentTypes.json_of_string @@ FDU.string_of_descriptor descriptor in
+      let%lwt descriptor = Yaks_connector.Global.Actual.get_catalog_fdu_info sys_id Yaks_connector.default_tenant_id fdu_uuid state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
+      let js = FAgentTypes.json_of_string @@ User.Descriptors.FDU.string_of_descriptor descriptor in
       let eval_res = FAgentTypes.{result = Some js ; error=None} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
     | _ -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
+  (*  *)
   let eval_get_image_info self (props:Apero.properties) =
     MVar.read self >>= fun state ->
     let image_uuid = Apero.Option.get @@ Apero.Properties.get "image_uuid" props in
     try%lwt
       let%lwt descriptor = Yaks_connector.Global.Actual.get_image sys_id Yaks_connector.default_tenant_id image_uuid state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
-      let js = FAgentTypes.json_of_string @@ FDU.string_of_image descriptor in
+      let js = FAgentTypes.json_of_string @@ User.Descriptors.FDU.string_of_image descriptor in
       let eval_res = FAgentTypes.{result = Some js ; error=None} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
     | _ -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
+  (*  *)
   let eval_get_node_fdu_info self (props:Apero.properties) =
     MVar.read self >>= fun state ->
     let fdu_uuid = Apero.Option.get @@ Apero.Properties.get "fdu_uuid" props in
@@ -202,7 +166,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     try%lwt
       let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - eval_get_node_fdu_info - Search for FDU Info") in
       let%lwt descriptor = Yaks_connector.Global.Actual.get_node_fdu_info sys_id Yaks_connector.default_tenant_id node_uuid fdu_uuid instanceid state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
-      let js = FAgentTypes.json_of_string @@ FDU.string_of_record  descriptor in
+      let js = FAgentTypes.json_of_string @@ Infra.Descriptors.FDU.string_of_record  descriptor in
       let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - eval_get_node_fdu_info - INFO %s" (FAgentTypes.string_of_json js)) in
       let eval_res = FAgentTypes.{result = Some js ; error=None} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
@@ -210,6 +174,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     | _ -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
+  (*  *)
   let eval_get_network_info self (props:Apero.properties) =
     MVar.read self >>= fun state ->
     let net_uuid = Apero.Option.get @@ Apero.Properties.get "uuid" props in
@@ -222,22 +187,23 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     | _ -> let eval_res = FAgentTypes.{result = None ; error=Some 22} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
+  (*  *)
   let eval_get_port_info self (props:Apero.properties) =
     MVar.read self >>= fun state ->
     let cp_uuid = Apero.Option.get @@ Apero.Properties.get "cp_uuid" props in
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - eval_get_port_info - Getting info for port %s" cp_uuid ) in
     try%lwt
       let%lwt descriptor = Yaks_connector.Global.Actual.get_port sys_id Yaks_connector.default_tenant_id cp_uuid state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
-      let js = FAgentTypes.json_of_string @@ FDU.string_of_connection_point_descriptor  descriptor in
+      let js = FAgentTypes.json_of_string @@ User.Descriptors.FDU.string_of_connection_point_descriptor  descriptor in
       let eval_res = FAgentTypes.{result = Some js ; error=None} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
     | _ ->
       let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - eval_get_port_info - Search port on FDU") in
-      let%lwt fdu_ids = Yaks_connector.Global.Actual.get_all_fdus sys_id Yaks_connector.default_tenant_id state.yaks in
+      let%lwt fdu_ids = Yaks_connector.Global.Actual.get_catalog_all_fdus sys_id Yaks_connector.default_tenant_id state.yaks in
       let%lwt cps = Lwt_list.filter_map_p (fun e ->
-          let%lwt fdu =  Yaks_connector.Global.Actual.get_fdu_info sys_id Yaks_connector.default_tenant_id e state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
-          let%lwt c = Lwt_list.filter_map_p (fun (cp:FDU.connection_point_descriptor) ->
+          let%lwt fdu =  Yaks_connector.Global.Actual.get_catalog_fdu_info sys_id Yaks_connector.default_tenant_id e state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
+          let%lwt c = Lwt_list.filter_map_p (fun (cp:User.Descriptors.FDU.connection_point_descriptor) ->
               let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - eval_get_port_info - %s == %s ? %d " cp.id cp_uuid (String.compare cp.id  cp_uuid)) in
               if (String.compare cp.id cp_uuid) == 0 then  Lwt.return @@ Some cp
               else Lwt.return None
@@ -247,7 +213,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       in
       try%lwt
         let cp = List.hd cps in
-        let js = FAgentTypes.json_of_string @@ FDU.string_of_connection_point_descriptor cp in
+        let js = FAgentTypes.json_of_string @@ User.Descriptors.FDU.string_of_connection_point_descriptor cp in
         let eval_res = FAgentTypes.{result = Some js ; error=None} in
         Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
       with
@@ -255,6 +221,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
         let eval_res = FAgentTypes.{result = None ; error=Some 33} in
         Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
+  (*  *)
   let eval_get_node_mgmt_address self (props:Apero.properties) =
     MVar.read self >>= fun state ->
     let node_uuid = Apero.Option.get @@ Apero.Properties.get "node_uuid" props in
@@ -299,6 +266,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     | _ -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
+  (*  *)
   let eval_remove_cp_from_network self (props:Apero.properties) =
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DISCONNECT-CP - ##############") in
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DISCONNECT-CP - Properties: %s" (Apero.Properties.to_string props) ) in
@@ -317,6 +285,142 @@ let agent verbose_flag debug_flag configuration custom_uuid =
         Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
     | _ -> let eval_res = FAgentTypes.{result = None ; error=Some 11} in
+      Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+  in
+  (* FDU Onboard in Catalog -- this may be moved to Orchestration part *)
+  let eval_onboard_fdu self (props:Apero.properties) =
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ONBOARD-FDU - ##############") in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ONBOARD-FDU - Properties: %s" (Apero.Properties.to_string props) ) in
+    MVar.read self >>= fun state ->
+    let descriptor = Apero.Option.get @@ Apero.Properties.get "descriptor" props in
+    try%lwt
+      let descriptor = User.Descriptors.FDU.descriptor_of_string descriptor in
+      let descriptor =
+        match descriptor.uuid with
+        | Some _ -> descriptor
+        | None ->
+          let fduid = Apero.Uuid.to_string @@ Apero.Uuid.make_from_alias descriptor.id in
+          {descriptor with uuid = Some fduid}
+      in
+      Yaks_connector.Global.Desired.add_catalog_fdu_info sys_id Yaks_connector.default_tenant_id (Apero.Option.get descriptor.uuid) descriptor state.yaks
+      >>= fun _ ->
+      let js = JSON.of_string (User.Descriptors.FDU.string_of_descriptor descriptor) in
+      let eval_res = FAgentTypes.{result = Some js ; error=None} in
+      Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+    with
+    | exn ->
+      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-ONBOARD-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let eval_res = FAgentTypes.{result = None ; error=Some 11} in
+      Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+  in
+  (* FDU Definition in Node *)
+  let eval_define_fdu self (props:Apero.properties) =
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEFINE-FDU - ##############") in
+    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEFINE-FDU - Properties: %s" (Apero.Properties.to_string props) ) in
+    MVar.read self >>= fun state ->
+    let fdu_uuid = Apero.Option.get @@ Apero.Properties.get "fdu_id" props in
+    try%lwt
+      let%lwt descriptor = Yaks_connector.Global.Actual.get_catalog_fdu_info sys_id Yaks_connector.default_tenant_id fdu_uuid state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
+      (* Find Correct Plugin *)
+      let fdu_type = Fos_im.string_of_hv_type descriptor.hypervisor in
+      let%lwt plugins = Yaks_connector.Local.Actual.get_node_plugins (Apero.Option.get state.configuration.agent.uuid) state.yaks in
+      let%lwt matching_plugins = Lwt_list.filter_map_p (fun e ->
+          let%lwt pl = Yaks_connector.Local.Actual.get_node_plugin (Apero.Option.get state.configuration.agent.uuid) e state.yaks in
+          if String.uppercase_ascii (pl.name) = String.uppercase_ascii (fdu_type) then
+            Lwt.return @@ Some pl
+          else
+            Lwt.return None
+        ) plugins
+      in
+      let pl =
+        match matching_plugins with
+        | [] -> None
+        | _ -> Some  ((List.hd matching_plugins).uuid)
+      in
+      (* Create Record
+       * Add UUID for each component
+       * Fix references with UUIDs
+      *)
+      let instanceid = Apero.Uuid.to_string @@ Apero.Uuid.make () in
+      let cp_records = List.map (
+          fun (e:User.Descriptors.FDU.connection_point_descriptor) ->
+            let cpuuid = Apero.Uuid.to_string @@ Apero.Uuid.make () in
+            Infra.Descriptors.FDU.{  uuid = cpuuid; status = `CREATE; cp_id = e.id;
+                                     cp_type = e.cp_type; port_security_enabled = e.port_security_enabled;
+                                     internal_vld_ref = e.internal_vld_ref; properties = None;
+                                     veth_face_name = None; br_name = None;
+                                  }
+        ) descriptor.connection_points
+      in
+      let interface_records = List.map (fun (e:User.Descriptors.FDU.interface) ->
+          let cp_new_id =
+            match e.cp_id with
+            | Some cp_id ->
+              let cp =  List.find (fun (cp:Infra.Descriptors.FDU.connection_point_record) -> cp_id = cp.cp_id ) cp_records
+              in Some cp.cp_id
+            | None -> None
+          in
+          Infra.Descriptors.FDU.{name = e.name; is_mgmt = e.is_mgmt; if_type = e.if_type;
+                                 mac_address = e.mac_address; virtual_interface = e.virtual_interface;
+                                 cp_id = cp_new_id; ext_cp_id = e.ext_cp_id;
+                                 vintf_name = e.name; status = `CREATE; phy_face = None;
+                                 veth_face_name = None; properties = None}
+
+
+        ) descriptor.interfaces
+      in
+      let storage_records = List.map (fun (e:User.Descriptors.FDU.storage_descriptor) ->
+          let st_uuid = Apero.Uuid.to_string @@ Apero.Uuid.make () in
+          let cp_new_id =
+            match e.cp_id with
+            | Some cp_id ->
+              let cp =  List.find (fun (cp:Infra.Descriptors.FDU.connection_point_record) -> cp_id = cp.cp_id ) cp_records
+              in Some cp.cp_id
+            | None -> None
+          in
+          Infra.Descriptors.FDU.{uuid = st_uuid; storage_id = e.id;
+                                 storage_type = e.storage_type; size = e.size;
+                                 file_system_protocol = e.file_system_protocol;
+                                 cp_id = cp_new_id}
+        ) descriptor.storage
+      in
+      let record = Infra.Descriptors.FDU.{
+          uuid = instanceid;
+          fdu_id = Apero.Option.get @@ descriptor.uuid;
+          status = `DEFINE;
+          image = descriptor.image;
+          command = descriptor.command;
+          storage = storage_records;
+          computation_requirements = descriptor.computation_requirements;
+          geographical_requirements = descriptor.geographical_requirements;
+          energy_requirements = descriptor.energy_requirements;
+          hypervisor = descriptor.hypervisor;
+          migration_kind = descriptor.migration_kind;
+          configuration = descriptor.configuration;
+          interfaces = interface_records;
+          io_ports = descriptor.io_ports;
+          connection_points = cp_records;
+          depends_on = descriptor.depends_on;
+          error_code = None;
+          error_msg = None;
+          migration_properties = None;
+          hypervisor_info = JSON.create_empty ()
+        }
+      in
+      (match pl with
+       | Some plid ->
+         Yaks_connector.Local.Desired.add_node_fdu (Apero.Option.get state.configuration.agent.uuid) plid fdu_uuid instanceid record state.yaks
+         >>= fun _ ->
+         let js = JSON.of_string (Infra.Descriptors.FDU.string_of_record record) in
+         let eval_res = FAgentTypes.{result = Some js ; error=None} in
+         Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
+       | None ->
+         let eval_res = FAgentTypes.{result = None ; error=Some 404} in
+         Lwt.return @@ FAgentTypes.string_of_eval_result eval_res)
+    with
+    | exn ->
+      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-DEFINE-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let eval_res = FAgentTypes.{result = None ; error=Some 11} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   (* NM Floating IPs *)
@@ -349,6 +453,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       let eval_res = FAgentTypes.{result = None ; error=Some 22} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
+  (*  *)
   let eval_delete_floating_ip self (props:Apero.properties) =
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEL-FLOATING-IP - ##############") in
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEL-FLOATING-IP - Properties: %s" (Apero.Properties.to_string props) ) in
@@ -382,6 +487,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       let eval_res = FAgentTypes.{result = None ; error=Some 22} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
+  (*  *)
   let eval_assign_floating_ip self (props:Apero.properties) =
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ASSOC-FLOATING-IP - ##############") in
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ASSOC-FLOATING-IP - Properties: %s" (Apero.Properties.to_string props) ) in
@@ -411,6 +517,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-ASSOC-FLOATING-IP - EXCEPTION: %s" (Printexc.to_string exn)) in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
+  (*  *)
   let eval_remove_floating_ip self (props:Apero.properties) =
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-REMOVE-FLOATING-IP - ##############") in
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-REMOVE-FLOATING-IP - Properties: %s" (Apero.Properties.to_string props) ) in
@@ -440,6 +547,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-REMOVE-FLOATING-IP - EXCEPTION: %s" (Printexc.to_string exn)) in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
+  (*  *)
   let eval_add_router_port self (props:Apero.properties) =
     ignore props;
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ADD-ROUTER-PORT - ##############") in
@@ -487,6 +595,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       let eval_res = FAgentTypes.{result = None ; error=Some 22} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
+  (*  *)
   let eval_remove_router_port self (props:Apero.properties) =
     ignore props;
     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEL-ROUTER-PORT - ##############") in
@@ -545,23 +654,30 @@ let agent verbose_flag debug_flag configuration custom_uuid =
          Yaks_connector.Local.Desired.remove_node_plugin (Apero.Option.get self.configuration.agent.uuid) plid self.yaks >>= Lwt.return
        | None -> Lwt.return_unit)
   in
-  let cb_gd_fdu self (fdu:FDU.descriptor option) (is_remove:bool) (uuid:string option) =
+  let cb_gd_fdu self (fdu:User.Descriptors.FDU.descriptor option) (is_remove:bool) (uuid:string option) =
     match is_remove with
     | false ->
       (match fdu with
        | Some fdu -> MVar.read self >>= fun self ->
          let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-FDU - ##############") in
          let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-FDU - FDU Updated! Advertising on GA") in
-         Yaks_connector.Global.Actual.add_fdu_info sys_id Yaks_connector.default_tenant_id (Apero.Option.get fdu.uuid) fdu self.yaks >>= Lwt.return
+         let fdu =
+           match fdu.uuid with
+           | Some _ -> fdu
+           | None  ->
+             let fduid = Apero.Uuid.to_string @@ Apero.Uuid.make_from_alias fdu.id in
+             {fdu with uuid = Some fduid}
+         in
+         Yaks_connector.Global.Actual.add_catalog_fdu_info sys_id Yaks_connector.default_tenant_id fdu.id fdu self.yaks >>= Lwt.return
        | None -> Lwt.return_unit
       )
     | true ->
       (match uuid with
        | Some fduid -> MVar.read self >>= fun self ->
-         Yaks_connector.Global.Actual.remove_fdu_info sys_id Yaks_connector.default_tenant_id fduid self.yaks >>= Lwt.return
+         Yaks_connector.Global.Actual.remove_catalog_fdu_info sys_id Yaks_connector.default_tenant_id fduid self.yaks >>= Lwt.return
        | None -> Lwt.return_unit)
   in
-  let cb_gd_image self (img:FDU.image option) (is_remove:bool) (uuid:string option) =
+  let cb_gd_image self (img:User.Descriptors.FDU.image option) (is_remove:bool) (uuid:string option) =
     match is_remove with
     | false ->
       (match img with
@@ -579,7 +695,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
          Yaks_connector.Global.Actual.remove_image sys_id Yaks_connector.default_tenant_id nodeid self.yaks >>= Lwt.return
        | None -> Lwt.return_unit)
   in
-  let cb_gd_flavor self (flv:FDU.computational_requirements option) (is_remove:bool) (uuid:string option) =
+  let cb_gd_flavor self (flv:User.Descriptors.FDU.computational_requirements option) (is_remove:bool) (uuid:string option) =
     match is_remove with
     | false ->
       (match flv with
@@ -598,7 +714,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
          Yaks_connector.Global.Actual.remove_flavor sys_id Yaks_connector.default_tenant_id flvid self.yaks >>= Lwt.return
        | None -> Lwt.return_unit)
   in
-  let cb_gd_node_fdu self (fdu:FDU.record option) (is_remove:bool) (fduid:string option) (instanceid:string option) =
+  let cb_gd_node_fdu self (fdu:Infra.Descriptors.FDU.record option) (is_remove:bool) (fduid:string option) (instanceid:string option) =
     match is_remove with
     | false ->
       (match fdu with
@@ -606,7 +722,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
          MVar.read self >>= fun self ->
          let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-NODE-FDU - ##############") in
          let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-NODE-FDU - FDU Updated! Agent will call the right plugin!") in
-         let%lwt fdu_d = Yaks_connector.Global.Actual.get_fdu_info sys_id Yaks_connector.default_tenant_id fdu.fdu_uuid self.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
+         let%lwt fdu_d = Yaks_connector.Global.Actual.get_catalog_fdu_info sys_id Yaks_connector.default_tenant_id fdu.fdu_id self.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
          let fdu_type = Fos_im.string_of_hv_type fdu_d.hypervisor in
          let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-FDU - FDU Type %s" fdu_type) in
          let%lwt plugins = Yaks_connector.Local.Actual.get_node_plugins (Apero.Option.get self.configuration.agent.uuid) self.yaks in
@@ -622,35 +738,16 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           | [] ->
             let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - CB-GD-FDU - No plugin found for this FDU") in
             let r = { fdu with status = `ERROR} in
-            Yaks_connector.Global.Actual.add_node_fdu sys_id Yaks_connector.default_tenant_id (Apero.Option.get self.configuration.agent.uuid) r.fdu_uuid (Apero.Option.get r.uuid) r self.yaks >>= Lwt.return
+            Yaks_connector.Global.Actual.add_node_fdu sys_id Yaks_connector.default_tenant_id (Apero.Option.get self.configuration.agent.uuid) r.fdu_id r.uuid r self.yaks >>= Lwt.return
           | _ ->
             let pl = List.hd matching_plugins in
             let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-FDU - Calling %s plugin" pl.name) in
             (* Here we should at least update the record interfaces and connection points *)
-            let%lwt ncpids = Lwt_list.map_p (fun (e:FDU.connection_point_descriptor) -> Lwt.return (e.id, Apero.Uuid.to_string @@ Apero.Uuid.make ())) fdu_d.connection_points in
-            let%lwt rcps = Lwt_list.map_p (fun (e:FDU.connection_point_descriptor) ->
-                let rcpid = List.assoc e.id ncpids in
-                let cpr = FDU.{uuid =  rcpid; status = `CREATE; cp_uuid = e.id; veth_face_name = None; br_name = None; properties = None } in
-                Lwt.return cpr
-              ) fdu_d.connection_points
-            in
-            let%lwt rfaces = Lwt_list.map_p (fun (e:FDU.interface) ->
-                let facer = FDU.{vintf_name = e.name; status = `CREATE; if_type = e.virtual_interface.intf_type; phy_face = None; cp_id = None; veth_face_name=None; properties=None; mac_address = e.mac_address} in
-                let facer =
-                  match e.if_type with
-                  | `INTERNAL -> (match e.cp_id with
-                      | Some cpid ->
-                        let ncpid = List.assoc cpid ncpids in
-                        {facer with cp_id = Some ncpid}
-                      | None -> facer)
-                  | _ ->
-                    {facer with phy_face = Some e.virtual_interface.vpci}
-                in
-                Lwt.return facer
-              ) fdu_d.interfaces
-            in
-            let fdu = {fdu with interfaces = rfaces; connection_points = rcps} in
-            Yaks_connector.Local.Desired.add_node_fdu (Apero.Option.get self.configuration.agent.uuid) pl.uuid fdu.fdu_uuid (Apero.Option.get fdu.uuid) fdu self.yaks >>= Lwt.return
+            match fdu.status with
+            | `DEFINE ->
+              let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - CB-GD-FDU - FDU Define it is not supposed to pass by this function") in
+              Lwt.return_unit
+            | _ -> Yaks_connector.Local.Desired.add_node_fdu (Apero.Option.get self.configuration.agent.uuid) pl.uuid fdu.fdu_id fdu.uuid fdu self.yaks >>= Lwt.return
          )
 
        | None -> Lwt.return_unit)
@@ -719,7 +816,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
          Lwt.return_unit)
 
   in
-  let cb_gd_cp self (cp:FDU.connection_point_descriptor option) (is_remove:bool) (uuid:string option) =
+  let cb_gd_cp self (cp:User.Descriptors.FDU.connection_point_descriptor option) (is_remove:bool) (uuid:string option) =
     let%lwt net_p = get_network_plugin self in
     match is_remove with
     | false ->
@@ -729,8 +826,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-CP - ##############") in
           let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-CP - CP Updated! Agent will update actual store and call the right plugin!") in
           let%lwt _ = Yaks_connector.Global.Actual.add_port sys_id Yaks_connector.default_tenant_id cp.id cp self.yaks in
-          let record = FDU.{cp_uuid = cp.id; uuid = cp.id; status = `CREATE; properties = None; veth_face_name = None; br_name = None} in
-          Yaks_connector.Local.Desired.add_node_port (Apero.Option.get self.configuration.agent.uuid) net_p record.cp_uuid record self.yaks
+          let record = Infra.Descriptors.FDU.{cp_id = cp.id; uuid = cp.id; status = `CREATE; properties = None; veth_face_name = None; br_name = None;cp_type= Some `VPORT; port_security_enabled=None; internal_vld_ref=None } in
+          Yaks_connector.Local.Desired.add_node_port (Apero.Option.get self.configuration.agent.uuid) net_p record.uuid record self.yaks
           >>= Lwt.return
         | None -> Lwt.return_unit)
     | true ->
@@ -808,7 +905,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
          Yaks_connector.Local.Desired.remove_node_network (Apero.Option.get self.configuration.agent.uuid) net_p netid self.yaks >>= Lwt.return
        | None -> Lwt.return_unit)
   in
-  let cb_la_cp self (cp:FDU.connection_point_record option) (is_remove:bool) (uuid:string option) =
+  let cb_la_cp self (cp:Infra.Descriptors.FDU.connection_point_record option) (is_remove:bool) (uuid:string option) =
     let%lwt net_p = get_network_plugin self in
     match is_remove with
     | false ->
@@ -819,9 +916,9 @@ let agent verbose_flag debug_flag configuration custom_uuid =
          let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-CP - CP Updated! Advertising on GA") in
          let nid = (Apero.Option.get self.configuration.agent.uuid) in
          ( match cp.status with
-           | `DESTROY -> Yaks_connector.Global.Actual.remove_node_port sys_id Yaks_connector.default_tenant_id nid cp.cp_uuid self.yaks
+           | `DESTROY -> Yaks_connector.Global.Actual.remove_node_port sys_id Yaks_connector.default_tenant_id nid cp.cp_id self.yaks
            | _ ->
-             Yaks_connector.Global.Actual.add_node_port sys_id Yaks_connector.default_tenant_id nid cp.cp_uuid cp self.yaks >>= Lwt.return)
+             Yaks_connector.Global.Actual.add_node_port sys_id Yaks_connector.default_tenant_id nid cp.cp_id cp self.yaks >>= Lwt.return)
        | None -> Lwt.return_unit)
     | true ->
       (match uuid with
@@ -911,7 +1008,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
          Yaks_connector.Global.Actual.remove_node_status sys_id Yaks_connector.default_tenant_id nid self.yaks >>= Lwt.return
        | None -> Lwt.return_unit)
   in
-  let cb_la_node_fdu self (fdu:FDU.record option) (is_remove:bool) (fduid:string option) (instanceid:string option) =
+  let cb_la_node_fdu self (fdu:Infra.Descriptors.FDU.record option) (is_remove:bool) (fduid:string option) (instanceid:string option) =
     match is_remove with
     | false ->
       (match fdu with
@@ -920,9 +1017,9 @@ let agent verbose_flag debug_flag configuration custom_uuid =
          let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-NODE-FDU - ##############") in
          let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-NODE-FDU - FDU Updated! Advertising on GA") in
          ( match fdu.status with
-           | `UNDEFINE -> Yaks_connector.Global.Actual.remove_node_fdu sys_id Yaks_connector.default_tenant_id (Apero.Option.get self.configuration.agent.uuid) fdu.fdu_uuid (Apero.Option.get fdu.uuid) self.yaks
+           | `UNDEFINE -> Yaks_connector.Global.Actual.remove_node_fdu sys_id Yaks_connector.default_tenant_id (Apero.Option.get self.configuration.agent.uuid) fdu.fdu_id fdu.uuid self.yaks
            | _ ->
-             Yaks_connector.Global.Actual.add_node_fdu sys_id Yaks_connector.default_tenant_id (Apero.Option.get self.configuration.agent.uuid) fdu.fdu_uuid (Apero.Option.get fdu.uuid) fdu self.yaks >>= Lwt.return)
+             Yaks_connector.Global.Actual.add_node_fdu sys_id Yaks_connector.default_tenant_id (Apero.Option.get self.configuration.agent.uuid) fdu.fdu_id fdu.uuid fdu self.yaks >>= Lwt.return)
        | None -> Lwt.return_unit)
     | true ->
       (match( fduid,instanceid)  with
@@ -962,7 +1059,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
      | None -> Lwt.return_unit)
      in *)
   (* Constrained Nodes Local *)
-  let cb_lac_node_fdu self _ (fdu:FDU.record option) (is_remove:bool) (uuid:string option) =
+  let cb_lac_node_fdu self _ (fdu:Infra.Descriptors.FDU.record option) (is_remove:bool) (uuid:string option) =
     match is_remove with
     | false ->
       (match fdu with
@@ -1048,12 +1145,15 @@ let agent verbose_flag debug_flag configuration custom_uuid =
   let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "remove_floating_ip" (eval_remove_floating_ip state) yaks in
   let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "add_router_port" (eval_add_router_port state) yaks in
   let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "remove_router_port" (eval_remove_router_port state) yaks in
+  (* FDU Evals *)
+  let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "onboard_fdu" (eval_onboard_fdu state) yaks in
+  let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "define_fdu" (eval_define_fdu state) yaks in
   (* Constraint Eval  *)
   let%lwt _ = Yaks_connector.LocalConstraint.Actual.add_agent_eval uuid "get_fdu_info" (eval_get_fdu_info state) yaks in
   (* Registering listeners *)
   (* Global Desired Listeners *)
   let%lwt _ = Yaks_connector.Global.Desired.observe_node_plugins sys_id Yaks_connector.default_tenant_id uuid (cb_gd_plugin state) yaks in
-  let%lwt _ = Yaks_connector.Global.Desired.observe_fdu sys_id Yaks_connector.default_tenant_id (cb_gd_fdu state) yaks in
+  let%lwt _ = Yaks_connector.Global.Desired.observe_catalog_fdu sys_id Yaks_connector.default_tenant_id (cb_gd_fdu state) yaks in
   let%lwt _ = Yaks_connector.Global.Desired.observe_node_fdu sys_id Yaks_connector.default_tenant_id uuid (cb_gd_node_fdu state) yaks in
   let%lwt _ = Yaks_connector.Global.Desired.observe_network sys_id Yaks_connector.default_tenant_id (cb_gd_net_all state) yaks in
   let%lwt _ = Yaks_connector.Global.Desired.observe_node_network sys_id Yaks_connector.default_tenant_id uuid (cb_gd_net state) yaks in

@@ -62,6 +62,8 @@ type floating_ip_record = {
   ip_version : ip_kind;
   address : string;
   face : string;
+  vface : string;
+  cp_id : string;
 }
 
 (* This are the old entities/atomic entities *)

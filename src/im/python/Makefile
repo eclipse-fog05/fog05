@@ -20,24 +20,27 @@ PYANG:= pyang
 PYBINDPLUGIN:=$(shell /usr/bin/env python3 -c \
 	            'import pyangbind; import os; print("{}/plugin".format(os.path.dirname(pyangbind.__file__)))')
 
-YANG_DESC_MODELS := fdud vnetd
-YANG_RECORD_MODELS := fdur vnetr
+YANG_DESC_MODELS := user_fdu
+YANG_RECORD_MODELS := infra_fdu
+
 PYTHON_MODELS := $(addsuffix .py, $(YANG_DESC_MODELS))
+PYTHON_RECORDS := $(addsuffix .py, $(YANG_RECORD_MODELS))
+
 PYTHON_JSONSCHEMAS := $(addsuffix .jsonschema, $(YANG_DESC_MODELS))
 YANG_DESC_TREES := $(addsuffix .tree.txt, $(YANG_DESC_MODELS))
 YANG_DESC_JSTREES := $(addsuffix .html, $(YANG_DESC_MODELS))
-YANG_RECORD_TREES := $(addsuffix .rec.tree.txt, $(YANG_RECORD_MODELS))
-YANG_RECORD_JSTREES := $(addsuffix .rec.html, $(YANG_RECORD_MODELS))
+YANG_RECORD_TREES := $(addsuffix .tree.txt, $(YANG_RECORD_MODELS))
+YANG_RECORD_JSTREES := $(addsuffix .html, $(YANG_RECORD_MODELS))
 
-OUT_DIR := fos_im
-TREES_DIR := fos_im_trees
+OUT_DIR := fog05_im
+TREES_DIR := fog05_im_trees
 MODEL_DIR := yang/fos
 RW_PB_EXT := build/yang/rw-pb-ext.yang
 Q?=@
 
 PYANG_OPTIONS := -Werror
 
-all: $(PYTHON_MODELS) pyang-json-schema-plugin $(PYTHON_JSONSCHEMAS) clean-plugin pyang-json-schema-plugin $(PYTHON_JSONSCHEMAS) trees
+all: $(PYTHON_MODELS) pyang-json-schema-plugin $(PYTHON_RECORDS) pyang-json-schema-plugin $(PYTHON_JSONSCHEMAS) clean-plugin pyang-json-schema-plugin $(PYTHON_JSONSCHEMAS) trees
 
 trees: $(YANG_DESC_TREES) $(YANG_DESC_JSTREES) $(YANG_RECORD_TREES) $(YANG_RECORD_JSTREES)
 
@@ -115,5 +118,11 @@ clean-plugin:
 	$(Q)rm -rf pyang-json-schema-plugin
 
 clean:
-	$(Q)rm -rf build dist osm_im.egg-info deb deb_dist *.gz pyang pyangbind pyang-json-schema-plugin $(OUT_DIR) $(TREES_DIR)
+	$(Q)rm -rf build dist fog05_im.egg-info deb deb_dist *.gz pyang pyangbind pyang-json-schema-plugin $(OUT_DIR) $(TREES_DIR)
+	$(Q)rm -rf
 
+install:
+	python3 setup.py install
+
+uninstall:
+	pip3 remove fog05-im -y

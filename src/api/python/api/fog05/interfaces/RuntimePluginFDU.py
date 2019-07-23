@@ -20,6 +20,7 @@ from fog05.interfaces.Plugin import Plugin
 from fog05 import Yaks_Connector
 from fog05 import Yaks_Connector
 from fog05.DLogger import DLogger
+from fog05.interfaces.InfraFDU import InfraFDU
 
 class RuntimePluginFDU(Plugin):
 
@@ -36,50 +37,14 @@ class RuntimePluginFDU(Plugin):
 
         self.current_fdus = {}
 
-    def get_nm_plugin(self):
-        pls = self.connector.loc.actual.get_all_plugins(self.node)
-        nms = [x for x in pls if x.get('type') == 'network']
-        if len(nms) == 0:
-            raise RuntimeError('No network_manager present in the node!!')
-        nm = nms[0]
-        return nm
-
-    def get_os_plugin(self):
-        pls = self.connector.loc.actual.get_all_plugins(self.node)
-        os = [x for x in pls if x.get('type') == 'os']
-        if len(os) == 0:
-            raise RuntimeError('No os plugin present in the node!!')
-        os = os[0]
-        return os
-
-    def call_nw_plugin_function(self, fname, fparameters):
-        nm = self.get_nm_plugin().get('uuid')
-        res = self.connector.loc.actual.exec_nw_eval(
-            self.node, nm, fname, fparameters)
-        if res.get('error'):
-            raise ValueError('NM Eval returned {}'.format(res.get('error')))
-            # return None
-        return res.get('result')
-
-    def get_fdu_descriptor(self, fduid):
-        parameters = {'fdu_uuid': fduid}
-        fname = 'get_fdu_info'
-        return self.call_agent_function(fname, parameters)
-
     def wait_destination_ready(self, fduid, instanceid, destinationid):
-        parameter = {
-            'fdu_uuid':fduid,
-            'instance_uuid':instanceid,
-            'node_uuid':destinationid
-        }
-        fname = 'get_node_fdu_info'
         flag = False
         while not flag:
             try:
-                res = self.call_agent_function(fname, parameter)
+                res = self.agent.get_node_fdu_info(fduid, instanceid, destinationid)
                 while res.get('status') != 'LAND':
                     time.sleep(0.250)
-                    res = self.call_agent_function(fname, parameter)
+                    res = self.agent.get_node_fdu_info(fduid, instanceid, destinationid)
                 flag = True
             except:
                 pass
@@ -87,6 +52,7 @@ class RuntimePluginFDU(Plugin):
 
 
     def wait_dependencies(self):
+        self.get_agent()
         os = None
         while os is None:
             try:
@@ -102,43 +68,23 @@ class RuntimePluginFDU(Plugin):
         return
 
 
-
-    def get_destination_node_mgmt_net(self, destinationid):
-        parameters = {
-            'node_uuid': destinationid
-        }
-        fname = 'get_node_mgmt_address'
-        return self.call_agent_function(fname, parameters)
-
-
-    def get_image_info(self, imageid):
-        parameters = {
-            'image_uuid': imageid
-        }
-        fname = 'get_image_info'
-        return self.call_agent_function(fname, parameters)
-
-
-    def get_local_mgmt_address(self):
-        fname = 'local_mgmt_address'
-        return self.call_os_plugin_function(fname,{})
-
-
     def write_fdu_error(self, fdu_uuid, instance_uuid, errno, errmsg):
         record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
         if record is None:
             record = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
-        record.update({'status': 'ERROR'})
-        record.update({'error_code': errno})
-        record.update({'error_msg': '{}'.format(errmsg)})
-        self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid, record)
+        record = InfraFDU(record)
+        record.set_status('ERROR')
+        record.set_error_code(errno)
+        record.set_error_msg('{}'.format(errmsg))
+        self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid, record.to_json())
 
     def update_fdu_status(self, fdu_uuid, instance_uuid, status):
         record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
         if record is None:
             record = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
-        record.update({'status': status})
-        self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid,instance_uuid, record)
+        record = InfraFDU(record)
+        record.set_status(status)
+        self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid,instance_uuid, record.to_json())
 
     def get_local_instances(self, fdu_uuid):
         return self.connector.loc.actual.get_node_fdu_instances(self.node, fdu_uuid)

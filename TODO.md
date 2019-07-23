@@ -7,3 +7,13 @@
 - Plugins for Public/Private Clouds (AWS, Azure, GCP)/(OpenStack)
 - Scaling Up/Down in runtime plugins (LXD, KVM, and clouds...)
 - Web GUI for interaction
+
+
+
+
+
+
+
+CHECK THIS FOR PYTHON USER API AND PYTHON PLUGIN API
+
+https://github.com/5GCity/fog05/blob/meao_api_dev/mec/meao/meao_api/api.py

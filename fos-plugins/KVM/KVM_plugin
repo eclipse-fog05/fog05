@@ -25,8 +25,6 @@ import re
 import libvirt
 import ipaddress
 import threading
-import base64
-import binascii
 from mvar import MVar
 from fog05 import Yaks_Connector
 from fog05.DLogger import DLogger
@@ -77,26 +75,18 @@ class KVM(RuntimePluginFDU):
         self.logger.info('startRuntime()', '[ DONE ] KVM Plugin - Connecting to KVM')
 
         '''check if dirs exists if not exists create'''
-        # TODO change the implementation of call_os_plugin_function to mask the name of parameters
-        if self.call_os_plugin_function('dir_exists', {'dir_path': self.BASE_DIR}):
-            if not self.call_os_plugin_function('dir_exists', {'dir_path': os.path.join(self.BASE_DIR, self.DISK_DIR)}):
-                self.call_os_plugin_function(
-                    'create_dir', {'dir_path': os.path.join(self.BASE_DIR, self.DISK_DIR)})
-            if not self.call_os_plugin_function('dir_exists', {'dir_path': os.path.join(self.BASE_DIR, self.IMAGE_DIR)}):
-                self.call_os_plugin_function(
-                    'create_dir', {'dir_path': os.path.join(self.BASE_DIR, self.IMAGE_DIR)})
-            if not self.call_os_plugin_function('dir_exists', {'dir_path': os.path.join(self.BASE_DIR, self.LOG_DIR)}):
-                self.call_os_plugin_function(
-                    'create_dir', {'dir_path': os.path.join(self.BASE_DIR, self.LOG_DIR)})
+        if self.os.dir_exists(self.BASE_DIR):
+            if not self.os.dir_exists(os.path.join(self.BASE_DIR, self.DISK_DIR)):
+                self.os.create_dir(os.path.join(self.BASE_DIR, self.DISK_DIR))
+            if not self.os.dir_exists(os.path.join(self.BASE_DIR, self.IMAGE_DIR)):
+                self.os.create_dir(os.path.join(self.BASE_DIR, self.IMAGE_DIR))
+            if not self.os.dir_exists(os.path.join(self.BASE_DIR, self.LOG_DIR)):
+                self.os.create_dir(os.path.join(self.BASE_DIR, self.LOG_DIR))
         else:
-            self.call_os_plugin_function(
-                'create_dir', {'dir_path': os.path.join(self.BASE_DIR)})
-            self.call_os_plugin_function(
-                    'create_dir', {'dir_path': os.path.join(self.BASE_DIR, self.DISK_DIR)})
-            self.call_os_plugin_function(
-                    'create_dir', {'dir_path': os.path.join(self.BASE_DIR, self.IMAGE_DIR)})
-            self.call_os_plugin_function(
-                    'create_dir', {'dir_path': os.path.join(self.BASE_DIR, self.LOG_DIR)})
+            self.os.create_dir(os.path.join(self.BASE_DIR))
+            self.os.create_dir(os.path.join(self.BASE_DIR, self.DISK_DIR))
+            self.os.create_dir(os.path.join(self.BASE_DIR, self.IMAGE_DIR))
+            self.os.create_dir(os.path.join(self.BASE_DIR, self.LOG_DIR))
 
         self.connector.loc.desired.observe_node_runtime_fdus(self.node, self.uuid, self.__fdu_observer)
 
@@ -160,7 +150,7 @@ class KVM(RuntimePluginFDU):
         ####
 
         if self.is_uuid(fdu.get_image_uri()):
-            img = self.get_image_info(fdu.get_image_uri())
+            img = self.agent.get_image_info(fdu.get_image_uri())
             self.logger.info('define_fdu()', '[ INFO ] LXD Plugin - Img info: {}'.format(img))
             if img is None:
                 self.logger.error('define_fdu()', '[ ERRO ] KVM Plugin - Cannot find image {}'.format(fdu.get_image_uri()))
@@ -174,12 +164,12 @@ class KVM(RuntimePluginFDU):
         #self.logger.warning('define_fdu()', '[ WARN ] KVM Plugin - No image id specified defining from manifest information new image id uuid:{}'.format(fdu_uuid))
         if fdu.get_image_uri().startswith('http'):
             image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
-            self.call_os_plugin_function('download_file',{'url':fdu.get_image_uri(),'file_path':image_name})
+            self.os.download_file(fdu.get_image_uri(),image_name)
         elif fdu.get_image_uri().startswith('file://'):
             image_name = os.path.join(
                 self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
             cmd = 'cp {} {}'.format(fdu.get_image_uri()[len('file://'):], image_name)
-            self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
+            self.os.execute_command(cmd, blocking=True, external=False)
 
 
         img_info = {}
@@ -243,7 +233,7 @@ class KVM(RuntimePluginFDU):
             fdu_uuid = fdu.fdu_uuid
             if self.get_local_instances(fdu_uuid) == 1:
                 image_name = fdu.image.get('file')
-                self.call_os_plugin_function('remove_file',{'file_path':image_name})
+                self.os.remove_file(image_name)
                 self.images.pop(fdu_uuid)
                 self.flavors.pop(fdu_uuid)
 
@@ -310,28 +300,23 @@ class KVM(RuntimePluginFDU):
                     mac = intf.get('mac_address', self.__generate_random_mac())
                     if intf.get('if_type').upper() in ['PHYSICAL','BRIDGED']:
                         real_intf_name = intf.get('phy_face')
-                        if self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['ethernet']:
+                        if self.os.get_intf_type(real_intf_name) in ['ethernet']:
                             net_cfg.append({'name':intf_name, 'mac':mac, 'dev':real_intf_name,'type':'direct'})
-                            self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
-                        elif self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['wireless']:
+                            self.os.set_interface_unaviable(real_intf_name)
+                        elif self.os.get_intf_type(real_intf_name) in ['wireless']:
                             net_cfg.append({'name':intf_name, 'mac':mac, 'dev':real_intf_name,'type':'direct'})
-                            self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
+                            self.os.set_interface_unaviable(real_intf_name)
                         else:
                             net_cfg.append({'name':intf_name, 'mac':mac, 'dev':real_intf_name})
                     else:
                         intf_id = 'kvm-{}-{}'.format(fdu.get_short_id(), i)
                         intf_data = self.connector.loc.actual.get_node_port(self.node, self.nm, intf.get('cp_id'))
                         self.logger.info('configure_fdu()',' KVM Plugin - Configuring FDU - interface data {}'.format(intf_data))
-                        #####
-                        def get_port_descriptor(cpid):
-                            parameters = {'cp_uuid': cpid}
-                            fname = 'get_port_info'
-                            return self.call_agent_function(fname, parameters)
-                        ####
-                        cp_data = get_port_descriptor(intf_data['cp_uuid'])
+
+                        cp_data = self.agent.get_port_info(intf_data['cp_uuid'])
                         self.logger.info('configure_fdu()',' KVM Plugin - Configuring FDU - connection point data {}'.format(cp_data))
                         net_data = self.connector.loc.actual.get_node_network(self.node, self.nm, cp_data['pair_id'])
-                        #self.call_nw_plugin_function('create_virtual_interface', {'intf_id':intf_id, 'descriptor': intf})
+                        self.mn.create_virtual_interface(intf_id, intf)
 
                         #self.logger.info('configure_fdu()','KVM Plugin - Interface info {}'.format(intf_data))
                         #dev_name = intf_data.get('cp_name')
@@ -344,13 +329,11 @@ class KVM(RuntimePluginFDU):
 
             vm_xml = self.__generate_dom_xml(fdu, flavor, img, net_cfg)
             xml_file_name = 'kvm-{}.xml'.format(instance_uuid)
-            vm_xml_store = binascii.hexlify(base64.b64encode(bytes(vm_xml, 'utf-8'))).decode()
-            self.call_os_plugin_function('store_file',{'content':vm_xml_store, 'file_path':self.BASE_DIR, 'filename':xml_file_name})
+            self.os.store_file(vm_xml, self.BASE_DIR, xml_file_name)
 
             vendor_conf = self.__generate_vendor_data(instance_uuid, self.node)
             vendor_filename = 'vendor_{}.yaml'.format(instance_uuid)
-            vendor_conf = binascii.hexlify(base64.b64encode(bytes(vendor_conf, 'utf-8'))).decode()
-            self.call_os_plugin_function('store_file',{'content':vendor_conf, 'file_path':self.BASE_DIR, 'filename':vendor_filename})
+            self.os.store_file(vendor_conf, self.BASE_DIR, vendor_filename)
             vendor_filename = os.path.join(self.BASE_DIR, vendor_filename)
             ### creating cloud-init initial drive TODO: check all the possibilities provided by OSM
             conf_cmd = '{} --hostname {} --uuid {} --vendor-data {}'.format(os.path.join(self.DIR, 'templates',
@@ -362,14 +345,12 @@ class KVM(RuntimePluginFDU):
             #     if fdu.configuration.get('conf_type') in ['CLOUD_INIT']:
             #         c_init_file = fdu.configuration.get('script')
             #         data_filename = 'userdata_{}'.format(fdu_uuid)
-            #         userdata = binascii.hexlify(base64.b64encode(bytes(fdu.c_init_file, 'utf-8'))).decode()
-            #         self.call_os_plugin_function('store_file',{'content':userdata, 'file_path':self.BASE_DIR, 'filename':data_filename})
+            #         self.os.store_file(c_init_file, self.BASE_DIR, data_filename)
             #         data_filename = os.path.join(self.BASE_DIR, data_filename)
             #         conf_cmd = conf_cmd + ' --user-data {}'.format(data_filename)
             # if fdu.ssh_key is not None and fdu.ssh_key != '':
             #     key_filename = 'key_{}.pub'.format(fdu_uuid)
-            #     keydata = binascii.hexlify(base64.b64encode(bytes(fdu.ssh_key, 'utf-8'))).decode()
-            #     self.call_os_plugin_function('store_file',{'content':keydata, 'file_path':self.BASE_DIR, 'filename':key_filename})
+            #     self.os.store_file(fdu.ssh_key, self.BASE_DIR, key_filename)
             #     key_filename = os.path.join(self.BASE_DIR, key_filename)
             #     conf_cmd = conf_cmd + ' --ssh-key {}'.format(key_filename)
 
@@ -386,20 +367,20 @@ class KVM(RuntimePluginFDU):
 
             dd_cmd = 'dd if={} of={}'.format(img.get('base_image'), fdu.disk)
 
-            self.call_os_plugin_function('execute_command',{'command':qemu_cmd,'blocking':True, 'external':False})
-            self.call_os_plugin_function('execute_command',{'command':conf_cmd,'blocking':True, 'external':False})
-            self.call_os_plugin_function('execute_command',{'command':dd_cmd,'blocking':True, 'external':False})
+            self.os.execute_command(qemu_cmd,blocking= True)
+            self.os.execute_command(conf_cmd,blocking=True)
+            self.os.execute_command(dd_cmd, blocking=True)
 
             # if fdu.ssh_key is not None and fdu.ssh_key != '':
-            #     self.call_os_plugin_function('remove_file',{'file_path':key_filename})
+            #     self.os.remove_file(key_filename)
             # if fdu.configuration is not None:
             #     if fdu.configuration.get('conf_type') in ['CLOUD_INIT']:
-            #         self.call_os_plugin_function('remove_file',{'file_path':data_filename})
-            # self.call_os_plugin_function('remove_file',{'file_path':vendor_filename})
+            #         self.os.remove_file(data_filename)
+            # self.os.remove_file(vendor_filename)
 
             try:
                 self.conn.defineXML(vm_xml)
-            except libvirt.libvirtError as err:
+            except libvirt.libvirtError:
                 self.conn = libvirt.open('qemu:///system')
                 self.conn.defineXML(vm_xml)
 
@@ -436,20 +417,20 @@ class KVM(RuntimePluginFDU):
                 self.logger.error('clean_fdu()', 'KVM Plugin - Domain  not found!!')
 
             vmlog = '{}_log.log'.format(instance_uuid)
-            self.call_os_plugin_function('remove_file',{'file_path':fdu.cdrom})
-            self.call_os_plugin_function('remove_file',{'file_path':fdu.disk})
-            self.call_os_plugin_function('remove_file',{'file_path':os.path.join(self.BASE_DIR, self.LOG_DIR, vmlog)})
+            self.os.remove_file(fdu.cdrom)
+            self.os.remove_file(fdu.disk)
+            self.os.remove_file(os.path.join(self.BASE_DIR, self.LOG_DIR, vmlog))
             xml_file_name = 'kvm-{}.xml'.format(instance_uuid)
-            self.call_os_plugin_function('remove_file',{'file_path':os.path.join(self.BASE_DIR, xml_file_name)})
+            self.os.remove_file(os.path.join(self.BASE_DIR, xml_file_name))
 
             for i, intf in enumerate(fdu.get_interfaces()):
                 intf_name = intf.get('name')
                 if intf.get('if_type').upper() not in ['PHYSICAL','BRIDGED']:
                     intf_id = 'kvm-{}-{}'.format(fdu.get_short_id(), i)
-                    #self.call_nw_plugin_function('delete_virtual_interface',{'intf_id':intf_id})
+                    # self.nm.delete_virtual_interface(intf_id)
                 else:
                     real_intf_name = intf.get('phy_face')
-                    self.call_os_plugin_function('set_interface_available', {'intf_name': real_intf_name})
+                    self.os.set_interface_available(real_intf_name)
 
             for cp in fdu.get_connection_points():
                 cp_id = cp.get('uuid')
@@ -632,12 +613,12 @@ class KVM(RuntimePluginFDU):
 
             if fdu.get_image_uri().startswith('http'):
                 image_name = os.path.join(self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
-                self.call_os_plugin_function('download_file',{'url':fdu.get_image_uri(),'file_path':image_name})
+                self.os.download_file(fdu.get_image_uri(), image_name)
             elif fdu.get_image_uri().startswith('file://'):
                 image_name = os.path.join(
                     self.BASE_DIR, self.IMAGE_DIR, fdu.get_image_uri().split('/')[-1])
                 cmd = 'cp {} {}'.format(fdu.get_image_uri()[len('file://'):], image_name)
-                self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
+                self.os.execute_command(cmd, blocking=True)
 
             self.logger.info('migrate_fdu()', '[ DONE ] KVM Plugin - Destination Node creating image and flavor...')
 
@@ -699,18 +680,18 @@ class KVM(RuntimePluginFDU):
                     mac = intf.get('mac_address', self.__generate_random_mac())
                     if intf.get('if_type').upper() in ['PHYSICAL','BRIDGED']:
                         real_intf_name = intf.get('phy_face')
-                        if self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['ethernet']:
+                        if self.os.get_intf_type(real_intf_name) in ['ethernet']:
                             net_cfg.append({'name':intf_name, 'mac':mac, 'dev':real_intf_name,'type':'direct'})
-                            self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
-                        elif self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['wireless']:
+                            self.os.set_interface_unaviable(real_intf_name)
+                        elif self.os.get_intf_type(real_intf_name) in ['wireless']:
                             net_cfg.append({'name':intf_name, 'mac':mac, 'dev':real_intf_name,'type':'direct'})
-                            self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
+                            self.os.set_interface_unaviable(real_intf_name)
                         else:
                             net_cfg.append({'name':intf_name, 'mac':mac, 'dev':real_intf_name})
                     else:
                         intf_id = 'kvm-{}-{}'.format(fdu.get_short_id(), i)
                         intf_data = self.connector.loc.actual.get_node_port(self.node, self.nm, intf.get('cp_id')).get('properties')
-                        #self.call_nw_plugin_function('create_virtual_interface', {'intf_id':intf_id, 'descriptor': intf})
+                        # self.nm.create_virtual_interface(intf_id,intf)
                         self.logger.info('migrate_fdu()','KVM Plugin - Interface info {}'.format(intf_data))
                         dev_name = intf_data.get('cp_name')
                         net_cfg.append({'name':intf_name, 'mac':mac, 'dev':dev_name})
@@ -721,13 +702,11 @@ class KVM(RuntimePluginFDU):
 
             vm_xml = self.__generate_dom_xml(fdu, flavor, img, net_cfg)
             xml_file_name = 'kvm-{}.xml'.format(instance_uuid)
-            vm_xml_store = binascii.hexlify(base64.b64encode(bytes(vm_xml, 'utf-8'))).decode()
-            self.call_os_plugin_function('store_file',{'content':vm_xml_store, 'file_path':self.BASE_DIR, 'filename':xml_file_name})
+            self.os.store_file(vm_xml, self.BASE_DIR, xml_file_name)
 
             vendor_conf = self.__generate_vendor_data(instance_uuid, self.node)
             vendor_filename = 'vendor_{}.yaml'.format(instance_uuid)
-            vendor_conf = binascii.hexlify(base64.b64encode(bytes(vendor_conf, 'utf-8'))).decode()
-            self.call_os_plugin_function('store_file',{'content':vendor_conf, 'file_path':self.BASE_DIR, 'filename':vendor_filename})
+            self.os.store_file(vendor_conf, self.BASE_DIR, vendor_filename)
             vendor_filename = os.path.join(self.BASE_DIR, vendor_filename)
             ### creating cloud-init initial drive TODO: check all the possibilities provided by OSM
             conf_cmd = '{} --hostname {} --uuid {} --vendor-data {}'.format(os.path.join(self.DIR, 'templates',
@@ -739,14 +718,12 @@ class KVM(RuntimePluginFDU):
             #     if fdu.configuration.get('conf_type') in ['CLOUD_INIT']:
             #         c_init_file = fdu.configuration.get('script')
             #         data_filename = 'userdata_{}'.format(fdu_uuid)
-            #         userdata = binascii.hexlify(base64.b64encode(bytes(fdu.c_init_file, 'utf-8'))).decode()
-            #         self.call_os_plugin_function('store_file',{'content':userdata, 'file_path':self.BASE_DIR, 'filename':data_filename})
+            #         self.os.store_file(c_init_file, self.BASE_DIR, data_filename)
             #         data_filename = os.path.join(self.BASE_DIR, data_filename)
             #         conf_cmd = conf_cmd + ' --user-data {}'.format(data_filename)
             # if fdu.ssh_key is not None and fdu.ssh_key != '':
             #     key_filename = 'key_{}.pub'.format(fdu_uuid)
-            #     keydata = binascii.hexlify(base64.b64encode(bytes(fdu.ssh_key, 'utf-8'))).decode()
-            #     self.call_os_plugin_function('store_file',{'content':keydata, 'file_path':self.BASE_DIR, 'filename':key_filename})
+            #     self.os.store_file(fdu.ssh_key, self.BASE_DIR, key_filename)
             #     key_filename = os.path.join(self.BASE_DIR, key_filename)
             #     conf_cmd = conf_cmd + ' --ssh-key {}'.format(key_filename)
 
@@ -755,17 +732,20 @@ class KVM(RuntimePluginFDU):
             # THIS AS TO BE DONE IN DIFFERENT WAY
             dd_cmd = 'dd if={} of={}'.format(img.get('base_image'), fdu.disk)
 
-            self.call_os_plugin_function('execute_command',{'command':qemu_cmd,'blocking':True, 'external':False})
-            self.call_os_plugin_function('execute_command',{'command':conf_cmd,'blocking':True, 'external':False})
+            self.os.execute_command(qemu_cmd, blocking=True)
+            self.os.execute_command(conf_cmd, blocking=True)
 
             # THIS AS TO BE DONE IN DIFFERENT WAY
-            self.call_os_plugin_function('execute_command',{'command':dd_cmd,'blocking':True, 'external':False})
+            self.os.execute_command(dd_cmd,blocking=True)
             # if fdu.ssh_key is not None and fdu.ssh_key != '':
-            #     self.call_os_plugin_function('remove_file',{'file_path':key_filename})
+            #     self.os.remove_file(key_filename)
             # if fdu.configuration is not None:
             #     if fdu.configuration.get('conf_type') in ['CLOUD_INIT']:
-            #         self.call_os_plugin_function('remove_file',{'file_path':data_filename})
-            self.call_os_plugin_function('remove_file',{'file_path':vendor_filename})
+            #         self.os.remove_file(data_filename)
+            # self.os.remove_file(vendor_filename)
+
+
+            self.os.remove_file(vendor_filename)
 
             record.update({'status': 'LAND'})
             self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid, record)
@@ -836,7 +816,7 @@ class KVM(RuntimePluginFDU):
 
                     c_net = {}
                     for i in record.get('interfaces'):
-                        ip = self.call_nw_plugin_function('get_address', {'mac_address':i.get('mac_address','')})
+                        ip = self.nm.get_address(i.get('mac_address',''))
                         # c_net.append(
                         #     {'name': i['vintf_name'],
                         #     'mac_address': i.get('mac_address',''),
@@ -888,7 +868,7 @@ class KVM(RuntimePluginFDU):
         if image is None:
             self.logger.info('__remove_image()', ' KVM Plugin - Image not found!!')
             return
-        self.call_os_plugin_function('remove_file',{'file_path':image.get('path')})
+        self.os.remove_file(image.get('path'))
         self.images.pop(image_uuid)
         self.connector.loc.actual.remove_node_image(self.node, self.uuid,image_uuid)
 
@@ -975,7 +955,7 @@ class KVM(RuntimePluginFDU):
                 self.undefine_fdu(fdu_uuid)
 
     def __generate_dom_xml(self, fdu, flavor, image, net_cfg):
-        template_xml = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vm.xml'), 'root':False})
+        template_xml = self.os.read_file(os.path.join(self.DIR, 'templates', 'vm.xml'))
         vm_xml = Environment().from_string(template_xml)
         vm_xml = vm_xml.render(name=fdu.name, uuid=fdu.uuid, memory=int(flavor.get('memory')),
                                cpu=flavor.get('cpu'), disk_image=fdu.disk,
@@ -983,7 +963,7 @@ class KVM(RuntimePluginFDU):
         return vm_xml
 
     def __generate_vendor_data(self, entityid, nodeid):
-        vendor_yaml = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vendor_data.yaml'), 'root':False})
+        vendor_yaml = self.os.read_file(os.path.join(self.DIR, 'templates', 'vendor_data.yaml'))
         vendor_conf = Environment().from_string(vendor_yaml)
         vendor_conf = vendor_conf.render(nodeid=nodeid, entityid=entityid)
         return vendor_conf
