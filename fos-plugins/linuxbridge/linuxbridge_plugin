@@ -330,8 +330,8 @@ class LinuxBridge(NetworkPlugin):
             'stop':cmd_stop
         }
         self.ports.update({cp_id: cp_info})
-        if descriptor.get("pair_id") is not None:
-            pair_id = descriptor.get("pair_id")
+        if descriptor.get("internal_vld_ref") is not None:
+            pair_id = descriptor.get("internal_vld_ref")
             self.connect_cp_to_vnetwork(cp_id, pair_id)
         properties = {
             'int_name': int_name,
@@ -351,8 +351,8 @@ class LinuxBridge(NetworkPlugin):
             self.logger.error('delete_port','{} does not exist'.format(cp_id))
             return False
         stop_file = port_info.get('stop')
-        if port_info.get('descriptor').get('pair_id') is not None:
-            pair_id = port_info.get('descriptor').get('pair_id')
+        if port_info.get('descriptor').get('internal_vld_ref') is not None:
+            pair_id = port_info.get('descriptor').get('internal_vld_ref')
             self.disconnect_cp(cp_id)
         self.os.execute_command(stop_file,blocking=True, external=True)
         self.os.remove_file(stop_file)
@@ -1041,7 +1041,7 @@ class LinuxBridge(NetworkPlugin):
         self.logger.info('__get_cp_routers()', 'Scanning FDU Interfaces')
         for c in fdud['connection_points']:
             if c['uuid'] == cp_rec['cp_uuid']:
-                netid = c['pair_id']
+                netid = c['internal_vld_ref']
 
         self.logger.info('__get_cp_routers()', 'CP is connected to {}'.format(netid))
         if netid is '':
