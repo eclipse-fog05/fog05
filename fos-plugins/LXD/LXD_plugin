@@ -831,7 +831,7 @@ class LXD(RuntimePluginFDU):
                 record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_id)
                 record = LXDFDU(record)
                 if record.get_status() not in ['LAND', 'TAKE_OFF','MIGRATE']:
-                    self.logger.info('__monitor_instance()','[ INFO ] LXD Plugin - Updating status of {}'.format(fdu_uuid))
+                    self.logger.info('__monitor_instance()','[ INFO ] LXD Plugin - Updating status of {} - {}'.format(instance_id, instance_name))
                     c = self.conn.containers.get(instance_name)
                     cs = c.state()
                     detailed_state = {}
@@ -844,15 +844,16 @@ class LXD(RuntimePluginFDU):
                             ip = ''
                         # Getting address from LXD if unable from network manager, eg. if connected to physical device/lxd bridge
                         if ip == '':
-                            lxd_net_info_addrs = cs.network[i['vintf_name']]['addresses']
-                            for a in lxd_net_info_addrs:
-                                if a['family'] == 'inet':
-                                    ip = a['address']
+                            if cs.network is not None:
+                                lxd_net_info_addrs = cs.network[i['vintf_name']]['addresses']
+                                for a in lxd_net_info_addrs:
+                                    if a['family'] == 'inet':
+                                        ip = a['address']
                         c_net.update(
                             {
-                                i.vintf_name:
+                                i.get('vintf_name'):
                                 {
-                                'hwaddr': i.mac_address,
+                                'hwaddr': i.get('mac_address'),
                                 'addresses': [
                                     {'address': ip}
                                     ]
@@ -866,7 +867,7 @@ class LXD(RuntimePluginFDU):
                     detailed_state.update({'memory': cs.memory})
 
                     record.set_hypervisor_info(detailed_state)
-                    self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_id, record)
+                    self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_id, record.to_json())
 
                 # if c.status == 'Stopped':
                 #    self.logger.info('__monitor_instance()','[ INFO ] LXD Plugin - Stopping monitoring of Container uuid {}'.format(fdu_uuid))

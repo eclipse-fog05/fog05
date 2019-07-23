@@ -183,6 +183,8 @@ class LinuxBridge(NetworkPlugin):
 
     def get_address(self, mac_address):
         self.logger.info('get_address()', 'Linux Bridge Plugin - Getting IP address for  {}'.format(mac_address))
+        if mac_address == '':
+            return {'result': ''}
 
         # LEASE FILE FORMAT
         # 1560518377 00:16:3e:5e:a8:fa 192.168.123.13 holy-gar 01:00:16:3e:5e:a8:fa
@@ -193,7 +195,7 @@ class LinuxBridge(NetworkPlugin):
                 n_small_id = netid.split('-')[0]
                 path = os.path.join(self.BASE_DIR, self.DHCP_DIR)
                 lease_file = os.path.join(path,'net_{}_leases'.format(n_small_id))
-                if self.os.read_file(lease_file):
+                if self.os.read_file(lease_file, root=True):
                     res = self.os.read_file(lease_file).split('\n')
                     for l in res:
                         tok = l.split(' ')

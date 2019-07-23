@@ -130,7 +130,7 @@ class InfraFDU(object):
             'hypervisor_info': self.hypervisor_info
         }
         check_obj = infra_fdu.infra_fdu()
-        pybindJSONDecoder.load_ietf_json({'fdu_record':data}, None, None, obj=check_obj)
+        pybindJSONDecoder.load_ietf_json({'fdu_record':data.update({'hypervisor_info':json.dumps('hypervisor_info')})}, None, None, obj=check_obj)
         return data
 
     def get_short_id(self):
