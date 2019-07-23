@@ -132,7 +132,7 @@ class LXD(RuntimePluginFDU):
                 self.logger.error('stop_runtime()', 'Error {}, continuing'.format(e))
                 pass
 
-            # if fdu.get_state() == State.DEFINED:
+            # if fdu.get_status() == State.DEFINED:
             #     self.undefine_fdu(k)
         keys = list(self.images.keys())
         for k in keys:
@@ -286,7 +286,7 @@ class LXD(RuntimePluginFDU):
             self.logger.error('undefine_fdu()', 'LXD Plugin - FDU not exists')
             raise FDUNotExistingException('FDU not existing',
                                              'FDU {} not in runtime {}'.format(instance_uuid, self.uuid))
-        elif fdu.get_state() != State.DEFINED:
+        elif fdu.get_status() != State.DEFINED:
             self.logger.error('undefine_fdu()', 'LXD Plugin - FDU state is wrong, or transition not allowed')
             raise StateTransitionNotAllowedException('FDU is not in DEFINED state',
                                                      'FDU {} is not in DEFINED state'.format(instance_uuid))
@@ -340,7 +340,7 @@ class LXD(RuntimePluginFDU):
             self.logger.error('configure_fdu()', 'LXD Plugin - FDU not exists')
             raise FDUNotExistingException('FDU not existing',
                                              'FDU {} not in runtime {}'.format(instance_uuid, self.uuid))
-        elif fdu.get_state() != State.DEFINED:
+        elif fdu.get_status() != State.DEFINED:
             self.logger.error('configure_fdu()', 'LXD Plugin - FDU state is wrong, or transition not allowed')
             raise StateTransitionNotAllowedException('FDU is not in DEFINED state',
                                                      'FDU {} is not in DEFINED state'.format(instance_uuid))
@@ -447,7 +447,7 @@ class LXD(RuntimePluginFDU):
             self.logger.error('clean_fdu()', 'LXD Plugin - FDU not exists')
             raise FDUNotExistingException('FDU not existing',
                                              'FDU {} not in runtime {}'.format(instance_uuid, self.uuid))
-        elif fdu.get_state() != State.CONFIGURED:
+        elif fdu.get_status() != State.CONFIGURED:
             self.logger.error('clean_fdu()', 'LXD Plugin - FDU state is wrong, or transition not allowed')
             raise StateTransitionNotAllowedException('FDU is not in CONFIGURED state',
                                                      'FDU {} is not in CONFIGURED state'.format(instance_uuid))
@@ -489,7 +489,7 @@ class LXD(RuntimePluginFDU):
             self.logger.error('run_fdu()', 'LXD Plugin - FDU not exists')
             raise FDUNotExistingException('FDU not existing',
                                              'FDU {} not in runtime {}'.format(instance_uuid, self.uuid))
-        elif fdu.get_state() != State.CONFIGURED:
+        elif fdu.get_status() != State.CONFIGURED:
             self.logger.error('run_fdu()', 'LXD Plugin - FDU state is wrong, or transition not allowed')
             raise StateTransitionNotAllowedException('FDU is not in CONFIGURED state',
                                                      'FDU {} is not in CONFIGURED state'.format(instance_uuid))
@@ -532,7 +532,7 @@ class LXD(RuntimePluginFDU):
             self.logger.error('stop_fdu()', 'LXD Plugin - FDU not exists')
             raise FDUNotExistingException('FDU not existing',
                                              'FDU {} not in runtime {}'.format(instance_uuid, self.uuid))
-        elif fdu.get_state() != State.RUNNING:
+        elif fdu.get_status() != State.RUNNING:
             self.logger.error('stop_fdu()', 'LXD Plugin - FDU state is wrong, or transition not allowed')
             raise StateTransitionNotAllowedException('FDU is not in RUNNING state',
                                                      'FDU {} is not in RUNNING state'.format(instance_uuid))
@@ -567,7 +567,7 @@ class LXD(RuntimePluginFDU):
             self.logger.error('pause_fdu()', 'LXD Plugin - FDU not exists')
             raise FDUNotExistingException('FDU not existing',
                                              'FDU {} not in runtime {}'.format(instance_uuid, self.uuid))
-        elif fdu.get_state() != State.RUNNING:
+        elif fdu.get_status() != State.RUNNING:
             self.logger.error('pause_fdu()', 'LXD Plugin - FDU state is wrong, or transition not allowed')
             raise StateTransitionNotAllowedException('FDU is not in RUNNING state',
                                                      'FDU {} is not in RUNNING state'.format(instance_uuid))
@@ -589,7 +589,7 @@ class LXD(RuntimePluginFDU):
             self.logger.error('resume_fdu()', 'LXD Plugin - FDU not exists')
             raise FDUNotExistingException('FDU not existing',
                                              'FDU {} not in runtime {}'.format(instance_uuid, self.uuid))
-        elif fdu.get_state() != State.PAUSED:
+        elif fdu.get_status() != State.PAUSED:
             self.logger.error('resume_fdu()', 'LXD Plugin - FDU state is wrong, or transition not allowed')
             raise StateTransitionNotAllowedException('FDU is not in PAUSED state',
                                                      'FDU {} is not in PAUSED state'.format(instance_uuid))
@@ -976,19 +976,19 @@ class LXD(RuntimePluginFDU):
         if fdu is None:
             self.logger.error('stop_fdu()', 'LXD Plugin - FDU not exists')
         else:
-            if fdu.get_state() == State.PAUSED:
+            if fdu.get_status() == State.PAUSED:
                 self.resume_fdu(fdu_uuid)
                 self.stop_fdu(fdu_uuid)
                 self.clean_fdu(fdu_uuid)
                 self.undefine_fdu(fdu_uuid)
-            if fdu.get_state() == State.RUNNING:
+            if fdu.get_status() == State.RUNNING:
                 self.stop_fdu(fdu_uuid)
                 self.clean_fdu(fdu_uuid)
                 self.undefine_fdu(fdu_uuid)
-            if fdu.get_state() == State.CONFIGURED:
+            if fdu.get_status() == State.CONFIGURED:
                 self.clean_fdu(fdu_uuid)
                 self.undefine_fdu(fdu_uuid)
-            if fdu.get_state() == State.DEFINED:
+            if fdu.get_status() == State.DEFINED:
                 self.undefine_fdu(fdu_uuid)
 
     def __get_bridge_names_from_instance_networks(self, instance_networks):

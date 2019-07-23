@@ -542,7 +542,11 @@ class FIMAPI(object):
                 raise ValueError('FDU with this UUID not found in the catalog')
 
             res = self.connector.glob.actual.define_fdu_in_node(self.sysid, self.tenantid, node_uuid, fduid)
-            return res
+            if res.get('error') is not None:
+                raise ValueError('Got Error {}'.format(res['error']))
+            if wait:
+                self.__wait_node_fdu_state_change(res['result']['uuid'],'DEFINE')
+            return res['result']
 
 
         def undefine(self, instanceid, wait=True):
@@ -791,10 +795,11 @@ class FIMAPI(object):
             :param nodeid: node where instantiate
             :return instance uuid
             '''
-            instance_id = self.define(fduid, nodeid)
+            instance_info= self.define(fduid, nodeid)
+            instance_id = instance_info['uuid']
             self.configure(instance_id)
             self.start(instance_id)
-            return instance_id
+            return instance_info
 
         def terminate(self, instanceid, wait=True):
             '''

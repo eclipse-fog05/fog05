@@ -63,6 +63,7 @@ class InfraFDU(object):
             self.fdu_id = self.fdu.fdu_record.fdu_id
             self.image = data.get('image', None)
             self.command = data.get('command', None)
+            self.status = data.get('status')
             self.storage = data.get('storage')
             self.computation_requirements = data.get('computation_requirements')
             self.geographical_requirements = data.get('geographical_requirements', None)
