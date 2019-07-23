@@ -502,15 +502,11 @@ class FIMAPI(object):
             :return the fdu uuid
 
             '''
-            nodes = self.connector.glob.get_all_nodes(self.sysid, self.tenantid)
+            nodes = self.connector.glob.actual.get_all_nodes(self.sysid, self.tenantid)
             if len(nodes) == 0:
                 raise SystemError("No nodes in the system!")
             n = random.choice(nodes)
 
-            fduid = descriptor.get_uuid()
-            if fduid is None:
-                fduid = '{}'.format(uuid.uuid4())
-                descriptor.set_uuid(fduid)
             res = self.connector.glob.actual.onboard_fdu_from_node(self.sysid, self.tenantid, n, descriptor.get_uuid(), descriptor.to_json())
             return res
 
@@ -524,7 +520,7 @@ class FIMAPI(object):
             :return the fdu uuid
 
             '''
-            res = self.connector.glob.desired.remove_fdu_info(
+            res = self.connector.glob.desired.remove_catalog_fdu_info(
                 self.sysid, self.tenantid, fdu_uuid)
             return fdu_uuid
 
@@ -540,7 +536,7 @@ class FIMAPI(object):
              returning
             :return: instance id
             '''
-            desc = self.connector.glob.actual.get_fdu_info(
+            desc = self.connector.glob.actual.get_catalog_fdu_info(
                 self.sysid, self.tenantid, fduid)
             if desc is None:
                 raise ValueError('FDU with this UUID not found in the catalog')
@@ -828,7 +824,7 @@ class FIMAPI(object):
             #     i_uuid = k.split('/')[-1]
             #     i.update({i_uuid: v})
             # return {entity_uuid: i}
-            return self.connector.glob.actual.get_fdu_info(self.sysid, self.tenantid, fdu_uuid)
+            return self.connector.glob.actual.get_catalog_fdu_info(self.sysid, self.tenantid, fdu_uuid)
 
         def instance_info(self, instanceid):
             '''
@@ -891,7 +887,7 @@ class FIMAPI(object):
             :param node_uuid: optional node uuid
             :return: dictionary {node uuid: {entity uuid: instance list} list}
             '''
-            return self.connector.glob.actual.get_all_fdus(self.sysid, self.tenantid)
+            return self.connector.glob.actual.get_catalog_all_fdus(self.sysid, self.tenantid)
 
 
     class Image(object):

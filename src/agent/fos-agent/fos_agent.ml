@@ -302,7 +302,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           let fduid = Apero.Uuid.to_string @@ Apero.Uuid.make_from_alias descriptor.id in
           {descriptor with uuid = Some fduid}
       in
-      Yaks_connector.Global.Desired.add_catalog_fdu_info sys_id Yaks_connector.default_tenant_id (Apero.Option.get descriptor.uuid) descriptor state.yaks
+      Yaks_connector.Global.Actual.add_catalog_fdu_info sys_id Yaks_connector.default_tenant_id (Apero.Option.get descriptor.uuid) descriptor state.yaks
       >>= fun _ ->
       let js = JSON.of_string (User.Descriptors.FDU.string_of_descriptor descriptor) in
       let eval_res = FAgentTypes.{result = Some js ; error=None} in
@@ -668,7 +668,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
              let fduid = Apero.Uuid.to_string @@ Apero.Uuid.make_from_alias fdu.id in
              {fdu with uuid = Some fduid}
          in
-         Yaks_connector.Global.Actual.add_catalog_fdu_info sys_id Yaks_connector.default_tenant_id fdu.id fdu self.yaks >>= Lwt.return
+         Yaks_connector.Global.Actual.add_catalog_fdu_info sys_id Yaks_connector.default_tenant_id (Apero.Option.get fdu.uuid) fdu self.yaks >>= Lwt.return
        | None -> Lwt.return_unit
       )
     | true ->

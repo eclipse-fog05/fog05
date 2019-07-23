@@ -57,8 +57,7 @@ class InfraFDU(object):
         if data is not None:
             # data = json.loads(data)
             data.update({'hypervisor_info':json.dumps(data['hypervisor_info'])})
-            data = {'fdu_record':data}
-            pybindJSONDecoder.load_ietf_json(data, None, None, obj=self.fdu)
+            pybindJSONDecoder.load_ietf_json({'fdu_record':data}, None, None, obj=self.fdu)
             self.enforce()
             self.uuid = self.fdu.fdu_record.uuid
             self.fdu_id = self.fdu.fdu_record.fdu_id
@@ -125,6 +124,7 @@ class InfraFDU(object):
             'connection_points': self.connection_points,
             'depends_on': self.depends_on,
             'error_code': self.error_code,
+            'error_msg': self.error_msg,
             'migration_properties': self.migration_properties,
             'hypervisor_info': self.hypervisor_info
         }
@@ -296,4 +296,4 @@ class InfraFDU(object):
         raise NotImplementedError('This is and interface!')
 
     def __str__(self):
-        return "FDU Record UUID: {} FDU_ID: {}".format(self.fdu.fdu_record.uuid, self.fdu.fdu_record.fdu_id)
+        return "FDU Record UUID: {} FDU_ID: {}".format(self.uuid, self.fdu_id)

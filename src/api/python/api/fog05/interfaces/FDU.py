@@ -36,11 +36,45 @@ class FDU(object):
 
         self.fdu = user_fdu.user_fdu()
         self.encoder = pybindJSONEncoder()
+        self.id = None
+        self.uuid = None
+        self.name = None
+        self.description = None
+        self.image = {}
+        self.command = {}
+        self.storage = []
+        self.computation_requirements = {}
+        self.geographical_requirements = {}
+        self.energy_requirements = {}
+        self.hypervisor = None
+        self.migration_kind = None
+        self.configuration = {}
+        self.interfaces = []
+        self.io_ports = []
+        self.connection_points = []
+        self.depends_on = []
         if data is not None:
-            # data = json.loads(data)
-            data = {'fdu_descriptor':data}
-            pybindJSONDecoder.load_ietf_json(data, None, None, obj=self.fdu)
+            pybindJSONDecoder.load_ietf_json({'fdu_descriptor':data}, None, None, obj=self.fdu)
             self.enforce()
+
+            self.id = self.fdu.fdu_descriptor.id
+            self.uuid = data.get('uuid', None)
+            self.image = data.get('image', None)
+            self.command = data.get('command', None)
+            self.name =  data.get('name')
+            self.description =  data.get('description', None)
+            self.storage = data.get('storage')
+            self.computation_requirements = data.get('computation_requirements')
+            self.geographical_requirements = data.get('geographical_requirements', None)
+            self.energy_requirements = data.get('energy_requirements', None)
+            self.hypervisor = data.get('hypervisor')
+            self.migration_kind = data.get('migration_kind')
+            self.configuration = data.get('configuration', None)
+            self.interfaces = data.get('interfaces')
+            self.io_ports = data.get('io_ports')
+            self.connection_points = data.get('connection_points')
+            self.depends_on = data.get('depends_on')
+
 
     def enforce(self):
         if self.fdu.fdu_descriptor.id == '':
@@ -59,36 +93,142 @@ class FDU(object):
             raise ValueError('FDU.Migration_Kind cannot be empty')
 
     def to_json(self):
-        data = self.encoder.encode(self.fdu)
-        data = json.loads(data)
-        return data['fdu_descriptor']
+        data = {
+            'uuid': self.uuid,
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'image': self.image,
+            'command': self.command,
+            'storage': self.storage,
+            'computation_requirements': self.computation_requirements,
+            'geographical_requirements': self.geographical_requirements,
+            'energy_requirements': self.energy_requirements,
+            'hypervisor': self.hypervisor,
+            'migration_kind': self.migration_kind,
+            'configuration': self.configuration,
+            'interfaces': self.interfaces,
+            'io_ports': self.io_ports,
+            'connection_points': self.connection_points,
+            'depends_on': self.depends_on,
+        }
+        check_obj = user_fdu.user_fdu()
+        pybindJSONDecoder.load_ietf_json({'fdu_descriptor':data}, None, None, obj=check_obj)
+        return data
 
     def get_uuid(self):
-        return self.fdu.fdu_descriptor.uuid
+        return self.uuid
 
-    def set_uuid(self, uuid):
-        self.fdu.fdu_descriptor.uuid = uuid
+    def set_uuid(self, uuid) :
+        self.uuid = uuid
 
     def get_id(self):
-        return self.fdu.fdu_descriptor.id
+        return self.id
+
+    def set_id(self, id) :
+        self.id = id
+
+    def get_description(self):
+        return self.description
+
+    def set_description(self, description) :
+        self.description = description
 
     def get_name(self):
-        return self.fdu.fdu_descriptor.name
+        return self.name
+
+    def set_name(self, name) :
+        self.name = name
+
+    def get_image(self):
+        return self.image
+
+    def set_image(self, image) :
+        self.image = image
 
     def get_image_uri(self):
-        return self.fdu.fdu_descriptor.base_image.uri
+        return self.image.get('uri')
 
-    def get_image_checksum(self):
-        return self.fdu.fdu_descriptor.base_image.checksum
+    def set_image_uri(self, uri) :
+        self.image.update({'uri':uri})
+
+    def get_image_uuid(self):
+        return self.image.get('uuid')
+
+    def set_image_uuid(self, uuid) :
+        self.image.update({'uuid':uuid})
 
     def get_image_format(self):
-        return self.fdu.fdu_descriptor.base_image.format
+        return self.image.get('format')
+
+    def set_image_format(self, format) :
+        self.image.update({'format':format})
+
+    def get_command(self):
+        return self.command
+
+    def set_command(self, command) :
+        self.command = command
+
+    def get_storage(self):
+        return self.storage
+
+    def set_storage(self, storage) :
+        self.storage = storage
+
+    def get_computation_requirements(self):
+        return self.computation_requirements
+
+    def set_computation_requirements(self, computation_requirements) :
+        self.computation_requirements = computation_requirements
+
+    def get_geographical_requirements(self):
+        return self.geographical_requirements
+
+    def set_geographical_requirements(self, geographical_requirements) :
+        self.geographical_requirements = geographical_requirements
+
+    def get_energy_requirements(self):
+        return self.energy_requirements
+
+    def set_energy_requirements(self, energy_requirements) :
+        self.energy_requirements = energy_requirements
+
+    def get_hypervisor(self):
+        return self.hypervisor
+
+    def set_hypervisor(self, hypervisor) :
+        self.hypervisor = hypervisor
+
+    def get_configuration(self):
+        return self.configuration
+
+    def set_configuration(self, configuration) :
+        self.configuration = configuration
+
+    def get_io_ports(self):
+        return self.io_ports
+
+    def set_io_ports(self, io_ports) :
+        self.io_ports = io_ports
 
     def get_interfaces(self):
-        return self.fdu.fdu_descriptor.interfaces
+        return self.interfaces
+
+    def set_interfaces(self, interfaces) :
+        self.interfaces = interfaces
 
     def get_connection_points(self):
-        return self.fdu.fdu_descriptor.connection_points
+        return self.connection_points
+
+    def set_connection_points(self, connection_points) :
+        self.connection_points = connection_points
+
+    def get_depends_on(self):
+        return self.depends_on
+
+    def set_depends_on(self, depends_on) :
+        self.depends_on = depends_on
 
     def __str__(self):
-        return "Name : {} ID: {}".format(self.fdu.fdu_descriptor.name, self.fdu.fdu_descriptor.id)
+        return "Name : {} ID: {}".format(self.name, self.id)
