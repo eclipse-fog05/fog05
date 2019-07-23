@@ -357,7 +357,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
             match e.cp_id with
             | Some cp_id ->
               let cp =  List.find (fun (cp:Infra.Descriptors.FDU.connection_point_record) -> cp_id = cp.cp_id ) cp_records
-              in Some cp.cp_id
+              in Some cp.uuid
             | None -> None
           in
           Infra.Descriptors.FDU.{name = e.name; is_mgmt = e.is_mgmt; if_type = e.if_type;

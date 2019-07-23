@@ -65,7 +65,6 @@ class LXD(RuntimePluginFDU):
         self.images = {}
         self.flavors = {}
         self.mon_th = {}
-        self.nm = self.get_nm_plugin().get('uuid')
         signal.signal(signal.SIGINT, self.__catch_signal)
         signal.signal(signal.SIGTERM, self.__catch_signal)
 
@@ -377,10 +376,10 @@ class LXD(RuntimePluginFDU):
                     #     'cp_uuid':cp_id,
                     #     'status':'CREATE'
                     # }
-                    self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id, cp)
-                    res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
+                    self.connector.loc.desired.add_node_port(self.node, self.nm.uuid, cp_id, cp)
+                    res = self.connector.loc.actual.get_node_port(self.node, self.nm.uuid, cp_id)
                     while res is None:
-                        res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
+                        res = self.connector.loc.actual.get_node_port(self.node, self.nm.uuid, cp_id)
                     cp.update({'status' :'CONNECTED'})
                     # record.get('connection_points').append(cp_id)
 
@@ -471,9 +470,9 @@ class LXD(RuntimePluginFDU):
                 self.logger.info('clean_fdu()', 'LXD Plugin - CP: {}'.format(cp))
                 cp_id = cp.get('uuid')
                 self.logger.info('clean_fdu()','Asking for the deletion of connetion_point {}'.format(cp_id))
-                cp = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
+                cp = self.connector.loc.actual.get_node_port(self.node, self.nm.uuid, cp_id)
                 cp.update({'status' :'DESTROY'})
-                self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id, cp)
+                self.connector.loc.desired.add_node_port(self.node, self.nm.uuid, cp_id, cp)
                 # self.nm.delete_port(cp_id)
 
             self.current_fdus.update({instance_uuid: fdu})
@@ -764,10 +763,10 @@ class LXD(RuntimePluginFDU):
                 # cp_record = {
                 #     'cp_uuid':cp_id,
                 #     'status':'CREATE'}
-                self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id,cp)
-                res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
+                self.connector.loc.desired.add_node_port(self.node, self.nm.uuid, cp_id,cp)
+                res = self.connector.loc.actual.get_node_port(self.node, self.nm.uuid, cp_id)
                 while res is None:
-                    res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
+                    res = self.connector.loc.actual.get_node_port(self.node, self.nm.uuid, cp_id)
                 cp.update({'status' :'CONNECTED'})
             i = 0
             for intf in fdu.get_interfaces().values():
@@ -838,7 +837,7 @@ class LXD(RuntimePluginFDU):
                     detailed_state = {}
 
                     c_net = {}
-                    for i in list(record.get_interfaces().values()):
+                    for i in record.get_interfaces():
                         try:
                             ip = self.nm.get_address(i.get('mac_address',''))
                         except ValueError:
@@ -914,13 +913,13 @@ class LXD(RuntimePluginFDU):
 
         i = 0
         interfaces = []
-        for intf in list(fdu.get_interfaces().values()):
+        for intf in fdu.get_interfaces():
             intf_name = intf.get('vintf_name')
             self.logger.info('__generate_custom_profile_devices_configuration()','Interface Info {}'.format(intf))
             mac = intf.get('mac_address', self.__generate_random_mac())
             intf.update({'mac_address': mac})
 
-            if intf.if_type.upper() in ['PHYSICAL','BRIDGED']:
+            if intf.get('if_type').upper() in ['PHYSICAL','BRIDGED']:
                 real_intf_name = intf.get('phy_face')
                 if self.os.get_intf_type(real_intf_name) in ['ethernet']:
                     nw_v = json.loads(str(template_value_macvlan_mac % (intf_name, real_intf_name, mac)))
@@ -930,14 +929,14 @@ class LXD(RuntimePluginFDU):
                     self.os.set_interface_unaviable(real_intf_name)
                 else:
                     nw_v = json.loads(str(template_value_bridge_mac % (intf_name, real_intf_name, mac)))
-                interfaces.append(real_intf_name)
+                interfaces.append(intf)
             else:
                 intf_id = 'lxd-{}-{}'.format(fdu.get_short_id(), i)
                 intf_data = self.nm.create_virtual_interface(intf_id, intf)
                 self.logger.info('__generate_custom_profile_userdata_configuration()','LXD Plugin - Interface info {}'.format(intf_data))
                 dev_name = intf_data.get('intf_name')
                 nw_v = json.loads(str(template_vintf % (intf_name, dev_name, mac)))
-                interfaces.append(intf_id)
+                interfaces.append(intf)
             devices.update({intf_name: nw_v})
             i += 1
 
