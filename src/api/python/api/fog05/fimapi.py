@@ -840,7 +840,9 @@ class FIMAPI(object):
             :return dict containing the fdu record and hypervisor informations
 
             '''
-            return self.connector.glob.actual.get_node_fdu_instance(self.sysid, self.tenantid, "*", instanceid)
+            data = self.connector.glob.actual.get_node_fdu_instance(self.sysid, self.tenantid, "*", instanceid)
+            fdu = InfraFDU(data)
+            return fdu.to_json()
 
         def get_nodes(self, fdu_uuid):
             '''

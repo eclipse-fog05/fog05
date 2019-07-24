@@ -195,7 +195,7 @@ class LinuxBridge(NetworkPlugin):
                 n_small_id = netid.split('-')[0]
                 path = os.path.join(self.BASE_DIR, self.DHCP_DIR)
                 lease_file = os.path.join(path,'net_{}_leases'.format(n_small_id))
-                if self.os.read_file(lease_file, root=True):
+                if self.os.read_file(lease_file):
                     res = self.os.read_file(lease_file).split('\n')
                     for l in res:
                         tok = l.split(' ')

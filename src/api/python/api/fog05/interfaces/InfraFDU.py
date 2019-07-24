@@ -19,6 +19,7 @@ from fog05_im import infra_fdu
 from pyangbind.lib.serialise import pybindJSONDecoder
 from pyangbind.lib.serialise import pybindJSONEncoder
 from collections import OrderedDict
+import copy
 
 class InfraFDU(object):
 
@@ -56,9 +57,12 @@ class InfraFDU(object):
 
         if data is not None:
             # data = json.loads(data)
-            data.update({'hypervisor_info':json.dumps(data['hypervisor_info'])})
+            if isinstance(data['hypervisor_info'], dict):
+                data.update({'hypervisor_info':json.dumps(data['hypervisor_info'])})
             pybindJSONDecoder.load_ietf_json({'fdu_record':data}, None, None, obj=self.fdu)
             self.enforce()
+            while isinstance(data['hypervisor_info'], str):
+                data.update({'hypervisor_info':json.loads(data['hypervisor_info'])})
             self.uuid = self.fdu.fdu_record.uuid
             self.fdu_id = self.fdu.fdu_record.fdu_id
             self.image = data.get('image', None)
@@ -131,6 +135,7 @@ class InfraFDU(object):
         }
         check_obj = infra_fdu.infra_fdu()
         pybindJSONDecoder.load_ietf_json({'fdu_record':data.update({'hypervisor_info':json.dumps(data['hypervisor_info'])})}, None, None, obj=check_obj)
+        data.update({'hypervisor_info':json.loads(data['hypervisor_info'])})
         return data
 
     def get_short_id(self):
