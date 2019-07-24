@@ -207,6 +207,7 @@ class LinuxBridge(NetworkPlugin):
         return {'result': ''}
 
 
+
     # todo: last item is empty-> delete
     def get_bridge_names_from_output_string(self, output):
         rows = output.split('\n')
