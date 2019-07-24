@@ -30,9 +30,8 @@ class LXDFDU(InfraFDU):
         self.profiles = None
         self.name = 'c{}'.format(self.uuid)
 
-
     def on_defined(self):
-        self.state = State.DEFINED
+        self.set_status(State.DEFINED)
 
     def on_configured(self, configuration):
         self.conf = configuration

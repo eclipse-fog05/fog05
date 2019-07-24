@@ -52,7 +52,6 @@ class Native(RuntimePluginFDU):
         self.LOG_DIR = 'logs'
         self.STORE_DIR = 'apps'
         self.configuration = manifest.get('configuration',{})
-        self.nm = self.get_nm_plugin().get('uuid')
         signal.signal(signal.SIGINT, self.__catch_signal)
         signal.signal(signal.SIGTERM, self.__catch_signal)
 
@@ -106,20 +105,14 @@ class Native(RuntimePluginFDU):
 
     def define_fdu(self, fdu_record):
 
-        fdu_uuid = fdu_record.get('fdu_uuid')
-        instance_id = fdu_record.get('uuid')
+        fdu = NativeFDU(fdu_record)
+        fdu_uuid = fdu.get_fdu_id()
+        instance_id = fdu.get_uuid()
 
         if instance_id in self.current_fdus:
             self.logger.error('define_fdu()', '[ ERRO ] LXD Plugin - Instance with ID {} already defined!!'.format(instance_id))
             self.write_fdu_error(fdu_uuid, instance_id, 0, 'Instance with this ID {} already exists!'.format(instance_id))
 
-        descriptor = self.get_fdu_descriptor(fdu_uuid)
-        fdu = NativeFDU.from_record(fdu_record)
-        # TODO this as to be fixed
-        fdu.comp_requirements = descriptor.get('computation_requirements')
-        fdu.image = descriptor.get('image')
-        fdu.set_command(descriptor.get('command'))
-        ####
 
         out_file = 'native_{}.log'.format(instance_id)
         self.logger.info('define_fdu()', ' Native Plugin - Define BE FDU')
@@ -153,7 +146,7 @@ class Native(RuntimePluginFDU):
         else:
             fdu.source = None
 
-        fdu.set_state(State.DEFINED)
+        fdu.set_status(State.DEFINED)
         self.current_fdus.update({instance_id: fdu})
         self.update_fdu_status(fdu_uuid, instance_id, 'DEFINE')
         self.logger.info('define_fdu()', ' Native Plugin - Defined BE FDU uuid {}'.format(instance_id))
@@ -170,7 +163,7 @@ class Native(RuntimePluginFDU):
             raise StateTransitionNotAllowedException('FDU is not in DEFINED state',
                                                      'FDU {} is not in DEFINED state'.format(instance_uuid))
         else:
-            fdu_uuid = fdu.fdu_uuid
+            fdu_uuid = fdu.get_fdu_id()
             if self.get_local_instances(fdu_uuid) == 1:
                 self.os.remove_dir(os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid))
 
@@ -191,7 +184,7 @@ class Native(RuntimePluginFDU):
             raise StateTransitionNotAllowedException('FDU is not in DEFINED state',
                                                      'FDU {} is not in DEFINED state'.format(instance_uuid))
         else:
-            fdu_uuid = fdu.fdu_uuid
+            fdu_uuid = fdu.get_fdu_id()
             out_file = 'native_{}.log'.format(instance_uuid)
             out_file = os.path.join(self.BASE_DIR, self.LOG_DIR, out_file)
             fdu.outfile = out_file
@@ -233,7 +226,7 @@ class Native(RuntimePluginFDU):
             raise StateTransitionNotAllowedException('FDU is not in CONFIGURED state',
                                                      'FDU {} is not in CONFIGURED state'.format(instance_uuid))
         else:
-            fdu_uuid = fdu.fdu_uuid
+            fdu_uuid = fdu.get_fdu_id()
             self.os.remove_file(fdu.outfile)
             native_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name)
             self.os.remove_dir(native_dir)
@@ -257,7 +250,7 @@ class Native(RuntimePluginFDU):
                                                      'FDU {} is not in CONFIGURED state'.format(instance_uuid))
         else:
             self.logger.info('run_fdu()', 'Native Plugin - FDU is {}'.format(fdu))
-            fdu_uuid = fdu.fdu_uuid
+            fdu_uuid = fdu.get_fdu_id()
             if fdu.source is not None:
                 native_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name)
                 source_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name)
@@ -329,7 +322,7 @@ class Native(RuntimePluginFDU):
             raise StateTransitionNotAllowedException('FDU is not in RUNNING state',
                                                      'FDU {} is not in RUNNING state'.format(instance_uuid))
         else:
-            fdu_uuid = fdu.fdu_uuid
+            fdu_uuid = fdu.get_fdu_id()
             if fdu.source is None:
 
                 pid = fdu.pid
@@ -386,7 +379,7 @@ class Native(RuntimePluginFDU):
             raise FDUNotExistingException('FDU not existing',
                                              'FDU {} not in runtime {}'.format(instance_uuid, self.uuid))
         else:
-            fdu_uuid = fdu.fdu_uuid
+            fdu_uuid = fdu.get_fdu_id()
             self.logger.error('pause_fdu','Cannot pause native!!')
             self.write_fdu_error(fdu_uuid, instance_uuid, 7, 'Instance cannot be paused')
 
@@ -397,13 +390,13 @@ class Native(RuntimePluginFDU):
             raise FDUNotExistingException('FDU not existing',
                                              'FDU {} not in runtime {}'.format(instance_uuid, self.uuid))
         else:
-            fdu_uuid = fdu.fdu_uuid
+            fdu_uuid = fdu.get_fdu_id()
             self.logger.error('resume_fdu','Cannot resume native!!')
             self.write_fdu_error(fdu_uuid, instance_uuid, 7, 'Instance cannot be resumed')
 
     def migrate_fdu(self, instance_uuid):
         record = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, '*', instance_uuid)
-        fdu_uuid = record.get('fdu_uuid')
+        fdu_uuid = record.get('fdu_id')
         destination = record.get('migration_properties').get('destination')
         if destination != self.node:
             fdu = self.current_fdus.get(instance_uuid, None)
@@ -412,7 +405,7 @@ class Native(RuntimePluginFDU):
                 raise FDUNotExistingException('FDU not existing',
                                                 'FDU {} not in runtime {}'.format(instance_uuid, self.uuid))
             else:
-                fdu_uuid = fdu.fdu_uuid
+                fdu_uuid = fdu.get_fdu_id()
                 self.logger.error('pause_fdu','Cannot migrate native!!')
                 self.write_fdu_error(fdu_uuid, instance_uuid, 7, 'Instance cannot be migrated')
         else:

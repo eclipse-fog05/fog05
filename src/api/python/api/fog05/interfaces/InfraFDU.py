@@ -267,6 +267,9 @@ class InfraFDU(object):
     def set_migration_properties(self, source, destination) :
         self.migration_properties = {'source':source, 'destination': destination}
 
+    def clean_migration_properties(self):
+        self.migration_properties = None
+
     def get_hypervisor_info(self):
         return self.hypervisor_info
 

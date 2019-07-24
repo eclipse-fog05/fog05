@@ -318,10 +318,12 @@ class LXD(RuntimePluginFDU):
 
             if self.get_local_instances(fdu_uuid) == 1:
                 try:
-                    img = self.conn.images.get_by_alias(instance_uuid)
+                    image_id = fdu.image.get('uuid')
+                    img = self.conn.images.get_by_alias(image_id)
                     img.delete()
-                    self.images.pop
-                    image_name = fdu.image.get('file')
+                    image_name = self.images.get(image_id)['base_image']
+                    self.os.remove_file(image_name)
+                    self.images.pop(image_id)
                     self.os.remove_file(image_name)
                 except Exception as e:
                     self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Undefine a Container Exception raised {}'.format(e))
