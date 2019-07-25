@@ -13,6 +13,7 @@ all:
 	make -C src/im/python
 	make -C src/im/ocaml install
 	make -C src/core/ocaml install
+	make -C src/api/ocaml/api install
 	make -C src/agent/;
 
 install:
