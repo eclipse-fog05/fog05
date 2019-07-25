@@ -45,6 +45,13 @@ module Network : sig
 
 end
 
+module AtomicEntity : sig
+
+  val onboard : User.Descriptors.AtomicEntity.descriptor -> api  -> User.Descriptors.AtomicEntity.descriptor Lwt.t
+  val instantiate : string -> api -> Infra.Descriptors.AtomicEntity.record Lwt.t
+
+end
+
 module FDU : sig
 
   (* FDU descriptor *)

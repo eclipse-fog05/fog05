@@ -1092,6 +1092,26 @@ class GAD(object):
         else:
             return json.loads(res[0][1].get_value())
 
+    def onboard_ae_from_node(self, sysid, tenantid, nodeid, ae_info):
+        fname = 'onboard_ae'
+        params = {'descriptor':ae_info}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def instantiate_ae_from_node(self, sysid, tenantid, nodeid, ae_id):
+        fname = 'instantiate_ae'
+        params = {'ae_id':ae_id}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
 
 
 

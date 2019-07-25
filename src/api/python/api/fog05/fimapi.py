@@ -49,6 +49,7 @@ class FIMAPI(object):
         self.fdu = self.FDU(self.connector, self.sysid, self.tenantid)
         self.image = self.Image(self.connector, self.sysid, self.tenantid)
         self.flavor = self.Flavor(self.connector, self.sysid, self.tenantid)
+        self.atomic_entity = self.AtomicEntity(self.connector, self.sysid, self.tenantid)
 
     def close(self):
         self.connector.close()
@@ -443,6 +444,34 @@ class FIMAPI(object):
             {node_uuid, network element uuid list} with matches
             '''
             pass
+
+    class AtomicEntity(object):
+
+        def __init__(self, connector=None, sysid=Constants.default_system_id,
+            tenantid=Constants.default_tenant_id):
+
+            if connector is None:
+                raise RuntimeError('Yaks connector cannot be none in API!')
+            self.connector = connector
+            self.sysid = sysid
+            self.tenantid = tenantid
+
+        def onboard(self, descriptor):
+            nodes = self.connector.glob.actual.get_all_nodes(self.sysid, self.tenantid)
+            if len(nodes) == 0:
+                raise SystemError("No nodes in the system!")
+            n = random.choice(nodes)
+            return self.connector.glob.actual.onboard_ae_from_node(self.sysid, self.tenantid, n, descriptor)
+
+
+
+        def instantiate(self, ae_id):
+            nodes = self.connector.glob.actual.get_all_nodes(self.sysid, self.tenantid)
+            if len(nodes) == 0:
+                raise SystemError("No nodes in the system!")
+            n = random.choice(nodes)
+            return self.connector.glob.actual.instantiate_ae_from_node(self.sysid, self.tenantid, n, ae_id)
+
 
     class FDU(object):
         '''

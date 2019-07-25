@@ -100,6 +100,28 @@ module Network = struct
 
 end
 
+module AtomicEntity = struct
+
+  let onboard (ae:User.Descriptors.AtomicEntity.descriptor) api =
+    let%lwt nodes = Yaks_connector.Global.Actual.get_all_nodes api.sysid api.tenantid api.yconnector in
+    let n = List.nth nodes (Random.int (List.length nodes)) in
+    let%lwt res = Yaks_connector.Global.Actual.onboard_ae_from_node api.sysid api.tenantid n ae api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ User.Descriptors.AtomicEntity.descriptor_of_string (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during onboarding" ) ))
+
+  let instantiate ae_id api =
+    let%lwt nodes = Yaks_connector.Global.Actual.get_all_nodes api.sysid api.tenantid api.yconnector in
+    let n = List.nth nodes (Random.int (List.length nodes)) in
+    let%lwt res = Yaks_connector.Global.Actual.instantiate_ae_from_node api.sysid api.tenantid n ae_id api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ Infra.Descriptors.AtomicEntity.record_of_string (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during onboarding" ) ))
+
+end
+
 module FDU = struct
 
 
