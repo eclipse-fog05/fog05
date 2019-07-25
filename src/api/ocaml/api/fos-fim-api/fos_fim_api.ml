@@ -103,12 +103,12 @@ end
 module FDU = struct
 
 
-  let rec wait_fdu_onboarding sysid tenantid fduid api =
-    Yaks_connector.Global.Actual.get_catalog_fdu_info sysid tenantid fduid api.yconnector
-    >>= fun r ->
-    match r with
-    | Some _ -> Lwt.return_unit
-    | None -> wait_fdu_onboarding sysid tenantid fduid api
+  (* let rec wait_fdu_onboarding sysid tenantid fduid api =
+     Yaks_connector.Global.Actual.get_catalog_fdu_info sysid tenantid fduid api.yconnector
+     >>= fun r ->
+     match r with
+     | Some _ -> Lwt.return_unit
+     | None -> wait_fdu_onboarding sysid tenantid fduid api *)
 
   let rec wait_fdu_offloading sysid tenantid fduid api =
     Yaks_connector.Global.Actual.get_catalog_fdu_info sysid tenantid fduid api.yconnector
@@ -159,14 +159,20 @@ module FDU = struct
 
 
   let onboard (fdu:User.Descriptors.FDU.descriptor) ?(wait=true) api =
-    let fduid = fdu.id in
-    let%lwt _ = Yaks_connector.Global.Desired.add_catalog_fdu_info api.sysid api.tenantid fduid fdu api.yconnector in
-    match wait with
-    | true ->
-      let%lwt _ = wait_fdu_onboarding api.sysid api.tenantid fduid api in
-      Lwt.return fduid
-    | false ->
-      Lwt.return fduid
+    ignore wait;
+    let%lwt nodes = Yaks_connector.Global.Actual.get_all_nodes api.sysid api.tenantid api.yconnector in
+    let n = List.nth nodes (Random.int (List.length nodes)) in
+    let%lwt res = Yaks_connector.Global.Actual.onboard_fdu_from_node api.sysid api.tenantid n fdu api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ User.Descriptors.FDU.descriptor_of_string (JSON.to_string js)
+    (* (match wait with
+       | true ->
+       let%lwt _ = wait_fdu_onboarding api.sysid api.tenantid (Apero.Option.get fdud.uuid) api in
+       Lwt.return fduid
+       | false ->
+       Lwt.return fduid) *)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during onboarding" ) ))
 
 
   let offload fduid ?(wait=true) api =
@@ -179,25 +185,19 @@ module FDU = struct
 
   let define fduid nodeid ?(wait=true) api =
     let%lwt fdud = Yaks_connector.Global.Actual.get_catalog_fdu_info api.sysid api.tenantid fduid api.yconnector in
-    let fdud = Apero.Option.get fdud in
-    (* let ar = Infra.Descriptors.FDU.{fpga = []; gpu= []} in *)
-    let instance_uuid = Apero.Uuid.to_string @@ Apero.Uuid.make () in
-    let record = Infra.Descriptors.FDU.{uuid = instance_uuid; fdu_id = fduid; status = `DEFINE; interfaces =  [];
-                                        connection_points = []; error_code = None; error_msg = None; migration_properties = None;
-                                        hypervisor_info = Fos_im.JSON.create_empty (); io_ports = [];
-                                        computation_requirements = fdud.computation_requirements;
-                                        geographical_requirements=fdud.geographical_requirements;
-                                        image = fdud.image; command = fdud.command;
-                                        hypervisor = fdud.hypervisor; migration_kind=fdud.migration_kind;
-                                        configuration = fdud.configuration; depends_on = fdud.depends_on;
-                                        energy_requirements = fdud.energy_requirements; storage = [];
-                                       } in
-    let%lwt _ = Yaks_connector.Global.Desired.add_node_fdu api.sysid api.tenantid nodeid fduid instance_uuid record api.yconnector in
-    match wait with
-    | true ->
-      let%lwt _ = wait_fdu_instance_state_change `DEFINE api.sysid api.tenantid nodeid fduid instance_uuid api in
-      Lwt.return instance_uuid
-    | false -> Lwt.return instance_uuid
+    match fdud with
+    | None -> raise @@ FException (`InternalError (`Msg ("FDU with this UUID not found in the catalog")))
+    | Some _ ->
+      let%lwt res = Yaks_connector.Global.Actual.define_fdu_in_node api.sysid api.tenantid nodeid fduid api.yconnector in
+      match res.result with
+      | Some js ->
+        let fdur = Infra.Descriptors.FDU.record_of_string (JSON.to_string js) in
+        (match wait with
+         | true ->
+           let%lwt _ = wait_fdu_instance_state_change `DEFINE api.sysid api.tenantid nodeid fduid fdur.uuid api in
+           Lwt.return fdur
+         | false -> Lwt.return fdur)
+      | None -> raise @@ FException (`InternalError (`Msg ("Error during define" )))
 
   let undefine instanceid ?(wait=true) api =
     let%lwt nodeid = Yaks_connector.Global.Actual.get_fdu_instance_node api.sysid api.tenantid instanceid api.yconnector in
@@ -251,9 +251,9 @@ module FDU = struct
 
   let instantiate fduid nodeid ?(wait=true) api =
     define fduid nodeid ~wait:true api
-    >>= fun instanceid -> configure instanceid ~wait:true api
+    >>= fun fdur -> configure fdur.uuid ~wait:true api
     >>= fun instanceid -> start instanceid ~wait:wait api
-    >>= Lwt.return
+    >>= fun _ -> Lwt.return fdur
 
   let terminate instanceid ?(wait=true) api =
     stop instanceid ~wait:true api

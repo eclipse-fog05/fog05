@@ -272,6 +272,24 @@ module MakeGAD(P: sig val prefix: string end) = struct
   let get_agent_exec_path sysid tenantid nodeid func_name =
     create_path [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid; "agent"; "exec"; func_name]
 
+  let get_agent_exec_path_with_params sysid tenantid nodeid func_name (params: (string * string) list) =
+    let rec assoc2args base index list =
+      let len = List.length list in
+      match index with
+      | 0 ->
+        let k,v = List.hd list in
+        let b = base ^ "(" ^ k ^ "=" ^ v in
+        assoc2args b (index+1) list
+      | n when n < len ->
+        let k,v = List.nth list index in
+        let b  = base ^ ";" ^ k ^ "=" ^ v in
+        assoc2args b (index+1) list
+      | _-> base ^ ")"
+    in  let  p = assoc2args "" 0 params in
+    let f = func_name ^ "?" ^ p in
+    create_selector [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid; "agent"; "exec"; f]
+
+
 
   (* ID extraction *)
 
@@ -1286,6 +1304,45 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let%lwt _ = Yaks.Workspace.register_eval p cb connector.ws in
     let ls = List.append connector.evals [p] in
     MVar.return Lwt.return_unit {connector with evals = ls}
+
+  let exec_multi_node_eval sysid tenantid  func_name parametes connector =
+    MVar.read connector >>= fun connector ->
+    let s = get_agent_exec_path_with_params sysid tenantid "*" func_name parametes
+    in
+    Yaks.Workspace.eval s connector.ws
+    >>= fun res ->
+    match res with
+    | [] -> Lwt.return []
+    | lst ->
+      Lwt_list.map_p (fun (_,v) ->
+          try
+            Lwt.return (Agent_types.eval_result_of_string (Yaks.Value.to_string v))
+          with
+          | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _ ->
+            Lwt.fail @@ FException (`InternalError (`Msg ("Value is not well formatted in exec_nm_eval") ))
+        ) lst
+
+  let onboard_fdu_from_node sysid tenantid nodeid fdu_info connector =
+    MVar.read connector >>= fun connector ->
+    let fname = "onboard_fdu" in
+    let params = [("descriptor",User.Descriptors.FDU.string_of_descriptor fdu_info)] in
+    let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
+    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    match res with
+    | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
+    | (_,v)::_ ->
+      Lwt.return (Agent_types.eval_result_of_string (Yaks.Value.to_string v))
+
+  let define_fdu_in_node sysid tenantid nodeid fdu_id connector =
+    MVar.read connector >>= fun connector ->
+    let fname = "define_fdu" in
+    let params = [("fdu_id",fdu_id)] in
+    let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
+    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    match res with
+    | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
+    | (_,v)::_ ->
+      Lwt.return (Agent_types.eval_result_of_string (Yaks.Value.to_string v))
 
 
 end

@@ -13,7 +13,7 @@
                 "ram_size_mb": 128.0,
                 "storage_size_gb": 5.0
             },
-            "base_image": {
+            "image": {
                 "uri": "lxd://alpine/3.6",
                 "checksum": "",
                 "format": ""
@@ -37,7 +37,7 @@
             "connection_points": [
                 {
                     "id": "test-cp1",
-                    "name": "test-internal-cp1"
+                    "name": "test-internal-cp1",
                 }
             ],
             "storage": [],
@@ -57,7 +57,7 @@
                 "dns": "8.8.8.8,8.8.4.4"
             },
             "int_cps": [
-                "test-cp2"
+                "test-cp1"
             ]
         }
     ],

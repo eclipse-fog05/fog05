@@ -48,11 +48,11 @@ end
 module FDU : sig
 
   (* FDU descriptor *)
-  val onboard : User.Descriptors.FDU.descriptor -> ?wait:bool -> api -> string Lwt.t
+  val onboard : User.Descriptors.FDU.descriptor -> ?wait:bool -> api -> User.Descriptors.FDU.descriptor Lwt.t
   val offload : string -> ?wait:bool -> api -> string Lwt.t
 
   (* FDU instances *)
-  val define : string-> string -> ?wait:bool -> api -> string Lwt.t
+  val define : string-> string -> ?wait:bool -> api -> Infra.Descriptors.FDU.record Lwt.t
   val undefine : string -> ?wait:bool -> api -> string Lwt.t
   val configure : string -> ?wait:bool -> api -> string Lwt.t
   val clean : string -> ?wait:bool -> api -> string Lwt.t
@@ -62,7 +62,7 @@ module FDU : sig
   val resume : string -> ?wait:bool -> api -> string Lwt.t
   val migrate : string -> string -> ?wait:bool -> api -> string Lwt.t
   (*  All-in-one functions  *)
-  val instantiate : string -> string -> ?wait:bool -> api -> string Lwt.t
+  val instantiate : string -> string -> ?wait:bool -> api -> Infra.Descriptors.FDU.record  Lwt.t
   val terminate : string -> ?wait:bool -> api -> string Lwt.t
 
   (* Enumeration functions *)

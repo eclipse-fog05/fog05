@@ -23,6 +23,7 @@ type address_information <ocaml module="Base_atomic_entity"> = abstract
 (* Descriptor Related Types *)
 
 type descriptor = {
+  ?uuid : string option;
   id : string;
   name : string;
   ?description : string option;
@@ -40,7 +41,7 @@ type connection_point_descriptor = {
   ?short_name : string option;
   ?cp_type : cp_kind option;
   ?port_security_enabled: bool option;
-  ?internal_vld_ref : string option;
+
 }
 
 (* VLD as ETSI NFV *)
@@ -48,6 +49,7 @@ type connection_point_descriptor = {
 type internal_virtual_link_descriptor = {
   id : string;
   name : string;
+  is_mgmt : bool;
   ?short_name : string option;
   ?description : string option;
   ?vl_type : vl_kind option;
