@@ -471,7 +471,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           | [] -> false
           | _ -> true
         in
-        let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CHECK-FDU - CPU Arch Check: %b" (fdu_cp.cpu_arch == ncpu.arch) ) in
+        let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CHECK-FDU - CPU Arch Check: %s = %s ? %b" fdu_cp.cpu_arch ncpu.arch (fdu_cp.cpu_arch == ncpu.arch) ) in
         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CHECK-FDU - RAM Size Check: %b" (fdu_cp.ram_size_mb <= ninfo.ram.size) ) in
         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CHECK-FDU - Plugin Check: %b" has_plugin ) in
         match (fdu_cp.cpu_arch == ncpu.arch),(fdu_cp.ram_size_mb <= ninfo.ram.size), has_plugin with
