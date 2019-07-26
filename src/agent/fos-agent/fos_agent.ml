@@ -565,7 +565,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
 
           let%lwt cps = Lwt_list.map_p (fun (cp:User.Descriptors.FDU.connection_point_descriptor) ->
               let ivl = List.find_opt (fun (vl:Infra.Descriptors.AtomicEntity.internal_virtual_link_record) ->
-                  match List.find_opt (fun id -> id == cp.id) vl.int_cps with
+                  match List.find_opt (fun id -> (String.compare id cp.id) == 0) vl.int_cps with
                   | Some _ -> true
                   | None -> false
                 ) nets in
