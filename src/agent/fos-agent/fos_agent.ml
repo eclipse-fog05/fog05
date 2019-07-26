@@ -631,7 +631,10 @@ let agent verbose_flag debug_flag configuration custom_uuid =
               ip_configuration = ip_conf
             }
           in
-          Lwt.ignore_result @@ Yaks_connector.Global.Actual.add_network sys_id Yaks_connector.default_tenant_id vl.uuid net_desc state.yaks;
+          Yaks_connector.Global.Actual.add_network sys_id Yaks_connector.default_tenant_id vl.uuid net_desc state.yaks
+          >>= fun _ ->
+          (* This has to be removed! *)
+          Unix.sleep 3;
           Lwt.return vl
         ) nets
       in
