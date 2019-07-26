@@ -631,7 +631,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
               ip_configuration = ip_conf
             }
           in
-          Yaks_connector.Global.Actual.add_network sys_id Yaks_connector.default_tenant_id vl.uuid net_desc state.yaks
+          Fos_fim_api.Network.add_network net_desc state.fim_api
           >>= fun _ ->
           (* This has to be removed! *)
           Unix.sleep 3;
