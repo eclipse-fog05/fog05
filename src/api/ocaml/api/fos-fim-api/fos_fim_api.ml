@@ -78,8 +78,9 @@ module Network = struct
     match n with
     | Some _ -> Lwt.fail @@ FException (`InternalError (`Msg (Printf.sprintf "Network with id %s already exists" netid)))
     | None ->
-      Yaks_connector.Global.Actual.add_network api.sysid api.tenantid netid descriptor api.yconnector
+      Yaks_connector.Global.Desired.add_network api.sysid api.tenantid netid descriptor api.yconnector
       >>= fun _ -> Lwt.return true
+
   let remove_network netid  api =
     Yaks_connector.Global.Desired.remove_network api.sysid api.tenantid netid api.yconnector
     >>= fun _ -> Lwt.return true
@@ -95,6 +96,7 @@ module Network = struct
   let remove_connection_point cpid api =
     Yaks_connector.Global.Desired.remove_port api.sysid api.tenantid cpid api.yconnector
     >>= fun _ -> Lwt.return true
+
   let list_connection_points api =
     Yaks_connector.Global.Actual.get_all_ports api.sysid api.tenantid api.yconnector
 

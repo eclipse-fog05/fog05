@@ -603,7 +603,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
         ) descriptor.fdus
       in
       (* Instantiating Virtual Networks *)
-      let%lwt _ = Lwt_list.map_p (fun (vl:Infra.Descriptors.AtomicEntity.internal_virtual_link_record) ->
+      Lwt_list.iter_s (fun (vl:Infra.Descriptors.AtomicEntity.internal_virtual_link_record) ->
           (* let cb_gd_net_all self (net:FTypes.virtual_network option) (is_remove:bool) (uuid:string option) = *)
           let ip_conf =
             match vl.ip_configuration with
@@ -634,10 +634,9 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           Fos_fim_api.Network.add_network net_desc state.fim_api
           >>= fun _ ->
           (* This has to be removed! *)
-          Unix.sleep 3;
-          Lwt.return vl
+          Lwt.return @@ Unix.sleep 3
         ) nets
-      in
+      >>= fun _ ->
       (* Onboard and Instantiate FDUs descriptors *)
       let%lwt fdurs = Lwt_list.map_p ( fun ((fdu:User.Descriptors.FDU.descriptor),(nodes:string list)) ->
           let n = List.nth nodes (Random.int (List.length nodes)) in
