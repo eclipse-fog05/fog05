@@ -18,7 +18,7 @@ all:
 
 install:
 
-	pip3 uninstall fog05_im fog05 -y
+
 
 	make -C src/im/python install
 	make -C src/api/python/api install
@@ -95,7 +95,7 @@ uninstall:
 	sudo rm -rf /etc/fos/agent
 	sudo rm -rf /usr/bin/fos_linux
 	sudo userdel fos
-	sudo pip3 uninstall fog05 -y
+	sudo pip3 uninstall fog05_im fog05 -y
 
 clean:
 	opam remove fos-im -y
