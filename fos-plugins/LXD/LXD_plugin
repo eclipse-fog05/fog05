@@ -431,7 +431,10 @@ class LXD(RuntimePluginFDU):
             fdu.on_configured(config)
 
             self.current_fdus.update({instance_uuid: fdu})
-            self.update_fdu_status(fdu_uuid, instance_uuid, 'CONFIGURE')
+
+            record.set_status('CONFIGURE')
+            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid,instance_uuid, record.to_json())
+            # self.update_fdu_status(fdu_uuid, instance_uuid, 'CONFIGURE')
 
             # TODO: monitoring TBA
             # this monitoring uses pylxd to get container information
