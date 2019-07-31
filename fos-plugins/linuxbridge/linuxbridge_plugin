@@ -27,8 +27,6 @@ import struct
 import json
 import socket
 import signal
-import base64
-import binascii
 import hashlib
 import psutil
 import netifaces
@@ -95,30 +93,14 @@ class LinuxBridge(NetworkPlugin):
             self.var.put(signal)
 
     def start_network_manager(self):
-        self.logger.info(
-            'start_runtime()', 'Linux Bridge Plugin - Starting...')
+        self.logger.info('start_runtime()', 'Linux Bridge Plugin - Starting...')
 
-        if self.call_os_plugin_function('dir_exists', {'dir_path': self.BASE_DIR}):
-            if not self.call_os_plugin_function('dir_exists', {'dir_path': os.path.join(self.BASE_DIR, self.DHCP_DIR)}):
-                self.call_os_plugin_function(
-                    'create_dir', {'dir_path': os.path.join(self.BASE_DIR, self.DHCP_DIR)})
+        if self.os.dir_exists(self.BASE_DIR):
+            if not self.os.dir_exists(os.path.join(self.BASE_DIR, self.DHCP_DIR)):
+                self.os.create_dir(os.path.join(self.BASE_DIR, self.DHCP_DIR))
         else:
-            self.call_os_plugin_function(
-                'create_dir', {'dir_path': os.path.join(self.BASE_DIR)})
-            self.call_os_plugin_function(
-                'create_dir', {'dir_path': os.path.join(self.BASE_DIR, self.DHCP_DIR)})
-
-        # if self.configuration.get('data_subnet'):
-        #     cird = self.configuration.get('data_subnet')
-
-        #     data = self.connector.loc.actual.get_node_info(self.node)
-        #     for n in data.get('network'):
-        #         intf_cird = self.__ip_mask_to_cird(
-        #             n.get('inft_configuration').get('ipv4_address'),
-        #             n.get('inft_configuration').get('ipv4_netmask')
-        #         )
-        #         if cird == intf_cird:
-        #             self.overlay_interface = n.get('intf_name')
+            self.os.create_dir(os.path.join(self.BASE_DIR))
+            self.os.create_dir(os.path.join(self.BASE_DIR, self.DHCP_DIR))
 
         if self.overlay_interface is None:
             self.agent_conf.get('agent').get('mgmt_interface')
@@ -213,13 +195,12 @@ class LinuxBridge(NetworkPlugin):
                 n_small_id = netid.split('-')[0]
                 path = os.path.join(self.BASE_DIR, self.DHCP_DIR)
                 lease_file = os.path.join(path,'net_{}_leases'.format(n_small_id))
-
-                if self.call_os_plugin_function('read_file',{'file_path':lease_file}):
-                    res = self.call_os_plugin_function('read_file',{'file_path':lease_file, 'root':True}).split('\n')
+                if self.os.read_file(lease_file):
+                    res = self.os.read_file(lease_file).split('\n')
                     for l in res:
                         tok = l.split(' ')
                         if tok[1] == mac_address:
-                            self.logger.info('get_address()', 'Linux Bridge Plugin - IP address for {} is '.format(mac_address, tok[2]))
+                            self.logger.info('get_address()', 'Linux Bridge Plugin - IP address for {} is {}'.format(mac_address, tok[2]))
                             return {'result': tok[2]}
 
         self.logger.info('get_address()', 'Linux Bridge Plugin - Unable to get IP address for {} '.format(mac_address))
@@ -236,7 +217,7 @@ class LinuxBridge(NetworkPlugin):
 
     def get_virtual_bridges_in_node(self):
         cmd = 'sudo brctl show'
-        output = self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
+        output = self.os.execute_command(cmd,blocking=True,external=False)
         return self.get_bridge_names_from_output_string(output)
 
     # this is an eval
@@ -257,7 +238,7 @@ class LinuxBridge(NetworkPlugin):
 
     def create_vlan_interface(self, iface, vlanid):
         cmd = 'sudo ip link add link {} name {}.{} type vlan id {}'.format(iface, iface, vlanid, vlanid)
-        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':True})
+        self.os.execute_command(cmd,blocking=True, external=True)
 
     # this is an eval
     def create_virtual_interface(self,intf_id, descriptor):
@@ -270,7 +251,7 @@ class LinuxBridge(NetworkPlugin):
         stop_file = self.__generate_interface_destroy_script(external_name, intf_name)
         cmd_start = os.path.join(self.BASE_DIR, start_file)
         cmd_stop = os.path.join(self.BASE_DIR, stop_file)
-        self.call_os_plugin_function('execute_command',{'command':cmd_start,'blocking':True, 'external':True})
+        self.os.execute_command(cmd_start,blocking=True, external=True)
         descriptor.update({'intf_id':intf_id})
         self.logger.info('create_virtual_interface','Created {}'.format(intf_id))
 
@@ -301,9 +282,9 @@ class LinuxBridge(NetworkPlugin):
         if intf_info.get('descriptor').get('cp_id') is not None:
             cpid = intf_info.get('descriptor').get('cp_id')
             self.disconnect_interface(intf_id)
-        self.call_os_plugin_function('execute_command',{'command':stop_file,'blocking':True, 'external':True})
-        self.call_os_plugin_function('remove_file',{'file_path':stop_file})
-        self.call_os_plugin_function('remove_file',{'file_path':intf_info.get('start')})
+        self.os.execute_command(stop_file,blocking=True, external=True)
+        self.os.remove_file(stop_file)
+        self.os.remove_file(intf_info.get('start'))
         self.intfs.pop(intf_id)
         self.logger.info('delete_virtual_interface','{} removed'.format(intf_id))
         return {'result':intf_id}
@@ -311,7 +292,7 @@ class LinuxBridge(NetworkPlugin):
     # this is an eval
     def create_virtual_bridge(self, name, uuid):
         cmd = 'sudo ip link add {} type bridge'.format(name)
-        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
+        self.os.execute_command(cmd,blocking=True, external=False)
         br_uuid = uuid
         self.bridges.update({br_uuid: name})
         return {'result':{'uuid':br_uuid, 'name':name}}
@@ -325,14 +306,14 @@ class LinuxBridge(NetworkPlugin):
             self.logger.error('delete_virtual_bridge', 'Bridge {} not existing'.format(br_uuid))
             return {'error':-2}
         cmd = 'sudo ip link del {}'.format(name)
-        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
+        self.os.execute_command(cmd, blocking=True, external=False)
         self.bridges.pop(br_uuid)
         self.logger.info('delete_virtual_bridge', 'Removed {}'.format(br_uuid))
         return {'result':br_uuid}
 
     def create_port(self, record):
         cp_id = record.get('uuid')
-        descriptor = self.get_port_descriptor(record.get('cp_uuid'))
+        # descriptor = self.agent.get_port_info(record.get('cp_uuid'))
         cp_small_id = ''.join([x[0] for x in cp_id.split('-')])
         cp_name = 'br-cp-{}'.format(cp_small_id)
         int_name = 'cp-{}-i'.format(cp_small_id)
@@ -342,7 +323,7 @@ class LinuxBridge(NetworkPlugin):
         stop_file = self.__generate_port_destroy_script(ext_name, cp_name)
         cmd_start = os.path.join(self.BASE_DIR, start_file)
         cmd_stop = os.path.join(self.BASE_DIR, stop_file)
-        self.call_os_plugin_function('execute_command',{'command':cmd_start,'blocking':True, 'external':True})
+        self.os.execute_command(cmd_start,blocking=True, external=True)
         cp_info = {
             'descriptor':record,
             'int_name': int_name,
@@ -352,8 +333,8 @@ class LinuxBridge(NetworkPlugin):
             'stop':cmd_stop
         }
         self.ports.update({cp_id: cp_info})
-        if descriptor.get("pair_id") is not None:
-            pair_id = descriptor.get("pair_id")
+        if record.get("internal_vld_ref") is not None:
+            pair_id = record.get("internal_vld_ref")
             self.connect_cp_to_vnetwork(cp_id, pair_id)
         properties = {
             'int_name': int_name,
@@ -373,12 +354,12 @@ class LinuxBridge(NetworkPlugin):
             self.logger.error('delete_port','{} does not exist'.format(cp_id))
             return False
         stop_file = port_info.get('stop')
-        if port_info.get('descriptor').get('pair_id') is not None:
-            pair_id = port_info.get('descriptor').get('pair_id')
+        if port_info.get('descriptor').get('internal_vld_ref') is not None:
+            pair_id = port_info.get('descriptor').get('internal_vld_ref')
             self.disconnect_cp(cp_id)
-        self.call_os_plugin_function('execute_command',{'command':stop_file,'blocking':True, 'external':True})
-        self.call_os_plugin_function('remove_file',{'file_path':stop_file})
-        self.call_os_plugin_function('remove_file',{'file_path':port_info.get('start')})
+        self.os.execute_command(stop_file,blocking=True, external=True)
+        self.os.remove_file(stop_file)
+        self.os.remove_file(port_info.get('start'))
         self.ports.pop(cp_id)
         self.connector.loc.actual.remove_node_port(self.node, self.uuid, cp_id)
 
@@ -410,8 +391,8 @@ class LinuxBridge(NetworkPlugin):
         self.logger.info('create_router()', 'Creating Router NS: {}'.format(record['router_ns']))
         cmd_new_ns = 'sudo ip netns add {}'.format(record['router_ns'])
         cmd_ns_forwarding = 'sudo ip netns exec {} sysctl -w net.ipv4.ip_forward=1'.format(record['router_ns'])
-        self.call_os_plugin_function('execute_command', {'command':cmd_new_ns, 'blocking':True, 'external':True})
-        self.call_os_plugin_function('execute_command', {'command':cmd_ns_forwarding, 'blocking':True, 'external':True})
+        self.os.execute_command(cmd_new_ns, blocking=True, external=True)
+        self.os.execute_command(cmd_ns_forwarding, blocking=True, external=True)
 
         # Sorting ports to have always the same order
         ports = sorted(record['ports'], key=lambda k: k['port_type']+k['faces'][0])
@@ -428,19 +409,19 @@ class LinuxBridge(NetworkPlugin):
                 cmd_port_up = 'sudo ip netns exec {} ip link set {} up'.format(record['router_ns'], p['faces'][0])
 
                 self.logger.info('create_router()', 'Creating EXTERNAL PORT: {} and assiging to router NS {}'.format(p['faces'][0], record['router_ns']))
-                self.call_os_plugin_function('execute_command', {'command':cmd_add_macvlan, 'blocking':True, 'external':True})
-                self.call_os_plugin_function('execute_command', {'command':cmd_port_to_ns, 'blocking':True, 'external':True})
-                self.call_os_plugin_function('execute_command', {'command':cmd_port_up, 'blocking':True, 'external':True})
+                self.os.execute_command(cmd_add_macvlan, blocking=True, external=True)
+                self.os.execute_command(cmd_port_to_ns, blocking=True, external=True)
+                self.os.execute_command(cmd_port_up, blocking=True, external=True)
                 if p['ip_address'] == '':
 
                     self.logger.info('create_router()', 'Asking address for face: {}'.format(p['faces'][0]))
 
                     cmd_dhcp_client = 'sudo ip netns exec {} dhclient {}'.format(record['router_ns'], p['faces'][0])
-                    self.call_os_plugin_function('execute_command', {'command':cmd_dhcp_client, 'blocking':True, 'external':True})
+                    self.os.execute_command(cmd_dhcp_client, blocking=True, external=True)
 
                     cmd_get_address = 'sudo ip netns exec {} fos_get_address {}'.format(record['router_ns'], p['faces'][0])
 
-                    addr = self.call_os_plugin_function('execute_command', {'command':cmd_get_address, 'blocking':True, 'external':False})
+                    addr = self.os.execute_command(cmd_get_address, blocking=True, external=False)
                     self.logger.info('create_router()', 'Returing: {}'.format(addr))
 
 
@@ -448,7 +429,7 @@ class LinuxBridge(NetworkPlugin):
                 else:
                     self.logger.info('create_router()', 'Assing {} address for face: {}'.format(p['ip_address'], p['faces'][0]))
                     cmd_add_addr = 'sudo ip netns exec {} ip addr add {} dev {}'.format(record['router_ns'], p['ip_address'], p['faces'][0])
-                    self.call_os_plugin_function('execute_command', {'command':cmd_add_addr, 'blocking':True, 'external':True})
+                    self.os.execute_command(cmd_add_addr, blocking=True, external=True)
                 self.logger.info('create_router()', 'Router EXTERNAL PORT Created: {}'.format(p['faces'][0]))
 
 
@@ -459,9 +440,9 @@ class LinuxBridge(NetworkPlugin):
                 cmd_i_face_to_ns = 'sudo ip link set {} netns {}'.format(p['faces'][0], record['router_ns'])
                 cmd_i_face_up = 'sudo ip netns exec {} ip link set {} up'.format(record['router_ns'], p['faces'][0])
 
-                self.call_os_plugin_function('execute_command', {'command':cmd_veth_pair, 'blocking':True, 'external':True})
-                self.call_os_plugin_function('execute_command', {'command':cmd_i_face_to_ns, 'blocking':True, 'external':True})
-                self.call_os_plugin_function('execute_command', {'command':cmd_i_face_up, 'blocking':True, 'external':True})
+                self.os.execute_command(cmd_veth_pair, blocking=True, external=True)
+                self.os.execute_command(cmd_i_face_to_ns, blocking=True, external=True)
+                self.os.execute_command(cmd_i_face_up, blocking=True, external=True)
 
                 net_record = self.networks.get(p['pair_id'])
                 net_ns = net_record['properties']['net_ns']
@@ -471,25 +452,27 @@ class LinuxBridge(NetworkPlugin):
                 cmd_e_face_up = 'sudo ip netns exec {} ip link set {} up'.format(net_ns, p['faces'][1])
                 cmd_e_face_master = 'sudo ip netns exec {} ip link set {} master {}'.format(net_ns, p['faces'][1], net_dev)
 
-                self.call_os_plugin_function('execute_command', {'command':cmd_e_face_to_ns, 'blocking':True, 'external':True})
-                self.call_os_plugin_function('execute_command', {'command':cmd_e_face_up, 'blocking':True, 'external':True})
-                self.call_os_plugin_function('execute_command', {'command':cmd_e_face_master, 'blocking':True, 'external':True})
+                self.os.execute_command(cmd_e_face_to_ns, blocking=True, external=True)
+                self.os.execute_command(cmd_e_face_up, blocking=True, external=True)
+                self.os.execute_command(cmd_e_face_master, blocking=True, external=True)
+
+
 
                 if p['ip_address'] == '':
 
                     self.logger.info('create_router()', 'Asking address for face: {}'.format(p['faces'][0]))
                     cmd_dhcp_client = 'sudo ip netns exec {} dhclient {}'.format(record['router_ns'],p['faces'][0])
-                    self.call_os_plugin_function('execute_command', {'command':cmd_dhcp_client, 'blocking':True, 'external':True})
+                    self.os.execute_command(cmd_dhcp_client, blocking=True, external=True)
 
                     cmd_get_address = 'sudo ip netns exec {} fos_get_address {}'.format(record['router_ns'], p['faces'][0])
 
-                    addr = self.call_os_plugin_function('execute_command', {'command':cmd_get_address, 'blocking':True, 'external':False})
+                    addr = self.os.execute_command(cmd_get_address, blocking=True, external=False)
 
                     p.update({'ip_address':addr.strip()})
                 else:
                     self.logger.info('create_router()', 'Assing {} address for face: {}'.format(p['ip_address'], p['faces'][0]))
                     cmd_add_addr = 'sudo ip netns exec {} ip addr add {} dev {}'.format(record['router_ns'], p['ip_address'], p['faces'][0])
-                    self.call_os_plugin_function('execute_command', {'command':cmd_add_addr, 'blocking':True, 'external':True})
+                    self.os.execute_command(cmd_add_addr, blocking=True, external=True)
 
                 self.logger.info('create_router()', 'Setting iptables rules...')
 
@@ -497,9 +480,9 @@ class LinuxBridge(NetworkPlugin):
                 cmd_iptables_forward_in = 'sudo ip netns exec {} iptables -A FORWARD -i {} -o {} -j ACCEPT'.format(record['router_ns'], ext_face, p['faces'][0])
                 cmd_iptables_forward_out = 'sudo ip netns exec {} iptables -A FORWARD -o {} -i {} -j ACCEPT'.format(record['router_ns'], ext_face, p['faces'][0])
 
-                self.call_os_plugin_function('execute_command', {'command':cmd_iptables_nat, 'blocking':True, 'external':True})
-                self.call_os_plugin_function('execute_command', {'command':cmd_iptables_forward_in, 'blocking':True, 'external':True})
-                self.call_os_plugin_function('execute_command', {'command':cmd_iptables_forward_out, 'blocking':True, 'external':True})
+                self.os.execute_command(cmd_iptables_nat, blocking=True, external=True)
+                self.os.execute_command(cmd_iptables_forward_in, blocking=True, external=True)
+                self.os.execute_command(cmd_iptables_forward_out, blocking=True, external=True)
 
 
             else:
@@ -521,7 +504,8 @@ class LinuxBridge(NetworkPlugin):
                 self.logger.info('delete_router()', 'Removing External Face {}'.format(p['faces'][0]))
                 cmd_remove_face = 'sudo ip netns exec {} ip link del {}'.format(router_info['router_ns'], p['faces'][0])
 
-                self.call_os_plugin_function('execute_command', {'command':cmd_remove_face, 'blocking':True, 'external':True})
+                self.os.execute_command(cmd_remove_face, blocking=True, external=True)
+
 
                 self.logger.info('delete_router()', 'Removed External Face {}'.format(p['faces'][0]))
 
@@ -533,7 +517,7 @@ class LinuxBridge(NetworkPlugin):
 
                 cmd_remove_face = 'sudo ip netns exec {} ip link del {}'.format(net_ns, p['faces'][1])
 
-                self.call_os_plugin_function('execute_command', {'command':cmd_remove_face, 'blocking':True, 'external':True})
+                self.os.execute_command(cmd_remove_face, blocking=True, external=True)
 
                 self.logger.info('delete_router()', 'Removed Internal Face {}'.format(p['faces'][0]))
             else:
@@ -542,7 +526,7 @@ class LinuxBridge(NetworkPlugin):
 
 
         cmd_ns_rem = 'sudo ip netns del {}'.format(router_info['router_ns'])
-        self.call_os_plugin_function('execute_command', {'command':cmd_ns_rem, 'blocking':True, 'external':True})
+        self.os.execute_command(cmd_ns_rem, blocking=True, external=True)
 
 
         self.logger.info('delete_router()', 'Router {} deleted'.format(router_id))
@@ -589,17 +573,17 @@ class LinuxBridge(NetworkPlugin):
             cmd_i_face_to_ns = 'sudo ip link set {} netns {}'.format(iface, record['router_ns'])
             cmd_i_face_up = 'sudo ip netns exec {} ip link set {} up'.format(record['router_ns'], iface)
 
-            self.call_os_plugin_function('execute_command', {'command':cmd_veth_pair, 'blocking':True, 'external':True})
-            self.call_os_plugin_function('execute_command', {'command':cmd_i_face_to_ns, 'blocking':True, 'external':True})
-            self.call_os_plugin_function('execute_command', {'command':cmd_i_face_up, 'blocking':True, 'external':True})
+            self.os.execute_command(cmd_veth_pair, blocking=True, external=True)
+            self.os.execute_command(cmd_i_face_to_ns, blocking=True, external=True)
+            self.os.execute_command(cmd_i_face_up, blocking=True, external=True)
 
             cmd_e_face_to_ns = 'sudo ip link set {} netns {}'.format(eface, net_ns)
             cmd_e_face_up = 'sudo ip netns exec {} ip link set {} up'.format(net_ns, eface)
             cmd_e_face_master = 'sudo ip netns exec {} ip link set {} master {}'.format(net_ns, eface, net_dev)
 
-            self.call_os_plugin_function('execute_command', {'command':cmd_e_face_to_ns, 'blocking':True, 'external':True})
-            self.call_os_plugin_function('execute_command', {'command':cmd_e_face_up, 'blocking':True, 'external':True})
-            self.call_os_plugin_function('execute_command', {'command':cmd_e_face_master, 'blocking':True, 'external':True})
+            self.os.execute_command(cmd_e_face_to_ns, blocking=True, external=True)
+            self.os.execute_command(cmd_e_face_up, blocking=True, external=True)
+            self.os.execute_command(cmd_e_face_master, blocking=True, external=True)
 
             port_record = {
                 'port_type':port_type.upper(),
@@ -611,17 +595,17 @@ class LinuxBridge(NetworkPlugin):
 
                 self.logger.info('add_port_to_router()', 'Asking address for face: {}'.format(iface))
                 cmd_dhcp_client = 'sudo ip netns exec {} dhclient {}'.format(record['router_ns'], iface)
-                self.call_os_plugin_function('execute_command', {'command':cmd_dhcp_client, 'blocking':True, 'external':True})
+                self.os.execute_command(cmd_dhcp_client, blocking=True, external=True)
 
                 cmd_get_address = 'sudo ip netns exec {} fos_get_address {}'.format(record['router_ns'], iface)
 
-                addr = self.call_os_plugin_function('execute_command', {'command':cmd_get_address, 'blocking':True, 'external':False})
+                addr = self.os.execute_command(cmd_get_address, blocking=True)
 
                 port_record.update({'ip_address':addr.strip().replace("\\n","")})
             else:
                 self.logger.info('add_port_to_router()', 'Assing {} address for face: {}'.format(ip_address, iface))
                 cmd_add_addr = 'sudo ip netns exec {} ip addr add {} dev {}'.format(record['router_ns'], ip_address, iface)
-                self.call_os_plugin_function('execute_command', {'command':cmd_add_addr, 'blocking':True, 'external':True})
+                self.os.execute_command(cmd_add_addr, blocking=True, external=True)
                 port_record.update({'ip_address':ip_address})
 
             self.logger.info('add_port_to_router()', 'Setting iptables rules...')
@@ -632,9 +616,9 @@ class LinuxBridge(NetworkPlugin):
             cmd_iptables_forward_in = 'sudo ip netns exec {} iptables -A FORWARD -i {} -o {} -j ACCEPT'.format(record['router_ns'], ext_face, iface)
             cmd_iptables_forward_out = 'sudo ip netns exec {} iptables -A FORWARD -o {} -i {} -j ACCEPT'.format(record['router_ns'], ext_face, iface)
 
-            self.call_os_plugin_function('execute_command', {'command':cmd_iptables_nat, 'blocking':True, 'external':True})
-            self.call_os_plugin_function('execute_command', {'command':cmd_iptables_forward_in, 'blocking':True, 'external':True})
-            self.call_os_plugin_function('execute_command', {'command':cmd_iptables_forward_out, 'blocking':True, 'external':True})
+            self.os.execute_command(cmd_iptables_nat, blocking=True, external=True)
+            self.os.execute_command(cmd_iptables_forward_in, blocking=True, external=True)
+            self.os.execute_command(cmd_iptables_forward_out, blocking=True, external=True)
 
 
 
@@ -671,15 +655,15 @@ class LinuxBridge(NetworkPlugin):
             net_ns = net_record['properties']['net_ns']
 
             cmd_remove_face = 'sudo ip netns exec {} ip link del {}'.format(net_ns, p['faces'][1])
-            self.call_os_plugin_function('execute_command', {'command':cmd_remove_face, 'blocking':True, 'external':True})
+            self.os.execute_command(cmd_remove_face, blocking=True, external=True)
 
             cmd_iptables_nat = 'sudo ip netns exec {} iptables -t nat -D POSTROUTING -s {} -o {} -j MASQUERADE'.format(record['router_ns'], p['ip_address'], ext_face)
             cmd_iptables_forward_in = 'sudo ip netns exec {} iptables -D FORWARD -i {} -o {} -j ACCEPT'.format(record['router_ns'], ext_face, p['faces'][0])
             cmd_iptables_forward_out = 'sudo ip netns exec {} iptables -D FORWARD -o {} -i {} -j ACCEPT'.format(record['router_ns'], ext_face, p['faces'][0])
 
-            self.call_os_plugin_function('execute_command', {'command':cmd_iptables_nat, 'blocking':True, 'external':True})
-            self.call_os_plugin_function('execute_command', {'command':cmd_iptables_forward_in, 'blocking':True, 'external':True})
-            self.call_os_plugin_function('execute_command', {'command':cmd_iptables_forward_out, 'blocking':True, 'external':True})
+            self.os.execute_command(cmd_iptables_nat, blocking=True, external=True)
+            self.os.execute_command(cmd_iptables_forward_in, blocking=True, external=True)
+            self.os.execute_command(cmd_iptables_forward_out, blocking=True, external=True)
 
             self.logger.info('remove_port_from_router()', 'Removed Internal Face {}'.format(p['faces'][0]))
 
@@ -690,11 +674,9 @@ class LinuxBridge(NetworkPlugin):
         return {'result': record}
 
 
-
-    # network_name, net_uuid, ip_range=None, has_dhcp=False, gateway=None,
     def create_virtual_network(self, manifest):
         net_uuid = manifest.get('uuid')
-        descriptor = self.get_network_descriptor(net_uuid)
+        descriptor = self.agent.get_network_info(net_uuid)
         self.logger.info('create_virtual_network()','Creating Network with UUID: {}'.format(net_uuid))
         self.logger.info('create_virtual_network()','Creating Network: {}'.format(manifest))
         net = self.networks.get(net_uuid, None)
@@ -731,32 +713,16 @@ class LinuxBridge(NetworkPlugin):
         if overlay:
             start_file  = self.__generate_vnet_start_script2(n_small_id, net_uuid, vni, mcast_addr, face)
             shutdown_file = self.__generate_vnet_stop_script2(n_small_id)
-            self.call_os_plugin_function('execute_command',{'command':os.path.join(self.BASE_DIR, start_file),'blocking':True, 'external':True})
+            self.os.execute_command(os.path.join(self.BASE_DIR, start_file),blocking=True, external=True)
             properties.update({'vxlan_id': vni})
             properties.update({'mcast_addr': mcast_addr})
         else:
             properties.update({'vlan_id': vlan_id})
             start_file = self.__generate_vnet_vlan_start_script2(n_small_id, net_uuid, vlan_id, face)
             shutdown_file = self.__generate_vnet_vlan_stop_script2(n_small_id)
-            self.call_os_plugin_function('execute_command',{'command':os.path.join(self.BASE_DIR, start_file),'blocking':True, 'external':True})
+            self.os.execute_command(os.path.join(self.BASE_DIR, start_file), blocking=True, external=True)
             properties.update({'vlan_id': vlan_id})
 
-
-        # if self.use_vlan:
-        #     properties.update({'vlan_id': self.__get_vlan_id(net_uuid, self.vlan_range[0], self.vlan_range[1])})
-        #     vlan_id = self.__get_vlan_id(net_uuid, self.vlan_range[0], self.vlan_range[1])
-        #     start_file = self.__generate_vnet_vlan_start_script(n_small_id, net_uuid)
-        #     shutdown_file = self.__generate_vnet_vlan_stop_script(n_small_id)
-        #     self.call_os_plugin_function('execute_command',{'command':os.path.join(self.BASE_DIR, start_file),'blocking':True, 'external':True})
-        #     properties.update({'vlan_id': vlan_id})
-        # else:
-        #     vxlan_id = self.__get_vni(net_uuid)
-        #     mcast_addr = self.__get_mcast_addr(net_uuid)
-        #     start_file  = self.__generate_vnet_start_script(n_small_id, net_uuid)
-        #     shutdown_file = self.__generate_vnet_stop_script(n_small_id)
-        #     self.call_os_plugin_function('execute_command',{'command':os.path.join(self.BASE_DIR, start_file),'blocking':True, 'external':True})
-        #     properties.update({'vxlan_id': vxlan_id})
-        #     properties.update({'mcast_addr': mcast_addr})
 
         properties.update({'virtual_device': vdev_name})
         properties.update({'net_ns': netns_name})
@@ -765,7 +731,7 @@ class LinuxBridge(NetworkPlugin):
         if manifest.get('ip_configuration') is not None:
             self.logger.info('create_virtual_network()','Networks as address informations: {}'.format(manifest.get('ip_configuration')))
             dhcp_file = self.__generate_dnsmaq_script(manifest)
-            self.call_os_plugin_function('execute_command',{'command':os.path.join(self.BASE_DIR, self.DHCP_DIR, dhcp_file),'blocking':True, 'external':True})
+            self.os.execute_command(os.path.join(self.BASE_DIR, self.DHCP_DIR, dhcp_file),blocking=True, external=True)
 
         manifest.update({'status':'CREATE'})
         manifest.update({'properties':properties})
@@ -780,21 +746,6 @@ class LinuxBridge(NetworkPlugin):
         raise NotImplementedError
 
     def assign_interface_to_network(self, network_uuid, intf_uuid):
-        # brctl addif virbr0 vnet0
-        # intf = self.interfaces_map.get(intf_uuid, None)
-        # if intf is None:
-        #     raise InterfaceNotExistingException(
-        #         '{} interface not exists'.format(intf_uuid))
-        # net = self.networks.get(network_uuid, None)
-        # if net is None:
-        #     raise BridgeAssociatedToNetworkException(
-        #         '{} network not exists'.format(network_uuid))
-
-        # br_cmd = 'sudo brctl addif {}-net {}'.format(
-        #     net.get('network_name'), intf)
-        # self.agent.get_os_plugin().execute_command(br_cmd)
-
-        # return True
         pass
 
     # eval
@@ -810,7 +761,7 @@ class LinuxBridge(NetworkPlugin):
         ext_intf = intf_info.get('ext_name')
         int_cp = cp_info.get('cp_name')
         cmd = 'sudo ip link set dev {} master {}'.format(ext_intf, int_cp)
-        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
+        self.os.execute_command(cmd,blocking=True, external=False)
         return {'result':{'int':intf_id, 'ext':cp_id}}
 
 
@@ -838,7 +789,7 @@ class LinuxBridge(NetworkPlugin):
         net_dev = net_info.get('properties').get('virtual_device')
         ext_cp = cp_info.get('ext_name')
         cmd = 'sudo ip link set dev {} master {}'.format(ext_cp, net_dev)
-        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
+        self.os.execute_command(cmd, blocking=True, external=False)
         self.logger.info('connect_cp_to_vnetwork()','CP {} <-> vNet {} OK'.format(cp_id, vnet_id))
         return {'result':{'int':cp_id, 'ext':vnet_id}}
 
@@ -853,27 +804,13 @@ class LinuxBridge(NetworkPlugin):
         self.logger.info('disconnect_cp()','CP info {}'.format(cp_info))
         ext_cp = cp_info.get('ext_name')
         cmd = 'sudo ip link set dev {} nomaster'.format(ext_cp)
-        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':False})
+        self.os.execute_command(cmd,blocking=True, external=False)
         self.logger.info('disconnect_cp()','Disconnected CP {}'.format(cp_id))
         return {'result':{'int':cp_id, 'ext':None}}
 
 
 
     def remove_interface_from_network(self, network_uuid, intf_uuid):
-        # net = self.networks.get(network_uuid, None)
-        # if net is None:
-        #     raise BridgeAssociatedToNetworkException(
-        #         '{} network not exists'.format(network_uuid))
-        # intf = self.brmap.get(intf_uuid, None)
-        # if intf is None:
-        #     raise InterfaceNotExistingException(
-        #         '{} interface not exists'.format(intf_uuid))
-        # if intf not in net.get('intf'):
-        #     raise InterfaceNotInNetworkException(
-        #         '{} interface not in this networks'.format(intf_uuid))
-
-        # net.get('intf').remove(intf)
-        # return True
         pass
 
     def delete_virtual_network(self, network_uuid):
@@ -898,27 +835,26 @@ class LinuxBridge(NetworkPlugin):
             conf = os.path.join(path,'net_{}.conf'.format(n_small_id))
             lease_file = os.path.join(path,'net_{}_leases'.format(n_small_id))
             start_file = os.path.join(path,'dhcp_{}.sh'.format(n_small_id))
-            pid = int(self.call_os_plugin_function('read_file',{'file_path':pid_file, 'root':False}))
+            pid = int(self.os.read_file(pid_file))
 
             dhcp_intf = 'dhcp-{}-e'.format(n_small_id)
             killcmd = 'sudo kill -9 {}'.format(pid)
-            self.call_os_plugin_function('execute_command',{'command':killcmd,'blocking':True, 'external':True})
-            # self.call_os_plugin_function('remove_file',{'file_path':pid_file})
-            self.call_os_plugin_function('remove_file',{'file_path':conf})
-            self.call_os_plugin_function('remove_file',{'file_path':start_file})
-            self.call_os_plugin_function('remove_file',{'file_path':lease_file})
+            self.os.execute_command(killcmd, blocking=True, external=True)
+
+            self.os.remove_file(conf)
+            self.os.remove_file(start_file)
+            self.os.remove_file(lease_file)
             cmd = 'sudo ip link del {}'.format(dhcp_intf)
-            self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':True})
+            self.os.execute_command(cmd,blocking=True, external=True)
 
 
 
         start_file, shutdown_file = self.net_files.get(network_uuid)
         shutdown_file = os.path.join(self.BASE_DIR, shutdown_file)
         start_file = os.path.join(self.BASE_DIR, start_file)
-        self.call_os_plugin_function('execute_command',{'command':'sudo {}'.format(shutdown_file),'blocking':True, 'external':True})
-        self.call_os_plugin_function('remove_file',{'file_path':shutdown_file})
-        self.call_os_plugin_function('remove_file',{'file_path':start_file})
-        # self.call_os_plugin_function('remove_file',{'file_path':dnsmasq_file})
+        self.os.execute_command('sudo {}'.format(shutdown_file),blocking=True, external=True)
+        self.os.remove_file(shutdown_file)
+        self.os.remove_file(start_file)
         m  = self.networks.pop(network_uuid)
         m.update({'status':'DESTROY'})
         self.net_files.pop(network_uuid)
@@ -948,9 +884,9 @@ class LinuxBridge(NetworkPlugin):
         vface = 'fl-{}'.format(ip_small_id)
         face = self.overlay_interface
         cmd = "sudo ip link add {} link {} type macvlan mode vepa".format(vface, face)
-        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':True})
+        self.os.execute_command(cmd,blocking=True, external=True)
         cmd = "sudo dhclient {}".format(vface)
-        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':False, 'external':True})
+        self.os.execute_command(cmd,blocking=False, external=True)
         try:
             addr = netifaces.ifaddresses(vface)[2][0]['addr']
             mask = netifaces.ifaddresses(face)[2][0]['netmask']
@@ -977,7 +913,7 @@ class LinuxBridge(NetworkPlugin):
         ip_small_id = ip_id.split('-')[0]
         vface = 'fl-{}'.format(ip_small_id)
         cmd = 'sudo ip link del {}'.format(vface)
-        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':True})
+        self.os.execute_command(cmd,blocking=True, external=True)
         rec = self.connector.loc.actual.get_node_floating_ip(self.node, self.uuid, ip_id)
         self.connector.loc.actual.remove_node_floating_ip(self.node, self.uuid, ip_id)
         self.logger.info('delete_floating_ip()', '[DONE] Deletted IP {}'.format(ip_id))
@@ -1020,10 +956,10 @@ class LinuxBridge(NetworkPlugin):
         cmd_reassing_ip = 'sudo ip netns exec {} ip addr add {} dev {}'.format(router['router_ns'], rec['address'], rec['vface'])
         cmd = 'sudo ip netns exec {} iptables -t nat -A PREROUTING -d {} -j DNAT --to {}'.format(router['router_ns'], rec['address'].split('/')[0], cp_ip)
 
-        self.call_os_plugin_function('execute_command',{'command':cmd_move_face_to_ns,'blocking':True, 'external':True})
-        self.call_os_plugin_function('execute_command',{'command':cmd_dev_up,'blocking':True, 'external':True})
-        self.call_os_plugin_function('execute_command',{'command':cmd_reassing_ip,'blocking':True, 'external':True})
-        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':True})
+        self.os.execute_command(cmd_move_face_to_ns,blocking=True, external=True)
+        self.os.execute_command(cmd_dev_up,blocking=True, external=True)
+        self.os.execute_command(cmd_reassing_ip,blocking=True, external=True)
+        self.os.execute_command(cmd,blocking=True, external=True)
 
         rec.update({'cp_id':cp_id})
         rec.update({'router_id':router['uuid']})
@@ -1053,10 +989,9 @@ class LinuxBridge(NetworkPlugin):
         cmd_to_default_ns = 'sudo ip netns exec {} ip link set {} netns 1'.format(router['router_ns'],rec['vface'])
         cmd_assign_ip = 'sudo ip addr add {} dev {}'.format(rec['address'], rec['vface'])
 
-
-        self.call_os_plugin_function('execute_command',{'command':cmd,'blocking':True, 'external':True})
-        self.call_os_plugin_function('execute_command',{'command':cmd_to_default_ns,'blocking':True, 'external':True})
-        self.call_os_plugin_function('execute_command',{'command':cmd_assign_ip,'blocking':True, 'external':True})
+        self.os.execute_command(cmd,blocking=True, external=True)
+        self.os.execute_command(cmd_to_default_ns,blocking=True, external=True)
+        self.os.execute_command(cmd_assign_ip,blocking=True, external=True)
 
         rec.update({'cp_id':''})
         rec.update({'router_id':''})
@@ -1104,12 +1039,12 @@ class LinuxBridge(NetworkPlugin):
         if fdu_id is '':
             return elegible_routers
 
-        fdud =  self.get_fdu_descriptor(fdu_id)
+        fdud =  self.agent.get_fdu_info(fdu_id)
         netid = ''
         self.logger.info('__get_cp_routers()', 'Scanning FDU Interfaces')
         for c in fdud['connection_points']:
             if c['uuid'] == cp_rec['cp_uuid']:
-                netid = c['pair_id']
+                netid = c['internal_vld_ref']
 
         self.logger.info('__get_cp_routers()', 'CP is connected to {}'.format(netid))
         if netid is '':
@@ -1124,11 +1059,6 @@ class LinuxBridge(NetworkPlugin):
 
         self.logger.info('__get_cp_routers()', 'Got {} elegible routers'.format(len(elegible_routers)))
         return elegible_routers
-
-    def get_fdu_descriptor(self, fduid):
-        parameters = {'fdu_uuid': fduid}
-        fname = 'get_fdu_info'
-        return self.call_agent_function(fname, parameters)
 
     def __cird2block(self, cird):
         '''
@@ -1236,71 +1166,70 @@ class LinuxBridge(NetworkPlugin):
 
 
     def __generate_interface_create_script(self, internal_name, external_name, name):
-        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vface_creation.sh'), 'root':False})
+        template_sh = self.os.read_file(os.path.join(self.DIR, 'templates', 'vface_creation.sh'))
         net_sh = Environment().from_string(template_sh)
         net_sh = net_sh.render(int_port=internal_name, ext_port=external_name)
-        net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
         f_name = 'create_face_{}.sh'.format(name)
-        self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
+        self.os.store_file(net_sh, self.BASE_DIR, f_name)
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
-        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        self.os.execute_command(chmod_cmd,blocking=True, external=False)
         return f_name
 
     def __generate_interface_destroy_script(self, external_name, name):
-        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vface_destroy.sh'), 'root':False})
+        template_sh = self.os.read_file(os.path.join(self.DIR, 'templates', 'vface_destroy.sh'))
         net_sh = Environment().from_string(template_sh)
         net_sh = net_sh.render(ext_port=external_name)
-        net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
+
         f_name = 'destroy_face_{}.sh'.format(name)
-        self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
+        self.os.store_file(net_sh, self.BASE_DIR, f_name)
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
-        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        self.os.execute_command(chmod_cmd, blocking=True, external=False)
         return f_name
 
 
     def __generate_port_create_script(self, internal_name, external_name, name):
-        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'cp_creation.sh'), 'root':False})
+        template_sh = self.os.read_file(os.path.join(self.DIR, 'templates', 'cp_creation.sh'))
         net_sh = Environment().from_string(template_sh)
         net_sh = net_sh.render(int_port=internal_name, ext_port=external_name, cp_name=name)
-        net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
+
         f_name = 'create_port_{}.sh'.format(name)
-        self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
+        self.os.store_file(net_sh, self.BASE_DIR,f_name)
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
-        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        self.os.execute_command(chmod_cmd,blocking=True,external=False)
         return f_name
 
     def __generate_port_destroy_script(self, external_name, name):
-        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'cp_destroy.sh'), 'root':False})
+        template_sh = self.os.read_file(os.path.join(self.DIR, 'templates', 'cp_destroy.sh'))
         net_sh = Environment().from_string(template_sh)
         net_sh = net_sh.render(ext_port=external_name, cp_name=name)
-        net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
+
         f_name = 'destroy_port_{}.sh'.format(name)
-        self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
+        self.os.store_file(net_sh, self.BASE_DIR,f_name)
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
-        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        self.os.execute_command(chmod_cmd,blocking=True, external=False)
         return f_name
 # ########################## NEW SCRIPT CREATION FUNCTIONS:
     def __generate_vnet_start_script2(self, netid, net_uuid, vxlan_id, mcast_addr, overlay_interface):
 
-        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vnet_create.sh'), 'root':False})
+        template_sh = self.os.read_file(os.path.join(self.DIR, 'templates', 'vnet_create.sh'))
         net_sh = Environment().from_string(template_sh)
         net_sh = net_sh.render(net_id=netid, group_id=vxlan_id, mcast_group_address=mcast_addr, wan=overlay_interface)
-        net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
+
         f_name = 'start_{}.sh'.format(netid)
-        self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
+        self.os.store_file(net_sh, self.BASE_DIR, f_name)
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
-        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        self.os.execute_command(chmod_cmd,blocking=True, external=False)
         return f_name
 
     def __generate_vnet_stop_script2(self, netid):
-        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vnet_destroy.sh'), 'root':False})
+        template_sh = self.os.read_file(os.path.join(self.DIR, 'templates', 'vnet_destroy.sh'))
         net_sh = Environment().from_string(template_sh)
         net_sh = net_sh.render(net_id=netid)
-        net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
+
         f_name = 'stop_{}.sh'.format(netid)
-        self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
+        self.os.store_file(net_sh, self.BASE_DIR, f_name)
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
-        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        self.os.execute_command(chmod_cmd,blocking=True, external=False)
         return f_name
 
     def __generate_vnet_vlan_start_script2(self, netid, net_uuid, vlan_id, vlan_face):
@@ -1309,26 +1238,26 @@ class LinuxBridge(NetworkPlugin):
         if not self.check_if_interface_exists(vintf):
             self.create_vlan_interface(vlan_face, vlan_id)
 
-        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vnet_create_vlan.sh'), 'root':False})
+        template_sh = self.os.read_file(os.path.join(self.DIR, 'templates', 'vnet_create_vlan.sh'))
         net_sh = Environment().from_string(template_sh)
 
         net_sh = net_sh.render(net_id=netid, vlan_intf=vintf)
-        net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
+
         f_name = 'start_{}.sh'.format(netid)
-        self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
+        self.os.store_file(net_sh, self.BASE_DIR,f_name)
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
-        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        self.os.execute_command(chmod_cmd,blocking=True, external=False)
         return f_name
 
     def __generate_vnet_vlan_stop_script2(self, netid):
-        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vnet_destroy_vlan.sh'), 'root':False})
+        template_sh = self.os.read_file(os.path.join(self.DIR, 'templates', 'vnet_destroy_vlan.sh'))
         net_sh = Environment().from_string(template_sh)
         net_sh = net_sh.render(net_id=netid)
-        net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
+
         f_name = 'stop_{}.sh'.format(netid)
-        self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
+        self.os.store_file(net_sh, self.BASE_DIR, f_name)
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
-        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        self.os.execute_command(chmod_cmd, blocking=True, external=False)
         return f_name
 
 
@@ -1340,26 +1269,26 @@ class LinuxBridge(NetworkPlugin):
         vxlan_id = self.__get_vni(net_uuid)
         mcast_addr = self.__get_mcast_addr(net_uuid)
 
-        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vnet_create.sh'), 'root':False})
+        template_sh = self.os.read_file(os.path.join(self.DIR, 'templates', 'vnet_create.sh'))
         net_sh = Environment().from_string(template_sh)
         overlay_interface = self.overlay_interface
         net_sh = net_sh.render(net_id=netid, group_id=vxlan_id, mcast_group_address=mcast_addr, wan=overlay_interface)
-        net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
+
         f_name = 'start_{}.sh'.format(netid)
-        self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
+        self.os.store_file(net_sh, self.BASE_DIR, f_name)
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
-        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        self.os.execute_command(chmod_cmd,blocking=True, external=False)
         return f_name
 
     def __generate_vnet_stop_script(self, netid):
-        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vnet_destroy.sh'), 'root':False})
+        template_sh = self.os.read_file(os.path.join(self.DIR, 'templates', 'vnet_destroy.sh'))
         net_sh = Environment().from_string(template_sh)
         net_sh = net_sh.render(net_id=netid)
-        net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
+
         f_name = 'stop_{}.sh'.format(netid)
-        self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
+        self.os.store_file(net_sh, self.BASE_DIR, f_name)
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
-        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        self.os.execute_command(chmod_cmd, blocking=True, external=False)
         return f_name
 
     def __generate_vnet_vlan_start_script(self, netid, net_uuid):
@@ -1370,26 +1299,26 @@ class LinuxBridge(NetworkPlugin):
         if not self.check_if_interface_exists(vintf):
             self.create_vlan_interface(self.vlan_face, vlan_id)
 
-        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vnet_create_vlan.sh'), 'root':False})
+        template_sh = self.os.read_file(os.path.join(self.DIR, 'templates', 'vnet_create_vlan.sh'))
         net_sh = Environment().from_string(template_sh)
 
         net_sh = net_sh.render(net_id=netid, vlan_intf=vintf)
-        net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
+
         f_name = 'start_{}.sh'.format(netid)
-        self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
+        self.os.store_file(net_sh, self.BASE_DIR, f_name)
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
-        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        self.os.execute_command(chmod_cmd, blocking=True, external=False)
         return f_name
 
     def __generate_vnet_vlan_stop_script(self, netid):
-        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vnet_destroy_vlan.sh'), 'root':False})
+        template_sh = self.os.read_file(os.path.join(self.DIR, 'templates', 'vnet_destroy_vlan.sh'))
         net_sh = Environment().from_string(template_sh)
         net_sh = net_sh.render(net_id=netid)
-        net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
+
         f_name = 'stop_{}.sh'.format(netid)
-        self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
+        self.os.store_file(net_sh, self.BASE_DIR,f_name)
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
-        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        self.os.execute_command(chmod_cmd,blocking=True, external=False)
         return f_name
 
 
@@ -1401,7 +1330,7 @@ class LinuxBridge(NetworkPlugin):
         netns_name = 'fosns-{}'.format(n_small_id)
         path = os.path.join(self.BASE_DIR, self.DHCP_DIR)
 
-        template_conf = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'dnsmasq.conf'), 'root':False})
+        template_conf = self.os.read_file(os.path.join(self.DIR, 'templates', 'dnsmasq.conf'))
 
         dhcp_intf = 'dhcp-{}-i'.format(n_small_id)
         lease_file = os.path.join(path,'net_{}_leases'.format(n_small_id))
@@ -1423,67 +1352,21 @@ class LinuxBridge(NetworkPlugin):
         if address_info.get('dns') is not None:
             dnsmasq_conf = dnsmasq_conf+'\ndhcp-option=6,{}'.format(address_info.get('dns'))
 
-        dnsmasq_conf = binascii.hexlify(base64.b64encode(bytes(dnsmasq_conf,'utf-8'))).decode()
-        self.call_os_plugin_function('store_file',{'content':dnsmasq_conf, 'file_path':path, 'filename':conf})
+        self.os.store_file(dnsmasq_conf, path, conf)
 
-        template_start = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'dnsmasq.sh'), 'root':False})
+        template_start = self.os.read_file(os.path.join(self.DIR, 'templates', 'dnsmasq.sh'))
         dnsmasq_sh = Environment().from_string(template_start)
 
         dns_face_ip = address_info.get('subnet').split('/')[0]
         dnsmasq_sh = dnsmasq_sh.render(netid=n_small_id, dhcp_conf_path=os.path.join(path, conf), ip=dns_face_ip, mask=addrs[-1])
-        dnsmasq_sh = binascii.hexlify(base64.b64encode(bytes(dnsmasq_sh,'utf-8'))).decode()
-        self.call_os_plugin_function('store_file',{'content':dnsmasq_sh, 'file_path':path, 'filename':start_file})
+        self.os.store_file(dnsmasq_sh, path, start_file)
 
         chmod_cmd = 'chmod +x {}'.format(os.path.join(path, start_file))
-        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        self.os.execute_command(chmod_cmd,blocking=True, external=False)
         return start_file
 
-    # def __generate_dnsmaq_script(self, descriptor):
-    #     net_uuid = descriptor.get('uuid')
-    #     address_info = descriptor.get('ip_configuration')
-    #     n_small_id = net_uuid.split('-')[0]
-    #     vdev_name = 'br-{}'.format(n_small_id)
-    #     netns_name = 'fosns-{}'.format(n_small_id)
-    #     path = os.path.join(self.BASE_DIR, self.DHCP_DIR)
-
-    #     template_conf = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'dnsmasq.conf'), 'root':False})
-
-    #     dhcp_intf = 'dhcp-{}-i'.format(n_small_id)
-    #     lease_file = os.path.join(path,'net_{}_leases'.format(n_small_id))
-    #     pid_file =  os.path.join(path,'net_{}.pid'.format(n_small_id))
-    #     conf = 'net_{}.conf'.format(n_small_id)
-    #     start_file = 'dhcp_{}.sh'.format(n_small_id)
-
-
-
-    #     dnsmasq_conf = Environment().from_string(template_conf)
-    #     dnsmasq_conf = dnsmasq_conf.render(dhcpinterface=dhcp_intf, lease_file=lease_file,dhcppid=pid_file)
-    #     if address_info.get('dhcp_range') is not None and address_info.get('dhcp_enable') :
-    #         dnsmasq_conf = dnsmasq_conf+'\ndhcp-range={},86400s'.format(address_info.get('dhcp_range'))
-    #     else:
-    #         dnsmasq_conf = dnsmasq_conf+'\ndhcp-range={},static,86400s'.format(address_info.get('subnet').split('/')[0])
-    #     if address_info.get('gateway') is not None:
-    #         dnsmasq_conf = dnsmasq_conf+'\ndhcp-option=3,{}'.format(address_info.get('gateway'))
-    #     if address_info.get('dns') is not None:
-    #         dnsmasq_conf = dnsmasq_conf+'\ndhcp-option=6,{}'.format(address_info.get('dns'))
-
-    #     dnsmasq_conf = binascii.hexlify(base64.b64encode(bytes(dnsmasq_conf,'utf-8'))).decode()
-    #     self.call_os_plugin_function('store_file',{'content':dnsmasq_conf, 'file_path':path, 'filename':conf})
-
-    #     template_start = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'dnsmasq.sh'), 'root':False})
-    #     dnsmasq_sh = Environment().from_string(template_start)
-    #     addrs = self.__cird2block(address_info.get('subnet'))
-    #     dnsmasq_sh = dnsmasq_sh.render(netid=n_small_id, dhcp_conf_path=os.path.join(path, conf), ip=addrs[0], mask=addrs[-1])
-    #     dnsmasq_sh = binascii.hexlify(base64.b64encode(bytes(dnsmasq_sh,'utf-8'))).decode()
-    #     self.call_os_plugin_function('store_file',{'content':dnsmasq_sh, 'file_path':path, 'filename':start_file})
-
-    #     chmod_cmd = 'chmod +x {}'.format(os.path.join(path, start_file))
-    #     self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
-    #     return start_file
-
-
     def __generate_vxlan_shutdown_script(self, net_uuid):
-        template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vxlan_destroy.sh'), 'root':False})
+        template_sh = self.os.read_file(os.path.join(self.DIR, 'templates', 'vxlan_destroy.sh'))
         br_name = 'br-{}'.format(net_uuid.split('-')[0])
         vxlan_name = 'vxl-{}'.format(net_uuid.split('-')[0])
         file_name = '{}_dnsmasq.pid'.format(br_name)
@@ -1491,21 +1374,21 @@ class LinuxBridge(NetworkPlugin):
         net_sh = Environment().from_string(template_sh)
         net_sh = net_sh.render(
             bridge=br_name, vxlan_intf_name=vxlan_name, dnsmasq_pid_file=pid_file_path)
-        net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
+
         self.logger.info('__generate_port_create_script()', 'File content : {}'.format(net_sh))
         file_name = '{}_stop.sh'.format(br_name)
-        self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':file_name})
+        self.os.store_file(net_sh, self.BASE_DIR, file_name)
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, file_name))
-        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        self.os.execute_command(chmod_cmd, blocking=True, external=False)
 
         return file_name
 
 
     def __generate_vxlan_script(self, net_uuid, manifest=None):
         if not self.overlay_interface:
-            template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vxlan_creation.sh'), 'root':False})
+            template_sh = self.os.read_file(os.path.join(self.DIR, 'templates', 'vxlan_creation.sh'))
         else:
-            template_sh = self.call_os_plugin_function('read_file',{'file_path':os.path.join(self.DIR, 'templates', 'vxlan_creation_intf.sh'), 'root':False})
+            template_sh = self.os.read_file(os.path.join(self.DIR, 'templates', 'vxlan_creation_intf.sh'))
         net_sh = Environment().from_string(template_sh)
         br_name = 'br-{}'.format(net_uuid.split('-')[0])
         vxlan_name = 'vxl-{}'.format(net_uuid.split('-')[0])
@@ -1527,11 +1410,11 @@ class LinuxBridge(NetworkPlugin):
         net_sh = net_sh.render(bridge_name=br_name, vxlan_intf_name=vxlan_name,
                                group_id=vxlan_id, mcast_group_address=mcast_addr, wan=self.overlay_interface)
 
-        net_sh = binascii.hexlify(base64.b64encode(bytes(net_sh,'utf-8'))).decode()
+
         f_name = '{}.sh'.format(net_uuid.split('-')[0])
-        self.call_os_plugin_function('store_file',{'content':net_sh, 'file_path':self.BASE_DIR, 'filename':f_name})
+        self.os.store_file(net_sh, self.BASE_DIR,f_name)
         chmod_cmd = 'chmod +x {}'.format(os.path.join(self.BASE_DIR, f_name))
-        self.call_os_plugin_function('execute_command',{'command':chmod_cmd,'blocking':True, 'external':False})
+        self.os.execute_command(chmod_cmd, blocking=True, external=False)
         return f_name, vxlan_name, vxlan_id, mcast_addr
 
     def __get_mcast_addr(self, net_id):

@@ -26,6 +26,8 @@ class GAD(object):
         for ep in self.evals:
             self.ws.unregister_eval(ep)
 
+    # SYSTEM
+
     def get_sys_info_path(self, sysid):
         return Constants.create_path([self.prefix, sysid, 'info'])
 
@@ -39,6 +41,8 @@ class GAD(object):
         return Constants.create_path(
             [self.prefix, sysid, 'users', userid, 'info'])
 
+    # TENANTS
+
     def get_all_tenants_selector(self, sysid):
         return Constants.create_path([self.prefix, sysid, 'tenants', '*'])
 
@@ -50,21 +54,39 @@ class GAD(object):
         return Constants.create_path(
             [self.prefix, sysid, 'tenants', tenantid, 'configuration'])
 
-    def get_atomic_entity_info_path(self, sysid, tenantid, aeid):
+    # CATALOG
+
+    def get_catalog_atomic_entity_info_path(self, sysid, tenantid, aeid):
         return Constants.create_path([self.prefix, sysid, 'tenants',
             tenantid, 'catalog', 'atomic-entities', aeid, 'info'])
 
-    def get_all_atomic_entities_selector(self, sysid, tenantid):
+    def get_catalog_all_atomic_entities_selector(self, sysid, tenantid):
         return Constants.create_path([self.prefix, sysid, 'tenants',
             tenantid, 'catalog', 'atomic-entities', '*', 'info'])
 
-    def get_fdu_info_path(self, sysid, tenantid, fduid):
+    def get_catalog_fdu_info_path(self, sysid, tenantid, fduid):
         return Constants.create_path([self.prefix, sysid, 'tenants',
             tenantid, 'catalog', 'fdu', fduid, 'info'])
 
-    def get_all_fdu_selector(self, sysid, tenantid):
+    def get_catalog_all_fdu_selector(self, sysid, tenantid):
         return Constants.create_path([self.prefix, sysid, 'tenants',
             tenantid, 'catalog', 'fdu', '*', 'info'])
+
+    # RECORDS
+
+    def get_records_atomic_entity_instance_info_path(self, sysid, tenantid, aeid, instanceid):
+        return Constants.create_path([self.prefix, sysid, 'tenants',
+            tenantid, 'records', 'atomic-entities', aeid, 'instances', instanceid, 'info'])
+
+    def get_records_all_atomic_entity_instances_selector(self, sysid, tenantid, aeid):
+        return Constants.create_path([self.prefix, sysid, 'tenants',
+            tenantid, 'records', 'atomic-entities', aeid, 'instances','*', 'info'])
+
+    def get_records_all_atomic_entities_instances_selector(self, sysid, tenantid):
+        return Constants.create_path([self.prefix, sysid, 'tenants',
+            tenantid, 'catalog', 'atomic-entities', '*', 'instances', '*' ,'info'])
+
+    # Nodes
 
     def get_all_nodes_selector(self, sysid, tenantid):
         return Constants.create_path(
@@ -101,6 +123,8 @@ class GAD(object):
                                       'nodes', nodeid, 'plugins',
                                       pluginid, 'exec', func_name])
 
+    # Node FDU or Records
+
     def get_node_fdu_info_path(self, sysid, tenantid, nodeid, fduid, instanceid):
         return Constants.create_path([self.prefix, sysid, 'tenants', tenantid,
                                       'nodes', nodeid, 'fdu',fduid ,
@@ -110,10 +134,23 @@ class GAD(object):
         return Constants.create_path([self.prefix, sysid, 'tenants', tenantid,
                                       'nodes', nodeid, 'fdu', '*', 'instances',
                                       '*', 'info'])
-    #
-    def get_all_entities_selector(self, sysid, tenantid):
-        return Constants.create_path(
-            [self.prefix, sysid, 'tenants', tenantid, 'entities', '*'])
+
+    def get_node_fdu_instances_selector(self, sysid, tenantid, nodeid, fduid):
+        return Constants.create_path([self.prefix, sysid, 'tenants', tenantid,
+                                      'nodes', nodeid, 'fdu', fduid, 'instances',
+                                      '*', 'info'])
+
+    def get_node_fdu_instance_selector(self, sysid, tenantid, nodeid, instid):
+        return Constants.create_path([self.prefix, sysid, 'tenants', tenantid,
+                                      'nodes', nodeid, 'fdu', '*', 'instances',
+                                      instid, 'info'])
+
+    def get_fdu_instance_selector(self, sysid, tenantid, instid):
+        return Constants.create_path([self.prefix, sysid, 'tenants', tenantid,
+                                      'nodes', '*', 'fdu', '*', 'instances',
+                                      instid, 'info'])
+
+    # Networks
 
     def get_all_networks_selector(self, sysid, tenantid):
         return Constants.create_path(
@@ -133,12 +170,6 @@ class GAD(object):
         return Constants.create_path(
             [self.prefix, sysid, 'tenants',
              tenantid, 'networks', networkid, 'info'])
-
-    def get_entity_instance_info_path(self, sysid, tenantid, entityid,
-                                      instanceid):
-        return Constants.create_path(
-            [self.prefix, sysid, 'tenants',
-             tenantid, 'entities', entityid, 'instances', instanceid, 'info'])
 
     def get_network_port_info_path(self, sysid, tenantid, portid):
         return Constants.create_path(
@@ -160,6 +191,8 @@ class GAD(object):
             self.prefix,sysid ,'tenants', tenantid,'networks','routers',
             '*', 'info'])
 
+    # Images
+
     def get_image_info_path(self, sysid, tenantid, imageid):
         return Constants.create_path([
             self.prefix, sysid, 'tenants', tenantid, 'image', imageid, 'info'
@@ -169,6 +202,8 @@ class GAD(object):
         return Constants.create_path([
             self.prefix, sysid, 'tenants', tenantid, 'image', '*', 'info'
         ])
+
+    # Node Images
 
     def get_node_image_info_path(self, sysid, tenantid, nodeid, imageid):
         return Constants.create_path([
@@ -182,6 +217,8 @@ class GAD(object):
             'image', '*', 'info'
         ])
 
+    # Flavor
+
     def get_flavor_info_path(self, sysid, tenantid, flavorid):
         return Constants.create_path([
             self.prefix, sysid, 'tenants', tenantid, 'flavor', flavorid, 'info'
@@ -191,6 +228,8 @@ class GAD(object):
         return Constants.create_path([
             self.prefix, sysid, 'tenants', tenantid, 'flavor', '*', 'info'
         ])
+
+    # Node Flavor
 
     def get_node_flavor_info_path(self, sysid, tenantid, nodeid, flavorid):
         return Constants.create_path([
@@ -203,6 +242,8 @@ class GAD(object):
             self.prefix, sysid, 'tenants', tenantid, 'nodes', nodeid,
             'flavor', '*', 'info'
         ])
+
+    # Node Network
 
     def get_node_network_floating_ip_info_path(self, sysid, tenantid, nodeid, ipid):
          return Constants.create_path([
@@ -235,7 +276,8 @@ class GAD(object):
             'nodes', nodeid, 'networks', 'routers', routerid, 'info'])
 
 
-    # TODO: this should be in the YAKS api in the creation of a selector
+    # Evals
+
     def dict2args(self, d):
         i = 0
         b = ''
@@ -263,6 +305,7 @@ class GAD(object):
         return Constants.create_path([self.prefix, sysid, 'tenants',
         tenantid, 'nodes', nodeid, 'agent', 'exec',f])
 
+    # ID Extraction
 
     def extract_userid_from_path(self, path):
         return path.split('/')[4]
@@ -270,8 +313,14 @@ class GAD(object):
     def extract_tenantid_from_path(self, path):
         return path.split('/')[4]
 
+    def extract_entityid_from_path(self, path):
+        return path.split('/')[7]
+
     def extract_aeid_from_path(self, path):
         return path.split('/')[7]
+
+    def extract_atomic_entity_instanceid_from_path(self, path):
+        return path.split('/')[9]
 
     def extract_fduid_from_path(self, path):
         return path.split('/')[7]
@@ -296,6 +345,8 @@ class GAD(object):
 
     def extract_node_floatingid_from_path(self, path):
         return path.split('/')[9]
+
+    # System
 
     def get_sys_info(self, sysid):
         s = self.get_sys_info_path(sysid)
@@ -322,6 +373,8 @@ class GAD(object):
             return []
         xs = map(lambda x: self.extract_userid_from_path(x[0]), res)
         return list(xs)
+
+    # Tenants
 
     def get_all_tenants_ids(self, sysid):
         s = self.get_all_tenants_selector(sysid)
@@ -391,8 +444,64 @@ class GAD(object):
         v = Value(json.dumps(nodeconf), encoding=Encoding.STRING)
         return self.ws.put(p, v)
 
-    def get_all_fdus(self, sysid, tenantid):
-        s = self.get_all_fdu_selector(sysid, tenantid)
+
+    # Catalog
+
+    def get_catalog_all_atomic_entities(self, sysid, tenantid):
+        s = self.get_catalog_all_atomic_entities_selector(sysid, tenantid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            return []
+        else:
+            xs = map(lambda x: self.extract_aeid_from_path(x[0]), res)
+            return list(xs)
+
+    def get_catalog_atomic_entity_info(self, sysid, tenantid, aeid):
+        p = self.get_catalog_atomic_entity_info_path(sysid, tenantid, aeid)
+        res = self.ws.get(p)
+        if len(res) == 0:
+            return None
+        v = res[0][1]
+        return json.loads(v.get_value())
+
+    def add_catalog_atomic_entity_info(self, sysid, tenantid, aeid, aeinfo):
+        p = self.get_catalog_atomic_entity_info_path(sysid, tenantid, aeid)
+        v = Value(json.dumps(aeinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def remove_catalog_atomic_entity_info(self, sysid, tenantid, aeid):
+        p = self.get_catalog_atomic_entity_info_path(sysid, tenantid, aeid)
+        self.ws.remove(p)
+
+    def observe_catalog_atomic_entities(self, sysid, tenantid, callback):
+        s = self.get_catalog_all_atomic_entities_selector(sysid, tenantid)
+        def cb(kvs):
+            if len(kvs) == 0:
+                raise ValueError('Listener received empty data')
+            else:
+                v = kvs[0][1].get_value()
+                if v is not None:
+                    callback(json.loads(v.value))
+        subid = self.ws.subscribe(s, cb)
+        self.listeners.append(subid)
+        return subid
+
+    def observe_catalog_fdu(self, sysid, tenantid, fduid,callback):
+        s = self.get_catalog_fdu_info_path(sysid, tenantid, fduid)
+        def cb(kvs):
+            if len(kvs) == 0:
+                raise ValueError('Listener received empty data')
+            else:
+                v = kvs[0][1].get_value()
+                if v is not None:
+                    callback(json.loads(v.value))
+        subid = self.ws.subscribe(s, cb)
+        self.listeners.append(subid)
+        return subid
+
+
+    def get_catalog_all_fdus(self, sysid, tenantid):
+        s = self.get_catalog_all_fdu_selector(sysid, tenantid)
         res = self.ws.get(s)
         if len(res) == 0:
             return []
@@ -400,28 +509,28 @@ class GAD(object):
             xs = map(lambda x: self.extract_fduid_from_path(x[0]), res)
             return list(xs)
 
-    def get_fdu_info(self, sysid, tenantid, fduid):
-        p = self.get_fdu_info_path(sysid, tenantid, fduid)
+    def get_catalog_fdu_info(self, sysid, tenantid, fduid):
+        p = self.get_catalog_fdu_info_path(sysid, tenantid, fduid)
         res = self.ws.get(p)
         if len(res) == 0:
             return None
         v = res[0][1]
         return json.loads(v.get_value())
 
-    def add_fdu_info(self, sysid, tenantid, fduid, fduinfo):
-        p = self.get_fdu_info_path(sysid, tenantid, fduid)
+    def add_catalog_fdu_info(self, sysid, tenantid, fduid, fduinfo):
+        p = self.get_catalog_fdu_info_path(sysid, tenantid, fduid)
         v = Value(json.dumps(fduinfo), encoding=Encoding.STRING)
         return self.ws.put(p, v)
 
-    def remove_fdu_info(self, sysid, tenantid, fduid):
-        p = self.get_fdu_info_path(sysid, tenantid, fduid)
+    def remove_catalog_fdu_info(self, sysid, tenantid, fduid):
+        p = self.get_catalog_fdu_info_path(sysid, tenantid, fduid)
         self.ws.remove(p)
 
-    def observe_fdus(self, sysid, tenantid, callback):
-        s = self.get_all_fdu_selector(sysid, tenantid)
+    def observe_catalog_fdus(self, sysid, tenantid, callback):
+        s = self.get_catalog_all_fdu_selector(sysid, tenantid)
         def cb(kvs):
             if len(kvs) == 0:
-                raise ValueError('Listener received empty datas')
+                raise ValueError('Listener received empty data')
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
@@ -430,46 +539,49 @@ class GAD(object):
         self.listeners.append(subid)
         return subid
 
-    def observe_fdu(self, sysid, tenantid, fduid,callback):
-        s = self.get_fdu_info_path(sysid, tenantid, fduid)
-        def cb(kvs):
-            if len(kvs) == 0:
-                raise ValueError('Listener received empty datas')
-            else:
-                v = kvs[0][1].get_value()
-                if v is not None:
-                    callback(json.loads(v.value))
-        subid = self.ws.subscribe(s, cb)
-        self.listeners.append(subid)
-        return subid
+    # Records
 
-    def get_all_plugins_ids(self, sysid, tenantid, nodeid):
-        s = self.get_node_plugins_selector(sysid, tenantid, nodeid)
+
+    def get_records_all_atomic_entities_instances(self, sysid, tenantid):
+        s = self.get_records_all_atomic_entities_instances_selector(sysid, tenantid)
         res = self.ws.get(s)
         if len(res) == 0:
             return []
-        xs = map(lambda x: self.extract_plugin_from_path(x[0]), res)
-        return list(xs)
+        else:
+            xs = map(lambda x: (self.extract_aeid_from_path(x[0]),self.extract_atomic_entity_instanceid_from_path(x[0])), res)
+            return list(xs)
 
-    def get_plugin_info(self, sysid, tenantid, nodeid, pluginid):
-        s = self.get_node_plugin_info_path(sysid, tenantid, nodeid, pluginid)
+    def get_records_all_atomic_entity_instances(self, sysid, tenantid, aeid):
+        s = self.get_records_all_atomic_entity_instances_selector(sysid, tenantid, aeid)
         res = self.ws.get(s)
+        if len(res) == 0:
+            return []
+        else:
+            xs = map(lambda x: self.extract_atomic_entity_instanceid_from_path(x[0]), res)
+            return list(xs)
+
+    def get_records_atomic_entity_info(self, sysid, tenantid, aeid, instanceid):
+        p = self.get_records_atomic_entity_instance_info_path(sysid, tenantid, aeid, instanceid)
+        res = self.ws.get(p)
         if len(res) == 0:
             return None
         v = res[0][1]
         return json.loads(v.get_value())
 
-    def add_node_plugin(self, sysid, tenantid, nodeid, pluginid, plugininfo):
-        p = self.get_node_plugin_info_path(sysid, tenantid, nodeid, pluginid)
-        v = Value(json.dumps(plugininfo), encoding=Encoding.STRING)
+    def add_records_atomic_entity_info(self, sysid, tenantid, aeid, instanceid, aeinfo):
+        p = self.get_records_atomic_entity_instance_info_path(sysid, tenantid, aeid, instanceid)
+        v = Value(json.dumps(aeinfo), encoding=Encoding.STRING)
         return self.ws.put(p, v)
 
-    def observe_node_plugins(self, sysid, tenantid, nodeid, callback):
-        s = self.get_node_plugins_subscriber_selector(sysid, tenantid, nodeid)
+    def remove_records_atomic_entity_info(self, sysid, tenantid, aeid, instanceid):
+        p = self.get_records_atomic_entity_instance_info_path(sysid, tenantid, aeid, instanceid)
+        self.ws.remove(p)
 
+    def observe_records_atomic_entities(self, sysid, tenantid, callback):
+        s = self.get_records_all_atomic_entities_instances_selector(sysid, tenantid)
         def cb(kvs):
             if len(kvs) == 0:
-                raise ValueError('Listener received empty datas')
+                raise ValueError('Listener received empty data')
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
@@ -478,17 +590,8 @@ class GAD(object):
         self.listeners.append(subid)
         return subid
 
-    def add_plugin_eval(self, sysid, tenantid, nodeid, pluginid,
-                        func_name, func):
-        p = self.get_node_plugin_eval_path(
-            sysid, tenantid, nodeid, pluginid, func_name)
 
-        def cb(path, props):
-            v = Value(json.dumps(func(**props)), encoding=Encoding.STRING)
-            return v
-        r = self.ws.register_eval(p, cb)
-        self.evals.append(p)
-        return r
+    # Node FDU
 
     def add_node_fdu(self, sysid, tenantid, nodeid, fduid, instanceid ,fduinfo):
         p = self.get_node_fdu_info_path(sysid, tenantid, nodeid, fduid, instanceid)
@@ -500,7 +603,7 @@ class GAD(object):
 
         def cb(kvs):
             if len(kvs) == 0:
-                raise ValueError('Listener received empty datas')
+                raise ValueError('Listener received empty data')
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
@@ -561,6 +664,57 @@ class GAD(object):
             return []
         xs = map(lambda x: self.extract_nodeid_from_path(x[0]), res)
         return list(xs)
+
+    # Plugins
+
+    def get_all_plugins_ids(self, sysid, tenantid, nodeid):
+        s = self.get_node_plugins_selector(sysid, tenantid, nodeid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            return []
+        xs = map(lambda x: self.extract_plugin_from_path(x[0]), res)
+        return list(xs)
+
+    def get_plugin_info(self, sysid, tenantid, nodeid, pluginid):
+        s = self.get_node_plugin_info_path(sysid, tenantid, nodeid, pluginid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            return None
+        v = res[0][1]
+        return json.loads(v.get_value())
+
+    def add_node_plugin(self, sysid, tenantid, nodeid, pluginid, plugininfo):
+        p = self.get_node_plugin_info_path(sysid, tenantid, nodeid, pluginid)
+        v = Value(json.dumps(plugininfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def observe_node_plugins(self, sysid, tenantid, nodeid, callback):
+        s = self.get_node_plugins_subscriber_selector(sysid, tenantid, nodeid)
+
+        def cb(kvs):
+            if len(kvs) == 0:
+                raise ValueError('Listener received empty data')
+            else:
+                v = kvs[0][1].get_value()
+                if v is not None:
+                    callback(json.loads(v.value))
+        subid = self.ws.subscribe(s, cb)
+        self.listeners.append(subid)
+        return subid
+
+    def add_plugin_eval(self, sysid, tenantid, nodeid, pluginid,
+                        func_name, func):
+        p = self.get_node_plugin_eval_path(
+            sysid, tenantid, nodeid, pluginid, func_name)
+
+        def cb(path, props):
+            v = Value(json.dumps(func(**props)), encoding=Encoding.STRING)
+            return v
+        r = self.ws.register_eval(p, cb)
+        self.evals.append(p)
+        return r
+
+    # Network
 
     def get_network_port(self, sysid, tenantid, portid):
         s = self.get_network_port_info_path(sysid, tenantid, portid)
@@ -634,6 +788,8 @@ class GAD(object):
         p = self.get_network_info_path(sysid, tenantid, netid)
         return self.ws.remove(p)
 
+    # Images
+
     def add_image(self, sysid, tenantid, imageid, imginfo):
         p = self.get_image_info_path(sysid, tenantid, imageid)
         v = Value(json.dumps(imginfo), encoding=Encoding.STRING)
@@ -660,6 +816,8 @@ class GAD(object):
             d.append(json.loads(kvs[0][1].get_value()))
         return d
 
+    # Node Images
+
     def add_node_image(self, sysid, tenantid, nodeid,imageid, imginfo):
         p = self.get_node_image_info_path(sysid, tenantid, nodeid, imageid)
         v = Value(json.dumps(imginfo), encoding=Encoding.STRING)
@@ -683,8 +841,11 @@ class GAD(object):
         kvs = self.ws.get(s)
         d = []
         for n in kvs:
-            d.append(json.loads(kvs[0][1].get_value()))
+            d.append(json.loads(n[0][1].get_value()))
         return d
+
+
+    # Flavor
 
     def add_flavor(self, sysid, tenantid, flavorid, flvinfo):
         p = self.get_flavor_info_path(sysid, tenantid, flavorid)
@@ -709,8 +870,10 @@ class GAD(object):
         kvs = self.ws.get(s)
         d = []
         for n in kvs:
-            d.append(json.loads(kvs[0][1].get_value()))
+            d.append(json.loads(n[0][1].get_value()))
         return d
+
+    # Node Flavor
 
     def add_node_flavor(self, sysid, tenantid, nodeid,flavorid, flvinfo):
         p = self.get_node_flavor_info_path(sysid, tenantid, nodeid, flavorid)
@@ -738,7 +901,7 @@ class GAD(object):
             d.append(json.loads(kvs[0][1].get_value()))
         return d
 
-    # FLOATING IP
+    # Node Network
     def add_node_floating_ip(self, sysid, tenantid, nodeid,floatingid, ip_info):
 
         p = self.get_node_network_floating_ip_info_path(sysid, tenantid, nodeid, floatingid)
@@ -785,8 +948,6 @@ class GAD(object):
         else:
             v = res[0][1]
             return json.loads(v.get_value())
-
-    #  Routers
 
     def get_node_network_router(self, sysid, tenantid, nodeid, routerid):
         s = self.get_node_network_router_info_path(sysid, tenantid, nodeid, routerid)
@@ -911,6 +1072,66 @@ class GAD(object):
         else:
             return json.loads(res[0][1].get_value())
 
+    def onboard_fdu_from_node(self, sysid, tenantid, nodeid, fdu_id, fdu_info):
+        fname = 'onboard_fdu'
+        params = {'descriptor':fdu_info}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def define_fdu_in_node(self, sysid, tenantid, nodeid, fdu_id):
+        fname = 'define_fdu'
+        params = {'fdu_id':fdu_id}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def onboard_ae_from_node(self, sysid, tenantid, nodeid, ae_info):
+        fname = 'onboard_ae'
+        params = {'descriptor':ae_info}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def instantiate_ae_from_node(self, sysid, tenantid, nodeid, ae_id):
+        fname = 'instantiate_ae'
+        params = {'ae_id':ae_id}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def offload_ae_from_node(self, sysid, tenantid, nodeid, ae_id):
+        fname = 'offload_ae'
+        params = {'ae_id':ae_id}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def terminate_ae_from_node(self, sysid, tenantid, nodeid, ae_inst_id):
+        fname = 'terminate_ae'
+        params = {'instance_id':ae_inst_id}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
 
 
 
@@ -952,6 +1173,8 @@ class LAD(object):
             i = i + 1
         return '('+b+')'
 
+    # Node
+
     def get_node_info_path(self, nodeid):
         return Constants.create_path([self.prefix, nodeid, 'info'])
 
@@ -979,7 +1202,7 @@ class LAD(object):
         return Constants.create_path(
             [self.prefix, nodeid, 'network_managers', '*'])
 
-    # Updated path with instances
+    # Node FDU
 
     def get_node_runtime_fdus_selector(self, nodeid, pluginid):
         return Constants.create_path(
@@ -1011,21 +1234,21 @@ class LAD(object):
             [self.prefix, nodeid, 'runtimes', '*', 'fdu', '*',
             'instances','*','info'])
 
+    # Node Images
+
     def get_node_image_info_path(self, nodeid, pluginid, imgid):
         return Constants.create_path(
             [self.prefix, nodeid, 'runtimes', pluginid,
              'images', imgid, 'info'])
+
+    # Node Flavors
 
     def get_node_flavor_info_path(self, nodeid, pluginid, flvid):
         return Constants.create_path(
             [self.prefix, nodeid, 'runtimes', pluginid,
              'flavors', flvid, 'info'])
 
-    def get_node_fdu_atomic_entity_info(self, nodeid, pluginid, fduid,
-                                        atomicid):
-        return Constants.create_path(
-            [self.prefix, nodeid, 'runtimes',
-             pluginid, 'fdu', fduid, 'atomic_entity', atomicid, 'info'])
+    # Node Networks
 
     def get_node_netwoks_selector(self, nodeid, pluginid):
         return Constants.create_path(
@@ -1072,7 +1295,7 @@ class LAD(object):
         return Constants.create_path([self.prefix, nodeid,
             'network_managers', pluginid , 'floating-ips', '*', 'info'])
 
-
+    # Node Evals
 
     def get_agent_exec_path(self, nodeid, func_name):
         return Constants.create_path([self.prefix, nodeid, 'agent', 'exec',
@@ -1130,6 +1353,7 @@ class LAD(object):
              'exec', f])
 
 
+    # ID Extraction
 
     def extract_nodeid_from_path(self, path):
         return path.split('/')[2]
@@ -1146,6 +1370,8 @@ class LAD(object):
     def extract_node_routerid_from_path(self, path):
         return path.split('/')[6]
 
+
+    # Node Evals
 
     def add_os_eval(self, nodeid, func_name, func):
         p = self.get_node_os_exec_path(nodeid, func_name)
@@ -1190,7 +1416,7 @@ class LAD(object):
             nodeid, nm_uuid, func_name, parameters)
         res = self.ws.eval(s)
         if len(res) == 0:
-            raise ValueError('Empty data on exec_nw_eval')
+            raise ValueError('Empty data on exec_os_eval')
         else:
             return json.loads(res[0][1].get_value())
 
@@ -1212,6 +1438,8 @@ class LAD(object):
         r = self.ws.register_eval(p, cb)
         self.evals.append(p)
         return r
+
+    # Node
 
     def add_node_plugin(self, nodeid, pluginid, plugininfo):
         p = self.get_node_plugin_info_path(nodeid, pluginid)
@@ -1277,7 +1505,7 @@ class LAD(object):
 
         def cb(kvs):
             if len(kvs) == 0:
-                raise ValueError('Listener received empty datas')
+                raise ValueError('Listener received empty data')
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
@@ -1291,7 +1519,7 @@ class LAD(object):
 
         def cb(kvs):
             if len(kvs) == 0:
-                raise ValueError('Listener received empty datas')
+                raise ValueError('Listener received empty data')
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
@@ -1318,6 +1546,8 @@ class LAD(object):
         p = self.get_node_os_info_path(nodeid)
         v = Value(json.dumps(osinfo), encoding=Encoding.STRING)
         return self.ws.put(p, v)
+
+    # Node FDU
 
     def add_node_fdu(self, nodeid, pluginid, fduid, instanceid, fduinfo):
         p = self.get_node_fdu_info_path(nodeid, pluginid, fduid, instanceid)
@@ -1349,6 +1579,8 @@ class LAD(object):
             return []
         return list(map (lambda x: json.loads(x[1].get_value()), res))
 
+    # Node Images
+
     def add_node_image(self, nodeid, pluginid, imgid, imginfo):
         p = self.get_node_image_info_path(nodeid, pluginid, imgid)
         v = Value(json.dumps(imginfo), encoding=Encoding.STRING)
@@ -1364,6 +1596,8 @@ class LAD(object):
     def remove_node_image(self, nodeid, pluginid, imgid):
         p = self.get_node_image_info_path(nodeid, pluginid, imgid)
         return self.ws.remove(p)
+
+    # Node Flavor
 
     def add_node_flavor(self, nodeid, pluginid, flvid, flvinfo):
         p = self.get_node_flavor_info_path(nodeid, pluginid, flvid)
@@ -1381,14 +1615,14 @@ class LAD(object):
         p = self.get_node_flavor_info_path(nodeid, pluginid, flvid)
         return self.ws.remove(p)
 
-    #  Network
+    #  Node Network
 
     def observe_node_networks(self, nodeid, pluginid, callback):
         s = self.get_node_netwoks_selector(nodeid, pluginid)
 
         def cb(kvs):
             if len(kvs) == 0:
-                raise ValueError('Listener received empty datas')
+                raise ValueError('Listener received empty data')
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
@@ -1428,8 +1662,6 @@ class LAD(object):
             d.append(json.loads(kvs[0][1].get_value()))
         return d
 
-    # Ports
-
     def add_node_port(self, nodeid, pluginid, portid, portinfo):
         p = self.get_node_network_port_info_path(nodeid, pluginid, portid)
         v = Value(json.dumps(portinfo), encoding=Encoding.STRING)
@@ -1451,7 +1683,7 @@ class LAD(object):
 
         def cb(kvs):
             if len(kvs) == 0:
-                raise ValueError('Listener received empty datas')
+                raise ValueError('Listener received empty data')
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
@@ -1467,8 +1699,6 @@ class LAD(object):
         for n in kvs:
             d.append(json.loads(kvs[0][1].get_value()))
         return d
-
-    # Routers
 
     def add_node_router(self, nodeid, pluginid, routerid, routerinfo):
         p = self.get_node_network_router_info_path(nodeid, pluginid, routerid)
@@ -1507,8 +1737,6 @@ class LAD(object):
         for n in kvs:
             d.append(json.loads(kvs[0][1].get_value()))
         return d
-
-    # FLOATING IPs
 
     def add_node_floating_ip(self, nodeid, pluginid, ipid, ipinfo):
         p = self.get_node_network_floating_ip_info_path(nodeid, pluginid, ipid)
@@ -1586,6 +1814,8 @@ class CLAD(object):
             i = i + 1
         return '('+b+')'
 
+    # Node
+
     def get_node_selector(self):
         return Constants.create_path([self.prefix, '*', 'info'])
 
@@ -1620,11 +1850,6 @@ class CLAD(object):
         return Constants.create_path(
             [self.prefix, nodeid, 'runtimes', pluginid, 'fdu', '**'])
 
-    def get_node_fdu_info_path(self, nodeid, pluginid, fduid):
-        return Constants.create_path(
-            [self.prefix, nodeid, 'runtimes', pluginid, 'fdu', fduid, 'info'])
-
-
     def get_node_status(self, nodeid):
         p = self.get_node_status_path(nodeid)
         res = self.ws.get(p)
@@ -1656,11 +1881,13 @@ class CLAD(object):
         p = self.get_node_status_path(nodeid)
         self.ws.remove(p)
 
-    # def get_node_fdu_atomic_entity_info(self, nodeid, pluginid, fduid,
-    #                                     atomicid):
-    #     return Constants.create_path(
-    #         [self.prefix, nodeid, 'runtimes',
-    #          pluginid, 'fdu', fduid, 'atomic_entity', atomicid, 'info'])
+    # Node FDU
+
+    def get_node_fdu_info_path(self, nodeid, pluginid, fduid):
+        return Constants.create_path(
+            [self.prefix, nodeid, 'runtimes', pluginid, 'fdu', fduid, 'info'])
+
+    # Agent Evals
 
     def get_agent_exec_path(self, nodeid, func_name):
         return Constants.create_path([self.prefix, nodeid, 'agent', 'exec',
@@ -1671,6 +1898,18 @@ class CLAD(object):
         f = func_name + '?' + p
         return Constants.create_path([self.prefix, nodeid, 'agent', 'exec',
         f])
+
+    def exec_agent_eval(self, nodeid, func_name, parameters):
+        s = self.get_agent_exec_path_with_params(
+            nodeid, func_name, parameters)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+
+    # Node Evals
 
     def get_node_os_exec_path(self, nodeid, func_name):
         return Constants.create_path(
@@ -1707,15 +1946,6 @@ class CLAD(object):
         r = self.ws.register_eval(p, cb)
         self.evals.append(p)
         return r
-
-    def exec_agent_eval(self, nodeid, func_name, parameters):
-        s = self.get_agent_exec_path_with_params(
-            nodeid, func_name, parameters)
-        res = self.ws.eval(s)
-        if len(res) == 0:
-            raise ValueError('Empty data on exec_agent_eval')
-        else:
-            return json.loads(res[0][1].get_value())
 
     def exec_os_eval(self, nodeid, func_name, parameters):
         s = self.get_node_os_exec_path_with_params(
@@ -1775,7 +2005,7 @@ class CLAD(object):
 
         def cb(kvs):
             if len(kvs) == 0:
-                raise ValueError('Listener received empty datas')
+                raise ValueError('Listener received empty data')
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
@@ -1783,13 +2013,31 @@ class CLAD(object):
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
+
+    # Node FDU
+
+    def add_node_fdu(self, nodeid, pluginid, fduid, fduinfo):
+        p = self.get_node_fdu_info_path(nodeid, pluginid, fduid)
+        v = Value(json.dumps(fduinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def get_node_fdu(self, nodeid, pluginid, fduid):
+        s = self.get_node_fdu_info_path(nodeid, pluginid, fduid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            return None
+        return json.loads(res[0][1].get_value())
+
+    def remove_node_fdu(self, nodeid, pluginid, fduid):
+        p = self.get_node_fdu_info_path(nodeid, pluginid, fduid)
+        return self.ws.remove(p)
 
     def observe_node_runtime_fdus(self, nodeid, pluginid, callback):
         s = self.get_node_runtime_fdus_subscriber_selector(nodeid, pluginid)
 
         def cb(kvs):
             if len(kvs) == 0:
-                raise ValueError('Listener received empty datas')
+                raise ValueError('Listener received empty data')
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
@@ -1797,6 +2045,8 @@ class CLAD(object):
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
+
+    # Node
 
     def get_node_info(self, nodeid):
         s = self.get_node_info_path(nodeid)
@@ -1817,21 +2067,6 @@ class CLAD(object):
         v = Value(json.dumps(osinfo), encoding=Encoding.STRING)
         return self.ws.put(p, v)
 
-    def add_node_fdu(self, nodeid, pluginid, fduid, fduinfo):
-        p = self.get_node_fdu_info_path(nodeid, pluginid, fduid)
-        v = Value(json.dumps(fduinfo), encoding=Encoding.STRING)
-        return self.ws.put(p, v)
-
-    def get_node_fdu(self, nodeid, pluginid, fduid):
-        s = self.get_node_fdu_info_path(nodeid, pluginid, fduid)
-        res = self.ws.get(s)
-        if len(res) == 0:
-            return None
-        return json.loads(res[0][1].get_value())
-
-    def remove_node_fdu(self, nodeid, pluginid, fduid):
-        p = self.get_node_fdu_info_path(nodeid, pluginid, fduid)
-        return self.ws.remove(p)
 
 class Global(object):
     def __init__(self, workspace):

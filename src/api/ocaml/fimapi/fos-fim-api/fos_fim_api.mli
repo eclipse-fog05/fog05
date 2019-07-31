@@ -38,21 +38,22 @@ module Network : sig
 
   val add_network : FTypes.virtual_network -> api -> bool Lwt.t
   val remove_network : string -> api -> bool Lwt.t
-  val add_connection_point : FDU.connection_point -> api -> bool Lwt.t
+  val add_connection_point : User.Descriptors.FDU.connection_point_descriptor -> api -> bool Lwt.t
   val remove_connection_point : string -> api -> bool Lwt.t
   val list_networks : api -> (FTypes.virtual_network list) Lwt.t
-  val list_connection_points : api -> (FDU.connection_point list) Lwt.t
+  val list_connection_points : api -> (User.Descriptors.FDU.connection_point_descriptor list) Lwt.t
 
 end
+
 
 module FDU : sig
 
   (* FDU descriptor *)
-  val onboard : FDU.descriptor -> ?wait:bool -> api -> string Lwt.t
+  val onboard : User.Descriptors.FDU.descriptor -> ?wait:bool -> api -> User.Descriptors.FDU.descriptor Lwt.t
   val offload : string -> ?wait:bool -> api -> string Lwt.t
 
   (* FDU instances *)
-  val define : string-> string -> ?wait:bool -> api -> string Lwt.t
+  val define : string-> string -> ?wait:bool -> api -> Infra.Descriptors.FDU.record Lwt.t
   val undefine : string -> ?wait:bool -> api -> string Lwt.t
   val configure : string -> ?wait:bool -> api -> string Lwt.t
   val clean : string -> ?wait:bool -> api -> string Lwt.t
@@ -62,7 +63,7 @@ module FDU : sig
   val resume : string -> ?wait:bool -> api -> string Lwt.t
   val migrate : string -> string -> ?wait:bool -> api -> string Lwt.t
   (*  All-in-one functions  *)
-  val instantiate : string -> string -> ?wait:bool -> api -> string Lwt.t
+  val instantiate : string -> string -> ?wait:bool -> api -> Infra.Descriptors.FDU.record  Lwt.t
   val terminate : string -> ?wait:bool -> api -> string Lwt.t
 
   (* Enumeration functions *)
@@ -70,25 +71,25 @@ module FDU : sig
   (* val list_node : string -> api -> (FDU.record list) Lwt.t *)
   val get_nodes : string -> api -> (string list) Lwt.t
   val instance_list : string -> ?nodeid:string -> api -> (string * (string list)) list Lwt.t
-  val info : string -> api -> FDU.descriptor Lwt.t
-  val instance_info : string -> api -> FDU.record Lwt.t
-  val list : api -> (FDU.descriptor list) Lwt.t
+  val info : string -> api -> User.Descriptors.FDU.descriptor Lwt.t
+  val instance_info : string -> api -> Infra.Descriptors.FDU.record Lwt.t
+  val list : api -> (User.Descriptors.FDU.descriptor list) Lwt.t
 
 end
 
 module Image : sig
 
-  val add : Fdu.image -> api -> string Lwt.t
+  val add : Base.Descriptors.FDU.image -> api -> string Lwt.t
   val remove : string -> api -> bool Lwt.t
-  val list : api -> (Fdu.image list) Lwt.t
+  val list : api -> (Base.Descriptors.FDU.image list) Lwt.t
 
 end
 
 
 module Flavor : sig
-  val add : Fdu.computational_requirements -> api -> string Lwt.t
+  val add : Base.Descriptors.FDU.computational_requirements -> api -> string Lwt.t
   val remove : string -> api -> string Lwt.t
-  val list : api -> (Fdu.computational_requirements list) Lwt.t
+  val list : api -> (Base.Descriptors.FDU.computational_requirements list) Lwt.t
 
 end
 

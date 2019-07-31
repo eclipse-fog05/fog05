@@ -32,3 +32,8 @@ depends: [
   "yaks-ocaml"
   "fos-core"
 ]
+
+
+synopsis : "Eclipse fog05 Agent"
+description: """
+Eclipse fog05 Agent is the running component of Eclipse fog05"""

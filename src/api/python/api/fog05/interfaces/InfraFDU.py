@@ -13,33 +13,30 @@
 # Contributors: Gabriele Baldoni, ADLINK Technology Inc.
 # OCaml implementation and API
 
-
 import json
 from fog05.interfaces.States import State
-from fog05_im import user_fdu
+from fog05_im import infra_fdu
 from pyangbind.lib.serialise import pybindJSONDecoder
 from pyangbind.lib.serialise import pybindJSONEncoder
 from collections import OrderedDict
+import copy
 
-
-class FDU(object):
+class InfraFDU(object):
 
     def __init__(self, data=None):
         '''
 
-        Constructor for the FDU Descriptor
-        :param data dictionary containing the FDU descriptor
+        Constructor for the FDU Record
+        :param data dictionary containing the FDU Record
 
         :return the FDU object
 
         '''
-
-        self.fdu = user_fdu.user_fdu()
+        self.fdu = infra_fdu.infra_fdu()
         self.encoder = pybindJSONEncoder()
-        self.id = None
         self.uuid = None
-        self.name = None
-        self.description = None
+        self.fdu_id = None
+        self.status = None
         self.image = {}
         self.command = {}
         self.storage = []
@@ -53,16 +50,24 @@ class FDU(object):
         self.io_ports = []
         self.connection_points = []
         self.depends_on = []
-        if data is not None:
-            pybindJSONDecoder.load_ietf_json({'fdu_descriptor':data}, None, None, obj=self.fdu)
-            self.enforce()
+        self.error_code = None
+        self.error_msg = None
+        self.migration_properties = {}
+        self.hypervisor_info = {}
 
-            self.id = self.fdu.fdu_descriptor.id
-            self.uuid = data.get('uuid', None)
+        if data is not None:
+            # data = json.loads(data)
+            if isinstance(data['hypervisor_info'], dict):
+                data.update({'hypervisor_info':json.dumps(data['hypervisor_info'])})
+            pybindJSONDecoder.load_ietf_json({'fdu_record':data}, None, None, obj=self.fdu)
+            self.enforce()
+            while isinstance(data['hypervisor_info'], str):
+                data.update({'hypervisor_info':json.loads(data['hypervisor_info'])})
+            self.uuid = self.fdu.fdu_record.uuid
+            self.fdu_id = self.fdu.fdu_record.fdu_id
             self.image = data.get('image', None)
             self.command = data.get('command', None)
-            self.name =  data.get('name')
-            self.description =  data.get('description', None)
+            self.status = data.get('status')
             self.storage = data.get('storage')
             self.computation_requirements = data.get('computation_requirements')
             self.geographical_requirements = data.get('geographical_requirements', None)
@@ -74,30 +79,42 @@ class FDU(object):
             self.io_ports = data.get('io_ports')
             self.connection_points = data.get('connection_points')
             self.depends_on = data.get('depends_on')
+            self.error_code = data.get('error_code', None)
+            self.error_msg = data.get('error_msg', None)
+            self.migration_properties = data.get('migration_properties', None)
+            self.hypervisor_info = data.get('hypervisor_info')
+
+
 
 
     def enforce(self):
-        if self.fdu.fdu_descriptor.id == '':
-            raise ValueError('FDU.ID cannot be empty')
+        if self.fdu.fdu_record.uuid == '':
+            raise ValueError('FDU.UUID cannot be empty')
 
-        if self.fdu.fdu_descriptor.name == '':
-            raise ValueError('FDU.Name cannot be empty')
+        if self.fdu.fdu_record.fdu_id == '':
+            raise ValueError('FDU.FDU_ID cannot be empty')
 
-        if self.fdu.fdu_descriptor.computation_requirements.cpu_arch == '':
+        if self.fdu.fdu_record.status == '':
+            raise ValueError('FDU.Status cannot be empty')
+
+        if self.fdu.fdu_record.computation_requirements.cpu_arch == '':
             raise ValueError('FDU.Computation_Requirements.CPU_Arch cannot be empty')
 
-        if self.fdu.fdu_descriptor.hypervisor == '':
+        if self.fdu.fdu_record.hypervisor == '':
             raise ValueError('FDU.Hypervisor cannot be empty')
 
-        if self.fdu.fdu_descriptor.migration_kind == '':
+        if self.fdu.fdu_record.migration_kind == '':
             raise ValueError('FDU.Migration_Kind cannot be empty')
+
+        if self.fdu.fdu_record.hypervisor_info == '':
+            self.fdu.fdu_record.hypervisor_info = '{}'
+
 
     def to_json(self):
         data = {
             'uuid': self.uuid,
-            'id': self.id,
-            'name': self.name,
-            'description': self.description,
+            'fdu_id': self.fdu_id,
+            'status': self.status,
             'image': self.image,
             'command': self.command,
             'storage': self.storage,
@@ -111,10 +128,24 @@ class FDU(object):
             'io_ports': self.io_ports,
             'connection_points': self.connection_points,
             'depends_on': self.depends_on,
+            'error_code': self.error_code,
+            'error_msg': self.error_msg,
+            'migration_properties': self.migration_properties,
+            'hypervisor_info': self.hypervisor_info
         }
-        check_obj = user_fdu.user_fdu()
-        pybindJSONDecoder.load_ietf_json({'fdu_descriptor':data}, None, None, obj=check_obj)
+        check_obj = infra_fdu.infra_fdu()
+        pybindJSONDecoder.load_ietf_json({'fdu_record':data.update({'hypervisor_info':json.dumps(data['hypervisor_info'])})}, None, None, obj=check_obj)
+        data.update({'hypervisor_info':json.loads(data['hypervisor_info'])})
         return data
+
+    def get_short_id(self):
+        return ''.join([x[0] for x in self.uuid.split('-')])
+
+    def get_status(self):
+        return self.status
+
+    def set_status(self, status) :
+        self.status = status
 
     def get_uuid(self):
         return self.uuid
@@ -122,23 +153,11 @@ class FDU(object):
     def set_uuid(self, uuid) :
         self.uuid = uuid
 
-    def get_id(self):
-        return self.id
+    def get_fdu_id(self):
+        return self.fdu_id
 
-    def set_id(self, id) :
-        self.id = id
-
-    def get_description(self):
-        return self.description
-
-    def set_description(self, description) :
-        self.description = description
-
-    def get_name(self):
-        return self.name
-
-    def set_name(self, name) :
-        self.name = name
+    def set_fdu_id(self, fdu_id) :
+        self.fdu_id = fdu_id
 
     def get_image(self):
         return self.image
@@ -230,5 +249,60 @@ class FDU(object):
     def set_depends_on(self, depends_on) :
         self.depends_on = depends_on
 
+    def get_error_code(self):
+        return self.error_code
+
+    def set_error_code(self, error_code) :
+        self.error_code = error_code
+
+    def get_error_msg(self):
+        return self.error_msg
+
+    def set_error_msg(self, error_msg):
+        self.error_msg = error_msg
+
+    def get_migration_properties(self):
+        return self.migration_properties
+
+    def set_migration_properties(self, source, destination) :
+        self.migration_properties = {'source':source, 'destination': destination}
+
+    def clean_migration_properties(self):
+        self.migration_properties = None
+
+    def get_hypervisor_info(self):
+        return self.hypervisor_info
+
+    def set_hypervisor_info(self, hypervisor_info) :
+        self.hypervisor_info = hypervisor_info
+
+
+    def on_defined(self):
+        raise NotImplementedError('This is and interface!')
+
+    def on_configured(self, configuration):
+        raise NotImplementedError('This is and interface!')
+
+    def on_clean(self):
+        raise NotImplementedError('This is and interface!')
+
+    def on_start(self):
+        raise NotImplementedError('This is and interface!')
+
+    def on_stop(self):
+        raise NotImplementedError('This is and interface!')
+
+    def on_pause(self):
+        raise NotImplementedError('This is and interface!')
+
+    def on_resume(self):
+        raise NotImplementedError('This is and interface!')
+
+    def before_migrate(self):
+        raise NotImplementedError('This is and interface!')
+
+    def after_migrate(self):
+        raise NotImplementedError('This is and interface!')
+
     def __str__(self):
-        return "Name : {} ID: {}".format(self.name, self.id)
+        return "FDU Record UUID: {} FDU_ID: {}".format(self.uuid, self.fdu_id)

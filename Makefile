@@ -10,15 +10,19 @@ LINUX_PLUGIN_CONFFILE = /etc/fos/plugins/linux/linux_plugin.json
 
 all:
 
-
+	make -C src/im/python
 	make -C src/im/ocaml install
 	make -C src/core/ocaml install
+	make -C src/api/ocaml/fimapi install
+	make -C src/api/ocaml/faemapi install
 	make -C src/agent/;
 
 install:
 
+	make -C src/im/python install
 	make -C src/api/python/api install
-	# make -C src/api/ocaml/api install
+
+
 ifeq "$(wildcard $(ETC_FOS_DIR))" ""
 	sudo mkdir -p /etc/fos/plugins
 endif
@@ -73,7 +77,6 @@ lldp:
 	sudo systemctl stop lldpd
 
 cli:
-	make -C src/api/ocaml/api install
 	make -C src/utils/ocaml/cli install
 
 uninstall:
@@ -91,14 +94,15 @@ uninstall:
 	sudo rm -rf /etc/fos/agent
 	sudo rm -rf /usr/bin/fos_linux
 	sudo userdel fos
-	sudo pip3 uninstall fog05 -y
+	sudo pip3 uninstall fog05_im fog05 -y
 
 clean:
 	opam remove fos-im -y
 	make -C src/im/ocaml clean
 	make -C src/core/ocaml clean
 	make -C src/agent clean
-	make -C src/api/ocaml/api clean
+	make -C src/api/ocaml/fimapi clean
+	make -C src/api/ocaml/faemapi clean
 	sudo rm -rf lldpd
 	sudo rm -rf src/pyhton/fog05.egg-info
 	sudo rm -rf src/pyhton/build

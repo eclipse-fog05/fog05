@@ -27,17 +27,48 @@ module JSON = Abs_json
 
 
 module Errors = Fos_errors
-module FDU = Fdu
+(* module FDU = Fdu *)
 module Router = Router
+
+(* module AtomicEntity = Atomic_entity *)
+
+
 
 module MEC = Mec
 module NFV = Nfv
 module MEC_Interfaces = Mec_interfaces
 
 
+(* Exporting Modules in Tree strucutre *)
+
+
+module Base = struct
+  module Descriptors = struct
+    module FDU = Base_fdu
+    module AtomicEnitity = Base_atomic_entity
+  end
+end
+
+module User  = struct
+  module Descriptors = struct
+    module FDU = User_fdu
+    module AtomicEntity = User_atomic_entity
+  end
+end
+
+module Infra = struct
+  module Descriptors = struct
+    module Router = Router
+    module FDU = Infra_fdu
+    module AtomicEntity = Infra_atomic_entity
+  end
+end
+
+
+
 module ConstraintMap = Map.Make(String)
 
-let string_of_hv_type (kind:Fdu.hv_kind) =
+let string_of_hv_type (kind:Infra_fdu.hv_kind) =
   match kind with
   | `BARE -> "native"
   | `KVM | `KVM_UK -> "kvm"
@@ -59,14 +90,14 @@ let hv_type_of_string hv =
 
 
 let fdu_of_mecapp (mecapp:MEC.appd_descriptor) =
-  let uuid = mecapp.id in
+  let id = mecapp.id in
   let name = mecapp.name in
   let hypervisor = List.hd mecapp.sw_image_descriptor.supported_virtualisation_environment |> hv_type_of_string in
   let migration_kind = `LIVE in
   let io_ports = [] in
   let depends_on = [] in
   let interfaces = [
-    FDU.{
+    User_fdu.{
       name = "eth0";
       is_mgmt = false;
       if_type = `INTERNAL;
@@ -76,9 +107,10 @@ let fdu_of_mecapp (mecapp:MEC.appd_descriptor) =
         vpci = "0:0:0";
         bandwidth = 100;
       };
-      cp_id = None
+      cp_id = None;
+      ext_cp_id = None;
     };
-    FDU.{
+    User_fdu.{
       name = "eth1";
       is_mgmt = true;
       if_type = `INTERNAL;
@@ -88,24 +120,25 @@ let fdu_of_mecapp (mecapp:MEC.appd_descriptor) =
         vpci = "0:0:0";
         bandwidth = 100;
       };
-      cp_id = None
+      cp_id = None;
+      ext_cp_id = None;
     };
   ]
   in
-  let computation_requirements = FDU.{
+  let computation_requirements = Base_fdu.{
+      uuid = None;
+      name = None;
       cpu_arch = mecapp.virtual_compute_descriptor.virtual_cpu.cpu_architecture;
       cpu_min_freq = Apero.Option.get_or_default mecapp.virtual_compute_descriptor.virtual_cpu.virtual_cpu_clock 0;
       cpu_min_count = mecapp.virtual_compute_descriptor.virtual_cpu.num_virtual_cpu;
       ram_size_mb = float_of_int @@ mecapp.virtual_compute_descriptor.virtual_memory.virtual_mem_size;
       storage_size_gb =  float_of_int @@ mecapp.sw_image_descriptor.min_disk;
-      uuid = None;
-      name = None;
       gpu_min_count = None;
       fpga_min_count = None;
       duty_cycle = None;
     }
   in
-  let image = FDU.{
+  let image = Base_fdu.{
       uuid = None;
       name = None;
       uri = mecapp.sw_image_descriptor.id;
@@ -113,4 +146,4 @@ let fdu_of_mecapp (mecapp:MEC.appd_descriptor) =
       format = mecapp.sw_image_descriptor.disk_format;
     }
   in
-  FDU.create_descriptor ~uuid ~name ~hypervisor ~image ~computation_requirements ~migration_kind ~io_ports ~depends_on ~interfaces
+  User_fdu.create_descriptor ~id ~name ~hypervisor ~image ~computation_requirements ~migration_kind ~io_ports ~depends_on ~interfaces

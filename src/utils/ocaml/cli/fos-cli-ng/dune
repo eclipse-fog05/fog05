@@ -2,6 +2,6 @@
  (name fos_cli_ng)
  (public_name fos)
  (package fos-cli-ng)
- (libraries lwt apero-core lwt.unix str cmdliner uuidm yojson fos-core fos-fim-api)
+ (libraries lwt apero-core lwt.unix str cmdliner uuidm yojson fos-core fos-fim-api fos-faem-api)
  (preprocess (pps lwt_ppx ppx_cstruct ))
  )
