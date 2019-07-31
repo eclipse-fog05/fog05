@@ -29,26 +29,8 @@ class NetworkPlugin(Plugin):
     def __init__(self, version, plugin_uuid):
         super(NetworkPlugin, self).__init__(version, plugin_uuid)
 
-    def get_network_descriptor(self, fduid):
-        parameters = {'uuid': fduid}
-        fname = 'get_network_info'
-        return self.call_agent_function(fname, parameters)
-
-    def get_port_descriptor(self, fduid):
-        parameters = {'cp_uuid': fduid}
-        fname = 'get_port_info'
-        return self.call_agent_function(fname, parameters)
-
-    def get_os_plugin(self):
-        pls = self.connector.loc.actual.get_all_plugins(self.node)
-        os = [x for x in pls if x.get('type') == 'os']
-        if len(os) == 0:
-            raise RuntimeError('No os plugin present in the node!!')
-        os = os[0]
-        return os
-
-
     def wait_dependencies(self):
+        self.get_agent()
         os = None
         while os is None:
             try:

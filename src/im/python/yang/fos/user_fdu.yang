@@ -1,5 +1,5 @@
-module fdud {
-    namespace "urn:fog05:im:fim:fdu";
+module user_fdu {
+    namespace "urn:fog05:im:user:fdu";
     prefix "fdud";
 
     typedef migr_kind {
@@ -60,6 +60,20 @@ module fdud {
             enum XEN_UK;
             enum MCU;
             enum DOCKER;
+        }
+    }
+
+    typedef storage_kind {
+        type enumeration {
+            enum BLOCK;
+            enum FILE;
+            enum OBJECT;
+        }
+    }
+
+    typedef cp_kind {
+        type enumeration {
+            enum VPORT;
         }
     }
 
@@ -162,7 +176,7 @@ module fdud {
     grouping geographical_requirements {
         container position {
             description
-              "Postion requirement for this VDU";
+              "Postion requirement for this FDU";
             uses position;
         }
 
@@ -184,7 +198,7 @@ module fdud {
 
         leaf cpu_arch {
             description
-              "CPU architecture needed by this VDU";
+              "CPU architecture needed by this FDU";
             type string;
         }
 
@@ -245,6 +259,12 @@ module fdud {
     // }
     }
 
+    grouping energy_requirements {
+        leaf key {
+            type string;
+        }
+    }
+
     grouping configuration {
         leaf conf_type {
             description
@@ -276,10 +296,20 @@ module fdud {
             type boolean;
         }
 
+        leaf if_type {
+            description
+              "Type of the virtualised interface";
+            type intf_t;
+        }
+
         leaf mac_address {
             description
               "MAC Address of the int64erface (AA:BB:CC:DD:EE:FF)";
             type string;
+        }
+
+        container virtual_interface {
+            uses vif_type;
         }
 
         leaf cp_id {
@@ -288,25 +318,34 @@ module fdud {
             type string;
         }
 
-        leaf if_type {
-            description
-              "Type of the virtualised interface";
-            type intf_t;
-        }
-
-        container virtual_interface {
-            uses vif_type;
+        leaf ext_cp_id {
+            type string;
         }
     }
 
     grouping connection_point {
-        leaf uuid {
-            description
-              "Unique UUID for this CP";
+
+        leaf name {
             type string;
         }
 
-        leaf pair_id {
+        leaf id {
+            type string;
+        }
+
+        leaf short_name {
+            type string;
+        }
+
+        leaf cp_type {
+            type cp_kind;
+        }
+
+        leaf port_security_enabled {
+            type boolean;
+        }
+
+        leaf internal_vld_ref {
             description
               "Reference to the VL this CP is connected";
             type string;
@@ -333,59 +372,100 @@ module fdud {
         }
     }
 
+    grouping storage_description {
+        leaf id {
+            type string;
+        }
+
+        leaf storage_type {
+            type storage_kind;
+        }
+
+        leaf size {
+            type int64;
+        }
+
+        leaf file_system_protocol {
+            type string;
+        }
+
+        leaf cp_id {
+            type string;
+        }
+    }
+
     grouping descriptor {
-        leaf uuid {
+        leaf id {
             description
-              "UUID of the VDU";
+              "ID of the FDU";
             type string;
         }
 
         leaf name {
             description
-              "Unique name of the VDU";
+              "Unique name of the FDU";
+            type string;
+        }
+
+        leaf uuid {
+            description
+              "This is populated by the Orchestrator";
             type string;
         }
 
         leaf description {
             description
-              "VDU Description";
+              "FDU Description";
             type string;
         }
 
         container image {
             description
-              "Imange used when instatiating the VDU";
+              "Imange used when instatiating the FDU";
             uses image;
         }
 
         container command {
             description
-              "Command used for start the BARE VDU";
+              "Command used for start the BARE FDU";
             uses command;
         }
 
         container computation_requirements {
             description
-              "Computation requirement for this VDU";
+              "Computation requirement for this FDU";
             uses computational_requirements;
+        }
+
+        container energy_requirements {
+            uses energy_requirements;
+        }
+
+        container geographical_requirements {
+            uses geographical_requirements;
         }
 
         container configuration {
             description
-              "Configuration script for this VDU";
+              "Configuration script for this FDU";
             uses configuration;
         }
 
         list interfaces {
             description
-              "List of virtual intefaces used by this VDU";
+              "List of virtual intefaces used by this FDU";
             key "name";
             uses interface;
         }
 
+        list storage {
+            key "id";
+            uses storage_description;
+        }
+
         leaf hypervisor {
             description
-              "Type of hypervisor needed by this VDU";
+              "Type of hypervisor needed by this FDU";
             type hv_kind;
         }
 
@@ -397,14 +477,14 @@ module fdud {
 
         list connection_points {
             description
-              "Internal connection points definited by this VDU";
-            key "uuid";
+              "Internal connection points definited by this FDU";
+            key "id";
             uses connection_point;
         }
 
         list io_ports {
             description
-              "I/O ports needed by this VDU";
+              "I/O ports needed by this FDU";
             key "name";
             uses io_port;
         }

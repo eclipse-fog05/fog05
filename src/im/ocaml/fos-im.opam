@@ -24,3 +24,10 @@ depends: [
   "yojson"
   "apero-core"
 ]
+
+
+
+synopsis : "Eclipse fog05 IM"
+description: """
+Eclipse fog05 IM is a collection of OCaml libraries and types used by
+Eclipse fog05 components"""

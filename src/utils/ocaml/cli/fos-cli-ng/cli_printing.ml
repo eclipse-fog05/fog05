@@ -85,10 +85,10 @@ let print_networks (netlist:FTypes.virtual_network list) =
       Lwt_io.printf "| Name: %s \n| UUID: %s\n| Mgmt: %b\n" manifest.name manifest.uuid manifest.is_mgmt
   ) netlist
 
-let print_images (imglist:FDU.image list) =
+let print_images (imglist:Base.Descriptors.FDU.image list) =
   let%lwt _ = Lwt_io.printf "+-------------------------------------------------------+\n" in
   Lwt_list.iter_p (
-    fun (descr:FDU.image) ->
+    fun (descr:Base.Descriptors.FDU.image) ->
       Lwt_io.printf "| Name: %s \n| UUID: %s\n| URI: %s\n| Checksum: %s\n| Format: %s\n"
         (Apero.Option.get_or_default descr.name "ND") (Apero.Option.get_or_default descr.uuid "ND")
         descr.uri descr.checksum descr.format
@@ -98,7 +98,7 @@ let print_images (imglist:FDU.image list) =
 let print_fdus aelist =
   let%lwt _ = Lwt_io.printf "+-------------------------------------------------------+\n" in
   Lwt_list.iter_p (
-    fun (_, fduid, (desc:FDU.descriptor) ) ->
+    fun (_, fduid, (desc:User.Descriptors.FDU.descriptor) ) ->
       let%lwt _ = Lwt_io.printf "| Name: %s \n| UUID: %s\n| Type: %s\n" desc.name fduid (Fos_im.string_of_hv_type desc.hypervisor) in
       (* let%lwt _ = Lwt_io.printf "| Node: %s\n" nid in
          let%lwt _ = Lwt_io.printf "| Status: %s\n" (Apero.Option.get_or_default manifest.status "ND") in *)

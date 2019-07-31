@@ -8,7 +8,6 @@ bug-reports:  "https://github.com/eclipse/fog05/issues/"
 dev-repo:     "https://github.com/eclipse/fog05.git"
 
 build: [
- ["dune" "subst"] {pinned}
  ["dune" "-p" name "-j" jobs]
 ]
 
@@ -19,22 +18,13 @@ install: [
 
 depends: [
   "dune"
-  "cmdliner"
-  "re"
-  "yojson"
-  "logs"
-  "lwt"
-  "lwt_ppx"
-  "logs-syslog"
-  "apero-core"
-  "apero-net"
-  "yaks-common"
-  "yaks-ocaml"
   "fos-im"
+  "fos-core"
+  "apero-core"
 ]
 
 
-synopsis : "Eclipse fog05 Core"
+synopsis : "Eclipse fog05 FIM API"
 description: """
-Eclipse fog05 Core a collection of OCaml libraries used by
-Eclipse fog05 components"""
+Eclipse fog05 FIM API is a collection of OCaml libraries used to interact
+with Eclipse fog05 FIM"""

@@ -471,9 +471,8 @@ class Linux(OSPlugin):
             data = ''
             if root:
                 file_path = 'sudo cat {}'.format(file_path)
-                process = subprocess.Popen(
-                    file_path.split(), stdout=subprocess.PIPE)
-                for line in iter(process.stdout.readline, ''):
+                p = psutil.Popen(file_path.split(), stdout=PIPE)
+                for line in p.stdout:
                     data = data + '{}'.format(line)
             else:
                 with open(file_path, 'r') as f:

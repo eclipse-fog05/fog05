@@ -110,3 +110,9 @@ type system_info = {
 type system_config = {
   config : string;
 }
+
+
+type compatible_node_response = {
+  uuid : string;
+  is_compatible: bool;
+}

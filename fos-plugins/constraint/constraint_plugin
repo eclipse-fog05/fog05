@@ -48,6 +48,8 @@ class ConstraintNode(Plugin):
         self.pid = os.getpid()
         self.var = MVar()
 
+        self.get_agent()
+
         osinfo = {
             'uuid': manifest.get('uuid'),
             'name': 'rpi1',
@@ -131,19 +133,6 @@ class ConstraintNode(Plugin):
         self.logger.info('stopRuntime()', '[ DONE ] Constraint Plugin - Bye')
         return True
 
-    def call_agent_function(self, fname, fparameters):
-        res = self.connector.actual.exec_agent_eval(
-            self.node, fname, fparameters)
-        if res.get('error'):
-            raise ValueError('Agent Eval returned {}'.format(res.get('error')))
-            # return None
-        return res.get('result')
-
-    def get_fdu_descriptor(self, fduid):
-        parameters = {'fdu_uuid': fduid}
-        fname = 'get_fdu_info'
-        return self.call_agent_function(fname, parameters)
-
     def execute_command(self, command, blocking=False, external=False):
         self.logger.info(
             'execute_command()', 'Constraint Plugin executing command {}'.format(command))
@@ -203,7 +192,7 @@ class ConstraintNode(Plugin):
     def define_fdu(self, fdu_record):
 
         fdu_uuid = fdu_record.get('fdu_uuid')
-        descriptor = self.get_fdu_descriptor(fdu_uuid)
+        descriptor = self.agent.get_fdu_info(fdu_uuid)
         out_file = 'native_{}.log'.format(fdu_uuid)
         fdu = NativeFDU.from_descriptor(descriptor)
 

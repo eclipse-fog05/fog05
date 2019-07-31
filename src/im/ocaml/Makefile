@@ -12,8 +12,16 @@ atd:
 	atdgen -j-std fos-im/fos_records_types.atd
 
 	atdgen -j-std fos-im/router.atd
-	# atdgen -t fos-im/fdu.atd
-	atdgen -j-std fos-im/fdu.atd
+
+	atdgen -j-std fos-im/base_fdu.atd
+	atdgen -j-std fos-im/base_atomic_entity.atd
+
+	atdgen -j-std fos-im/user_fdu.atd
+	atdgen -j-std fos-im/user_atomic_entity.atd
+
+	atdgen -j-std fos-im/infra_fdu.atd
+	atdgen -j-std fos-im/infra_atomic_entity.atd
+
 
 	atdgen -j-std fos-im/nfv.atd
 
@@ -27,7 +35,16 @@ clean:
 	rm -rf fos-im/fos_types*.ml fos-im/fos_types*.mli
 	rm -rf fos-im/fos_records_types*.ml fos-im/fos_records_types*.mli
 	rm -rf fos-im/types_record*.ml fos-im/types_record*.mli
-	rm -rf fos-im/fdu*.ml fos-im/fdu*.mli
+
+	rm -rf fos-im/base_fdu*.ml*
+	rm -rf fos-im/base_atomic_entity*.ml*
+
+	rm -rf fos-im/user_fdu*.ml*
+	rm -rf fos-im/user_atomic_entity*.ml*
+
+	rm -rf fos-im/infra_fdu*.ml*
+	rm -rf fos-im/infra_atomic_entity*.ml*
+
 	rm -rf fos-im/nfv*.ml*
 	rm -rf fos-im/mec*.ml*
 	rm -rf fos-im/router*.ml*

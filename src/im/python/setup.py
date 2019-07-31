@@ -21,11 +21,11 @@
 from setuptools import setup
 
 setup(
-    name='mec_im',
-    version='0.0.1',
+    name='fog05_im',
+    version='0.2.0',
     python_requires='>=3',
     author='ADLINK',
-    packages=['mec_im'],
+    packages=['fog05_im'],
     install_requires=['jsonschema'],
     include_package_data=True
 )
