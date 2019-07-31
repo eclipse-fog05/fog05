@@ -1114,7 +1114,7 @@ class GAD(object):
 
     def offload_ae_from_node(self, sysid, tenantid, nodeid, ae_id):
         fname = 'offload_ae'
-        params = {'descriptor':ae_id}
+        params = {'ae_id':ae_id}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
         res = self.ws.eval(s)
         if len(res) == 0:
