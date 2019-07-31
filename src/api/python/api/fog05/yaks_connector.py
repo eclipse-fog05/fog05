@@ -1112,6 +1112,26 @@ class GAD(object):
         else:
             return json.loads(res[0][1].get_value())
 
+    def offload_ae_from_node(self, sysid, tenantid, nodeid, ae_id):
+        fname = 'offload_ae'
+        params = {'descriptor':ae_id}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def terminate_ae_from_node(self, sysid, tenantid, nodeid, ae_inst_id):
+        fname = 'terminate_ae'
+        params = {'instance_id':ae_inst_id}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
 
 
 

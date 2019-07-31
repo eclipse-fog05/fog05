@@ -472,6 +472,22 @@ class FIMAPI(object):
             n = random.choice(nodes)
             return self.connector.glob.actual.instantiate_ae_from_node(self.sysid, self.tenantid, n, ae_id)
 
+        def offload(self, ae_id):
+            nodes = self.connector.glob.actual.get_all_nodes(self.sysid, self.tenantid)
+            if len(nodes) == 0:
+                raise SystemError("No nodes in the system!")
+            n = random.choice(nodes)
+            return self.connector.glob.actual.offload_ae_from_node(self.sysid, self.tenantid, n, ae_id)
+
+
+
+        def terminate(self, ae_instance_id):
+            nodes = self.connector.glob.actual.get_all_nodes(self.sysid, self.tenantid)
+            if len(nodes) == 0:
+                raise SystemError("No nodes in the system!")
+            n = random.choice(nodes)
+            return self.connector.glob.actual.terminate_ae_from_node(self.sysid, self.tenantid, n, ae_instance_id)
+
 
     class FDU(object):
         '''

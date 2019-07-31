@@ -383,7 +383,9 @@ class KVM(RuntimePluginFDU):
             fdu.on_configured(vm_xml)
 
             self.current_fdus.update({instance_uuid: fdu})
-            self.update_fdu_status(fdu_uuid, instance_uuid, 'CONFIGURE')
+            # self.update_fdu_status(fdu_uuid, instance_uuid, 'CONFIGURE')
+            fdu.set_status('CONFIGURE')
+            self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid,instance_uuid, fdu.to_json())
             self.logger.info('configure_fdu()', '[ DONE ] KVM Plugin - Configure a VM uuid {}'.format(instance_uuid))
 
             # TODO: monitoring TBA
