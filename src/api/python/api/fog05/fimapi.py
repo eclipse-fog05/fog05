@@ -49,7 +49,6 @@ class FIMAPI(object):
         self.fdu = self.FDU(self.connector, self.sysid, self.tenantid)
         self.image = self.Image(self.connector, self.sysid, self.tenantid)
         self.flavor = self.Flavor(self.connector, self.sysid, self.tenantid)
-        self.atomic_entity = self.AtomicEntity(self.connector, self.sysid, self.tenantid)
 
     def close(self):
         self.connector.close()
@@ -445,50 +444,6 @@ class FIMAPI(object):
             '''
             pass
 
-    class AtomicEntity(object):
-
-        def __init__(self, connector=None, sysid=Constants.default_system_id,
-            tenantid=Constants.default_tenant_id):
-
-            if connector is None:
-                raise RuntimeError('Yaks connector cannot be none in API!')
-            self.connector = connector
-            self.sysid = sysid
-            self.tenantid = tenantid
-
-        def onboard(self, descriptor):
-            nodes = self.connector.glob.actual.get_all_nodes(self.sysid, self.tenantid)
-            if len(nodes) == 0:
-                raise SystemError("No nodes in the system!")
-            n = random.choice(nodes)
-            return self.connector.glob.actual.onboard_ae_from_node(self.sysid, self.tenantid, n, descriptor)
-
-
-
-        def instantiate(self, ae_id):
-            nodes = self.connector.glob.actual.get_all_nodes(self.sysid, self.tenantid)
-            if len(nodes) == 0:
-                raise SystemError("No nodes in the system!")
-            n = random.choice(nodes)
-            return self.connector.glob.actual.instantiate_ae_from_node(self.sysid, self.tenantid, n, ae_id)
-
-        def offload(self, ae_id):
-            nodes = self.connector.glob.actual.get_all_nodes(self.sysid, self.tenantid)
-            if len(nodes) == 0:
-                raise SystemError("No nodes in the system!")
-            n = random.choice(nodes)
-            return self.connector.glob.actual.offload_ae_from_node(self.sysid, self.tenantid, n, ae_id)
-
-
-
-        def terminate(self, ae_instance_id):
-            nodes = self.connector.glob.actual.get_all_nodes(self.sysid, self.tenantid)
-            if len(nodes) == 0:
-                raise SystemError("No nodes in the system!")
-            n = random.choice(nodes)
-            return self.connector.glob.actual.terminate_ae_from_node(self.sysid, self.tenantid, n, ae_instance_id)
-
-
     class FDU(object):
         '''
 
@@ -553,7 +508,9 @@ class FIMAPI(object):
             n = random.choice(nodes)
 
             res = self.connector.glob.actual.onboard_fdu_from_node(self.sysid, self.tenantid, n, descriptor.get_uuid(), descriptor.to_json())
-            return res
+            if res.get('result') is None:
+                raise SystemError('Error during onboarding {}'.format(res['error']))
+            return res['result']
 
 
         def offload(self, fdu_uuid, wait=True):
@@ -567,6 +524,9 @@ class FIMAPI(object):
             '''
             res = self.connector.glob.desired.remove_catalog_fdu_info(
                 self.sysid, self.tenantid, fdu_uuid)
+            if res.get('result') is None:
+                raise SystemError('Error during onboarding {}'.format(res['error']))
+
             return fdu_uuid
 
         def define(self, fduid, node_uuid, wait=True):

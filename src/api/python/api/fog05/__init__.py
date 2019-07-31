@@ -14,5 +14,6 @@
 # OCaml implementation and API
 
 from fog05.fimapi import FIMAPI
+from fog05.faemapi import FAEMAPI
 from fog05.yaks_connector import Yaks_Connector
 from fog05.yaks_connector import Yaks_Constraint_Connector

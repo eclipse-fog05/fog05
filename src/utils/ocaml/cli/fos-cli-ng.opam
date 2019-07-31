@@ -29,3 +29,9 @@ depends: [
   "lwt_ppx"
   "fos-core"
 ]
+
+
+synopsis : "Eclipse fog05 CLI"
+description: """
+Eclipse fog05 CLI is the command line interface used for interact with
+Eclipse fog05"""

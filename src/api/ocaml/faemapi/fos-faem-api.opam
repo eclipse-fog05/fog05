@@ -22,3 +22,9 @@ depends: [
   "fos-core"
   "apero-core"
 ]
+
+
+synopsis : "Eclipse fog05 FAEM API"
+description: """
+Eclipse fog05 FAEM API is a collection of OCaml libraries used to interact
+with Eclipse fog05 FAEM"""
