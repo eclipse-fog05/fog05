@@ -137,7 +137,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
   (* Records *)
 
   let get_records_atomic_entity_instance_info_path sysid tenantid aeid instance_id =
-    create_path [P.prefix; sysid; "tenants"; tenantid; "records"; "atomic-entities"; aeid; "instances"; instance_id; "info"]
+    create_selector [P.prefix; sysid; "tenants"; tenantid; "records"; "atomic-entities"; aeid; "instances"; instance_id; "info"]
 
   let get_records_all_atomic_entity_instance_selector sysid tenantid aeid =
     create_selector [P.prefix; sysid; "tenants"; tenantid; "records"; "atomic-entities"; aeid; "instances"; "*"; "info"]
@@ -724,7 +724,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
 
   let get_records_atomic_entity_instance_info sysid tenantid aeid instanceid connector =
     MVar.read connector >>= fun connector ->
-    let s = Yaks.Selector.of_path @@ get_records_atomic_entity_instance_info_path sysid tenantid aeid instanceid in
+    let s = get_records_atomic_entity_instance_info_path sysid tenantid aeid instanceid in
     Yaks.Workspace.get s connector.ws
     >>= fun res ->
     match res with
@@ -740,13 +740,13 @@ module MakeGAD(P: sig val prefix: string end) = struct
 
   let add_records_atomic_entity_instance_info sysid tenantid aeid instanceid aeinfo connector =
     MVar.read connector >>= fun connector ->
-    let p = get_records_atomic_entity_instance_info_path sysid tenantid aeid instanceid  in
+    let p = Yaks.Path.of_string @@ Yaks.Selector.path @@  get_records_atomic_entity_instance_info_path sysid tenantid aeid instanceid  in
     let value = Yaks.Value.StringValue (Infra.Descriptors.AtomicEntity.string_of_record aeinfo )in
     Yaks.Workspace.put p value connector.ws
 
   let remove_records_atomic_entity_instance_info sysid tenantid aeid instanceid connector =
     MVar.read connector >>= fun connector ->
-    let p = get_records_atomic_entity_instance_info_path sysid tenantid aeid instanceid in
+    let p = Yaks.Path.of_string @@  Yaks.Selector.path @@ get_records_atomic_entity_instance_info_path sysid tenantid aeid instanceid in
     Yaks.Workspace.remove p connector.ws
 
   let observe_records_atomic_entities_instances sysid tenantid callback connector =
