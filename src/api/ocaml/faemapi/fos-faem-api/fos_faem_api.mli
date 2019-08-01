@@ -32,7 +32,7 @@ end
 
 module FAEMAPI : sig
 
-  val connect : ?locator:Apero_net.Locator.t -> ?sysid:string -> ?tenantid:string -> unit -> faemapi Lwt.t
+  val connect : ?locator:string -> ?sysid:string -> ?tenantid:string -> unit -> faemapi Lwt.t
   val close : faemapi -> unit Lwt.t
 
 end
