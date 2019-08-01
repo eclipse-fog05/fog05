@@ -28,7 +28,7 @@ type state = {
   yaks_client : Yaks_api.t
 ; yaks_admin : Yaks.Admin.t
 ; ws : Yaks.Workspace.t
-; listeners : string list
+; listeners : Yaks_api.subid list
 ; evals : Yaks.Path.t list;
 }
 
@@ -36,8 +36,9 @@ type connector = state MVar.t
 
 
 let get_connector (config:configuration)=
-  let loc = Apero.Option.get @@ Apero_net.Locator.of_string config.agent.yaks in
-  let%lwt yclient = Yaks.login loc Apero.Properties.empty in
+  (* let loc = Apero.Option.get @@ Apero_net.Locator.of_string config.agent.yaks in
+     let%lwt yclient = Yaks.login loc Apero.Properties.empty in *)
+  let%lwt yclient = Yaks.login  config.agent.yaks Apero.Properties.empty in
   let%lwt admin = Yaks.admin yclient in
   let%lwt ws = Yaks.workspace (create_path [global_actual_prefix; ""]) yclient in
   Lwt.return @@ MVar.create {  ws = ws
