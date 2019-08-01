@@ -48,6 +48,8 @@ fi
 tar -xzvf /tmp/fos.tar.gz -C src/agent/_build/default/fos-agent
 rm -rf /tmp/fos.tar.gz
 
+make -C src/im/python
+
 sudo make install
 
 uuid=$(to_uuid $(cat '/etc/machine-id'))
