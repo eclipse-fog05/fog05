@@ -1,0 +1,58 @@
+(*********************************************************************************
+ * Copyright (c) 2018 ADLINK Technology Inc.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0, or the Apache Software License 2.0
+ * which is available at https://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
+ * Contributors: 1
+ *   Gabriele Baldoni (gabriele (dot) baldoni (at) adlinktech (dot) com ) - IM Updates
+ *********************************************************************************)
+(* AtomicEntity Manifest *)
+
+type cp_kind <ocaml module="Base_entity"> = abstract
+type vl_kind <ocaml module="Base_entity"> = abstract
+type address_information <ocaml module="Base_entity"> = abstract
+
+(* Descriptor Related Types *)
+
+type descriptor = {
+  ?uuid : string option;
+  id : string;
+  name : string;
+  ?description : string option;
+  ?version : string option;
+  atomic_entities : string list;
+  virtual_links : virtual_link_descriptor list;
+  connection_points : connection_point_descriptor list;
+}
+
+(* CPD as ETSI NFV *)
+
+type connection_point_descriptor = {
+  name : string;
+  id : string;
+  ?short_name : string option;
+  ?cp_type : cp_kind option;
+  ?port_security_enabled: bool option;
+  ?require_floating_ip : bool option;
+  ?atomic_entity_cp_ref : string option;
+}
+
+(* VLD as ETSI NFV *)
+
+type virtual_link_descriptor = {
+  id : string;
+  name : string;
+  is_mgmt : bool;
+  ?short_name : string option;
+  ?description : string option;
+  ?vl_type : vl_kind option;
+  ?root_bandwidth : int option;
+  ?leaf_bandwidth : int option;
+  cps : string list;
+  (* From fog05 *)
+  ?ip_configuration : address_information option;
+}

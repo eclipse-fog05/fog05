@@ -1,0 +1,60 @@
+(*********************************************************************************
+ * Copyright (c) 2018 ADLINK Technology Inc.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0, or the Apache Software License 2.0
+ * which is available at https://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
+ * Contributors: 1
+ *   Gabriele Baldoni (gabriele (dot) baldoni (at) adlinktech (dot) com ) - IM Update
+ *********************************************************************************)
+
+(* Atomic Entity Infrastructure Information *)
+
+type cp_kind <ocaml module="Base_entity"> = abstract
+type vl_kind <ocaml module="Base_entity"> = abstract
+type address_information <ocaml module="Base_entity"> = abstract
+
+(* Descriptor Related Types *)
+
+type record = {
+  uuid : string;
+  atomic_entities : string list;
+  entity_id : string;
+  virtual_links : virtual_link_record list;
+  connection_points : connection_point_record list;
+  depends_on : string list;
+}
+
+(* CPD as ETSI NFV *)
+
+type connection_point_record = {
+  uuid : string;
+  cp_id : string;
+  ?cp_type : cp_kind option;
+  ?port_security_enabled: bool option;
+  ?require_floating_ip : bool option;
+  ?atomic_entity_cp_ref : string option;
+}
+
+(* VLD as ETSI NFV *)
+
+type virtual_link_record = {
+  uuid : string;
+  internal_vl_id : string;
+  is_mgmt : bool;
+  ?vl_type : vl_kind option;
+  ?root_bandwidth : int option;
+  ?leaf_bandwidth : int option;
+  cps : string list;
+  (* From fog05 *)
+  ?ip_configuration : address_information option;
+  (* filled by Orchestrator *)
+  ?overlay : bool option;
+  ?vni: int option;
+  ?mcast_addr: string option;
+  ?vlan_id : int option;
+  ?face : string option;
+}

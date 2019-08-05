@@ -46,6 +46,7 @@ module Base = struct
   module Descriptors = struct
     module FDU = Base_fdu
     module AtomicEnitity = Base_atomic_entity
+    module Entity = Base_entity
   end
 end
 
@@ -53,6 +54,7 @@ module User  = struct
   module Descriptors = struct
     module FDU = User_fdu
     module AtomicEntity = User_atomic_entity
+    module Entity = User_entity
   end
 end
 
@@ -61,6 +63,7 @@ module Infra = struct
     module Router = Router
     module FDU = Infra_fdu
     module AtomicEntity = Infra_atomic_entity
+    module Entity = Infra_entity
   end
 end
 
