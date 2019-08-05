@@ -134,6 +134,13 @@ module MakeGAD(P: sig val prefix: string end) = struct
   let get_catalog_all_fdu_selector sysid tenantid =
     create_selector [P.prefix; sysid; "tenants"; tenantid; "catalog"; "fdu"; "*"; "info"]
 
+
+  let get_catalog_entity_info_path sysid tenantid eid =
+    create_path [P.prefix; sysid; "tenants"; tenantid; "catalog"; "entities"; eid; "info"]
+
+  let get_catalog_all_entities_selector sysid tenantid =
+    create_selector [P.prefix; sysid; "tenants"; tenantid; "catalog"; "entities"; "*"; "info"]
+
   (* Records *)
 
   let get_records_atomic_entity_instance_info_path sysid tenantid aeid instance_id =
@@ -144,6 +151,15 @@ module MakeGAD(P: sig val prefix: string end) = struct
 
   let get_records_all_atomic_entities_instance_selector sysid tenantid =
     create_selector [P.prefix; sysid; "tenants"; tenantid; "records"; "atomic-entities"; "*"; "instances"; "*"; "info"]
+
+  let get_records_entity_instance_info_path sysid tenantid eid instance_id =
+    create_selector [P.prefix; sysid; "tenants"; tenantid; "records"; "entities"; eid; "instances"; instance_id; "info"]
+
+  let get_records_all_entity_instances_selector sysid tenantid eid =
+    create_selector [P.prefix; sysid; "tenants"; tenantid; "records"; "entities"; eid; "instances"; "*"; "info"]
+
+  let get_records_all_entities_instances_selector sysid tenantid =
+    create_selector [P.prefix; sysid; "tenants"; tenantid; "records"; "entities"; "*"; "instances"; "*"; "info"]
 
 
   (* Nodes *)
@@ -300,6 +316,14 @@ module MakeGAD(P: sig val prefix: string end) = struct
   let extract_tenantid_from_path path =
     let ps = Yaks.Path.to_string path in
     List.nth (String.split_on_char '/' ps) 4
+
+  let extract_entity_id_from_path path =
+    let ps = Yaks.Path.to_string path in
+    List.nth (String.split_on_char '/' ps) 7
+
+  let extract_entity_instanceid_from_path path =
+    let ps = Yaks.Path.to_string path in
+    List.nth (String.split_on_char '/' ps) 9
 
   let extract_aeid_from_path path =
     let ps = Yaks.Path.to_string path in
@@ -606,6 +630,51 @@ module MakeGAD(P: sig val prefix: string end) = struct
 
   (* Catalog  *)
 
+  let get_catalog_all_entities sysid tenantid connector =
+    MVar.read connector >>= fun connector ->
+    let s = get_catalog_all_entities_selector sysid tenantid in
+    Yaks.Workspace.get s  connector.ws
+    >>= fun res ->
+    match res with
+    | [] ->
+      Lwt.return []
+    | _ ->
+      Lwt.return @@ List.map (fun (k,_) -> extract_entity_id_from_path k) res
+
+  let get_catalog_entity_info sysid tenantid eid connector =
+    MVar.read connector >>= fun connector ->
+    let s = Yaks.Selector.of_path @@ get_catalog_entity_info_path sysid tenantid eid in
+    Yaks.Workspace.get s connector.ws
+    >>= fun res ->
+    match res with
+    | [] -> Lwt.return None
+    | _ ->
+      let _,v = (List.hd res) in
+      try
+        Lwt.return @@ Some (User.Descriptors.Entity.descriptor_of_string (Yaks.Value.to_string v))
+      with
+      | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _ ->
+        Lwt.fail @@ FException (`InternalError (`Msg ("Value is not well formatted in get_catalog_entity_info") ))
+      | exn -> Lwt.fail exn
+
+  let add_catalog_entity_info sysid tenantid eid einfo connector =
+    MVar.read connector >>= fun connector ->
+    let p = get_catalog_entity_info_path sysid tenantid eid in
+    let value = Yaks.Value.StringValue (User.Descriptors.Entity.string_of_descriptor einfo )in
+    Yaks.Workspace.put p value connector.ws
+
+  let remove_catalog_entity_info sysid tenantid aeid connector =
+    MVar.read connector >>= fun connector ->
+    let p = get_catalog_entity_info_path sysid tenantid aeid in
+    Yaks.Workspace.remove p connector.ws
+
+  let observe_catalog_entities sysid tenantid callback connector =
+    MVar.guarded connector @@ fun connector ->
+    let s = get_catalog_all_entities_selector sysid tenantid in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback User.Descriptors.Entity.descriptor_of_string extract_entity_id_from_path) s connector.ws in
+    let ls = List.append connector.listeners [subid] in
+    MVar.return subid {connector with listeners = ls}
+
   let get_catalog_all_atomic_entities sysid tenantid connector =
     MVar.read connector >>= fun connector ->
     let s = get_catalog_all_atomic_entity_selector sysid tenantid in
@@ -753,6 +822,62 @@ module MakeGAD(P: sig val prefix: string end) = struct
     MVar.guarded connector @@ fun connector ->
     let s = get_records_all_atomic_entities_instance_selector sysid tenantid in
     let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Infra.Descriptors.AtomicEntity.record_of_string extract_aeid_instanceid_from_path) s connector.ws in
+    let ls = List.append connector.listeners [subid] in
+    MVar.return subid {connector with listeners = ls}
+
+  let get_records_all_entities_instances sysid tenantid connector =
+    MVar.read connector >>= fun connector ->
+    let s = get_records_all_entities_instances_selector sysid tenantid in
+    Yaks.Workspace.get s  connector.ws
+    >>= fun res ->
+    match res with
+    | [] ->
+      Lwt.return []
+    | _ ->
+      Lwt.return @@ List.map (fun (k,_) -> (extract_entity_id_from_path k, extract_entity_instanceid_from_path k)) res
+
+  let get_records_all_entity_instances sysid tenantid eid connector =
+    MVar.read connector >>= fun connector ->
+    let s = get_records_all_entity_instances_selector sysid tenantid eid in
+    Yaks.Workspace.get s  connector.ws
+    >>= fun res ->
+    match res with
+    | [] ->
+      Lwt.return []
+    | _ ->
+      Lwt.return @@ List.map (fun (k,_) -> extract_entity_instanceid_from_path k) res
+
+  let get_records_entity_instance_info sysid tenantid eid instanceid connector =
+    MVar.read connector >>= fun connector ->
+    let s = get_records_entity_instance_info_path sysid tenantid eid instanceid in
+    Yaks.Workspace.get s connector.ws
+    >>= fun res ->
+    match res with
+    | [] -> Lwt.return None
+    | _ ->
+      let _,v = (List.hd res) in
+      try
+        Lwt.return @@ Some (Infra.Descriptors.Entity.record_of_string (Yaks.Value.to_string v))
+      with
+      | Atdgen_runtime.Oj_run.Error _ | Yojson.Json_error _ ->
+        Lwt.fail @@ FException (`InternalError (`Msg ("Value is not well formatted in get_fdu_info") ))
+      | exn -> Lwt.fail exn
+
+  let add_records_entity_instance_info sysid tenantid eid instanceid einfo connector =
+    MVar.read connector >>= fun connector ->
+    let p = Yaks.Path.of_string @@ Yaks.Selector.path @@  get_records_entity_instance_info_path sysid tenantid eid instanceid  in
+    let value = Yaks.Value.StringValue (Infra.Descriptors.Entity.string_of_record einfo )in
+    Yaks.Workspace.put p value connector.ws
+
+  let remove_records_entity_instance_info sysid tenantid eid instanceid connector =
+    MVar.read connector >>= fun connector ->
+    let p = Yaks.Path.of_string @@  Yaks.Selector.path @@ get_records_entity_instance_info_path sysid tenantid eid instanceid in
+    Yaks.Workspace.remove p connector.ws
+
+  let observe_records_entities_instances sysid tenantid callback connector =
+    MVar.guarded connector @@ fun connector ->
+    let s = get_records_all_entities_instances_selector sysid tenantid in
+    let%lwt subid = Yaks.Workspace.subscribe ~listener:(sub_cb callback Infra.Descriptors.Entity.record_of_string extract_entity_instanceid_from_path) s connector.ws in
     let ls = List.append connector.listeners [subid] in
     MVar.return subid {connector with listeners = ls}
 
