@@ -1513,6 +1513,50 @@ module MakeGAD(P: sig val prefix: string end) = struct
     | (_,v)::_ ->
       Lwt.return (Agent_types.eval_result_of_string (Yaks.Value.to_string v))
 
+  let onboard_entity_from_node sysid tenantid nodeid ae_info connector =
+    MVar.read connector >>= fun connector ->
+    let fname = "onboard_entity" in
+    let params = [("descriptor",User.Descriptors.Entity.string_of_descriptor ae_info)] in
+    let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
+    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    match res with
+    | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
+    | (_,v)::_ ->
+      Lwt.return (Agent_types.eval_result_of_string (Yaks.Value.to_string v))
+
+  let instantiate_entity_from_node sysid tenantid nodeid ae_id connector =
+    MVar.read connector >>= fun connector ->
+    let fname = "instantiate_entity" in
+    let params = [("entity_id",ae_id)] in
+    let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
+    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    match res with
+    | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
+    | (_,v)::_ ->
+      Lwt.return (Agent_types.eval_result_of_string (Yaks.Value.to_string v))
+
+  let offload_entity_from_node sysid tenantid nodeid ae_id connector =
+    MVar.read connector >>= fun connector ->
+    let fname = "offload_entity" in
+    let params = [("entity_id",ae_id)] in
+    let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
+    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    match res with
+    | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
+    | (_,v)::_ ->
+      Lwt.return (Agent_types.eval_result_of_string (Yaks.Value.to_string v))
+
+  let terminate_entity_from_node sysid tenantid nodeid ae_inst_id connector =
+    MVar.read connector >>= fun connector ->
+    let fname = "terminate_entity" in
+    let params = [("instance_id",ae_inst_id)] in
+    let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
+    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    match res with
+    | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
+    | (_,v)::_ ->
+      Lwt.return (Agent_types.eval_result_of_string (Yaks.Value.to_string v))
+
 
 end
 
