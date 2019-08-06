@@ -20,8 +20,8 @@ PYANG:= pyang
 PYBINDPLUGIN:=$(shell /usr/bin/env python3 -c \
 	            'import pyangbind; import os; print("{}/plugin".format(os.path.dirname(pyangbind.__file__)))')
 
-YANG_DESC_MODELS := user_fdu
-YANG_RECORD_MODELS := infra_fdu
+YANG_DESC_MODELS := user_fdu user_atomic_entity user_entity
+YANG_RECORD_MODELS := infra_fdu infra_atomic_entity infra_entity
 
 PYTHON_MODELS := $(addsuffix .py, $(YANG_DESC_MODELS))
 PYTHON_RECORDS := $(addsuffix .py, $(YANG_RECORD_MODELS))
