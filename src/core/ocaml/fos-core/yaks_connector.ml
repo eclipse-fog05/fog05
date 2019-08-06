@@ -134,7 +134,6 @@ module MakeGAD(P: sig val prefix: string end) = struct
   let get_catalog_all_fdu_selector sysid tenantid =
     create_selector [P.prefix; sysid; "tenants"; tenantid; "catalog"; "fdu"; "*"; "info"]
 
-
   let get_catalog_entity_info_path sysid tenantid eid =
     create_path [P.prefix; sysid; "tenants"; tenantid; "catalog"; "entities"; eid; "info"]
 
