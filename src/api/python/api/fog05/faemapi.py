@@ -16,7 +16,8 @@
 import random
 from fog05.yaks_connector import Yaks_Connector
 from fog05.interfaces import Constants
-
+from fog05.interfaces.AtomicEntity import AtomicEntity
+from fog05.interfaces.AtomicEntityRecord import AtomicEntityRecord
 
 class FAEMAPI(object):
     '''
@@ -30,12 +31,12 @@ class FAEMAPI(object):
         self.connector = Yaks_Connector(locator)
         self.sysid = sysid
         self.tenantid = tenantid
-        self.atomic_entity = self.AtomicEntity(self.connector, self.sysid, self.tenantid)
+        self.atomic_entity = self.AtomicEntityAPI(self.connector, self.sysid, self.tenantid)
 
     def close(self):
         self.connector.close()
 
-    class AtomicEntity(object):
+    class AtomicEntityAPI(object):
 
         def __init__(self, connector=None, sysid=Constants.default_system_id,
             tenantid=Constants.default_tenant_id):
@@ -47,14 +48,16 @@ class FAEMAPI(object):
             self.tenantid = tenantid
 
         def onboard(self, descriptor):
+            if not isinstance(descriptor,AtomicEntity):
+                raise ValueError("descriptor should be of type AtomicEntity")
             nodes = self.connector.glob.actual.get_all_nodes(self.sysid, self.tenantid)
             if len(nodes) == 0:
                 raise SystemError("No nodes in the system!")
             n = random.choice(nodes)
-            res = self.connector.glob.actual.onboard_ae_from_node(self.sysid, self.tenantid, n, descriptor)
+            res = self.connector.glob.actual.onboard_ae_from_node(self.sysid, self.tenantid, n, descriptor.to_json())
             if res.get('result') is None:
                 raise SystemError('Error during onboarding {}'.format(res['error']))
-            return res['result']
+            return AtomicEntity(res['result'])
 
 
         def instantiate(self, ae_id):
@@ -65,7 +68,7 @@ class FAEMAPI(object):
             res =  self.connector.glob.actual.instantiate_ae_from_node(self.sysid, self.tenantid, n, ae_id)
             if res.get('result') is None:
                 raise SystemError('Error during instantiation {}'.format(res['error']))
-            return res['result']
+            return AtomicEntityRecord(res['result'])
 
         def offload(self, ae_id):
             nodes = self.connector.glob.actual.get_all_nodes(self.sysid, self.tenantid)
@@ -75,7 +78,7 @@ class FAEMAPI(object):
             res =  self.connector.glob.actual.offload_ae_from_node(self.sysid, self.tenantid, n, ae_id)
             if res.get('result') is None:
                 raise SystemError('Error during offloading {}'.format(res['error']))
-            return res['result']
+            return AtomicEntity(res['result'])
 
 
         def terminate(self, ae_instance_id):
@@ -86,15 +89,15 @@ class FAEMAPI(object):
             res = self.connector.glob.actual.terminate_ae_from_node(self.sysid, self.tenantid, n, ae_instance_id)
             if res.get('result') is None:
                 raise SystemError('Error during termination {}'.format(res['error']))
-            return res['result']
+            return AtomicEntityRecord(res['result'])
 
         def get_atomic_entity_descriptor(self, ae_id):
             res = self.connector.glob.actual.get_catalog_atomic_entity_info(self.sysid, self.tenantid, ae_id)
-            return res
+            return AtomicEntity(res)
 
         def get_atomic_entity_instance_info(self, instance_id):
             res = self.connector.glob.actual.get_records_atomic_entity_info(self.sysid, self.tenantid, "*", instance_id)
-            return res
+            return AtomicEntityRecord(res)
 
 
         def list(self):

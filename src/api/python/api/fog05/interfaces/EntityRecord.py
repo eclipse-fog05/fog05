@@ -21,7 +21,7 @@ from pyangbind.lib.serialise import pybindJSONEncoder
 from collections import OrderedDict
 
 
-class Entity(object):
+class EntityRecord(object):
 
     def __init__(self, data=None):
         '''
