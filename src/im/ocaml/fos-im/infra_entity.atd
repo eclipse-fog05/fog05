@@ -25,7 +25,6 @@ type record = {
   entity_id : string;
   virtual_links : virtual_link_record list;
   connection_points : connection_point_record list;
-  depends_on : string list;
 }
 
 (* CPD as ETSI NFV *)

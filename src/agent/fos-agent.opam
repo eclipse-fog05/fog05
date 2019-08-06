@@ -31,6 +31,8 @@ depends: [
   "apero-net"
   "yaks-ocaml"
   "fos-core"
+  "fos-fim-api"
+  "fos-faem-api"
 ]
 
 
