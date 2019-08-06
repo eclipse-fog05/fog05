@@ -628,7 +628,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           let net_uuid = Apero.Uuid.to_string (Apero.Uuid.make ()) in
           let record = Infra.Descriptors.Entity.{
               uuid = net_uuid;
-              internal_vl_id = ivl.id;
+              vl_id = ivl.id;
               is_mgmt = ivl.is_mgmt;
               vl_type = ivl.vl_type;
               root_bandwidth = ivl.root_bandwidth;
@@ -662,7 +662,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           in
           let net_desc = FTypes.{
               uuid = vl.uuid;
-              name = vl.internal_vl_id;
+              name = vl.vl_id;
               net_type = FTypes.vn_type_of_string (Infra.Descriptors.Entity.string_of_vl_kind (Apero.Option.get_or_default vl.vl_type `ELAN));
               is_mgmt = vl.is_mgmt;
               overlay = vl.overlay;

@@ -81,7 +81,7 @@ module infra_entity {
     }
 
     grouping virtual_link_record {
-        leaf id {
+        leaf vl_id {
             type string;
         }
 

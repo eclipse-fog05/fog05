@@ -42,7 +42,7 @@ type connection_point_record = {
 
 type virtual_link_record = {
   uuid : string;
-  internal_vl_id : string;
+  vl_id : string;
   is_mgmt : bool;
   ?vl_type : vl_kind option;
   ?root_bandwidth : int option;
