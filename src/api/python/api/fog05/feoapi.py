@@ -10,7 +10,7 @@
 #
 # SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
 #
-# Contributors: Gabriele Baldoni, ADLINK Technology Inc. - FAEM API
+# Contributors: Gabriele Baldoni, ADLINK Technology Inc. - FEO API
 
 
 import random
@@ -18,7 +18,7 @@ from fog05.yaks_connector import Yaks_Connector
 from fog05.interfaces import Constants
 
 
-class FAEMAPI(object):
+class FEOAPI(object):
     '''
         This class allow the interaction with fog05 FIM
     '''
@@ -30,12 +30,12 @@ class FAEMAPI(object):
         self.connector = Yaks_Connector(locator)
         self.sysid = sysid
         self.tenantid = tenantid
-        self.atomic_entity = self.AtomicEntity(self.connector, self.sysid, self.tenantid)
+        self.entity = self.Entity(self.connector, self.sysid, self.tenantid)
 
     def close(self):
         self.connector.close()
 
-    class AtomicEntity(object):
+    class Entity(object):
 
         def __init__(self, connector=None, sysid=Constants.default_system_id,
             tenantid=Constants.default_tenant_id):
@@ -51,55 +51,55 @@ class FAEMAPI(object):
             if len(nodes) == 0:
                 raise SystemError("No nodes in the system!")
             n = random.choice(nodes)
-            res = self.connector.glob.actual.onboard_ae_from_node(self.sysid, self.tenantid, n, descriptor)
+            res = self.connector.glob.actual.onboard_entity_from_node(self.sysid, self.tenantid, n, descriptor)
             if res.get('result') is None:
                 raise SystemError('Error during onboarding {}'.format(res['error']))
             return res['result']
 
 
-        def instantiate(self, ae_id):
+        def instantiate(self, e_id):
             nodes = self.connector.glob.actual.get_all_nodes(self.sysid, self.tenantid)
             if len(nodes) == 0:
                 raise SystemError("No nodes in the system!")
             n = random.choice(nodes)
-            res =  self.connector.glob.actual.instantiate_ae_from_node(self.sysid, self.tenantid, n, ae_id)
+            res =  self.connector.glob.actual.instantiate_entity_from_node(self.sysid, self.tenantid, n, e_id)
             if res.get('result') is None:
                 raise SystemError('Error during instantiation {}'.format(res['error']))
             return res['result']
 
-        def offload(self, ae_id):
+        def offload(self, e_id):
             nodes = self.connector.glob.actual.get_all_nodes(self.sysid, self.tenantid)
             if len(nodes) == 0:
                 raise SystemError("No nodes in the system!")
             n = random.choice(nodes)
-            res =  self.connector.glob.actual.offload_ae_from_node(self.sysid, self.tenantid, n, ae_id)
+            res =  self.connector.glob.actual.offload_entity_from_node(self.sysid, self.tenantid, n, e_id)
             if res.get('result') is None:
                 raise SystemError('Error during offloading {}'.format(res['error']))
             return res['result']
 
 
-        def terminate(self, ae_instance_id):
+        def terminate(self, e_instance_id):
             nodes = self.connector.glob.actual.get_all_nodes(self.sysid, self.tenantid)
             if len(nodes) == 0:
                 raise SystemError("No nodes in the system!")
             n = random.choice(nodes)
-            res = self.connector.glob.actual.terminate_ae_from_node(self.sysid, self.tenantid, n, ae_instance_id)
+            res = self.connector.glob.actual.terminate_entity_from_node(self.sysid, self.tenantid, n, e_instance_id)
             if res.get('result') is None:
                 raise SystemError('Error during termination {}'.format(res['error']))
             return res['result']
 
-        def get_atomic_entity_descriptor(self, ae_id):
-            res = self.connector.glob.actual.get_catalog_atomic_entity_info(self.sysid, self.tenantid, ae_id)
+        def get_entity_descriptor(self, e_id):
+            res = self.connector.glob.actual.get_catalog_entity_info(self.sysid, self.tenantid, e_id)
             return res
 
-        def get_atomic_entity_instance_info(self, instance_id):
-            res = self.connector.glob.actual.get_records_atomic_entity_info(self.sysid, self.tenantid, "*", instance_id)
+        def get_entity_instance_info(self, instance_id):
+            res = self.connector.glob.actual.get_records_entity_info(self.sysid, self.tenantid, "*", instance_id)
             return res
-
 
         def list(self):
-            return self.connector.glob.actual.get_catalog_all_atomic_entities(self.sysid, self.tenantid)
+            return self.connector.glob.actual.get_catalog_all_entities(self.sysid, self.tenantid)
 
-        def instance_list(self, aeid):
-            return  self.connector.glob.actual.get_records_all_atomic_entity_instances(self.sysid, self.tenantid, aeid)
+        def instance_list(self, entity_id):
+            return  self.connector.glob.actual.get_records_all_entity_instances(self.sysid, self.tenantid, entity_id)
+
 
