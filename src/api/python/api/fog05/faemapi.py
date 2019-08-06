@@ -56,7 +56,7 @@ class FAEMAPI(object):
             n = random.choice(nodes)
             res = self.connector.glob.actual.onboard_ae_from_node(self.sysid, self.tenantid, n, descriptor.to_json())
             if res.get('result') is None:
-                raise SystemError('Error during onboarding {}'.format(res['error']))
+                raise SystemError('Error during onboarding {} - {}'.format(res['error'], res['error_msg']))
             return AtomicEntity(res['result'])
 
 
@@ -67,7 +67,7 @@ class FAEMAPI(object):
             n = random.choice(nodes)
             res =  self.connector.glob.actual.instantiate_ae_from_node(self.sysid, self.tenantid, n, ae_id)
             if res.get('result') is None:
-                raise SystemError('Error during instantiation {}'.format(res['error']))
+                raise SystemError('Error during instantiation {} - {}'.format(res['error'], res['error_msg']))
             return AtomicEntityRecord(res['result'])
 
         def offload(self, ae_id):
@@ -77,7 +77,7 @@ class FAEMAPI(object):
             n = random.choice(nodes)
             res =  self.connector.glob.actual.offload_ae_from_node(self.sysid, self.tenantid, n, ae_id)
             if res.get('result') is None:
-                raise SystemError('Error during offloading {}'.format(res['error']))
+                raise SystemError('Error during offloading {} - {}'.format(res['error'], res['error_msg']))
             return AtomicEntity(res['result'])
 
 
@@ -88,7 +88,7 @@ class FAEMAPI(object):
             n = random.choice(nodes)
             res = self.connector.glob.actual.terminate_ae_from_node(self.sysid, self.tenantid, n, ae_instance_id)
             if res.get('result') is None:
-                raise SystemError('Error during termination {}'.format(res['error']))
+                raise SystemError('Error during termination {} - {}'.format(res['error'], res['error_msg']))
             return AtomicEntityRecord(res['result'])
 
         def get_atomic_entity_descriptor(self, ae_id):

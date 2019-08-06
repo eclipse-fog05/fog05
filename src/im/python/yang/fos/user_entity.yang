@@ -131,6 +131,10 @@ module user_entity {
             type string;
         }
 
+        leaf name {
+            type string;
+        }
+
         leaf description {
             type string;
         }

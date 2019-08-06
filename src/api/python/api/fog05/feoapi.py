@@ -56,7 +56,7 @@ class FEOAPI(object):
             n = random.choice(nodes)
             res = self.connector.glob.actual.onboard_entity_from_node(self.sysid, self.tenantid, n, descriptor.to_json())
             if res.get('result') is None:
-                raise SystemError('Error during onboarding {}'.format(res['error']))
+                raise SystemError('Error during onboarding {} - {}'.format(res['error'], res['error_msg']))
             return Entity(res['result'])
 
 
@@ -67,7 +67,7 @@ class FEOAPI(object):
             n = random.choice(nodes)
             res =  self.connector.glob.actual.instantiate_entity_from_node(self.sysid, self.tenantid, n, e_id)
             if res.get('result') is None:
-                raise SystemError('Error during instantiation {}'.format(res['error']))
+                raise SystemError('Error during instantiation {} - {}'.format(res['error'], res['error_msg']))
             return EntityRecord(res['result'])
 
         def offload(self, e_id):
@@ -77,7 +77,7 @@ class FEOAPI(object):
             n = random.choice(nodes)
             res =  self.connector.glob.actual.offload_entity_from_node(self.sysid, self.tenantid, n, e_id)
             if res.get('result') is None:
-                raise SystemError('Error during offloading {}'.format(res['error']))
+                raise SystemError('Error during offloading {} - {}'.format(res['error'], res['error_msg']))
             return Entity(res['result'])
 
 
@@ -88,7 +88,7 @@ class FEOAPI(object):
             n = random.choice(nodes)
             res = self.connector.glob.actual.terminate_entity_from_node(self.sysid, self.tenantid, n, e_instance_id)
             if res.get('result') is None:
-                raise SystemError('Error during termination {}'.format(res['error']))
+                raise SystemError('Error during termination {} - {}'.format(res['error'], res['error_msg']))
             return EntityRecord(res['result'])
 
         def get_entity_descriptor(self, e_id):

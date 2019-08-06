@@ -674,7 +674,9 @@ let agent verbose_flag debug_flag configuration custom_uuid =
             }
           in
           Fos_fim_api.Network.add_network net_desc state.fim_api
-          >>= fun _ -> Lwt.return_unit
+          >>= fun _ ->
+          (* This has to be removed! *)
+          Lwt.return @@ Unix.sleep 3
         ) nets
       in
       let%lwt aes = Yaks_connector.Global.Actual.get_catalog_all_atomic_entities sys_id Yaks_connector.default_tenant_id state.yaks  >>=

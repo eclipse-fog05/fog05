@@ -526,8 +526,8 @@ class FIMAPI(object):
             '''
             res = self.connector.glob.desired.remove_catalog_fdu_info(
                 self.sysid, self.tenantid, fdu_uuid)
-            if res.get('result') is None:
-                raise SystemError('Error during onboarding {}'.format(res['error']))
+            # if res.get('result') is None:
+            #     raise SystemError('Error during onboarding {}'.format(res['error']))
 
             return fdu_uuid
 

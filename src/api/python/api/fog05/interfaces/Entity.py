@@ -121,4 +121,4 @@ class Entity(object):
         return self.atomic_entities
 
     def __str__(self):
-        return "Name : {} ID: {}".format(self.name, self.id)
+        return "Name : {} ID: {} UUID:{}".format(self.name, self.id, self.uuid)

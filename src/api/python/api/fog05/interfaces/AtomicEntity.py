@@ -134,4 +134,4 @@ class AtomicEntity(object):
         return self.fdus
 
     def __str__(self):
-        return "Name : {} ID: {}".format(self.name, self.id)
+        return "Name : {} ID: {} UUID: {}".format(self.name, self.id, self.uuid)
