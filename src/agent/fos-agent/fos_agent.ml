@@ -674,9 +674,10 @@ let agent verbose_flag debug_flag configuration custom_uuid =
             }
           in
           Fos_fim_api.Network.add_network net_desc state.fim_api
-          >>= fun _ ->
-          (* This has to be removed! *)
-          Lwt.return @@ Unix.sleep 3
+          (* >>= fun _ ->
+             (* This has to be removed! *)
+             Lwt.return @@ Unix.sleep 3 *)
+          >>= fun _ -> Lwt.return_unit
         ) nets
       in
       let%lwt aes = Yaks_connector.Global.Actual.get_catalog_all_atomic_entities sys_id Yaks_connector.default_tenant_id state.yaks  >>=
@@ -689,8 +690,12 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       let%lwt ae_instances = Lwt_list.map_p (fun (e:string) ->
           match List.find_opt (fun x -> (String.compare x e)==0) aes with
           | Some ae_uuid ->
-            let%lwt ae_rec = Fos_faem_api.AtomicEntity.instantiate ae_uuid state.faem_api in
-            Lwt.return ae_rec.uuid
+            let%lwt desc = Yaks_connector.Global.Actual.get_catalog_atomic_entity_info sys_id Yaks_connector.default_tenant_id ae_uuid state.yaks in
+            (match desc with
+             | Some _ ->
+               let%lwt ae_rec = Fos_faem_api.AtomicEntity.instantiate ae_uuid state.faem_api in
+               Lwt.return ae_rec.uuid
+             | None -> Lwt.fail @@ FException (`NotFound (`MsgCode ((Printf.sprintf ("Atomic Entity %s not in catalog")e),404))))
           | None -> Lwt.fail @@ FException (`NotFound (`MsgCode ((Printf.sprintf ("Atomic Entity %s not in catalog")e),404)))
         ) descriptor.atomic_entities
       in
@@ -855,9 +860,10 @@ let agent verbose_flag debug_flag configuration custom_uuid =
             }
           in
           Fos_fim_api.Network.add_network net_desc state.fim_api
-          >>= fun _ ->
-          (* This has to be removed! *)
-          Lwt.return @@ Unix.sleep 3
+          (* >>= fun _ ->
+             (* This has to be removed! *)
+             Lwt.return @@ Unix.sleep 3 *)
+          >>= fun _ -> Lwt.return_unit
         ) nets
       >>= fun _ ->
       (* Onboard and Instantiate FDUs descriptors *)
