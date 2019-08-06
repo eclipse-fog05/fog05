@@ -52,7 +52,7 @@ class EntityRecord(object):
 
 
     def enforce(self):
-        if self.e.entity_record.id == '':
+        if self.e.entity_record.entity_id == '':
             raise ValueError('EntityRecord.ID cannot be empty')
 
         if self.e.entity_record.uuid == '':
