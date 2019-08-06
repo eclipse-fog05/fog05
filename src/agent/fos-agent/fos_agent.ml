@@ -372,11 +372,15 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           in
           match e.virtual_interface.intf_type with
           | `PHYSICAL | `BRIDGED ->
-            Infra.Descriptors.FDU.{name = e.name; is_mgmt = e.is_mgmt; if_type = e.if_type;
-                                   mac_address = e.mac_address; virtual_interface = e.virtual_interface;
-                                   cp_id = cp_new_id; ext_cp_id = e.ext_cp_id;
-                                   vintf_name = e.name; status = `CREATE; phy_face = Some e.virtual_interface.vpci;
-                                   veth_face_name = None; properties = None}
+            let _ = Logs_lwt.info (fun m -> m "[FOS-AGENT] - EV-DEFINE-FDU - THIS FDU HAS PHYSICAL INTERFACE!!!!!!!!!!!!") in
+            let  r = Infra.Descriptors.FDU.{name = e.name; is_mgmt = e.is_mgmt; if_type = e.if_type;
+                                            mac_address = e.mac_address; virtual_interface = e.virtual_interface;
+                                            cp_id = cp_new_id; ext_cp_id = e.ext_cp_id;
+                                            vintf_name = e.name; status = `CREATE; phy_face = Some e.virtual_interface.vpci;
+                                            veth_face_name = None; properties = None}
+            in
+            let _ = Logs_lwt.info (fun m -> m "[FOS-AGENT] - EV-DEFINE-FDU - THIS FDU HAS PHYSICAL INTERFACE RECORD: %s" (Infra.Descriptors.FDU.string_of_interface r) ) in
+            r
           | _ ->
             Infra.Descriptors.FDU.{name = e.name; is_mgmt = e.is_mgmt; if_type = e.if_type;
                                    mac_address = e.mac_address; virtual_interface = e.virtual_interface;

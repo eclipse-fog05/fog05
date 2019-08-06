@@ -462,7 +462,7 @@ class LXD(RuntimePluginFDU):
             i = 0
             for intf in fdu.get_interfaces():
                 intf_name = intf.get('vintf_name')
-                if intf.get('if_type').upper() not in ['PHYSICAL','BRIDGED']:
+                if intf.get('virtual_interface').get('intf_type').upper() not in ['PHYSICAL','BRIDGED']:
                     intf_id = 'lxd-{}-{}'.format(fdu.get_short_id(), i)
                     self.logger.info('clean_fdu()','Asking for the deletion of virtual interface {}'.format(intf_id))
                     self.nm.delete_virtual_interface(intf_id)
@@ -778,7 +778,7 @@ class LXD(RuntimePluginFDU):
                 intf_name = intf.get('vintf_name')
                 mac = intf.get('mac_address', self.__generate_random_mac())
                 intf.update({'mac_address': mac})
-                if intf.get('if_type').upper() in ['PHYSICAL','BRIDGED']:
+                if intf.get('virtual_interface').get('intf_type').upper() in ['PHYSICAL','BRIDGED']:
                     real_intf_name = intf.get('phy_face')
                     if self.os.get_intf_type(real_intf_name) in ['ethernet']:
                         self.os.set_interface_unaviable(real_intf_name)
@@ -924,9 +924,10 @@ class LXD(RuntimePluginFDU):
             self.logger.info('__generate_custom_profile_devices_configuration()','Interface Info {}'.format(intf))
             mac = intf.get('mac_address', self.__generate_random_mac())
             intf.update({'mac_address': mac})
-
-            if intf.get('if_type').upper() in ['PHYSICAL','BRIDGED']:
-                real_intf_name = intf.get('phy_face')
+            if intf.get('virtual_interface').get('intf_type').upper() in ['PHYSICAL','BRIDGED']:
+                real_intf_name = intf.get('phy_face', None)
+                if real_intf_name is None:
+                    raise ValueError("phy_face cannot be none")
                 if self.os.get_intf_type(real_intf_name) in ['ethernet']:
                     nw_v = json.loads(str(template_value_macvlan_mac % (intf_name, real_intf_name, mac)))
                     self.os.set_interface_unaviable(real_intf_name)

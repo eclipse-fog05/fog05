@@ -294,7 +294,7 @@ class KVM(RuntimePluginFDU):
                     intf_name = intf.get('name')
                     mac = intf.get('mac_address', self.__generate_random_mac())
                     intf.update({'mac_address': mac})
-                    if intf.get('if_type').upper() in ['PHYSICAL','BRIDGED']:
+                    if intf.get('virtual_interface').get('intf_type').upper() in ['PHYSICAL','BRIDGED']:
                         real_intf_name = intf.get('phy_face')
                         if self.os.get_intf_type(real_intf_name) in ['ethernet']:
                             net_cfg.append({'name':intf_name, 'mac':mac, 'dev':real_intf_name,'type':'direct'})
@@ -424,7 +424,7 @@ class KVM(RuntimePluginFDU):
 
             for i, intf in enumerate(fdu.get_interfaces()):
                 intf_name = intf.get('name')
-                if intf.get('if_type').upper() not in ['PHYSICAL','BRIDGED']:
+                if intf.get('virtual_interface').get('intf_type').upper() not in ['PHYSICAL','BRIDGED']:
                     intf_id = 'kvm-{}-{}'.format(fdu.get_short_id(), i)
                     # self.nm.delete_virtual_interface(intf_id)
                 else:
@@ -679,7 +679,7 @@ class KVM(RuntimePluginFDU):
                     intf_name = intf.get('name')
                     mac = intf.get('mac_address', self.__generate_random_mac())
                     intf.update({'mac_address': mac})
-                    if intf.get('if_type').upper() in ['PHYSICAL','BRIDGED']:
+                    if intf.get('virtual_interface').get('intf_type').upper() in ['PHYSICAL','BRIDGED']:
                         real_intf_name = intf.get('phy_face')
                         if self.os.get_intf_type(real_intf_name) in ['ethernet']:
                             net_cfg.append({'name':intf_name, 'mac':mac, 'dev':real_intf_name,'type':'direct'})
