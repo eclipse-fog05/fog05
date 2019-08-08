@@ -55,6 +55,23 @@ module user_entity {
         }
     }
 
+    grouping cp_ref {
+        leaf component_id_ref {
+            type string;
+        }
+
+        leaf component_index_ref {
+            type int64;
+        }
+
+        leaf cp_id {
+            type string;
+        }
+
+        leaf has_floating_ip {
+            type boolean;
+        }
+    }
     grouping virtual_link_descriptor {
         leaf id {
             type string;
@@ -88,12 +105,23 @@ module user_entity {
             type int64;
         }
 
-        leaf-list cps {
-            type string;
+        list cps {
+            key "component_index_ref";
+            uses cp_ref;
         }
 
         container ip_configuration {
             uses address_information;
+        }
+    }
+
+    grouping contituent_atomic_entity {
+        leaf id {
+            type string;
+        }
+
+        leaf index {
+            type int64;
         }
     }
 
@@ -118,8 +146,9 @@ module user_entity {
             type string;
         }
 
-        leaf-list atomic_entities {
-            type string;
+        list atomic_entities {
+            key "index";
+            uses contituent_atomic_entity;
         }
 
         list virtual_links {

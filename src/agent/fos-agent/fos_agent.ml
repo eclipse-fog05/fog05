@@ -847,7 +847,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
         ) descriptor.virtual_links
       in
       (* Adding networks *)
-      let%lwt _ = Lwt_list.iter_s (fun (vl:Infra.Descriptors.Entity.virtual_link_record) ->
+      let%lwt netdescs = Lwt_list.iter_s (fun (vl:Infra.Descriptors.Entity.virtual_link_record) ->
           (* let cb_gd_net_all self (net:FTypes.virtual_network option) (is_remove:bool) (uuid:string option) = *)
           let ip_conf =
             match vl.ip_configuration with
@@ -1110,14 +1110,14 @@ let agent verbose_flag debug_flag configuration custom_uuid =
 
           let%lwt _ = Fos_fim_api.FDU.configure fdur.uuid state.fim_api  in
           (* Connecting FDU interface to right connection points *)
-          Lwt_list.iter_s (fun (iface:Infra.Descriptors.FDU.interface) ->
+          let%lwt cprs  = Lwt_list.filter_map_s (fun (iface:Infra.Descriptors.FDU.interface) ->
               match iface.ext_cp_id, iface.cp_id with
               | Some ecp, None ->
                 (match List.find_opt (fun (e:User.Descriptors.AtomicEntity.connection_point_descriptor) -> (String.compare ecp e.id)==0) descriptor.connection_points with
                  | Some ae_ecp ->
                    let%lwt cpr = Fos_fim_api.Network.add_connection_point_to_node ae_ecp n state.fim_api in
                    Fos_fim_api.FDU.connect_interface_to_cp cpr.uuid fdur.uuid iface.name n state.fim_api
-                   >>= fun _ -> Lwt.return_unit
+                   >>= fun _ -> Lwt.return (Some cpr)
                  | None ->Lwt.fail @@ FException (`NotFound (`MsgCode (( Printf.sprintf ("Unable to find Atomic entity connection point %s") ecp ),404) ))
                 )
               | None, Some icp ->
@@ -1131,33 +1131,36 @@ let agent verbose_flag debug_flag configuration custom_uuid =
                            | Some net_desc ->
                              let%lwt vnet_r = Fos_fim_api.Network.add_network_to_node net_desc n state.fim_api in
                              Fos_fim_api.Network.connect_cp_to_network fdu_icp.uuid vnet_r.uuid n state.fim_api
-                             >>= fun _ -> Lwt.return_unit
+                             >>= fun _ -> Lwt.return None
                            | None -> Lwt.fail @@ FException (`NotFound (`MsgCode (( Printf.sprintf ("Unable to find virtual network %s") vl.uuid ),404) ))
                          )
                        | None -> Lwt.fail @@ FException (`NotFound (`MsgCode (( Printf.sprintf ("Unable to find virtual link %s") vlr ),404) ))
                       )
-                    | None -> Lwt.return_unit
+                    | None -> Lwt.return None
                    )
                  (* Fos_fim_api.Network.add_network_to_node
                     Fos_fim_api.FDU.connect_interface_to_cp cpr.uuid fdur.uuid iface.name n state.fim_api
                     >>= fun _ -> Lwt.return_unit *)
                  | None -> Lwt.fail @@ FException (`NotFound (`MsgCode (( Printf.sprintf ("Unable to find FDU connection point %s") icp ),404) ))
                 )
-              | _, _ ->  Lwt.return_unit
+              | _, _ ->  Lwt.return  None
 
             ) fdur.interfaces
-          >>= fun _ ->
+          in
           let%lwt _ = Fos_fim_api.FDU.start fdur.uuid state.fim_api  in
-          Lwt.return fdur
+          Lwt.return (fdur, cprs)
         ) fdus_node_maps
       in
       let instanceid = Apero.Uuid.to_string (Apero.Uuid.make ()) in
+      let cprs = List.map (fun (_,cprs) -> cprs) fdurs in
+      let cprs = List.flatten cprs in
+      let fdurs = List.map (fun (fdur,_) -> fdur) fdurs in
       let ae_record = Infra.Descriptors.AtomicEntity.{
           uuid = instanceid;
           fdus = fdurs;
           atomic_entity_id = ae_uuid;
           internal_virtual_links = nets;
-          connection_points = [];
+          connection_points = cprs;
           depends_on = descriptor.depends_on
         }
       in
