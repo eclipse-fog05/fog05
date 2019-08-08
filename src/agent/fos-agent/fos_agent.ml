@@ -988,7 +988,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           in Lwt.return record
         ) descriptor.internal_virtual_links
       in
-      let%lwt cps = Lwt_list.map_p (fun (cp:User.Descriptors.Network.connection_point_descriptor) ->
+      (* let%lwt cps = Lwt_list.map_p (fun (cp:User.Descriptors.Network.connection_point_descriptor) ->
           let cp_uuid = Apero.Uuid.to_string (Apero.Uuid.make ()) in
           let record = Infra.Descriptors.Network.{
               status = `CREATE;
@@ -1000,8 +1000,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
               vld_ref = cp.vld_ref
             }
           in Lwt.return record
-        ) descriptor.connection_points
-      in
+         ) descriptor.connection_points
+         in *)
       (* update the FDU with correct connection to the VLs *)
       (* Pretend we already ordered the fdus *)
       let ordered_fdus = descriptor.fdus in
@@ -1529,7 +1529,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
   in
   (*  *)
   let cb_gd_net_all self (net:FTypes.virtual_network option) (is_remove:bool) (uuid:string option) =
-    let%lwt net_p = get_network_plugin self in
+    let%lwt _ = get_network_plugin self in
     match is_remove with
     | false ->
       (match net with
