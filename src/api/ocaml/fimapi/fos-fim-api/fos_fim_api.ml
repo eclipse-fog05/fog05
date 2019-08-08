@@ -107,7 +107,7 @@ module Network = struct
       | false ->
         (match port with
          | Some port ->
-           (if (String.compare port.uuid portid) == 0 then
+           (if (String.compare port.cp_id portid) == 0 then
               Fos_core.MVar.put var port
             else
               Lwt.return_unit)
