@@ -882,6 +882,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           >>= fun _ -> Lwt.return_unit
         ) nets
       in
+      ignore netdescs;
       let%lwt aes = Yaks_connector.Global.Actual.get_catalog_all_atomic_entities sys_id Yaks_connector.default_tenant_id state.yaks  >>=
         Lwt_list.map_p (fun (e:string) ->
             let%lwt e = Yaks_connector.Global.Actual.get_catalog_atomic_entity_info sys_id Yaks_connector.default_tenant_id e state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
