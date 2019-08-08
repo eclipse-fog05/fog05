@@ -467,7 +467,7 @@ module FDU = struct
     match res.result with
     | Some js ->
       Lwt.return @@ (JSON.to_string js)
-    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point connection to interface")))
+    | None -> raise @@ FException (`InternalError (`Msg ( Apero.Option.get res.error_msg)))
 
 
   let disconnect_interface_from_cp face instanceid nodeid api =
