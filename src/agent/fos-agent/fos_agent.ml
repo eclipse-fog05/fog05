@@ -353,6 +353,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
          in *)
 
       let%lwt record = Yaks_connector.Global.Actual.get_node_fdu_info sys_id Yaks_connector.default_tenant_id (Apero.Option.get state.configuration.agent.uuid) "*" instance_id state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
+      let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-CONNECT-CP-TO-FDU - FDU Record: %s" (Infra.Descriptors.FDU.string_of_record record) ) in
       (* Find Correct Plugin *)
       let fdu_type = Fos_im.string_of_hv_type record.hypervisor in
       let%lwt plugins = Yaks_connector.Local.Actual.get_node_plugins (Apero.Option.get state.configuration.agent.uuid) state.yaks in
@@ -377,13 +378,15 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       *)
       (match pl with
        | Some plid ->
-
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-CONNECT-CP-TO-FDU - Plugin ID: %s" plid ) in
          let parameters = [("cpid", cp_id);("instanceid", instance_id);("iface",interface)] in
          let fname = "connect_interface_to_cp" in
          Yaks_connector.Local.Actual.exec_plugin_eval (Apero.Option.get state.configuration.agent.uuid) plid fname parameters state.yaks
          >>= fun res ->
          (match res with
-          | Some r -> Lwt.return @@ FAgentTypes.string_of_eval_result r
+          | Some r ->
+            let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-CONNECT-CP-TO-FDU - Should be ok!") in
+            Lwt.return @@ FAgentTypes.string_of_eval_result r
           | None ->  Lwt.fail @@ FException (`InternalError (`MsgCode ((Printf.sprintf ("Cannot connect cp to interface %s") cp_id ),503)))
          )
        | None ->
