@@ -989,6 +989,12 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           in Lwt.return record
         ) descriptor.internal_virtual_links
       in
+      let cps = List.map (fun  (cp:User.Descriptors.Network.connection_point_descriptor) ->
+          let cp_uuid = Apero.Uuid.to_string (Apero.Uuid.make ()) in
+          {cp with uuid = Some cp_uuid}
+        ) descriptor.connection_points
+      in
+      let descriptor = {descriptor with connection_points = cps} in
       (* let%lwt cps = Lwt_list.map_p (fun (cp:User.Descriptors.Network.connection_point_descriptor) ->
           let cp_uuid = Apero.Uuid.to_string (Apero.Uuid.make ()) in
           let record = Infra.Descriptors.Network.{
@@ -1114,7 +1120,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           let%lwt cprs  = Lwt_list.filter_map_s (fun (iface:Infra.Descriptors.FDU.interface) ->
               match iface.ext_cp_id, iface.cp_id with
               | Some ecp, None ->
-                (match List.find_opt (fun (e:User.Descriptors.AtomicEntity.connection_point_descriptor) -> (String.compare ecp e.id)==0) descriptor.connection_points with
+                (match List.find_opt (fun (e:User.Descriptors.Network.connection_point_descriptor) -> (String.compare ecp e.id)==0) descriptor.connection_points with
                  | Some ae_ecp ->
                    let%lwt cpr = Fos_fim_api.Network.add_connection_point_to_node ae_ecp n state.fim_api in
                    let%lwt _ = Logs_lwt.info (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - CONNECTING A INTERFACE TO AN EXTERNAL CP : %s <-> %s:%s" cpr.uuid fdur.uuid iface.name ) in

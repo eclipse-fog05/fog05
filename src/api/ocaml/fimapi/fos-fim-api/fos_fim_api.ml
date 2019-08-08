@@ -96,6 +96,30 @@ module Network = struct
     >>= fun _ ->
     Lwt.return_unit
 
+
+  let wait_port_in_node sysid tenantid nodeid portid api =
+    let var = Fos_core.MVar.create_empty  () in
+
+    let cb portid (port:Infra.Descriptors.Network.connection_point_record option) (is_remove:bool) (uuid:string option) =
+      ignore uuid;
+      match is_remove with
+      | true -> Lwt.return_unit
+      | false ->
+        (match port with
+         | Some port ->
+           (if (String.compare port.uuid portid) == 0 then
+              Fos_core.MVar.put var port
+            else
+              Lwt.return_unit)
+         | None -> Lwt.return_unit
+        )
+    in
+
+    let%lwt  _ = Yaks_connector.Global.Actual.observe_node_ports sysid tenantid nodeid (cb portid) api.yconnector in
+    Fos_core.MVar.read var
+    >>= fun _ ->
+    Lwt.return_unit
+
   let add_network (descriptor:FTypes.virtual_network) api =
     let netid = descriptor.uuid in
     let%lwt n = Yaks_connector.Global.Actual.get_network api.sysid api.tenantid netid api.yconnector in
@@ -145,10 +169,16 @@ module Network = struct
     | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point removal")))
 
 
-  let add_connection_point_to_node descriptor nodeid  api =
+  let add_connection_point_to_node (descriptor:User.Descriptors.Network.connection_point_descriptor) nodeid  api =
+    let descriptor =
+      match descriptor.uuid with
+      | Some _ -> descriptor
+      | None -> {descriptor with uuid = Some (Apero.Uuid.to_string @@ Apero.Uuid.make ())}
+    in
     let%lwt res = Yaks_connector.Global.Actual.create_cp_in_node api.sysid api.tenantid nodeid descriptor api.yconnector in
     match res.result with
     | Some js ->
+      wait_port_in_node api.sysid api.tenantid nodeid "" api >>= fun _ ->
       Lwt.return @@ Infra.Descriptors.Network.connection_point_record_of_string (JSON.to_string js)
     | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point creation")))
 
