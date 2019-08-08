@@ -170,7 +170,7 @@ module infra_atomic_entity {
 
         list connection_points {
             key "uuid";
-            uses connection_point_record;
+            uses connection_point;
         }
 
         leaf-list depends_on {

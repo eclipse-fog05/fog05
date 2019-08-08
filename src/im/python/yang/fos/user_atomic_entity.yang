@@ -162,7 +162,7 @@ module user_atomic_entity {
 
         list connection_points {
             key "id";
-            uses connection_point_descriptor;
+            uses connection_point;
         }
 
         leaf-list depends_on {
