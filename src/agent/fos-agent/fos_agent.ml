@@ -270,7 +270,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
     | exn ->
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-CREATE-CP - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-CREATE-NET - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error=Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
@@ -278,8 +278,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     MVar.read self >>= fun state ->
     try%lwt
       let%lwt net_p = get_network_plugin self in
-      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CREATE-NET - ##############") in
-      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CREATE-NET - Properties: %s" (Apero.Properties.to_string props) ) in
+      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-REMOVE-NET - ##############") in
+      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-REMOVE-NET - Properties: %s" (Apero.Properties.to_string props) ) in
       let net_id =Apero.Option.get @@ Apero.Properties.get "net_id" props in
       let%lwt record =  Yaks_connector.Local.Actual.get_node_network  (Apero.Option.get state.configuration.agent.uuid) net_p net_id state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
       Yaks_connector.Global.Actual.remove_network sys_id Yaks_connector.default_tenant_id record.uuid state.yaks >>= Lwt.return
@@ -289,7 +289,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
     | exn ->
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-CREATE-CP - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-REMOVE-CP - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error=Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
