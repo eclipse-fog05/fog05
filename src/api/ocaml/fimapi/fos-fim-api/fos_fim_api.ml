@@ -412,7 +412,7 @@ module FDU = struct
     match res.result with
     | Some js ->
       Lwt.return @@ (JSON.to_string js)
-    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point creation")))
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point connection")))
 
 
   let disconnect_interface_from_cp face instanceid nodeid api =

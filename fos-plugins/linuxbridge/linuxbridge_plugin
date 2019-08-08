@@ -1032,9 +1032,9 @@ class LinuxBridge(NetworkPlugin):
             'stop':cmd_stop
         }
         self.ports.update({cp_uuid: cp_info})
-        if descriptor.get("vld_ref") is not None:
-            pair_id = descriptor.get("vld_ref")
-            self.connect_cp_to_vnetwork(cp_id, pair_id)
+        # if descriptor.get("vld_ref") is not None:
+        #     pair_id = descriptor.get("vld_ref")
+        #     self.connect_cp_to_vnetwork(cp_id, pair_id)
         properties = {
             'int_name': int_name,
             'ext_name':ext_name,
