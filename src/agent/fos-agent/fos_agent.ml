@@ -345,12 +345,12 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     try%lwt
 
 
-      let%lwt nodeid = Yaks_connector.Global.Actual.get_fdu_instance_node sys_id Yaks_connector.default_tenant_id instance_id state.yaks in
-      let nodeid =
-        match nodeid with
-        | Some nid -> nid
-        | None ->  raise @@ FException (`InternalError (`Msg ("Unable to find nodeid for this instance id" ) ))
-      in
+      (* let%lwt nodeid = Yaks_connector.Global.Actual.get_fdu_instance_node sys_id Yaks_connector.default_tenant_id instance_id state.yaks in
+         let nodeid =
+         match nodeid with
+         | Some nid -> nid
+         | None ->  raise @@ FException (`InternalError (`Msg ("Unable to find nodeid for this instance id" ) ))
+         in *)
 
       let%lwt record = Yaks_connector.Global.Actual.get_node_fdu_info sys_id Yaks_connector.default_tenant_id (Apero.Option.get state.configuration.agent.uuid) "*" instance_id state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
       (* Find Correct Plugin *)
