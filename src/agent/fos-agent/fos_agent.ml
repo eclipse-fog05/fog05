@@ -343,7 +343,15 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     let instance_id = Apero.Option.get @@ Apero.Properties.get "instance_id" props in
     let interface = Apero.Option.get @@ Apero.Properties.get "interface" props in
     try%lwt
-      let%lwt record = Yaks_connector.Global.Actual.get_node_fdu_info sys_id Yaks_connector.default_tenant_id (Apero.Option.get state.configuration.agent.uuid) "*" instance_id state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
+
+      let%lwt nodeid = Yaks_connector.Global.Actual.get_fdu_instance_node sys_id Yaks_connector.default_tenant_id instance_id state.yaks in
+      let nodeid =
+        match nodeid with
+        | Some nid -> nid
+        | None ->  raise @@ FException (`InternalError (`Msg ("Unable to find nodeid for this instance id" ) ))
+      in
+
+      let%lwt record = Yaks_connector.Global.Actual.get_node_fdu_info sys_id Yaks_connector.default_tenant_id (Apero.Option.get state.configuration.agent.uuid) nodeid instance_id state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
       (* Find Correct Plugin *)
       let fdu_type = Fos_im.string_of_hv_type record.hypervisor in
       let%lwt plugins = Yaks_connector.Local.Actual.get_node_plugins (Apero.Option.get state.configuration.agent.uuid) state.yaks in
@@ -381,7 +389,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
          Lwt.fail @@ FException (`PluginNotFound (`MsgCode ((Printf.sprintf ("CRITICAL!!!! Cannot find a plugin for this FDU even if it is present in the node WTF!! %s") instance_id ),404))))
     with
     | exn ->
-      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-DEFINE-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-CONNECT-CP-TO-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error=Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
@@ -392,7 +400,14 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     let face = Apero.Option.get @@ Apero.Properties.get "interface" props in
     let instance_id = Apero.Option.get @@ Apero.Properties.get "instance_id" props in
     try%lwt
-      let%lwt record = Yaks_connector.Global.Actual.get_node_fdu_info sys_id Yaks_connector.default_tenant_id (Apero.Option.get state.configuration.agent.uuid) "*" instance_id state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
+
+      let%lwt nodeid = Yaks_connector.Global.Actual.get_fdu_instance_node sys_id Yaks_connector.default_tenant_id instance_id state.yaks in
+      let nodeid =
+        match nodeid with
+        | Some nid -> nid
+        | None ->  raise @@ FException (`InternalError (`Msg ("Unable to find nodeid for this instance id" ) ))
+      in
+      let%lwt record = Yaks_connector.Global.Actual.get_node_fdu_info sys_id Yaks_connector.default_tenant_id (Apero.Option.get state.configuration.agent.uuid) nodeid instance_id state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
       (* Find Correct Plugin *)
       let fdu_type = Fos_im.string_of_hv_type record.hypervisor in
       let%lwt plugins = Yaks_connector.Local.Actual.get_node_plugins (Apero.Option.get state.configuration.agent.uuid) state.yaks in
@@ -2049,6 +2064,7 @@ let info =
 let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
 let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
 
+let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
 let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
 let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
 let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
