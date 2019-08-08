@@ -849,10 +849,10 @@ class LXD(RuntimePluginFDU):
         try:
             fdu = self.current_fdus.get(instanceid, None)
             if fdu is None:
-                self.logger.error('run_fdu()', 'LXD Plugin - FDU not exists')
+                self.logger.error('connect_interface_to_cp()', 'LXD Plugin - FDU not exists')
                 return {'error':404, 'error_msg': 'FDU {} not in runtime {}'.format(instanceid, self.uuid) }
-            elif fdu.get_status() not in [State.CONFIGURED. State.RUNNING, State.PAUSED]:
-                self.logger.error('run_fdu()', 'LXD Plugin - FDU state is wrong, or transition not allowed')
+            elif fdu.get_status() not in [State.CONFIGURED, State.RUNNING, State.PAUSED]:
+                self.logger.error('connect_interface_to_cp()', 'LXD Plugin - FDU state is wrong, or transition not allowed')
                 return {'error':404, 'error_msg': 'FDU {} is not in correct state'.format(instanceid)}
             else:
                 fdu_uuid = fdu.get_fdu_id()
@@ -868,24 +868,24 @@ class LXD(RuntimePluginFDU):
                 if face == '':
                     return {'error':404, 'error_msg': 'Unable to find interface {}'.format(iface)}
                 r = self.nm.connect_interface_to_connection_point(face,cpid)
-                if r.get('result') is not None:
-                    return {'result':cpid}
-                return {'error':503, 'error_msg': 'Unable to attach interface {} to cp'.format(iface)}
+                self.logger.error('connect_interface_to_cp()', 'NM Returned {}'.format(r))
+                return {'result':cpid}
+
         except Exception as e:
             import traceback
-            self.logger.error('create_port_from_descriptor()', '[ERROR] {}'.format(traceback.format_exc()))
+            self.logger.error('connect_interface_to_cp()', '[ERROR] {}'.format(traceback.format_exc()))
             traceback.format_exc()
-            self.logger.error('create_port_from_descriptor()', '[ERROR] got error {}'.format(e))
+            self.logger.error('connect_interface_to_cp()', '[ERROR] got error {}'.format(e))
             return {'error':503, 'error_msg':'{}'.format(e)}
 
 
     def disconnect_interface_from_cp(self, iface, instanceid):
         fdu = self.current_fdus.get(instanceid, None)
         if fdu is None:
-            self.logger.error('run_fdu()', 'LXD Plugin - FDU not exists')
+            self.logger.error('disconnect_interface_from_cp()', 'LXD Plugin - FDU not exists')
             return {'error':404, 'error_msg': 'FDU {} not in runtime {}'.format(instanceid, self.uuid) }
-        elif fdu.get_status() not in [State.CONFIGURED. State.RUNNING, State.PAUSED]:
-            self.logger.error('run_fdu()', 'LXD Plugin - FDU state is wrong, or transition not allowed')
+        elif fdu.get_status() not in [State.CONFIGURED, State.RUNNING, State.PAUSED]:
+            self.logger.error('disconnect_interface_from_cp()', 'LXD Plugin - FDU state is wrong, or transition not allowed')
             return {'error':404, 'error_msg': 'FDU {} is not in correct state'.format(instanceid)}
         else:
             fdu_uuid = fdu.get_fdu_id()

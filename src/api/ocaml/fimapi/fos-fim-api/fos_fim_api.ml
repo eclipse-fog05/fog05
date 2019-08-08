@@ -153,10 +153,11 @@ module Network = struct
     match%lwt Yaks_connector.Global.Actual.get_node_network api.sysid api.tenantid nodeid descriptor.uuid api.yconnector with
     | Some netr -> Lwt.return netr
     | None ->
+      let r =  wait_network_in_node api.sysid api.tenantid nodeid descriptor.uuid api in
       let%lwt res = Yaks_connector.Global.Actual.create_network_in_node api.sysid api.tenantid nodeid descriptor api.yconnector in
       ( match res.result with
         | Some js ->
-          wait_network_in_node api.sysid api.tenantid nodeid descriptor.uuid api >>= fun _ ->
+          r >>= fun _ ->
           Lwt.return @@ FTypesRecord.virtual_network_of_string (JSON.to_string js)
         | None -> raise @@ FException (`InternalError (`Msg ("Error during network creation"))))
 
