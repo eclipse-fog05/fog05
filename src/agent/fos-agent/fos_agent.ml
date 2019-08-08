@@ -1116,9 +1116,9 @@ let agent verbose_flag debug_flag configuration custom_uuid =
                    let%lwt cpr = Fos_fim_api.Network.add_connection_point_to_node ae_ecp n state.fim_api in
                    Fos_fim_api.FDU.connect_interface_to_cp cpr.uuid fdur.uuid iface.name n state.fim_api
                    >>= fun _ -> Lwt.return_unit
-                 | None -> Lwt.return_unit
+                 | None ->Lwt.fail @@ FException (`NotFound (`MsgCode (( Printf.sprintf ("Unable to find Atomic entity connection point %s") ecp ),404) ))
                 )
-              | _, Some icp ->
+              | None, Some icp ->
                 (match List.find_opt (fun (e:Infra.Descriptors.FDU.connection_point_record) -> (String.compare icp e.cp_id)==0) fdur.connection_points with
                  | Some fdu_icp ->
                    (match fdu_icp.vld_ref with
@@ -1130,16 +1130,16 @@ let agent verbose_flag debug_flag configuration custom_uuid =
                              let%lwt vnet_r = Fos_fim_api.Network.add_network_to_node net_desc n state.fim_api in
                              Fos_fim_api.Network.connect_cp_to_network fdu_icp.uuid vnet_r.uuid n state.fim_api
                              >>= fun _ -> Lwt.return_unit
-                           | None -> Lwt.return_unit
+                           | None -> Lwt.fail @@ FException (`NotFound (`MsgCode (( Printf.sprintf ("Unable to find virtual network %s") vl.uuid ),404) ))
                          )
-                       | None -> Lwt.return_unit
+                       | None -> Lwt.fail @@ FException (`NotFound (`MsgCode (( Printf.sprintf ("Unable to find virtual link %s") vlr ),404) ))
                       )
                     | None -> Lwt.return_unit
                    )
                  (* Fos_fim_api.Network.add_network_to_node
                     Fos_fim_api.FDU.connect_interface_to_cp cpr.uuid fdur.uuid iface.name n state.fim_api
                     >>= fun _ -> Lwt.return_unit *)
-                 | None -> Lwt.return_unit
+                 | None -> Lwt.fail @@ FException (`NotFound (`MsgCode (( Printf.sprintf ("Unable to find FDU connection point %s") icp ),404) ))
                 )
               | _, _ ->  Lwt.return_unit
 
