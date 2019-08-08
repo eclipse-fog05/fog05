@@ -1601,7 +1601,7 @@ class LAD(object):
     def add_plugin_eval(self, nodeid, pluginid, func_name, func):
         p = self.get_node_plugin_eval_path(nodeid, pluginid, func_name)
 
-        def cb(path, props):
+        def cb(path, **props):
             v = Value(json.dumps(func(**props)), encoding=Encoding.STRING)
             return v
         r = self.ws.register_eval(p, cb)
