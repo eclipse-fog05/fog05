@@ -344,6 +344,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     let interface = Apero.Option.get @@ Apero.Properties.get "interface" props in
     try%lwt
 
+
       let%lwt nodeid = Yaks_connector.Global.Actual.get_fdu_instance_node sys_id Yaks_connector.default_tenant_id instance_id state.yaks in
       let nodeid =
         match nodeid with
@@ -351,7 +352,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
         | None ->  raise @@ FException (`InternalError (`Msg ("Unable to find nodeid for this instance id" ) ))
       in
 
-      let%lwt record = Yaks_connector.Global.Actual.get_node_fdu_info sys_id Yaks_connector.default_tenant_id (Apero.Option.get state.configuration.agent.uuid) nodeid instance_id state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
+      let%lwt record = Yaks_connector.Global.Actual.get_node_fdu_info sys_id Yaks_connector.default_tenant_id (Apero.Option.get state.configuration.agent.uuid) "*" instance_id state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
       (* Find Correct Plugin *)
       let fdu_type = Fos_im.string_of_hv_type record.hypervisor in
       let%lwt plugins = Yaks_connector.Local.Actual.get_node_plugins (Apero.Option.get state.configuration.agent.uuid) state.yaks in
@@ -401,13 +402,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     let instance_id = Apero.Option.get @@ Apero.Properties.get "instance_id" props in
     try%lwt
 
-      let%lwt nodeid = Yaks_connector.Global.Actual.get_fdu_instance_node sys_id Yaks_connector.default_tenant_id instance_id state.yaks in
-      let nodeid =
-        match nodeid with
-        | Some nid -> nid
-        | None ->  raise @@ FException (`InternalError (`Msg ("Unable to find nodeid for this instance id" ) ))
-      in
-      let%lwt record = Yaks_connector.Global.Actual.get_node_fdu_info sys_id Yaks_connector.default_tenant_id (Apero.Option.get state.configuration.agent.uuid) nodeid instance_id state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
+
+      let%lwt record = Yaks_connector.Global.Actual.get_node_fdu_info sys_id Yaks_connector.default_tenant_id (Apero.Option.get state.configuration.agent.uuid) "*" instance_id state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
       (* Find Correct Plugin *)
       let fdu_type = Fos_im.string_of_hv_type record.hypervisor in
       let%lwt plugins = Yaks_connector.Local.Actual.get_node_plugins (Apero.Option.get state.configuration.agent.uuid) state.yaks in
