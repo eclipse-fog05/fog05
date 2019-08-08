@@ -1193,7 +1193,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
 
     with
     | exn ->
-      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error = Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
@@ -1224,7 +1224,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
 
     with
     | exn ->
-      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-TERMINATE-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-TERMINATE-AE - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error = Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in

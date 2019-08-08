@@ -933,7 +933,11 @@ module MakeGAD(P: sig val prefix: string end) = struct
 
   let get_node_fdu_info sysid tenantid nodeid fduid instanceid connector =
     MVar.read connector >>= fun connector ->
-    let s = Yaks.Selector.of_path @@ get_node_fdu_info_path sysid tenantid nodeid fduid instanceid in
+    let s =
+      match fduid with
+      | "*" -> get_node_fdu_instance_selector sysid tenantid nodeid instanceid
+      | _ -> Yaks.Selector.of_path @@ get_node_fdu_info_path sysid tenantid nodeid fduid instanceid
+    in
     Yaks.Workspace.get s connector.ws
     >>= fun kvs ->
     match kvs with
@@ -957,7 +961,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
 
   let get_fdu_nodes sysid tenantid fduid connector =
     MVar.read connector >>= fun connector ->
-    let s = Yaks.Selector.of_path @@ get_node_fdu_info_path sysid tenantid "*" fduid "*" in
+    let s = get_node_fdu_instances_selector sysid tenantid "*" fduid in
     Yaks.Workspace.get s connector.ws
     >>= fun kvs ->
     match kvs with
@@ -2534,3 +2538,4 @@ module LocalConstraint = struct
 
 
 end
+
