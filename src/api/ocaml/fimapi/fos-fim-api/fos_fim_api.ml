@@ -166,7 +166,7 @@ module Network = struct
     match res.result with
     | Some js ->
       Lwt.return @@ (JSON.to_string js)
-    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point connection")))
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point connection to network")))
 
 
   let disconnect_cp_from_network cpid nodeid api =
@@ -174,7 +174,7 @@ module Network = struct
     match res.result with
     | Some js ->
       Lwt.return @@ (JSON.to_string js)
-    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point disconnection")))
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point disconnection from network")))
 
 
   let create_floating_ip nodeid api =
@@ -437,7 +437,7 @@ module FDU = struct
     match res.result with
     | Some js ->
       Lwt.return @@ (JSON.to_string js)
-    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point connection")))
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point connection to interface")))
 
 
   let disconnect_interface_from_cp face instanceid nodeid api =
@@ -445,7 +445,7 @@ module FDU = struct
     match res.result with
     | Some js ->
       Lwt.return @@ (JSON.to_string js)
-    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point removal")))
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point disconnection from interface")))
 
 
 
