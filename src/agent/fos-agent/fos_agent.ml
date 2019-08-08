@@ -1117,6 +1117,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
                 (match List.find_opt (fun (e:User.Descriptors.AtomicEntity.connection_point_descriptor) -> (String.compare ecp e.id)==0) descriptor.connection_points with
                  | Some ae_ecp ->
                    let%lwt cpr = Fos_fim_api.Network.add_connection_point_to_node ae_ecp n state.fim_api in
+                   let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - CONNECTING A INTERFACE TO AN EXTERNAL CP : %s <-> %s:%s" cpr.uuid fdur.uuid iface.name ) in
                    Fos_fim_api.FDU.connect_interface_to_cp cpr.uuid fdur.uuid iface.name n state.fim_api
                    >>= fun _ -> Lwt.return (Some cpr)
                  | None ->Lwt.fail @@ FException (`NotFound (`MsgCode (( Printf.sprintf ("Unable to find Atomic entity connection point %s") ecp ),404) ))
