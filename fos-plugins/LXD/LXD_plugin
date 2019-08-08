@@ -65,6 +65,20 @@ class LXD(RuntimePluginFDU):
         self.images = {}
         self.flavors = {}
         self.mon_th = {}
+
+
+        d = {
+            'connect_interface_to_cp': self.connect_interface_to_cp,
+            'disconnect_interface_from_cp': self.disconnect_interface_from_cp,
+        }
+
+        for k in d:
+            f = d.get(k)
+            self.logger.info(
+                '__init__()', 'LXD Plugin - Registering {}'.format(k))
+            self.connector.loc.actual.add_plugin_eval(self.node, self.uuid, k, f)
+
+
         signal.signal(signal.SIGINT, self.__catch_signal)
         signal.signal(signal.SIGTERM, self.__catch_signal)
 
@@ -827,6 +841,60 @@ class LXD(RuntimePluginFDU):
 
     def after_migrate_entity_actions(self, fdu_uuid, dst=False):
         pass
+
+
+
+    def connect_interface_to_cp(self, cpid, instanceid, iface):
+        fdu = self.current_fdus.get(instanceid, None)
+        if fdu is None:
+            self.logger.error('run_fdu()', 'LXD Plugin - FDU not exists')
+            return {'error':404, 'error_msg': 'FDU {} not in runtime {}'.format(instanceid, self.uuid) }
+        elif fdu.get_status() not in [State.CONFIGURED. State.RUNNING, State.PAUSED]:
+            self.logger.error('run_fdu()', 'LXD Plugin - FDU state is wrong, or transition not allowed')
+            return {'error':404, 'error_msg': 'FDU {} is not in correct state'.format(instanceid)}
+        else:
+            fdu_uuid = fdu.get_fdu_id()
+            face = ''
+
+            i = 0
+            for intf in fdu.get_interfaces():
+                intf_name = intf.get('vintf_name')
+                if intf.get('virtual_interface').get('intf_type').upper() not in ['PHYSICAL','BRIDGED']:
+                    intf_id = 'lxd-{}-{}'.format(fdu.get_short_id(), i)
+                    if intf.get('name') == iface:
+                        face = intf_id
+            if face == '':
+                return {'error':404, 'error_msg': 'Unable to find interface {}'.format(iface)}
+            r = self.nm.connect_interface_to_connection_point(face,cpid)
+            if r.get('result') is not None:
+                return {'result':cpid}
+            return {'error':503, 'error_msg': 'Unable to attach interface {} to cp'.format(iface)}
+
+    def disconnect_interface_from_cp(self, iface, instanceid):
+        fdu = self.current_fdus.get(instanceid, None)
+        if fdu is None:
+            self.logger.error('run_fdu()', 'LXD Plugin - FDU not exists')
+            return {'error':404, 'error_msg': 'FDU {} not in runtime {}'.format(instanceid, self.uuid) }
+        elif fdu.get_status() not in [State.CONFIGURED. State.RUNNING, State.PAUSED]:
+            self.logger.error('run_fdu()', 'LXD Plugin - FDU state is wrong, or transition not allowed')
+            return {'error':404, 'error_msg': 'FDU {} is not in correct state'.format(instanceid)}
+        else:
+            fdu_uuid = fdu.get_fdu_id()
+            face = ''
+
+            i = 0
+            for intf in fdu.get_interfaces():
+                intf_name = intf.get('vintf_name')
+                if intf.get('virtual_interface').get('intf_type').upper() not in ['PHYSICAL','BRIDGED']:
+                    intf_id = 'lxd-{}-{}'.format(fdu.get_short_id(), i)
+                    if intf.get('name') == iface:
+                        face = intf_id
+            if face == '':
+                return {'error':404, 'error_msg': 'Unable to find interface {}'.format(iface)}
+            r = self.nm.disconnect_interface(face)
+            if r.get('result') is not None:
+                return {'result':iface}
+            return {'error':503, 'error_msg': 'Unable to disconnect interface {} to cp'.format(iface)}
 
     def __monitor_instance(self, fdu_uuid, instance_id, instance_name):
         self.logger.info('__monitor_instance()','[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(instance_id))

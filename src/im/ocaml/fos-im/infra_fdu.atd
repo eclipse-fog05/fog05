@@ -31,7 +31,8 @@ type vintf_t <ocaml module="Base_fdu"> = abstract
 type io_kind <ocaml module="Base_fdu"> = abstract
 type io_port <ocaml module="Base_fdu"> = abstract
 type storage_kind <ocaml module="Base_fdu"> = abstract
-type cp_kind <ocaml module="Base_fdu"> = abstract
+type net_state <ocaml module="Infra_network"> = abstract
+type connection_point_record <ocaml module="Infra_network"> = abstract
 
 
 (* Record Related Types *)
@@ -88,23 +89,6 @@ type storage_record = {
 }
 
 
-
-(* CPD as ETSI NFV *)
-
-type connection_point_record = {
-  uuid : string;
-  status : net_state;
-  cp_id : string;
-  ?cp_type : cp_kind option;
-  ?port_security_enabled: bool option;
-  ?internal_vld_ref : string option;
-
-  ?veth_face_name : string option;
-  ?br_name : string option;
-  ?properties : json option;
-}
-
-
 type fdu_state = [
   | DEFINE
   | CONFIGURE
@@ -138,13 +122,6 @@ type error_code = [
   | UNDEFINE_ERROR of 0
 ]
 *)
-
-type net_state = [
-  | CREATE
-  | CONNECTED
-  | DISCONNECTED
-  | DESTROY
-]
 
 
 type migration_properties = {

@@ -58,12 +58,21 @@ module user_atomic_entity {
             type string;
         }
     }
-    grouping connection_point_descriptor {
+    grouping connection_point {
+
+        leaf uuid {
+            type string;
+        }
+
         leaf name {
             type string;
         }
 
         leaf id {
+            type string;
+        }
+
+        leaf short_name {
             type string;
         }
 
@@ -73,6 +82,12 @@ module user_atomic_entity {
 
         leaf port_security_enabled {
             type boolean;
+        }
+
+        leaf vld_ref {
+            description
+              "Reference to the VL this CP is connected";
+            type string;
         }
     }
 

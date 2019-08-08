@@ -12,11 +12,16 @@
  *********************************************************************************)
 (* AtomicEntity Manifest *)
 
-type cp_kind <ocaml module="Base_entity"> = abstract
-type vl_kind <ocaml module="Base_entity"> = abstract
-type address_information <ocaml module="Base_entity"> = abstract
+type vl_kind <ocaml module="Base_network"> = abstract
+type address_information <ocaml module="Base_network"> = abstract
 
 (* Descriptor Related Types *)
+
+
+type constituent_atomic_entity = {
+  id : string;
+  index : int;
+}
 
 type descriptor = {
   ?uuid : string option;
@@ -24,24 +29,16 @@ type descriptor = {
   name : string;
   ?description : string option;
   ?version : string option;
-  atomic_entities : string list;
+  atomic_entities : constituent_atomic_entity list;
   virtual_links : virtual_link_descriptor list;
-  connection_points : connection_point_descriptor list;
 }
 
-(* CPD as ETSI NFV *)
-
-type connection_point_descriptor = {
-  name : string;
-  id : string;
-  ?short_name : string option;
-  ?cp_type : cp_kind option;
-  ?port_security_enabled: bool option;
-  ?require_floating_ip : bool option;
-  ?atomic_entity_cp_ref : string option;
+type cp_ref = {
+  component_id_ref : string;
+  component_index_ref : int;
+  cp_id : string;
+  ?has_floating_ip : bool option;
 }
-
-(* VLD as ETSI NFV *)
 
 type virtual_link_descriptor = {
   id : string;
@@ -52,7 +49,7 @@ type virtual_link_descriptor = {
   ?vl_type : vl_kind option;
   ?root_bandwidth : int option;
   ?leaf_bandwidth : int option;
-  cps : string list;
+  cps : cp_ref list;
   (* From fog05 *)
   ?ip_configuration : address_information option;
 }

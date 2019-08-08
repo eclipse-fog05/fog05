@@ -47,6 +47,7 @@ module Base = struct
     module FDU = Base_fdu
     module AtomicEnitity = Base_atomic_entity
     module Entity = Base_entity
+    module Network = Base_network
   end
 end
 
@@ -55,6 +56,7 @@ module User  = struct
     module FDU = User_fdu
     module AtomicEntity = User_atomic_entity
     module Entity = User_entity
+    module Network = User_network
   end
 end
 
@@ -64,6 +66,7 @@ module Infra = struct
     module FDU = Infra_fdu
     module AtomicEntity = Infra_atomic_entity
     module Entity = Infra_entity
+    module Network = Infra_network
   end
 end
 

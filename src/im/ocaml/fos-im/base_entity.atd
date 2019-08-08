@@ -22,13 +22,6 @@ type cp_kind = [
   | VPORT
 ]
 
-type connection_point_descriptor = {
-  uuid : string;
-  cp_id : string;
-  ?cp_type : cp_kind option;
-  ?port_security_enabled: bool option;
-  ?atomic_vld_ref : string option;
-}
 
 (* VLD as ETSI NFV *)
 

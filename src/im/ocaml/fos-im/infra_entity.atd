@@ -13,30 +13,36 @@
 
 (* Atomic Entity Infrastructure Information *)
 
-type cp_kind <ocaml module="Base_entity"> = abstract
-type vl_kind <ocaml module="Base_entity"> = abstract
-type address_information <ocaml module="Base_entity"> = abstract
+
+type vl_kind <ocaml module="Base_network"> = abstract
+type address_information <ocaml module="Base_network"> = abstract
 
 (* Descriptor Related Types *)
 
+
+type constituent_atomic_entity = {
+  id : string;
+  uuid : string;
+  index : int;
+}
+
 type record = {
   uuid : string;
-  atomic_entities : string list;
+  atomic_entities : constituent_atomic_entity list;
   entity_id : string;
   virtual_links : virtual_link_record list;
-  connection_points : connection_point_record list;
 }
 
-(* CPD as ETSI NFV *)
-
-type connection_point_record = {
-  uuid : string;
+type cp_ref = {
+  component_id_ref : string;
+  component_index_ref : int;
   cp_id : string;
-  ?cp_type : cp_kind option;
-  ?port_security_enabled: bool option;
-  ?require_floating_ip : bool option;
-  ?atomic_entity_cp_ref : string option;
+  uuid : string;
+  ?has_floating_ip : bool option;
+  ?floating_ip_id : string option;
+  ?floating_ip : string option;
 }
+
 
 (* VLD as ETSI NFV *)
 
@@ -47,7 +53,7 @@ type virtual_link_record = {
   ?vl_type : vl_kind option;
   ?root_bandwidth : int option;
   ?leaf_bandwidth : int option;
-  cps : string list;
+  cps : cp_ref list;
   (* From fog05 *)
   ?ip_configuration : address_information option;
   (* filled by Orchestrator *)

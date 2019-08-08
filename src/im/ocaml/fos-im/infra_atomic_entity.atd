@@ -17,9 +17,10 @@ type json <ocaml module="Abs_json"> = abstract
 
 type fdu <ocaml module="Infra_fdu"> = abstract
 
-type cp_kind <ocaml module="Base_atomic_entity"> = abstract
-type vl_kind <ocaml module="Base_atomic_entity"> = abstract
-type address_information <ocaml module="Base_atomic_entity"> = abstract
+
+type vl_kind <ocaml module="Base_network"> = abstract
+type address_information <ocaml module="Base_network"> = abstract
+type connection_point_record <ocaml module="Infra_network"> = abstract
 
 (* Descriptor Related Types *)
 
@@ -32,14 +33,6 @@ type record = {
   depends_on : string list;
 }
 
-(* CPD as ETSI NFV *)
-
-type connection_point_record = {
-  uuid : string;
-  cp_id : string;
-  ?cp_type : cp_kind option;
-  ?port_security_enabled: bool option;
-}
 
 (* VLD as ETSI NFV *)
 

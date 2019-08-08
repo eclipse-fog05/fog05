@@ -10,36 +10,22 @@
  * Contributors: 1
  *   Gabriele Baldoni (gabriele (dot) baldoni (at) adlinktech (dot) com ) - IM Update
  *********************************************************************************)
-(* Atomic Entity Shared Types *)
+(* Network Descriptor Shared Types *)
 
 type json <ocaml module="Abs_json"> = abstract
+type cp_kind <ocaml module="Base_network"> = abstract
+type vl_kind <ocaml module="Base_network"> = abstract
+type address_information <ocaml module="Base_network"> = abstract
 
 
 
-(* CPD as ETSI NFV *)
 
-type cp_kind = [
-  | VPORT
-]
-
-(* VLD as ETSI NFV *)
-
-type vl_kind = [
-  | ELINE
-  | ELAN
-]
-
-
-type ip_kind = [
-  | IPV4
-  | IPV6
-]
-
-type address_information = {
-  ip_version : ip_kind;
-  subnet : string;   (*  X.X.X.X/Y*)
-  ?gateway : string option; (* X.X.X.X *)
-  dhcp_enable :  bool;
-  ?dhcp_range : string option; (* X.X.X.X,X.X.X.Z *)
-  ?dns : string option; (* X.X.X.X,X.X.X.Z,.... *)
+type connection_point_descriptor = {
+  ?uuid : string option;
+  name : string;
+  id : string;
+  ?vld_ref : string option;
+  ?short_name : string option;
+  ?cp_type : cp_kind option;
+  ?port_security_enabled: bool option;
 }

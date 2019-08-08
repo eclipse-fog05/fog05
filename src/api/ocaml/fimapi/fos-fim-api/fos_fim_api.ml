@@ -88,6 +88,7 @@ module Network = struct
   let list_networks api =
     Yaks_connector.Global.Actual.get_all_networks api.sysid api.tenantid api.yconnector
 
+
   let add_connection_point (descriptor:User.Descriptors.FDU.connection_point_descriptor) api =
     let cpid = descriptor.id in
     Yaks_connector.Global.Desired.add_port api.sysid api.tenantid cpid descriptor api.yconnector
@@ -99,6 +100,87 @@ module Network = struct
 
   let list_connection_points api =
     Yaks_connector.Global.Actual.get_all_ports api.sysid api.tenantid api.yconnector
+
+  let add_network_to_node (descriptor:FTypes.virtual_network) nodeid api =
+    match%lwt Yaks_connector.Global.Actual.get_node_network api.sysid api.tenantid nodeid descriptor.uuid api.yconnector with
+    | Some netr -> Lwt.return netr
+    | None ->
+      let%lwt res = Yaks_connector.Global.Actual.create_network_in_node api.sysid api.tenantid nodeid descriptor api.yconnector in
+      ( match res.result with
+        | Some js ->
+          Lwt.return @@ FTypesRecord.virtual_network_of_string (JSON.to_string js)
+        | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point creation"))))
+
+
+  let remove_network_from_node netid nodeid api =
+    let%lwt res = Yaks_connector.Global.Actual.remove_network_from_node api.sysid api.tenantid nodeid netid api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ FTypesRecord.virtual_network_of_string (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point removal")))
+
+
+  let add_connection_point_to_node descriptor nodeid  api =
+    let%lwt res = Yaks_connector.Global.Actual.create_cp_in_node api.sysid api.tenantid nodeid descriptor api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ Infra.Descriptors.Network.connection_point_record_of_string (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point creation")))
+
+
+  let remove_connection_point_from_node cpid nodeid  api =
+    let%lwt res = Yaks_connector.Global.Actual.remove_cp_from_node api.sysid api.tenantid nodeid cpid api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ Infra.Descriptors.Network.connection_point_record_of_string (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point removal")))
+
+
+  let connect_cp_to_network cpid netid nodeid api =
+    let%lwt res = Yaks_connector.Global.Actual.connect_cp_to_network api.sysid api.tenantid nodeid cpid netid api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point creation")))
+
+
+  let disconnect_cp_from_network cpid nodeid api =
+    let%lwt res = Yaks_connector.Global.Actual.disconnect_cp_from_network api.sysid api.tenantid nodeid cpid api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point removal")))
+
+
+  let create_floating_ip nodeid api =
+    let%lwt res = Yaks_connector.Global.Actual.create_floating_ip_in_node api.sysid api.tenantid nodeid api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ FTypes.floating_ip_of_string (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point creation")))
+
+
+  let delete_floating_ip ipid nodeid api =
+    let%lwt res = Yaks_connector.Global.Actual.delete_floating_ip_from_node api.sysid api.tenantid nodeid ipid api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ FTypes.floating_ip_of_string (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point removal")))
+
+  let assing_floating_ip ipid cpid nodeid api =
+    let%lwt res = Yaks_connector.Global.Actual.assing_floating_ip_in_node api.sysid api.tenantid nodeid ipid cpid api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ FTypes.floating_ip_of_string (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point creation")))
+
+
+  let retain_floating_ip ipid cpid nodeid api =
+    let%lwt res = Yaks_connector.Global.Actual.remove_floating_ip_from_node api.sysid api.tenantid nodeid ipid cpid api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ FTypes.floating_ip_of_string (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point removal")))
 
 end
 
@@ -299,6 +381,21 @@ module FDU = struct
         (nid, iids)
       ) nids
 
+
+  let connect_interface_to_cp cpid instanceid face nodeid api =
+    let%lwt res = Yaks_connector.Global.Actual.connect_cp_to_interface api.sysid api.tenantid nodeid cpid instanceid face api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point creation")))
+
+
+  let disconnect_interface_from_cp face instanceid nodeid api =
+    let%lwt res = Yaks_connector.Global.Actual.disconnect_cp_from_interface api.sysid api.tenantid nodeid face instanceid api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point removal")))
 
 
 

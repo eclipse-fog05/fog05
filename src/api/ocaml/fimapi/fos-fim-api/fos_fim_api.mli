@@ -38,10 +38,27 @@ module Network : sig
 
   val add_network : FTypes.virtual_network -> api -> bool Lwt.t
   val remove_network : string -> api -> bool Lwt.t
-  val add_connection_point : User.Descriptors.FDU.connection_point_descriptor -> api -> bool Lwt.t
-  val remove_connection_point : string -> api -> bool Lwt.t
   val list_networks : api -> (FTypes.virtual_network list) Lwt.t
-  val list_connection_points : api -> (User.Descriptors.FDU.connection_point_descriptor list) Lwt.t
+
+  val add_connection_point : User.Descriptors.Network.connection_point_descriptor -> api -> bool Lwt.t
+  val remove_connection_point : string -> api -> bool Lwt.t
+  val list_connection_points : api -> (User.Descriptors.Network.connection_point_descriptor list) Lwt.t
+
+
+  val add_network_to_node : FTypes.virtual_network -> string -> api -> FTypesRecord.virtual_network Lwt.t
+  val remove_network_from_node : string -> string -> api -> FTypesRecord.virtual_network Lwt.t
+
+  val add_connection_point_to_node : User.Descriptors.Network.connection_point_descriptor -> string -> api -> Infra.Descriptors.Network.connection_point_record Lwt.t
+  val remove_connection_point_from_node : string -> string -> api -> Infra.Descriptors.Network.connection_point_record Lwt.t
+
+
+  val connect_cp_to_network : string -> string -> string -> api -> string Lwt.t
+  val disconnect_cp_from_network : string -> string -> api -> string Lwt.t
+
+  val create_floating_ip : string -> api -> FTypes.floating_ip Lwt.t
+  val delete_floating_ip : string -> string -> api -> FTypes.floating_ip Lwt.t
+  val assing_floating_ip : string -> string -> string -> api -> FTypes.floating_ip Lwt.t
+  val retain_floating_ip : string -> string -> string -> api -> FTypes.floating_ip Lwt.t
 
 end
 
@@ -74,6 +91,10 @@ module FDU : sig
   val info : string -> api -> User.Descriptors.FDU.descriptor Lwt.t
   val instance_info : string -> api -> Infra.Descriptors.FDU.record Lwt.t
   val list : api -> (User.Descriptors.FDU.descriptor list) Lwt.t
+
+
+  val connect_interface_to_cp : string -> string -> string -> string -> api -> string Lwt.t
+  val disconnect_interface_from_cp : string -> string -> string -> api -> string Lwt.t
 
 end
 

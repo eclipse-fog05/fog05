@@ -58,7 +58,8 @@ module infra_atomic_entity {
             type string;
         }
     }
-    grouping connection_point_record {
+    grouping connection_point {
+
         leaf uuid {
             type string;
         }
@@ -73,6 +74,28 @@ module infra_atomic_entity {
 
         leaf port_security_enabled {
             type boolean;
+        }
+
+        leaf vld_ref {
+            description
+              "Reference to the VL this CP is connected";
+            type string;
+        }
+
+        leaf veth_face_name {
+            type string;
+        }
+
+        leaf br_name {
+            type string;
+        }
+
+        leaf properties {
+            type string;
+        }
+
+        leaf status {
+            type string;
         }
     }
 

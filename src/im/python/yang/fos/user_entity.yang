@@ -54,31 +54,6 @@ module user_entity {
             type string;
         }
     }
-    grouping connection_point_descriptor {
-        leaf name {
-            type string;
-        }
-
-        leaf id {
-            type string;
-        }
-
-        leaf cp_type {
-            type cp_kind;
-        }
-
-        leaf port_security_enabled {
-            type boolean;
-        }
-
-        leaf require_floating_ip {
-            type boolean;
-        }
-
-        leaf atomic_entity_cp_ref {
-            type string;
-        }
-    }
 
     grouping virtual_link_descriptor {
         leaf id {
@@ -150,11 +125,6 @@ module user_entity {
         list virtual_links {
             key "id";
             uses virtual_link_descriptor;
-        }
-
-        list connection_points {
-            key "id";
-            uses connection_point_descriptor;
         }
     }
 

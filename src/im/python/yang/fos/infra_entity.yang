@@ -54,31 +54,6 @@ module infra_entity {
             type string;
         }
     }
-    grouping connection_point_record {
-        leaf uuid {
-            type string;
-        }
-
-        leaf cp_id {
-            type string;
-        }
-
-        leaf cp_type {
-            type cp_kind;
-        }
-
-        leaf port_security_enabled {
-            type boolean;
-        }
-
-        leaf require_floating_ip {
-            type boolean;
-        }
-
-        leaf atomic_entity_cp_ref {
-            type string;
-        }
-    }
 
     grouping virtual_link_record {
         leaf vl_id {
@@ -146,11 +121,6 @@ module infra_entity {
         list virtual_links {
             key "uuid";
             uses virtual_link_record;
-        }
-
-        list connection_points {
-            key "uuid";
-            uses connection_point_record;
         }
     }
 
