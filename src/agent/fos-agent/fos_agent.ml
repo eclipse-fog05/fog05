@@ -1145,6 +1145,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
 
             ) fdur.interfaces
           >>= fun _ ->
+          let%lwt _ = Fos_fim_api.FDU.start fdur.uuid state.fim_api  in
           Lwt.return fdur
         ) fdus_node_maps
       in
