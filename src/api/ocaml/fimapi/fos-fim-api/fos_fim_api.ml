@@ -203,16 +203,41 @@ module FDU = struct
     | None -> Lwt.return_unit
 
 
-  let rec wait_fdu_instance_state_change new_state sysid tenantid nodeid fdu_uuid instance_uuid api =
-    Yaks_connector.Global.Actual.get_node_fdu_info sysid tenantid nodeid fdu_uuid instance_uuid api.yconnector
-    >>= fun r ->
-    match r with
-    | Some fduinfo ->
-      if fduinfo.status == new_state then
-        Lwt.return_unit
-      else
-        wait_fdu_instance_state_change new_state sysid tenantid nodeid fdu_uuid instance_uuid api
-    | None -> wait_fdu_instance_state_change new_state sysid tenantid nodeid fdu_uuid instance_uuid api
+  let wait_fdu_instance_state_change new_state sysid tenantid nodeid fdu_uuid instance_uuid api =
+    let var = Fos_core.MVar.create_empty  () in
+
+    let cb new_state fdu_id instance (fdu:Infra.Descriptors.FDU.record option) (is_remove:bool) (fduid:string option) (instanceid:string option) =
+      ignore fduid;
+      ignore instanceid;
+      match is_remove with
+      | true -> Lwt.return_unit
+      | false ->
+        (match fdu with
+         | Some fdu ->
+           (if (String.compare fdu.fdu_id fdu_id) == 0 && (String.compare fdu.uuid instance) ==0 then
+              ( if fdu.status == new_state then
+                  Fos_core.MVar.put var fdu
+                else
+                  Lwt.return_unit)
+            else
+              Lwt.return_unit)
+         | None -> Lwt.return_unit
+        )
+    in
+
+    let%lwt  _ = Yaks_connector.Global.Actual.observe_node_fdu sysid tenantid nodeid (cb new_state fdu_uuid instance_uuid) api.yconnector in
+    Fos_core.MVar.read var
+    >>= fun _ ->
+    Lwt.return_unit
+  (* Yaks_connector.Global.Actual.get_node_fdu_info sysid tenantid nodeid fdu_uuid instance_uuid api.yconnector
+     >>= fun r ->
+     match r with
+     | Some fduinfo ->
+     if fduinfo.status == new_state then
+      Lwt.return_unit
+     else
+      wait_fdu_instance_state_change new_state sysid tenantid nodeid fdu_uuid instance_uuid api
+     | None -> wait_fdu_instance_state_change new_state sysid tenantid nodeid fdu_uuid instance_uuid api *)
 
   let rec wait_fdu_instance_undefine sysid tenantid nodeid fdu_uuid instance_uuid api =
     Yaks_connector.Global.Actual.get_node_fdu_info sysid tenantid nodeid fdu_uuid instance_uuid api.yconnector
