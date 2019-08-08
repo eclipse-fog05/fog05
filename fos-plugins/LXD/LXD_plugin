@@ -845,30 +845,39 @@ class LXD(RuntimePluginFDU):
 
 
     def connect_interface_to_cp(self, cpid, instanceid, iface):
-        fdu = self.current_fdus.get(instanceid, None)
-        if fdu is None:
-            self.logger.error('run_fdu()', 'LXD Plugin - FDU not exists')
-            return {'error':404, 'error_msg': 'FDU {} not in runtime {}'.format(instanceid, self.uuid) }
-        elif fdu.get_status() not in [State.CONFIGURED. State.RUNNING, State.PAUSED]:
-            self.logger.error('run_fdu()', 'LXD Plugin - FDU state is wrong, or transition not allowed')
-            return {'error':404, 'error_msg': 'FDU {} is not in correct state'.format(instanceid)}
-        else:
-            fdu_uuid = fdu.get_fdu_id()
-            face = ''
+        self.logger.error('connect_interface_to_cp()', 'CP {} <->  {}:{}'.format(cpid, instanceid, iface))
+        try:
+            fdu = self.current_fdus.get(instanceid, None)
+            if fdu is None:
+                self.logger.error('run_fdu()', 'LXD Plugin - FDU not exists')
+                return {'error':404, 'error_msg': 'FDU {} not in runtime {}'.format(instanceid, self.uuid) }
+            elif fdu.get_status() not in [State.CONFIGURED. State.RUNNING, State.PAUSED]:
+                self.logger.error('run_fdu()', 'LXD Plugin - FDU state is wrong, or transition not allowed')
+                return {'error':404, 'error_msg': 'FDU {} is not in correct state'.format(instanceid)}
+            else:
+                fdu_uuid = fdu.get_fdu_id()
+                face = ''
 
-            i = 0
-            for intf in fdu.get_interfaces():
-                intf_name = intf.get('vintf_name')
-                if intf.get('virtual_interface').get('intf_type').upper() not in ['PHYSICAL','BRIDGED']:
-                    intf_id = 'lxd-{}-{}'.format(fdu.get_short_id(), i)
-                    if intf.get('name') == iface:
-                        face = intf_id
-            if face == '':
-                return {'error':404, 'error_msg': 'Unable to find interface {}'.format(iface)}
-            r = self.nm.connect_interface_to_connection_point(face,cpid)
-            if r.get('result') is not None:
-                return {'result':cpid}
-            return {'error':503, 'error_msg': 'Unable to attach interface {} to cp'.format(iface)}
+                i = 0
+                for intf in fdu.get_interfaces():
+                    intf_name = intf.get('vintf_name')
+                    if intf.get('virtual_interface').get('intf_type').upper() not in ['PHYSICAL','BRIDGED']:
+                        intf_id = 'lxd-{}-{}'.format(fdu.get_short_id(), i)
+                        if intf.get('name') == iface:
+                            face = intf_id
+                if face == '':
+                    return {'error':404, 'error_msg': 'Unable to find interface {}'.format(iface)}
+                r = self.nm.connect_interface_to_connection_point(face,cpid)
+                if r.get('result') is not None:
+                    return {'result':cpid}
+                return {'error':503, 'error_msg': 'Unable to attach interface {} to cp'.format(iface)}
+        except Exception as e:
+            import traceback
+            self.logger.error('create_port_from_descriptor()', '[ERROR] {}'.format(traceback.format_exc()))
+            traceback.format_exc()
+            self.logger.error('create_port_from_descriptor()', '[ERROR] got error {}'.format(e))
+            return {'error':503, 'error_msg':'{}'.format(e)}
+
 
     def disconnect_interface_from_cp(self, iface, instanceid):
         fdu = self.current_fdus.get(instanceid, None)

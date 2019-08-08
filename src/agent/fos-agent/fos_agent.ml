@@ -85,7 +85,7 @@ let main_loop state promise =
 
 let agent verbose_flag debug_flag configuration custom_uuid =
   let level, reporter = (match verbose_flag with
-      | true -> Apero.Result.get @@ Logs.level_of_string "info" ,  (Logs_fmt.reporter ())
+      | true -> Apero.Result.get @@ Logs.level_of_string "debug" ,  (Logs_fmt.reporter ())
       | false -> Apero.Result.get @@ Logs.level_of_string "error",  (Fos_core.get_unix_syslog_reporter ())
     )
   in
@@ -105,19 +105,19 @@ let agent verbose_flag debug_flag configuration custom_uuid =
   let sys_id = Apero.Option.get @@ conf.agent.system in
   let uuid = (Apero.Option.get conf.agent.uuid) in
   let plugin_path = conf.plugins.plugin_path in
-  let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - INIT - DEBUG IS: %b"  debug_flag) in
-  let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - INIT - ##############") in
-  let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - INIT - Agent Configuration is:") in
-  let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - INIT - SYSID: %s" sys_id) in
-  let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - INIT - UUID: %s"  uuid) in
-  let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - INIT - LLDPD: %b" conf.agent.enable_lldp) in
-  let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - INIT - SPAWNER: %b" conf.agent.enable_spawner) in
-  let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - INIT - PID FILE: %s" conf.agent.pid_file) in
-  let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - INIT - YAKS Server: %s" conf.agent.yaks) in
-  let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - INIT - MGMT Interface: %s" conf.agent.mgmt_interface) in
-  let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - INIT - Plugin Directory: %s" plugin_path) in
-  let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - INIT - AUTOLOAD: %b" conf.plugins.autoload) in
-  let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - INIT - Plugins:") in
+  let _ = Logs.debug (fun m -> m "[FOS-AGENT] - INIT - DEBUG IS: %b"  debug_flag) in
+  let _ = Logs.debug (fun m -> m "[FOS-AGENT] - INIT - ##############") in
+  let _ = Logs.debug (fun m -> m "[FOS-AGENT] - INIT - Agent Configuration is:") in
+  let _ = Logs.debug (fun m -> m "[FOS-AGENT] - INIT - SYSID: %s" sys_id) in
+  let _ = Logs.debug (fun m -> m "[FOS-AGENT] - INIT - UUID: %s"  uuid) in
+  let _ = Logs.debug (fun m -> m "[FOS-AGENT] - INIT - LLDPD: %b" conf.agent.enable_lldp) in
+  let _ = Logs.debug (fun m -> m "[FOS-AGENT] - INIT - SPAWNER: %b" conf.agent.enable_spawner) in
+  let _ = Logs.debug (fun m -> m "[FOS-AGENT] - INIT - PID FILE: %s" conf.agent.pid_file) in
+  let _ = Logs.debug (fun m -> m "[FOS-AGENT] - INIT - YAKS Server: %s" conf.agent.yaks) in
+  let _ = Logs.debug (fun m -> m "[FOS-AGENT] - INIT - MGMT Interface: %s" conf.agent.mgmt_interface) in
+  let _ = Logs.debug (fun m -> m "[FOS-AGENT] - INIT - Plugin Directory: %s" plugin_path) in
+  let _ = Logs.debug (fun m -> m "[FOS-AGENT] - INIT - AUTOLOAD: %b" conf.plugins.autoload) in
+  let _ = Logs.debug (fun m -> m "[FOS-AGENT] - INIT - Plugins:") in
   List.iter (fun p -> ignore @@ Logs_lwt.debug (fun m -> m "[FOS-AGENT] - INIT - %s" p )) (Apero.Option.get_or_default conf.plugins.auto []);
   (* let sys_info = system_info sys_id uuid in *)
   let%lwt yaks = Yaks_connector.get_connector conf in
@@ -171,10 +171,10 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     let node_uuid = Apero.Option.get @@ Apero.Properties.get "node_uuid" props in
     let instanceid = Apero.Option.get @@ Apero.Properties.get "instance_uuid" props in
     try%lwt
-      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - eval_get_node_fdu_info - Search for FDU Info") in
+      let _ = Logs.debug (fun m -> m "[FOS-AGENT] - eval_get_node_fdu_info - Search for FDU Info") in
       let%lwt descriptor = Yaks_connector.Global.Actual.get_node_fdu_info sys_id Yaks_connector.default_tenant_id node_uuid fdu_uuid instanceid state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
       let js = FAgentTypes.json_of_string @@ Infra.Descriptors.FDU.string_of_record  descriptor in
-      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - eval_get_node_fdu_info - INFO %s" (FAgentTypes.string_of_json js)) in
+      let _ = Logs.debug (fun m -> m "[FOS-AGENT] - eval_get_node_fdu_info - INFO %s" (FAgentTypes.string_of_json js)) in
       let eval_res = FAgentTypes.{result = Some js ; error = None; error_msg = None} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
@@ -200,7 +200,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
   let eval_get_port_info self (props:Apero.properties) =
     MVar.read self >>= fun state ->
     let cp_uuid = Apero.Option.get @@ Apero.Properties.get "cp_uuid" props in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - eval_get_port_info - Getting info for port %s" cp_uuid ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - eval_get_port_info - Getting info for port %s" cp_uuid ) in
     try%lwt
       let%lwt descriptor = Yaks_connector.Global.Actual.get_port sys_id Yaks_connector.default_tenant_id cp_uuid state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
       let js = FAgentTypes.json_of_string @@ User.Descriptors.Network.string_of_connection_point_descriptor  descriptor in
@@ -208,12 +208,12 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
     | _ ->
-      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - eval_get_port_info - Search port on FDU") in
+      let _ = Logs.debug (fun m -> m "[FOS-AGENT] - eval_get_port_info - Search port on FDU") in
       let%lwt fdu_ids = Yaks_connector.Global.Actual.get_catalog_all_fdus sys_id Yaks_connector.default_tenant_id state.yaks in
       let%lwt cps = Lwt_list.filter_map_p (fun e ->
           let%lwt fdu =  Yaks_connector.Global.Actual.get_catalog_fdu_info sys_id Yaks_connector.default_tenant_id e state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
           let%lwt c = Lwt_list.filter_map_p (fun (cp:User.Descriptors.Network.connection_point_descriptor) ->
-              let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - eval_get_port_info - %s == %s ? %d " cp.id cp_uuid (String.compare cp.id  cp_uuid)) in
+              let _ = Logs.debug (fun m -> m "[FOS-AGENT] - eval_get_port_info - %s == %s ? %d " cp.id cp_uuid (String.compare cp.id  cp_uuid)) in
               if (String.compare cp.id cp_uuid) == 0 then  Lwt.return @@ Some cp
               else Lwt.return None
             ) fdu.connection_points
@@ -259,8 +259,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     MVar.read self >>= fun state ->
     try%lwt
       let%lwt net_p = get_network_plugin self in
-      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CREATE-NET - ##############") in
-      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CREATE-NET - Properties: %s" (Apero.Properties.to_string props) ) in
+      let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-CREATE-NET - ##############") in
+      let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-CREATE-NET - Properties: %s" (Apero.Properties.to_string props) ) in
       let descriptor = FTypes.virtual_network_of_string @@ Apero.Option.get @@ Apero.Properties.get "descriptor" props in
       let record = FTypesRecord.{uuid = descriptor.uuid; status = `CREATE; properties = None; ip_configuration = descriptor.ip_configuration; overlay = None; vni = None; mcast_addr = None; vlan_id = None; face = None} in
       Yaks_connector.Local.Desired.add_node_network (Apero.Option.get state.configuration.agent.uuid) net_p descriptor.uuid record state.yaks
@@ -270,7 +270,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
     | exn ->
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-CREATE-NET - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-CREATE-NET - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error=Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
@@ -278,8 +278,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     MVar.read self >>= fun state ->
     try%lwt
       let%lwt net_p = get_network_plugin self in
-      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-REMOVE-NET - ##############") in
-      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-REMOVE-NET - Properties: %s" (Apero.Properties.to_string props) ) in
+      let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-REMOVE-NET - ##############") in
+      let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-REMOVE-NET - Properties: %s" (Apero.Properties.to_string props) ) in
       let net_id =Apero.Option.get @@ Apero.Properties.get "net_id" props in
       let%lwt record =  Yaks_connector.Local.Actual.get_node_network  (Apero.Option.get state.configuration.agent.uuid) net_p net_id state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
       Yaks_connector.Global.Actual.remove_network sys_id Yaks_connector.default_tenant_id record.uuid state.yaks >>= Lwt.return
@@ -289,17 +289,17 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
     | exn ->
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-REMOVE-CP - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-REMOVE-CP - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error=Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   let eval_create_cp self (props:Apero.properties) =
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CREATE-CP - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CREATE-CP - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-CREATE-CP - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-CREATE-CP - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let%lwt net_p = get_network_plugin self in
     let descriptor = User.Descriptors.Network.connection_point_descriptor_of_string @@ Apero.Option.get @@ Apero.Properties.get "descriptor" props in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CREATE-CP - # NetManager: %s" net_p) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-CREATE-CP - # NetManager: %s" net_p) in
     try%lwt
       let parameters = [("descriptor",User.Descriptors.Network.string_of_connection_point_descriptor descriptor)] in
       let fname = "create_port_agent" in
@@ -310,17 +310,17 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       | None ->  Lwt.fail @@ FException (`InternalError (`MsgCode ((Printf.sprintf ("Cannot connect create cp %s") descriptor.id ),503)))
     with
     | exn ->
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-CREATE-CP - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-CREATE-CP - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error=Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   let eval_remove_cp self (props:Apero.properties) =
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-REMOVE-CP - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-REMOVE-CP - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-REMOVE-CP - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-REMOVE-CP - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let%lwt net_p = get_network_plugin self in
     let cp_id =  Apero.Option.get @@ Apero.Properties.get "cp_id" props in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-REMOVE-CP - # NetManager: %s" net_p) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-REMOVE-CP - # NetManager: %s" net_p) in
     try%lwt
       let parameters = [("cp_id", cp_id)] in
       let fname = "destroy_port_agent" in
@@ -331,13 +331,13 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       | None ->  Lwt.fail @@ FException (`InternalError (`MsgCode ((Printf.sprintf ("Cannot destroy create cp %s") cp_id ),503)))
     with
     | exn ->
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-REMOVE-CP - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-REMOVE-CP - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error=Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   let eval_connect_cp_to_fdu_face self (props:Apero.properties) =
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CONNECT-CP-TO-FDU - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CONNECT-CP-TO-FDU - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-CONNECT-CP-TO-FDU - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-CONNECT-CP-TO-FDU - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let cp_id = Apero.Option.get @@ Apero.Properties.get "cp_id" props in
     let instance_id = Apero.Option.get @@ Apero.Properties.get "instance_id" props in
@@ -381,13 +381,13 @@ let agent verbose_flag debug_flag configuration custom_uuid =
          Lwt.fail @@ FException (`PluginNotFound (`MsgCode ((Printf.sprintf ("CRITICAL!!!! Cannot find a plugin for this FDU even if it is present in the node WTF!! %s") instance_id ),404))))
     with
     | exn ->
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-DEFINE-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-DEFINE-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error=Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   let eval_disconnect_cp_from_fdu_face self (props:Apero.properties) =
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DISCONNECT-CP-TO-FDU - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DISCONNECT-CP-TO-FDU - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-DISCONNECT-CP-TO-FDU - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-DISCONNECT-CP-TO-FDU - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let face = Apero.Option.get @@ Apero.Properties.get "interface" props in
     let instance_id = Apero.Option.get @@ Apero.Properties.get "instance_id" props in
@@ -429,18 +429,18 @@ let agent verbose_flag debug_flag configuration custom_uuid =
          Lwt.fail @@ FException (`PluginNotFound (`MsgCode ((Printf.sprintf ("CRITICAL!!!! Cannot find a plugin for this FDU even if it is present in the node WTF!! %s") instance_id ),404))))
     with
     | exn ->
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-DEFINE-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-DEFINE-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error=Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   let eval_connect_cp_to_network self (props:Apero.properties) =
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CONNECT-CP - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CONNECT-CP - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-CONNECT-CP - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-CONNECT-CP - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let%lwt net_p = get_network_plugin self in
     let cp_id = Apero.Option.get @@ Apero.Properties.get "cp_uuid" props in
     let net_id = Apero.Option.get @@ Apero.Properties.get "network_uuid" props in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CONNECT-CP - # NetManager: %s" net_p) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-CONNECT-CP - # NetManager: %s" net_p) in
     try%lwt
       let parameters = [("cp_id",cp_id);("vnet_id", net_id)] in
       let fname = "connect_cp_to_vnetwork" in
@@ -456,12 +456,12 @@ let agent verbose_flag debug_flag configuration custom_uuid =
   in
   (*  *)
   let eval_remove_cp_from_network self (props:Apero.properties) =
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DISCONNECT-CP - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DISCONNECT-CP - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-DISCONNECT-CP - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-DISCONNECT-CP - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let%lwt net_p = get_network_plugin self in
     let cp_id = Apero.Option.get @@ Apero.Properties.get "cp_uuid" props in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DISCONNECT-CP - # NetManager: %s" net_p) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-DISCONNECT-CP - # NetManager: %s" net_p) in
     try%lwt
       let parameters = [("cp_id",cp_id)] in
       let fname = "disconnect_cp" in
@@ -477,8 +477,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
   in
   (* FDU Onboard in Catalog -- this may be moved to Orchestration part *)
   let eval_onboard_fdu self (props:Apero.properties) =
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ONBOARD-FDU - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ONBOARD-FDU - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-ONBOARD-FDU - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-ONBOARD-FDU - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let descriptor = Apero.Option.get @@ Apero.Properties.get "descriptor" props in
     try%lwt
@@ -497,14 +497,14 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
     | exn ->
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-ONBOARD-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-ONBOARD-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error = Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   (* FDU Definition in Node *)
   let eval_define_fdu self (props:Apero.properties) =
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEFINE-FDU - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEFINE-FDU - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-DEFINE-FDU - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-DEFINE-FDU - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let fdu_uuid = Apero.Option.get @@ Apero.Properties.get "fdu_id" props in
     try%lwt
@@ -617,7 +617,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
          Lwt.fail @@ FException (`PluginNotFound (`MsgCode ((Printf.sprintf ("Node %s has no plugin for %s") (Apero.Option.get state.configuration.agent.uuid) fdu_uuid ),404))))
     with
     | exn ->
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-DEFINE-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-DEFINE-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error=Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
@@ -641,8 +641,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
 
   *)
   let eval_check_fdu self (props:Apero.properties) =
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CHECK-FDU - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CHECK-FDU - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-CHECK-FDU - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-CHECK-FDU - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let descriptor = Apero.Option.get @@ Apero.Properties.get "descriptor" props in
     try%lwt
@@ -666,9 +666,9 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           | [] -> false
           | _ -> true
         in
-        let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CHECK-FDU - CPU Arch Check: %s = %s ? %b" fdu_cp.cpu_arch ncpu.arch ((String.compare fdu_cp.cpu_arch ncpu.arch) == 0) ) in
-        let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CHECK-FDU - RAM Size Check: %b" (fdu_cp.ram_size_mb <= ninfo.ram.size) ) in
-        let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-CHECK-FDU - Plugin Check: %b" has_plugin ) in
+        let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-CHECK-FDU - CPU Arch Check: %s = %s ? %b" fdu_cp.cpu_arch ncpu.arch ((String.compare fdu_cp.cpu_arch ncpu.arch) == 0) ) in
+        let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-CHECK-FDU - RAM Size Check: %b" (fdu_cp.ram_size_mb <= ninfo.ram.size) ) in
+        let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-CHECK-FDU - Plugin Check: %b" has_plugin ) in
         match ((String.compare fdu_cp.cpu_arch ncpu.arch) == 0),(fdu_cp.ram_size_mb <= ninfo.ram.size), has_plugin with
         | (true, true, true) -> Lwt.return true
         | (_,_,_) -> Lwt.return false
@@ -683,14 +683,14 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
     | exn ->
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-CHECK-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-CHECK-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error=Some 11; error_msg =  None} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   (* Entity Onboard in Catalog *)
   let eval_onboard_entity self (props:Apero.properties) =
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ONBOARD-ENTITY - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ONBOARD-ENTITY - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-ONBOARD-ENTITY - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-ONBOARD-ENTITY - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let descriptor = Apero.Option.get @@ Apero.Properties.get "descriptor" props in
     try%lwt
@@ -724,14 +724,14 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
     | exn ->
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-ONBOARD-ENTITY - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-ONBOARD-ENTITY - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error=Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   (* Entity offload from Catalog *)
   let eval_offload_entity self (props:Apero.properties) =
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-OFFLOAD-ENTITY - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-OFFLOAD-ENTITY - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-OFFLOAD-ENTITY - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-OFFLOAD-ENTITY - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let ae_id = Apero.Option.get @@ Apero.Properties.get "entity_id" props in
     try%lwt
@@ -748,14 +748,14 @@ let agent verbose_flag debug_flag configuration custom_uuid =
         Lwt.fail @@ FException (`NotFound (`MsgCode (( Printf.sprintf ("Entity %s not in catalog") ae_id ),404)))
     with
     | exn ->
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-OFFLOAD-ENTITY - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-OFFLOAD-ENTITY - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error = Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   (* Atomic Entity Onboard in Catalog -- this may be moved to Orchestration part *)
   let eval_onboard_ae self (props:Apero.properties) =
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ONBOARD-AE - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ONBOARD-AE - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-ONBOARD-AE - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-ONBOARD-AE - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let descriptor = Apero.Option.get @@ Apero.Properties.get "descriptor" props in
     try%lwt
@@ -774,14 +774,14 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
     | exn ->
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-ONBOARD-AE - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-ONBOARD-AE - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error = Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   (* EVAL Offload AE *)
   let eval_offload_ae self (props:Apero.properties) =
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-OFFLOAD-AE - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-OFFLOAD-AE - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-OFFLOAD-AE - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-OFFLOAD-AE - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let ae_id = Apero.Option.get @@ Apero.Properties.get "ae_id" props in
     try%lwt
@@ -798,14 +798,14 @@ let agent verbose_flag debug_flag configuration custom_uuid =
         Lwt.fail @@ FException (`NotFound (`MsgCode ((Printf.sprintf ("Atomic Entity %s not found") ae_id ),404)))
     with
     | exn ->
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-OFFLOAD-AE - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-OFFLOAD-AE - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error = Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   (* EVAL Instantiate an Entity *)
   let eval_instantiate_entity self (props:Apero.properties) =
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-ENTITY - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-ENTITY - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-ENTITY - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-ENTITY - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let e_uuid = Apero.Option.get @@ Apero.Properties.get "entity_id" props in
     try%lwt
@@ -920,14 +920,14 @@ let agent verbose_flag debug_flag configuration custom_uuid =
 
     with
     | exn ->
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-ENTITY - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-ENTITY - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error = Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   (* EVAL Terminate an AE *)
   let eval_terminate_entity self (props:Apero.properties) =
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-TERMINATE-AE - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-TERMINATE-AE - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-TERMINATE-AE - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-TERMINATE-AE - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     (* let ae_id = Apero.Option.get @@ Apero.Properties.get "ae_id" props in *)
     let e_instance_id = Apero.Option.get @@ Apero.Properties.get "instance_id" props in
@@ -950,14 +950,14 @@ let agent verbose_flag debug_flag configuration custom_uuid =
 
     with
     | exn ->
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-TERMINATE-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-TERMINATE-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error = Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   (* EVAL Instantiate an AE  *)
   let eval_instantiate_ae self (props:Apero.properties) =
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let ae_uuid = Apero.Option.get @@ Apero.Properties.get "ae_id" props in
     try%lwt
@@ -1123,7 +1123,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
                 (match List.find_opt (fun (e:User.Descriptors.Network.connection_point_descriptor) -> (String.compare ecp e.id)==0) descriptor.connection_points with
                  | Some ae_ecp ->
                    let%lwt cpr = Fos_fim_api.Network.add_connection_point_to_node ae_ecp n state.fim_api in
-                   let%lwt _ = Logs_lwt.info (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - CONNECTING A INTERFACE TO AN EXTERNAL CP : %s <-> %s:%s" cpr.uuid fdur.uuid iface.name ) in
+                   let _ = Logs.info (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - CONNECTING A INTERFACE TO AN EXTERNAL CP : %s <-> %s:%s" cpr.uuid fdur.uuid iface.name ) in
                    Fos_fim_api.FDU.connect_interface_to_cp cpr.uuid fdur.uuid iface.name n state.fim_api
                    >>= fun _ -> Lwt.return (Some cpr)
                  | None ->Lwt.fail @@ FException (`NotFound (`MsgCode (( Printf.sprintf ("Unable to find Atomic entity connection point %s") ecp ),404) ))
@@ -1179,14 +1179,14 @@ let agent verbose_flag debug_flag configuration custom_uuid =
 
     with
     | exn ->
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error = Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   (* EVAL Terminate an AE *)
   let eval_terminate_ae self (props:Apero.properties) =
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-TERMINATE-AE - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-TERMINATE-AE - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-TERMINATE-AE - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-TERMINATE-AE - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     (* let ae_id = Apero.Option.get @@ Apero.Properties.get "ae_id" props in *)
     let ae_instance_id = Apero.Option.get @@ Apero.Properties.get "instance_id" props in
@@ -1210,25 +1210,25 @@ let agent verbose_flag debug_flag configuration custom_uuid =
 
     with
     | exn ->
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-TERMINATE-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-TERMINATE-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error = Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   (*     NM Floating IPs *)
   let eval_create_floating_ip self (props:Apero.properties) =
     ignore props;
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-NEW-FLOATING-IP - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-NEW-FLOATING-IP - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-NEW-FLOATING-IP - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-NEW-FLOATING-IP - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let%lwt net_p = get_network_plugin self in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-NEW-FLOATING-IP - # NetManager: %s" net_p) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-NEW-FLOATING-IP - # NetManager: %s" net_p) in
     try%lwt
       let fname = "create_floating_ip" in
       Yaks_connector.Local.Actual.exec_nm_eval (Apero.Option.get state.configuration.agent.uuid) net_p fname [] state.yaks
       >>= fun res ->
       match res with
       | Some r ->
-        let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-NEW-FLOATING-IP - GOT RESPONSE FROM EVAL %s" (FAgentTypes.string_of_eval_result r)) in
+        let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-NEW-FLOATING-IP - GOT RESPONSE FROM EVAL %s" (FAgentTypes.string_of_eval_result r)) in
         (* Convertion from record *)
         let floating_r = FTypes.floating_ip_record_of_string @@ JSON.to_string (Apero.Option.get r.result) in
         let floating = FTypes.{uuid = floating_r.uuid; ip_version = floating_r.ip_version; address = floating_r.address} in
@@ -1240,15 +1240,15 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     with
     | exn ->
       let eval_res = FAgentTypes.{result = None ; error = Some 22; error_msg = Some (Printexc.to_string exn)} in
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-NEW-FLOATING-IP - # ERROR WHEN CREATING FLOATING IP") in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-NEW-FLOATING-IP - # ERROR WHEN CREATING FLOATING IP") in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   let eval_delete_floating_ip self (props:Apero.properties) =
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEL-FLOATING-IP - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEL-FLOATING-IP - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-DEL-FLOATING-IP - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-DEL-FLOATING-IP - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let%lwt net_p = get_network_plugin self in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEL-FLOATING-IP - # NetManager: %s" net_p) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-DEL-FLOATING-IP - # NetManager: %s" net_p) in
     try%lwt
       let ip_id = Apero.Option.get @@ Apero.Properties.get "floating_uuid" props in
       let parameters = [("ip_id",ip_id)] in
@@ -1257,7 +1257,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       >>= fun res ->
       match res with
         Some r ->
-        let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEL-FLOATING-IP - GOT RESPONSE FROM EVAL %s" (FAgentTypes.string_of_eval_result r)) in
+        let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-DEL-FLOATING-IP - GOT RESPONSE FROM EVAL %s" (FAgentTypes.string_of_eval_result r)) in
         (* Convertion from record *)
         let floating_r = FTypes.floating_ip_record_of_string @@ JSON.to_string (Apero.Option.get r.result) in
         let floating = FTypes.{uuid = floating_r.uuid; ip_version = floating_r.ip_version; address = floating_r.address} in
@@ -1271,14 +1271,14 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       let msg = Printexc.to_string e
       and stack = Printexc.get_backtrace () in
       Printf.eprintf "there was an error: %s%s\n" msg stack;
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-NEW-FLOATING-IP - # ERROR WHEN DELETING FLOATING IP") in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-NEW-FLOATING-IP - # ERROR WHEN DELETING FLOATING IP") in
       let eval_res = FAgentTypes.{result = None ; error = Some 22; error_msg = Some (Printexc.to_string e)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   (*  *)
   let eval_assign_floating_ip self (props:Apero.properties) =
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ASSOC-FLOATING-IP - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ASSOC-FLOATING-IP - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-ASSOC-FLOATING-IP - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-ASSOC-FLOATING-IP - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let%lwt net_p = get_network_plugin self in
     try%lwt
@@ -1301,12 +1301,12 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     with
     | exn ->
       let eval_res = FAgentTypes.{result = None ; error = Some 33; error_msg = Some (Printexc.to_string exn)} in
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-ASSOC-FLOATING-IP - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-ASSOC-FLOATING-IP - EXCEPTION: %s" (Printexc.to_string exn)) in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   let eval_remove_floating_ip self (props:Apero.properties) =
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-REMOVE-FLOATING-IP - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-REMOVE-FLOATING-IP - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-REMOVE-FLOATING-IP - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-REMOVE-FLOATING-IP - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let%lwt net_p = get_network_plugin self in
     try%lwt
@@ -1329,16 +1329,16 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     with
     | exn ->
       let eval_res = FAgentTypes.{result = None ; error = Some 33; error_msg = Some (Printexc.to_string exn)} in
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-REMOVE-FLOATING-IP - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-REMOVE-FLOATING-IP - EXCEPTION: %s" (Printexc.to_string exn)) in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   let eval_add_router_port self (props:Apero.properties) =
     ignore props;
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ADD-ROUTER-PORT - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ADD-ROUTER-PORT - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-ADD-ROUTER-PORT - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-ADD-ROUTER-PORT - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let%lwt net_p = get_network_plugin self in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ADD-ROUTER-PORT - # NetManager: %s" net_p) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-ADD-ROUTER-PORT - # NetManager: %s" net_p) in
     try%lwt
       let fname = "add_router_port" in
       let rid = Apero.Option.get @@ Apero.Properties.get "router_id" props in
@@ -1358,7 +1358,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       >>= fun res ->
       match res with
       | Some r ->
-        let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-ADD-ROUTER-PORT - GOT RESPONSE FROM EVAL %s" (FAgentTypes.string_of_eval_result r)) in
+        let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-ADD-ROUTER-PORT - GOT RESPONSE FROM EVAL %s" (FAgentTypes.string_of_eval_result r)) in
         (* Convertion from record *)
         let router = Router.record_of_string @@ JSON.to_string (Apero.Option.get r.result) in
         let%lwt ports = Lwt_list.map_p (fun (e:Router.router_port_record) ->
@@ -1374,18 +1374,18 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       |  None ->  Lwt.fail @@ FException (`InternalError (`MsgCode ((Printf.sprintf ("Cannot create to router  %s") rid ),503)))
     with
     | exn ->
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-ADD-ROUTER-PORT - # ERROR WHEN ADDING ROUTER PORT: %s" (Printexc.to_string exn) ) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-ADD-ROUTER-PORT - # ERROR WHEN ADDING ROUTER PORT: %s" (Printexc.to_string exn) ) in
       let eval_res = FAgentTypes.{result = None ; error = Some 22; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
   (*  *)
   let eval_remove_router_port self (props:Apero.properties) =
     ignore props;
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEL-ROUTER-PORT - ##############") in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEL-ROUTER-PORT - Properties: %s" (Apero.Properties.to_string props) ) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-DEL-ROUTER-PORT - ##############") in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-DEL-ROUTER-PORT - Properties: %s" (Apero.Properties.to_string props) ) in
     MVar.read self >>= fun state ->
     let%lwt net_p = get_network_plugin self in
-    let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEL-ROUTER-PORT - # NetManager: %s" net_p) in
+    let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-DEL-ROUTER-PORT - # NetManager: %s" net_p) in
     try%lwt
       let fname = "remove_router_port" in
       let rid = Apero.Option.get @@ Apero.Properties.get "router_id" props in
@@ -1395,7 +1395,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       >>= fun res ->
       match res with
       | Some r ->
-        let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEL-ROUTER-PORT - GOT RESPONSE FROM EVAL %s" (FAgentTypes.string_of_eval_result r)) in
+        let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-DEL-ROUTER-PORT - GOT RESPONSE FROM EVAL %s" (FAgentTypes.string_of_eval_result r)) in
         (* Convertion from record *)
         let router = Router.record_of_string @@ JSON.to_string (Apero.Option.get r.result) in
         let%lwt ports = Lwt_list.map_p (fun (e:Router.router_port_record) ->
@@ -1411,7 +1411,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       |  None ->  Lwt.fail @@ FException (`InternalError (`MsgCode ((Printf.sprintf ("Cannot remove port from router %s") rid ),503)))
     with
     | exn ->
-      let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - EV-DEL-ROUTER-PORT - # ERROR WHEN REMOVING ROUTER PORT: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-DEL-ROUTER-PORT - # ERROR WHEN REMOVING ROUTER PORT: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error = Some 22; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
@@ -1423,10 +1423,10 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       (match pl with
        | Some pl ->
          MVar.read self >>= fun self ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-PLUGIN - ##############") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-PLUGIN - Received plugin") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-PLUGIN - Name: %s" pl.name) in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-PLUGIN -  Calling the spawner by writing this on local desired") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-PLUGIN - ##############") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-PLUGIN - Received plugin") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-PLUGIN - Name: %s" pl.name) in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-PLUGIN -  Calling the spawner by writing this on local desired") in
          Yaks_connector.Local.Desired.add_node_plugin (Apero.Option.get self.configuration.agent.uuid) pl self.yaks >>= Lwt.return
        | None -> Lwt.return_unit)
     | true ->
@@ -1441,8 +1441,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     | false ->
       (match fdu with
        | Some fdu -> MVar.read self >>= fun self ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-FDU - ##############") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-FDU - FDU Updated! Advertising on GA") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-FDU - ##############") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-FDU - FDU Updated! Advertising on GA") in
          let fdu =
            match fdu.uuid with
            | Some _ -> fdu
@@ -1465,8 +1465,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       (match img with
        | Some img ->
          MVar.read self >>= fun self ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-IMAGE - ##############") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-IMAGE - Image Updated! Advertising on GA") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-IMAGE - ##############") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-IMAGE - Image Updated! Advertising on GA") in
          (match img.uuid with
           | Some id -> Yaks_connector.Global.Actual.add_image sys_id Yaks_connector.default_tenant_id id img self.yaks >>= Lwt.return
           | None -> Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-IMAGE - Ignoring Image as UUID is missing!!") >>= Lwt.return)
@@ -1484,8 +1484,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       (match flv with
        | Some flv ->
          MVar.read self >>= fun self ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-FLAVOR - ##############") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-FLAVOR - Flavor Updated! Advertising on GA") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-FLAVOR - ##############") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-FLAVOR - Flavor Updated! Advertising on GA") in
          (match flv.uuid with
           | Some id -> Yaks_connector.Global.Actual.add_flavor sys_id Yaks_connector.default_tenant_id id flv self.yaks >>= Lwt.return
           | None -> Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-FLAVOR - Ignoring Flavor as UUID is missing!!") >>= Lwt.return)
@@ -1503,11 +1503,11 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       (match fdu with
        | Some fdu ->
          MVar.read self >>= fun self ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-NODE-FDU - ##############") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-NODE-FDU - FDU Updated! Agent will call the right plugin!") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-NODE-FDU - ##############") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-NODE-FDU - FDU Updated! Agent will call the right plugin!") in
          let%lwt fdu_d = Yaks_connector.Global.Actual.get_catalog_fdu_info sys_id Yaks_connector.default_tenant_id fdu.fdu_id self.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
          let fdu_type = Fos_im.string_of_hv_type fdu_d.hypervisor in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-FDU - FDU Type %s" fdu_type) in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-FDU - FDU Type %s" fdu_type) in
          let%lwt plugins = Yaks_connector.Local.Actual.get_node_plugins (Apero.Option.get self.configuration.agent.uuid) self.yaks in
          let%lwt matching_plugins = Lwt_list.filter_map_p (fun e ->
              let%lwt pl = Yaks_connector.Local.Actual.get_node_plugin (Apero.Option.get self.configuration.agent.uuid) e self.yaks in
@@ -1519,16 +1519,16 @@ let agent verbose_flag debug_flag configuration custom_uuid =
          in
          (match matching_plugins with
           | [] ->
-            let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - CB-GD-FDU - No plugin found for this FDU") in
+            let _ = Logs.err (fun m -> m "[FOS-AGENT] - CB-GD-FDU - No plugin found for this FDU") in
             let r = { fdu with status = `ERROR} in
             Yaks_connector.Global.Actual.add_node_fdu sys_id Yaks_connector.default_tenant_id (Apero.Option.get self.configuration.agent.uuid) r.fdu_id r.uuid r self.yaks >>= Lwt.return
           | _ ->
             let pl = List.hd matching_plugins in
-            let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-FDU - Calling %s plugin" pl.name) in
+            let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-FDU - Calling %s plugin" pl.name) in
             (* Here we should at least update the record interfaces and connection points *)
             match fdu.status with
             | `DEFINE ->
-              let%lwt _ = Logs_lwt.err (fun m -> m "[FOS-AGENT] - CB-GD-FDU - FDU Define it is not supposed to pass by this function") in
+              let _ = Logs.err (fun m -> m "[FOS-AGENT] - CB-GD-FDU - FDU Define it is not supposed to pass by this function") in
               Lwt.return_unit
             | _ -> Yaks_connector.Local.Desired.add_node_fdu (Apero.Option.get self.configuration.agent.uuid) pl.uuid fdu.fdu_id fdu.uuid fdu self.yaks >>= Lwt.return
          )
@@ -1549,8 +1549,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       (match net with
        | Some net ->
          MVar.read self >>= fun self ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - ##############") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - vNET Updated! Agent will update actual store and call the right plugin!") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - ##############") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - vNET Updated! Agent will update actual store and call the right plugin!") in
          let%lwt _ = Yaks_connector.Global.Actual.add_network sys_id Yaks_connector.default_tenant_id net.uuid net self.yaks in
          (* let record = FTypesRecord.{uuid = net.uuid; status = `CREATE; properties = None; ip_configuration = net.ip_configuration; overlay = None; vni = None; mcast_addr = None; vlan_id = None; face = None} in *)
          (* Yaks_connector.Local.Desired.add_node_network (Apero.Option.get self.configuration.agent.uuid) net_p net.uuid record self.yaks *)
@@ -1559,14 +1559,14 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     | true ->
       (match uuid with
        | Some netid -> MVar.read self >>= fun self ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - ##############") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - vNET Removed!") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - ##############") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - vNET Removed!") in
          let%lwt net_info = Yaks_connector.Local.Actual.get_node_network (Apero.Option.get self.configuration.agent.uuid) net_p netid self.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
          let net_info = {net_info with status = `DESTROY} in
          let%lwt _ = Yaks_connector.Local.Desired.add_node_network (Apero.Option.get self.configuration.agent.uuid) net_p netid net_info self.yaks in
          Yaks_connector.Global.Actual.remove_network sys_id Yaks_connector.default_tenant_id netid self.yaks >>= Lwt.return
        | None ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - vNET NO UUID!!!!") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - vNET NO UUID!!!!") in
          Lwt.return_unit)
 
   in
@@ -1578,8 +1578,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       (match net with
        | Some net ->
          MVar.read self >>= fun self ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - ##############") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - vNET Updated! Agent will update actual store and call the right plugin!") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - ##############") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - vNET Updated! Agent will update actual store and call the right plugin!") in
          (* let%lwt _ = Yaks_connector.Global.Actual.add_network sys_id Yaks_connector.default_tenant_id net.uuid net self.yaks in *)
          (* let record = FTypesRecord.{uuid = net.uuid; status = `CREATE; properties = None; ip_configuration = net.ip_configuration} in *)
          Yaks_connector.Local.Desired.add_node_network (Apero.Option.get self.configuration.agent.uuid) net_p net.uuid net self.yaks
@@ -1588,14 +1588,14 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     | true ->
       (match uuid with
        | Some netid -> MVar.read self >>= fun self ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - ##############") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - vNET Removed!") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - ##############") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - vNET Removed!") in
          let%lwt net_info = Yaks_connector.Local.Actual.get_node_network (Apero.Option.get self.configuration.agent.uuid) net_p netid self.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
          let net_info = {net_info with status = `DESTROY} in
          let%lwt _ = Yaks_connector.Local.Desired.add_node_network (Apero.Option.get self.configuration.agent.uuid) net_p netid net_info self.yaks in
          Yaks_connector.Global.Actual.remove_network sys_id Yaks_connector.default_tenant_id netid self.yaks >>= Lwt.return
        | None ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - vNET NO UUID!!!!") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-NET - vNET NO UUID!!!!") in
          Lwt.return_unit)
 
   in
@@ -1606,8 +1606,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       ( match cp with
         | Some cp ->
           MVar.read self >>= fun self ->
-          let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-CP - ##############") in
-          let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-CP - CP Updated! Agent will update actual store and call the right plugin!") in
+          let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-CP - ##############") in
+          let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-CP - CP Updated! Agent will update actual store and call the right plugin!") in
           let%lwt _ = Yaks_connector.Global.Actual.add_port sys_id Yaks_connector.default_tenant_id cp.id cp self.yaks in
           let record = Infra.Descriptors.Network.{cp_id = cp.id; uuid = cp.id; status = `CREATE; properties = None; veth_face_name = None; br_name = None;cp_type= Some `VPORT; port_security_enabled=None; vld_ref = cp.vld_ref} in
           Yaks_connector.Local.Desired.add_node_port (Apero.Option.get self.configuration.agent.uuid) net_p record.uuid record self.yaks
@@ -1627,8 +1627,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       (match router with
        | Some router ->
          MVar.read self >>= fun self ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-ROUTER - ##############") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-ROUTER - vRouter Updated! Agent will update actual store and call the right plugin!") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-ROUTER - ##############") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-ROUTER - vRouter Updated! Agent will update actual store and call the right plugin!") in
          (* Converting to record *)
          let rid = (Apero.Option.get_or_default router.uuid (Apero.Uuid.to_string (Apero.Uuid.make ()))) in
          let%lwt port_records = Lwt_list.mapi_p (fun i (e:Router.router_port) ->
@@ -1654,14 +1654,14 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     | true ->
       (match uuid with
        | Some routerid -> MVar.read self >>= fun self ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-ROUTER - ##############") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-ROUTER - vRouter Removed!") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-ROUTER - ##############") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-ROUTER - vRouter Removed!") in
          let%lwt router_info = Yaks_connector.Local.Actual.get_node_router (Apero.Option.get self.configuration.agent.uuid) net_p routerid self.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
          let router_info = {router_info with state = `DESTROY} in
          Yaks_connector.Local.Desired.add_node_router (Apero.Option.get self.configuration.agent.uuid) net_p routerid router_info self.yaks
        (* Yaks_connector.Global.Actual.reove_ sys_id Yaks_connector.default_tenant_id routerid self.yaks >>= Lwt.return *)
        | None ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-ROUTER - vRouter NO UUID!!!!") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-ROUTER - vRouter NO UUID!!!!") in
          Lwt.return_unit)
 
   in
@@ -1673,8 +1673,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       (match net with
        | Some net ->
          MVar.read self >>= fun self ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-NET - ##############") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-NET - vNET Updated! Advertising on GA") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LA-NET - ##############") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LA-NET - vNET Updated! Advertising on GA") in
          let nid = (Apero.Option.get self.configuration.agent.uuid) in
          (match net.status with
           | `DESTROY -> Yaks_connector.Global.Actual.remove_node_network sys_id Yaks_connector.default_tenant_id nid net.uuid self.yaks
@@ -1695,8 +1695,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       (match cp with
        | Some cp ->
          MVar.read self >>= fun self ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-CP - ##############") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-CP - CP Updated! Advertising on GA") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LA-CP - ##############") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LA-CP - CP Updated! Advertising on GA") in
          let nid = (Apero.Option.get self.configuration.agent.uuid) in
          ( match cp.status with
            | `DESTROY -> Yaks_connector.Global.Actual.remove_node_port sys_id Yaks_connector.default_tenant_id nid cp.cp_id self.yaks
@@ -1718,8 +1718,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       (match router with
        | Some router ->
          MVar.read self >>= fun self ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-ROUTER - ##############") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-ROUTER - vRouter Updated! Advertising on GA") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LA-ROUTER - ##############") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LA-ROUTER - vRouter Updated! Advertising on GA") in
          let nid = (Apero.Option.get self.configuration.agent.uuid) in
          (match router.state with
           | `DESTROY -> Yaks_connector.Global.Actual.remove_node_router sys_id Yaks_connector.default_tenant_id nid router.uuid self.yaks
@@ -1745,10 +1745,10 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       (match pl with
        | Some pl ->
          MVar.read self >>= fun self ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-PLUGIN - ##############") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-PLUGIN - Received plugin") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-PLUGIN - Name: %s" pl.name) in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-PLUGIN -  Plugin loaded advertising on GA") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LA-PLUGIN - ##############") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LA-PLUGIN - Received plugin") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LA-PLUGIN - Name: %s" pl.name) in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LA-PLUGIN -  Plugin loaded advertising on GA") in
          Yaks_connector.Global.Actual.add_node_plugin sys_id Yaks_connector.default_tenant_id (Apero.Option.get self.configuration.agent.uuid) pl self.yaks >>= Lwt.return
        | None -> Lwt.return_unit)
     | true ->
@@ -1764,8 +1764,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       (match ni with
        | Some ni ->
          MVar.read self >>= fun self ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-NI - ##############") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-NI - Updated node info advertising of GA") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LA-NI - ##############") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LA-NI - Updated node info advertising of GA") in
          Yaks_connector.Global.Actual.add_node_info sys_id Yaks_connector.default_tenant_id (Apero.Option.get self.configuration.agent.uuid) ni self.yaks >>= Lwt.return
        | None -> Lwt.return_unit)
     | true ->
@@ -1781,8 +1781,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       (match ns with
        | Some ns ->
          MVar.read self >>= fun self ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-NI - ##############") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-NI - Updated node info advertising of GA") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LA-NI - ##############") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LA-NI - Updated node info advertising of GA") in
          Yaks_connector.Global.Actual.add_node_status sys_id Yaks_connector.default_tenant_id (Apero.Option.get self.configuration.agent.uuid) ns self.yaks >>= Lwt.return
        | None -> Lwt.return_unit)
     | true ->
@@ -1797,8 +1797,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       (match fdu with
        | Some fdu ->
          MVar.read self >>= fun self ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-NODE-FDU - ##############") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LA-NODE-FDU - FDU Updated! Advertising on GA") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LA-NODE-FDU - ##############") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LA-NODE-FDU - FDU Updated! Advertising on GA") in
          ( match fdu.status with
            | `UNDEFINE -> Yaks_connector.Global.Actual.remove_node_fdu sys_id Yaks_connector.default_tenant_id (Apero.Option.get self.configuration.agent.uuid) fdu.fdu_id fdu.uuid self.yaks
            | _ ->
@@ -1819,16 +1819,16 @@ let agent verbose_flag debug_flag configuration custom_uuid =
      (match fdu with
      | Some fdu ->
      MVar.read self >>= fun self ->
-     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-CNODE-FDU - ##############") in
-     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-CNODE-FDU - FDU Updated! Agent will call the right plugin!") in
+     let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-CNODE-FDU - ##############") in
+     let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-CNODE-FDU - FDU Updated! Agent will call the right plugin!") in
      let%lwt fdu_d = Yaks_connector.Global.Actual.get_fdu_info sys_id Yaks_connector.default_tenant_id fdu.fdu_uuid self.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
      let fdu_type = Fos_im.string_of_hv_type fdu_d.hypervisor in
-     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-CNODE-FDU - FDU Type %s" fdu_type) in
+     let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-CNODE-FDU - FDU Type %s" fdu_type) in
      let%lwt plugins = Yaks_connector.LocalConstraint.Actual.get_node_plugins nodeid self.yaks in
      Lwt_list.iter_p (fun e ->
      let%lwt pl = Yaks_connector.LocalConstraint.Actual.get_node_plugin nodeid e self.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
      if String.uppercase_ascii (pl.name) = String.uppercase_ascii (fdu_type) then
-     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-FDU - Calling %s plugin" pl.name) in
+     let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-FDU - Calling %s plugin" pl.name) in
      Yaks_connector.LocalConstraint.Desired.add_node_fdu nodeid pl.uuid fdu.fdu_uuid fdu self.yaks >>= Lwt.return
      else
      Lwt.return_unit
@@ -1848,8 +1848,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       (match fdu with
        | Some fdu ->
          MVar.read self >>= fun _ ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LAC-NODE-FDU - ##############") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LAC-NODE-FDU - FDU Updated! Advertising on GA") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LAC-NODE-FDU - ##############") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LAC-NODE-FDU - FDU Updated! Advertising on GA") in
          ( match fdu.status with
            | `UNDEFINE -> Lwt.return_unit
            (* Yaks_connector.Global.Actual.remove_node_fdu sys_id Yaks_connector.default_tenant_id nodeid fdu.fdu_uuid self.yaks *)
@@ -1868,10 +1868,10 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       (match pl with
        | Some pl ->
          MVar.read self >>= fun self ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LAC-PLUGIN - ##############") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LAC-PLUGIN - Received plugin") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LAC-PLUGIN - Name: %s" pl.name) in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LAC-PLUGIN -  Plugin loaded advertising on GA") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LAC-PLUGIN - ##############") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LAC-PLUGIN - Received plugin") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LAC-PLUGIN - Name: %s" pl.name) in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LAC-PLUGIN -  Plugin loaded advertising on GA") in
          Yaks_connector.Global.Actual.add_node_plugin sys_id Yaks_connector.default_tenant_id nodeid pl self.yaks >>= Lwt.return
        | None -> Lwt.return_unit)
     | true ->
@@ -1882,10 +1882,10 @@ let agent verbose_flag debug_flag configuration custom_uuid =
   in
   (* let cb_lac_node_configuration self nodeid (pl:FTypes.node_info) =
      MVar.read self >>= fun self ->
-     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LAC-NODE-CONF - ##############") in
-     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LAC-NODE-CONF - Received plugin") in
-     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LAC-NODE-CONF - Name: %s" pl.name) in
-     let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LAC-NODE-CONF -  Plugin loaded advertising on GA") in
+     let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LAC-NODE-CONF - ##############") in
+     let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LAC-NODE-CONF - Received plugin") in
+     let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LAC-NODE-CONF - Name: %s" pl.name) in
+     let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LAC-NODE-CONF -  Plugin loaded advertising on GA") in
      Yaks_connector.Global.Actual.add_node_configuration sys_id Yaks_connector.default_tenant_id nodeid pl self.yaks >>= Lwt.return
      in *)
   let cb_lac_nodes self (ni:FTypes.node_info option) (is_remove:bool) (uuid:string option) =
@@ -1894,8 +1894,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       (match ni with
        | Some ni ->
          MVar.guarded self @@ fun state ->
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LAC-NI - ##############") in
-         let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-LAC-NI - Updated node info advertising of GA") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LAC-NI - ##############") in
+         let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-LAC-NI - Updated node info advertising of GA") in
          let intid = ni.uuid in
          let extid = Apero.Uuid.to_string @@ Apero.Uuid.make () in
          let ext_ni = {ni with uuid = extid } in
