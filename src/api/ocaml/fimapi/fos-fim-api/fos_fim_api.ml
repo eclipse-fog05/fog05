@@ -72,6 +72,30 @@ end
 
 module Network = struct
 
+
+  let wait_network_in_node sysid tenantid nodeid netid api =
+    let var = Fos_core.MVar.create_empty  () in
+
+    let cb netid (net:FTypesRecord.virtual_network option) (is_remove:bool) (uuid:string option) =
+      ignore uuid;
+      match is_remove with
+      | true -> Lwt.return_unit
+      | false ->
+        (match net with
+         | Some net ->
+           (if (String.compare net.uuid netid) == 0 then
+              Fos_core.MVar.put var net
+            else
+              Lwt.return_unit)
+         | None -> Lwt.return_unit
+        )
+    in
+
+    let%lwt  _ = Yaks_connector.Global.Actual.observe_node_network sysid tenantid nodeid (cb netid) api.yconnector in
+    Fos_core.MVar.read var
+    >>= fun _ ->
+    Lwt.return_unit
+
   let add_network (descriptor:FTypes.virtual_network) api =
     let netid = descriptor.uuid in
     let%lwt n = Yaks_connector.Global.Actual.get_network api.sysid api.tenantid netid api.yconnector in
@@ -108,8 +132,9 @@ module Network = struct
       let%lwt res = Yaks_connector.Global.Actual.create_network_in_node api.sysid api.tenantid nodeid descriptor api.yconnector in
       ( match res.result with
         | Some js ->
+          wait_network_in_node api.sysid api.tenantid nodeid descriptor.uuid api >>= fun _ ->
           Lwt.return @@ FTypesRecord.virtual_network_of_string (JSON.to_string js)
-        | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point creation"))))
+        | None -> raise @@ FException (`InternalError (`Msg ("Error during network creation"))))
 
 
   let remove_network_from_node netid nodeid api =
@@ -141,7 +166,7 @@ module Network = struct
     match res.result with
     | Some js ->
       Lwt.return @@ (JSON.to_string js)
-    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point creation")))
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point connection")))
 
 
   let disconnect_cp_from_network cpid nodeid api =
@@ -149,7 +174,7 @@ module Network = struct
     match res.result with
     | Some js ->
       Lwt.return @@ (JSON.to_string js)
-    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point removal")))
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point disconnection")))
 
 
   let create_floating_ip nodeid api =
@@ -157,7 +182,7 @@ module Network = struct
     match res.result with
     | Some js ->
       Lwt.return @@ FTypes.floating_ip_of_string (JSON.to_string js)
-    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point creation")))
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during floatig ip creatation")))
 
 
   let delete_floating_ip ipid nodeid api =
@@ -165,14 +190,14 @@ module Network = struct
     match res.result with
     | Some js ->
       Lwt.return @@ FTypes.floating_ip_of_string (JSON.to_string js)
-    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point removal")))
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during floating removal")))
 
   let assing_floating_ip ipid cpid nodeid api =
     let%lwt res = Yaks_connector.Global.Actual.assing_floating_ip_in_node api.sysid api.tenantid nodeid ipid cpid api.yconnector in
     match res.result with
     | Some js ->
       Lwt.return @@ FTypes.floating_ip_of_string (JSON.to_string js)
-    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point creation")))
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during floating ip assing")))
 
 
   let retain_floating_ip ipid cpid nodeid api =
@@ -180,7 +205,7 @@ module Network = struct
     match res.result with
     | Some js ->
       Lwt.return @@ FTypes.floating_ip_of_string (JSON.to_string js)
-    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point removal")))
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during floating ip retain")))
 
 end
 
