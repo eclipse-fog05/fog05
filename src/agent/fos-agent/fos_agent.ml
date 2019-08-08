@@ -118,7 +118,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
   let _ = Logs.debug (fun m -> m "[FOS-AGENT] - INIT - Plugin Directory: %s" plugin_path) in
   let _ = Logs.debug (fun m -> m "[FOS-AGENT] - INIT - AUTOLOAD: %b" conf.plugins.autoload) in
   let _ = Logs.debug (fun m -> m "[FOS-AGENT] - INIT - Plugins:") in
-  List.iter (fun p -> ignore @@ Logs_lwt.debug (fun m -> m "[FOS-AGENT] - INIT - %s" p )) (Apero.Option.get_or_default conf.plugins.auto []);
+  List.iter (fun p -> ignore @@ Logs.debug (fun m -> m "[FOS-AGENT] - INIT - %s" p )) (Apero.Option.get_or_default conf.plugins.auto []);
   (* let sys_info = system_info sys_id uuid in *)
   let%lwt yaks = Yaks_connector.get_connector conf in
   let%lwt fim = Fos_fim_api.FIMAPI.connect ~locator:(Apero.Option.get (Apero_net.Locator.of_string conf.agent.yaks)) () in
@@ -358,7 +358,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       let pl =
         match matching_plugins with
         | [] ->
-          ignore @@  Logs_lwt.err (fun m -> m "Cannot find a plugin for this FDU even if it is present in the node WTF!! %s" instance_id );
+          ignore @@  Logs.err (fun m -> m "Cannot find a plugin for this FDU even if it is present in the node WTF!! %s" instance_id );
           None
         | _ -> Some  ((List.hd matching_plugins).uuid)
       in
@@ -407,7 +407,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       let pl =
         match matching_plugins with
         | [] ->
-          ignore @@  Logs_lwt.err (fun m -> m "Cannot find a plugin for this FDU even if it is present in the node WTF!! %s" instance_id );
+          ignore @@  Logs.err (fun m -> m "Cannot find a plugin for this FDU even if it is present in the node WTF!! %s" instance_id );
           None
         | _ -> Some  ((List.hd matching_plugins).uuid)
       in
@@ -549,14 +549,14 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           in
           match e.virtual_interface.intf_type with
           | `PHYSICAL | `BRIDGED ->
-            let _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEFINE-FDU - THIS FDU HAS PHYSICAL INTERFACE!!!!!!!!!!!!") in
+            let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-DEFINE-FDU - THIS FDU HAS PHYSICAL INTERFACE!!!!!!!!!!!!") in
             let  r = Infra.Descriptors.FDU.{name = e.name; is_mgmt = e.is_mgmt; if_type = e.if_type;
                                             mac_address = e.mac_address; virtual_interface = e.virtual_interface;
                                             cp_id = cp_new_id; ext_cp_id = e.ext_cp_id;
                                             vintf_name = e.name; status = `CREATE; phy_face = Some e.virtual_interface.vpci;
                                             veth_face_name = None; properties = None}
             in
-            let _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEFINE-FDU - THIS FDU HAS PHYSICAL INTERFACE RECORD: %s" (Infra.Descriptors.FDU.string_of_interface r) ) in
+            let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-DEFINE-FDU - THIS FDU HAS PHYSICAL INTERFACE RECORD: %s" (Infra.Descriptors.FDU.string_of_interface r) ) in
             r
           | _ ->
             Infra.Descriptors.FDU.{name = e.name; is_mgmt = e.is_mgmt; if_type = e.if_type;
@@ -1469,7 +1469,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
          let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-IMAGE - Image Updated! Advertising on GA") in
          (match img.uuid with
           | Some id -> Yaks_connector.Global.Actual.add_image sys_id Yaks_connector.default_tenant_id id img self.yaks >>= Lwt.return
-          | None -> Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-IMAGE - Ignoring Image as UUID is missing!!") >>= Lwt.return)
+          | None -> Lwt.return @@ Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-IMAGE - Ignoring Image as UUID is missing!!") >>= Lwt.return)
        | None -> Lwt.return_unit)
     | true ->
       (match uuid with
@@ -1488,7 +1488,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
          let _ = Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-FLAVOR - Flavor Updated! Advertising on GA") in
          (match flv.uuid with
           | Some id -> Yaks_connector.Global.Actual.add_flavor sys_id Yaks_connector.default_tenant_id id flv self.yaks >>= Lwt.return
-          | None -> Logs_lwt.debug (fun m -> m "[FOS-AGENT] - CB-GD-FLAVOR - Ignoring Flavor as UUID is missing!!") >>= Lwt.return)
+          | None -> Lwt.return @@ Logs.debug (fun m -> m "[FOS-AGENT] - CB-GD-FLAVOR - Ignoring Flavor as UUID is missing!!") >>= Lwt.return)
        | None -> Lwt.return_unit
       )
     | true ->
