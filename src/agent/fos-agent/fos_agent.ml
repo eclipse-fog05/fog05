@@ -1108,6 +1108,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
 
           let%lwt fdur = Fos_fim_api.FDU.define (Apero.Option.get fdu.uuid) n state.fim_api in
           let%lwt _ = Fos_fim_api.FDU.configure fdur.uuid state.fim_api  in
+          (* Connecting FDU interface to right connection points *)
           Lwt_list.iter_s (fun (iface:Infra.Descriptors.FDU.interface) ->
               match iface.ext_cp_id, iface.cp_id with
               | Some ecp, None ->
@@ -1119,7 +1120,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
                  | None ->Lwt.fail @@ FException (`NotFound (`MsgCode (( Printf.sprintf ("Unable to find Atomic entity connection point %s") ecp ),404) ))
                 )
               | None, Some icp ->
-                (match List.find_opt (fun (e:Infra.Descriptors.FDU.connection_point_record) -> (String.compare icp e.cp_id)==0) fdur.connection_points with
+                (match List.find_opt (fun (e:Infra.Descriptors.FDU.connection_point_record) -> (String.compare icp e.uuid)==0) fdur.connection_points with
                  | Some fdu_icp ->
                    (match fdu_icp.vld_ref with
                     | Some vlr ->
