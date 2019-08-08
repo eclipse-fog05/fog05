@@ -530,13 +530,16 @@ let agent verbose_flag debug_flag configuration custom_uuid =
        * Fix references with UUIDs
       *)
       let instanceid = Apero.Uuid.to_string @@ Apero.Uuid.make () in
-      let cp_records = List.map (
+      let%lwt cp_records = Lwt_list.map_p (
           fun (e:User.Descriptors.Network.connection_point_descriptor) ->
             let cpuuid = Apero.Uuid.to_string @@ Apero.Uuid.make () in
-            Infra.Descriptors.Network.{  uuid = cpuuid; status = `CREATE; cp_id = e.id;
-                                         cp_type = e.cp_type; port_security_enabled = e.port_security_enabled;
-                                         properties = None; veth_face_name = None; br_name = None; vld_ref = e.vld_ref
-                                      }
+            let r = Infra.Descriptors.Network.{  uuid = cpuuid; status = `CREATE; cp_id = e.id;
+                                                 cp_type = e.cp_type; port_security_enabled = e.port_security_enabled;
+                                                 properties = None; veth_face_name = None; br_name = None; vld_ref = e.vld_ref
+                                              }
+            in
+            let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-DEFINE-FDU - CP RECORD: %s" (Infra.Descriptors.Network.string_of_connection_point_record r))
+            in Lwt.return r
         ) descriptor.connection_points
       in
       let interface_records = List.map (fun (e:User.Descriptors.FDU.interface) ->
@@ -1107,6 +1110,9 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           let%lwt _ = Fos_fim_api.FDU.onboard fdu state.fim_api in
 
           let%lwt fdur = Fos_fim_api.FDU.define (Apero.Option.get fdu.uuid) n state.fim_api in
+
+          Unix.sleep 10;
+
           let%lwt _ = Fos_fim_api.FDU.configure fdur.uuid state.fim_api  in
           (* Connecting FDU interface to right connection points *)
           Lwt_list.iter_s (fun (iface:Infra.Descriptors.FDU.interface) ->
