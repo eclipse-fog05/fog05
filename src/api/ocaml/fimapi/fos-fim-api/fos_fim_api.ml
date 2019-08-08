@@ -178,7 +178,7 @@ module Network = struct
     let%lwt res = Yaks_connector.Global.Actual.create_cp_in_node api.sysid api.tenantid nodeid descriptor api.yconnector in
     match res.result with
     | Some js ->
-      wait_port_in_node api.sysid api.tenantid nodeid "" api >>= fun _ ->
+      wait_port_in_node api.sysid api.tenantid nodeid (Apero.Option.get descriptor.uuid) api >>= fun _ ->
       Lwt.return @@ Infra.Descriptors.Network.connection_point_record_of_string (JSON.to_string js)
     | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point creation")))
 

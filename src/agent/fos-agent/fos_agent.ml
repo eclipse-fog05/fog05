@@ -85,7 +85,7 @@ let main_loop state promise =
 
 let agent verbose_flag debug_flag configuration custom_uuid =
   let level, reporter = (match verbose_flag with
-      | true -> Apero.Result.get @@ Logs.level_of_string "debug" ,  (Logs_fmt.reporter ())
+      | true -> Apero.Result.get @@ Logs.level_of_string "info" ,  (Logs_fmt.reporter ())
       | false -> Apero.Result.get @@ Logs.level_of_string "error",  (Fos_core.get_unix_syslog_reporter ())
     )
   in
