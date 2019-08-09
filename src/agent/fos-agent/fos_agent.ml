@@ -1003,7 +1003,16 @@ let agent verbose_flag debug_flag configuration custom_uuid =
         ) record.atomic_entities
       in
       let%lwt _ = Lwt_list.iter_p (fun (vlr:Infra.Descriptors.Entity.virtual_link_record) ->
-          Fos_fim_api.Network.remove_network vlr.uuid state.fim_api
+          let%lwt _ = Fos_fim_api.Network.remove_network vlr.uuid state.fim_api in
+          Lwt_list.iter_s (fun (cp:Infra.Descriptors.Entity.cp_ref) ->
+              let%lwt cp_node = Fos_fim_api.Network.get_node_from_connection_point cp.uuid state.fim_api in
+              (match cp_node with
+               |Some cp_node ->
+                 let%lwt _ = Fos_fim_api.Network.remove_connection_point_from_node cp.uuid cp_node state.fim_api in
+                 Lwt.return_unit
+               | None -> Lwt.fail @@ FException (`NotFound (`MsgCode (( Printf.sprintf ("Unable to find a node for this CP %s") cp.uuid ),404) ))
+              )
+            ) vlr.cps
           >>= fun _ -> Lwt.return_unit
         ) record.virtual_links
       in
