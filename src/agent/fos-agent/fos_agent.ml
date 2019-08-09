@@ -1004,16 +1004,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       in
       let%lwt _ = Lwt_list.iter_p (fun (vlr:Infra.Descriptors.Entity.virtual_link_record) ->
           let%lwt _ = Fos_fim_api.Network.remove_network vlr.uuid state.fim_api in
-          Lwt_list.iter_s (fun (cp:Infra.Descriptors.Entity.cp_ref) ->
-              let%lwt cp_node = Fos_fim_api.Network.get_node_from_connection_point cp.uuid state.fim_api in
-              (match cp_node with
-               |Some cp_node ->
-                 let%lwt _ = Fos_fim_api.Network.remove_connection_point_from_node cp.uuid cp_node state.fim_api in
-                 Lwt.return_unit
-               | None -> Lwt.fail @@ FException (`NotFound (`MsgCode (( Printf.sprintf ("Unable to find a node for this CP %s") cp.uuid ),404) ))
-              )
-            ) vlr.cps
-          >>= fun _ -> Lwt.return_unit
+          Lwt.return_unit
         ) record.virtual_links
       in
       let js = JSON.of_string (Infra.Descriptors.Entity.string_of_record record) in
@@ -1269,6 +1260,16 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           Fos_fim_api.Network.remove_network vlr.uuid state.fim_api
           >>= fun _ -> Lwt.return_unit
         ) record.internal_virtual_links
+      in
+      let%lwt _ = Lwt_list.iter_s (fun (cp:Infra.Descriptors.Network.connection_point_record) ->
+          let%lwt cp_node = Fos_fim_api.Network.get_node_from_connection_point cp.uuid state.fim_api in
+          (match cp_node with
+           |Some cp_node ->
+             let%lwt _ = Fos_fim_api.Network.remove_connection_point_from_node cp.uuid cp_node state.fim_api in
+             Lwt.return_unit
+           | None -> Lwt.fail @@ FException (`NotFound (`MsgCode (( Printf.sprintf ("Unable to find a node for this CP %s") cp.uuid ),404) ))
+          )
+        ) record.connection_points
       in
       let js = JSON.of_string (Infra.Descriptors.AtomicEntity.string_of_record record) in
       let%lwt _ = Yaks_connector.Global.Actual.remove_records_atomic_entity_instance_info sys_id Yaks_connector.default_tenant_id record.atomic_entity_id ae_instance_id state.yaks in
