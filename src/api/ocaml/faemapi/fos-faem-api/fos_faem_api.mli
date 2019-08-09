@@ -27,6 +27,9 @@ module AtomicEntity : sig
   val get_atomic_entity_descriptor : string -> faemapi -> User.Descriptors.AtomicEntity.descriptor Lwt.t
   val get_atomic_entity_instance_info : string -> faemapi -> Infra.Descriptors.AtomicEntity.record Lwt.t
 
+  val list : faemapi -> string list Lwt.t
+  val instance_list : string -> faemapi -> string list Lwt.t
+
 end
 
 

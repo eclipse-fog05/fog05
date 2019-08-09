@@ -65,6 +65,20 @@ class LXD(RuntimePluginFDU):
         self.images = {}
         self.flavors = {}
         self.mon_th = {}
+
+
+        d = {
+            'connect_interface_to_cp': self.connect_interface_to_cp,
+            'disconnect_interface_from_cp': self.disconnect_interface_from_cp,
+        }
+
+        for k in d:
+            f = d.get(k)
+            self.logger.info(
+                '__init__()', 'LXD Plugin - Registering {}'.format(k))
+            self.connector.loc.actual.add_plugin_eval(self.node, self.uuid, k, f)
+
+
         signal.signal(signal.SIGINT, self.__catch_signal)
         signal.signal(signal.SIGTERM, self.__catch_signal)
 
@@ -462,7 +476,7 @@ class LXD(RuntimePluginFDU):
             i = 0
             for intf in fdu.get_interfaces():
                 intf_name = intf.get('vintf_name')
-                if intf.get('if_type').upper() not in ['PHYSICAL','BRIDGED']:
+                if intf.get('virtual_interface').get('intf_type').upper() not in ['PHYSICAL','BRIDGED']:
                     intf_id = 'lxd-{}-{}'.format(fdu.get_short_id(), i)
                     self.logger.info('clean_fdu()','Asking for the deletion of virtual interface {}'.format(intf_id))
                     self.nm.delete_virtual_interface(intf_id)
@@ -778,7 +792,7 @@ class LXD(RuntimePluginFDU):
                 intf_name = intf.get('vintf_name')
                 mac = intf.get('mac_address', self.__generate_random_mac())
                 intf.update({'mac_address': mac})
-                if intf.get('if_type').upper() in ['PHYSICAL','BRIDGED']:
+                if intf.get('virtual_interface').get('intf_type').upper() in ['PHYSICAL','BRIDGED']:
                     real_intf_name = intf.get('phy_face')
                     if self.os.get_intf_type(real_intf_name) in ['ethernet']:
                         self.os.set_interface_unaviable(real_intf_name)
@@ -827,6 +841,69 @@ class LXD(RuntimePluginFDU):
 
     def after_migrate_entity_actions(self, fdu_uuid, dst=False):
         pass
+
+
+
+    def connect_interface_to_cp(self, cpid, instanceid, iface):
+        self.logger.error('connect_interface_to_cp()', 'CP {} <->  {}:{}'.format(cpid, instanceid, iface))
+        try:
+            fdu = self.current_fdus.get(instanceid, None)
+            if fdu is None:
+                self.logger.error('connect_interface_to_cp()', 'LXD Plugin - FDU not exists')
+                return {'error':404, 'error_msg': 'FDU {} not in runtime {}'.format(instanceid, self.uuid) }
+            elif fdu.get_status() not in [State.CONFIGURED, State.RUNNING, State.PAUSED]:
+                self.logger.error('connect_interface_to_cp()', 'LXD Plugin - FDU state is wrong, or transition not allowed')
+                return {'error':404, 'error_msg': 'FDU {} is not in correct state'.format(instanceid)}
+            else:
+                fdu_uuid = fdu.get_fdu_id()
+                face = ''
+
+                i = 0
+                for intf in fdu.get_interfaces():
+                    intf_name = intf.get('vintf_name')
+                    if intf.get('virtual_interface').get('intf_type').upper() not in ['PHYSICAL','BRIDGED']:
+                        intf_id = 'lxd-{}-{}'.format(fdu.get_short_id(), i)
+                        if intf.get('name') == iface:
+                            face = intf_id
+                if face == '':
+                    return {'error':404, 'error_msg': 'Unable to find interface {}'.format(iface)}
+                r = self.nm.connect_interface_to_connection_point(face,cpid)
+                self.logger.error('connect_interface_to_cp()', 'NM Returned {}'.format(r))
+                return {'result':cpid}
+
+        except Exception as e:
+            import traceback
+            self.logger.error('connect_interface_to_cp()', '[ERROR] {}'.format(traceback.format_exc()))
+            traceback.format_exc()
+            self.logger.error('connect_interface_to_cp()', '[ERROR] got error {}'.format(e))
+            return {'error':503, 'error_msg':'{}'.format(e)}
+
+
+    def disconnect_interface_from_cp(self, iface, instanceid):
+        fdu = self.current_fdus.get(instanceid, None)
+        if fdu is None:
+            self.logger.error('disconnect_interface_from_cp()', 'LXD Plugin - FDU not exists')
+            return {'error':404, 'error_msg': 'FDU {} not in runtime {}'.format(instanceid, self.uuid) }
+        elif fdu.get_status() not in [State.CONFIGURED, State.RUNNING, State.PAUSED]:
+            self.logger.error('disconnect_interface_from_cp()', 'LXD Plugin - FDU state is wrong, or transition not allowed')
+            return {'error':404, 'error_msg': 'FDU {} is not in correct state'.format(instanceid)}
+        else:
+            fdu_uuid = fdu.get_fdu_id()
+            face = ''
+
+            i = 0
+            for intf in fdu.get_interfaces():
+                intf_name = intf.get('vintf_name')
+                if intf.get('virtual_interface').get('intf_type').upper() not in ['PHYSICAL','BRIDGED']:
+                    intf_id = 'lxd-{}-{}'.format(fdu.get_short_id(), i)
+                    if intf.get('name') == iface:
+                        face = intf_id
+            if face == '':
+                return {'error':404, 'error_msg': 'Unable to find interface {}'.format(iface)}
+            r = self.nm.disconnect_interface(face)
+            if r.get('result') is not None:
+                return {'result':iface}
+            return {'error':503, 'error_msg': 'Unable to disconnect interface {} to cp'.format(iface)}
 
     def __monitor_instance(self, fdu_uuid, instance_id, instance_name):
         self.logger.info('__monitor_instance()','[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(instance_id))
@@ -924,9 +1001,10 @@ class LXD(RuntimePluginFDU):
             self.logger.info('__generate_custom_profile_devices_configuration()','Interface Info {}'.format(intf))
             mac = intf.get('mac_address', self.__generate_random_mac())
             intf.update({'mac_address': mac})
-
-            if intf.get('if_type').upper() in ['PHYSICAL','BRIDGED']:
-                real_intf_name = intf.get('phy_face')
+            if intf.get('virtual_interface').get('intf_type').upper() in ['PHYSICAL','BRIDGED']:
+                real_intf_name = intf.get('phy_face', None)
+                if real_intf_name is None:
+                    raise ValueError("phy_face cannot be none")
                 if self.os.get_intf_type(real_intf_name) in ['ethernet']:
                     nw_v = json.loads(str(template_value_macvlan_mac % (intf_name, real_intf_name, mac)))
                     self.os.set_interface_unaviable(real_intf_name)

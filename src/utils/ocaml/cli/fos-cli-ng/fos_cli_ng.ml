@@ -13,12 +13,13 @@
 
 open Cmdliner
 open Lwt.Infix
-open Fos_core
 open Fos_im
+open Fos_core
+open Errors
 open Fos_fim_api
 open Fos_faem_api
-open Errors
-open Fos_im
+open Fos_feo_api
+
 
 let check s =
   let n = String.length s in
@@ -28,7 +29,65 @@ let check s =
     s
 
 
+(* Entity Commands *)
 
+let add_entity_descriptor_to_catalog api (descriptor:string option) =
+  match descriptor with
+  | Some dp ->
+    let d = read_file dp in
+    let e = User.Descriptors.Entity.descriptor_of_string d in
+    Entity.onboard e api  >>= fun res ->
+    Lwt_io.printf "%s\n" (User.Descriptors.Entity.string_of_descriptor res)
+  | None -> Lwt_io.printf "Manifest parameter missing!!\n"
+
+let remove_entity_descriptor_from_catalog api eid =
+  match eid with
+  | Some id ->
+    Entity.offload id api  >>= fun res ->
+    Lwt_io.printf "%s\n" (User.Descriptors.Entity.string_of_descriptor res)
+  | None -> Lwt_io.printf "Entity uuid parameter missing!!\n"
+
+
+let entity_instantiate api eid =
+  (match eid with
+   | Some eid ->
+     Entity.instantiate eid api >>= fun res ->
+     Lwt_io.printf "%s\n" (Infra.Descriptors.Entity.string_of_record res)
+   | None  -> Lwt_io.printf "Entity UUID parameter missing!!\n")
+
+let entity_terminate api instanceid =
+  match instanceid with
+  | Some iid ->
+    Entity.terminate iid api >>= fun res ->
+    Lwt_io.printf "%s\n" (Infra.Descriptors.Entity.string_of_record res)
+  | None -> Lwt_io.printf "Entity Instance UUID parameter missing!!\n"
+
+let entity_info api aeid =
+  match aeid with
+  | Some iid ->
+    Entity.get_entity_descriptor iid api >>= fun res ->
+    Lwt_io.printf "%s\n" (User.Descriptors.Entity.string_of_descriptor res)
+  | None -> Lwt_io.printf "Entity UUID parameter missing!!\n"
+
+
+let entity_record api instanceid =
+  match instanceid with
+  | Some iid ->
+    Entity.get_entity_instance_info iid api >>= fun res ->
+    Lwt_io.printf "%s\n" (Infra.Descriptors.Entity.string_of_record res)
+  | None -> Lwt_io.printf "Entity Instance UUID parameter missing!!\n"
+
+let entity_list api =
+  let%lwt elist = Entity.list api in
+  Lwt_list.iter_p (fun e -> Lwt_io.printf "%s\n" e) elist
+
+let entity_instance_list api eid =
+  match eid with
+  | Some eid ->
+    let%lwt elist = Entity.instance_list eid api in
+    let%lwt _ = Lwt_io.printf "Entity: %s instances\n" eid in
+    Lwt_list.iter_p (fun e -> Lwt_io.printf "%s\n" e) elist
+  | None -> Lwt_io.printf "Entity UUID parameter missing!!\n"
 
 (* Atomic Entity Commands *)
 let add_ae_descriptor_to_catalog api (descriptor:string option) =
@@ -45,7 +104,7 @@ let remove_ae_descriptor_from_catalog api aeid =
   | Some id ->
     AtomicEntity.offload id api  >>= fun res ->
     Lwt_io.printf "%s\n" (User.Descriptors.AtomicEntity.string_of_descriptor res)
-  | None -> Lwt_io.printf "Entity uuid parameter missing!!\n"
+  | None -> Lwt_io.printf "Atomic Entity UUID parameter missing!!\n"
 
 
 let ae_instantiate api ae_id =
@@ -53,21 +112,21 @@ let ae_instantiate api ae_id =
    | Some ae_id ->
      AtomicEntity.instantiate ae_id api >>= fun res ->
      Lwt_io.printf "%s\n" (Infra.Descriptors.AtomicEntity.string_of_record res)
-   | None  -> Lwt_io.printf "FDU UUID parameter missing!!\n")
+   | None  -> Lwt_io.printf "Atomic Entity UUID parameter missing!!\n")
 
 let ae_terminate api instanceid =
   match instanceid with
   | Some iid ->
     AtomicEntity.terminate iid api >>= fun res ->
     Lwt_io.printf "%s\n" (Infra.Descriptors.AtomicEntity.string_of_record res)
-  | None -> Lwt_io.printf "FDU Instance UUID parameter missing!!\n"
+  | None -> Lwt_io.printf "Atomic Entity Instance UUID parameter missing!!\n"
 
 let ae_info api aeid =
   match aeid with
   | Some iid ->
     AtomicEntity.get_atomic_entity_descriptor iid api >>= fun res ->
     Lwt_io.printf "%s\n" (User.Descriptors.AtomicEntity.string_of_descriptor res)
-  | None -> Lwt_io.printf "FDU Instance UUID parameter missing!!\n"
+  | None -> Lwt_io.printf "Atomic Entity Instance UUID parameter missing!!\n"
 
 
 let ae_record api instanceid =
@@ -75,8 +134,20 @@ let ae_record api instanceid =
   | Some iid ->
     AtomicEntity.get_atomic_entity_instance_info iid api >>= fun res ->
     Lwt_io.printf "%s\n" (Infra.Descriptors.AtomicEntity.string_of_record res)
-  | None -> Lwt_io.printf "FDU Instance UUID parameter missing!!\n"
+  | None -> Lwt_io.printf "Atomic Entity Instance UUID parameter missing!!\n"
 
+
+let atomic_entity_list api =
+  let%lwt elist = AtomicEntity.list api in
+  Lwt_list.iter_p (fun e -> Lwt_io.printf "%s\n" e) elist
+
+let atomic_entity_instance_list api aeid =
+  match aeid with
+  | Some aeid ->
+    let%lwt elist = AtomicEntity.instance_list aeid api in
+    let%lwt _ = Lwt_io.printf "Atomic Entity: %s instances\n" aeid in
+    Lwt_list.iter_p (fun e -> Lwt_io.printf "%s\n" e) elist
+  | None  -> Lwt_io.printf "Atomic Entity UUID parameter missing!!\n"
 (* Plugin command *)
 
 let plugin_list nodeid yconnector =
@@ -412,8 +483,49 @@ let fdu_cmd api action nodeid fduid instanceid destid descriptor =
     in Lwt.return_unit
 
 
+let atomic_entity_cmd faemapi action instanceid aeid descriptor =
+  (match action with
+   | "onboard" ->
+     add_ae_descriptor_to_catalog faemapi descriptor
+   | "offload" ->
+     remove_ae_descriptor_from_catalog faemapi aeid
+   | "instantiate" ->
+     ae_instantiate faemapi aeid
+   | "terminate" ->
+     ae_terminate faemapi instanceid
+   | "info" ->
+     ae_info faemapi aeid
+   | "record" ->
+     ae_record faemapi instanceid
+   | "list" ->
+     atomic_entity_list faemapi
+   | "instance_list" ->
+     atomic_entity_instance_list faemapi aeid
+   | _  ->  Lwt_io.printf "%s Is not a command\n" action)
 
-let parser component cmd action netid imgid nodeid fduid instanceid destid descriptor aeid =
+
+let entity_cmd feoapi action instanceid eid descriptor =
+  (match action with
+   | "onboard" ->
+     add_entity_descriptor_to_catalog feoapi descriptor
+   | "offload" ->
+     remove_entity_descriptor_from_catalog feoapi eid
+   | "instantiate" ->
+     entity_instantiate feoapi eid
+   | "terminate" ->
+     entity_terminate feoapi instanceid
+   | "info" ->
+     entity_info feoapi eid
+   | "record" ->
+     entity_record feoapi instanceid
+   | "list" ->
+     entity_list feoapi
+   | "instance_list" ->
+     entity_instance_list feoapi eid
+   | _  ->  Lwt_io.printf "%s Is not a command\n" action)
+
+
+let parser component cmd action netid imgid nodeid fduid instanceid destid descriptor aeid eid =
   match String.lowercase_ascii component with
   | "fim" ->
     (match cmd with
@@ -438,40 +550,33 @@ let parser component cmd action netid imgid nodeid fduid instanceid destid descr
      | _ -> Lwt_io.printf "%s Is not a command\n" cmd)
   | "faem" ->
     (match cmd with
-     | "onboard" ->
+     | "atomic_entity" ->
        let%lwt faemapi = Cli_helper.faemapy () in
-       add_ae_descriptor_to_catalog faemapi descriptor
-     | "offload" ->
-       let%lwt faemapi = Cli_helper.faemapy () in
-       remove_ae_descriptor_from_catalog faemapi aeid
-     | "instantiate" ->
-       let%lwt faemapi = Cli_helper.faemapy () in
-       ae_instantiate faemapi aeid
-     | "terminate" ->
-       let%lwt faemapi = Cli_helper.faemapy () in
-       ae_terminate faemapi instanceid
-     | "info" ->
-       let%lwt faemapi = Cli_helper.faemapy () in
-       ae_info faemapi aeid
-     | "record" ->
-       let%lwt faemapi = Cli_helper.faemapy () in
-       ae_record faemapi instanceid
-     | _  ->  Lwt_io.printf "%s Is not a command\n" cmd)
+       atomic_entity_cmd faemapi action instanceid aeid descriptor
+     | _  ->  Lwt_io.printf "%s Is not a recognized, maybe atomic_entity\n" cmd)
+  | "feo" ->
+    (match cmd with
+     | "entity" ->
+       let%lwt feoapi = Cli_helper.feoapi () in
+       entity_cmd feoapi action instanceid eid descriptor
+     | _  ->  Lwt_io.printf "%s Is not a recognized, maybe entity\n" cmd)
+
   | _ -> Lwt_io.printf "%s not implemented\n" component
 
 
-let p1 component cmd action netid imgid nodeid fduid instanceid destid descriptor aeid =
-  Lwt_main.run @@ parser component cmd action netid imgid nodeid fduid instanceid destid descriptor aeid
+let p1 component cmd action netid imgid nodeid fduid instanceid destid descriptor aeid eid =
+  Lwt_main.run @@ parser component cmd action netid imgid nodeid fduid instanceid destid descriptor aeid eid
 
 let usage = "usage: " ^ Sys.argv.(0) ^ " [fim|faem|feo] "
 
-let node_uuid_par = Arg.(value & opt (some string) None & info ["n"] ~docv:"node uuid")
-let fdu_uuid_par = Arg.(value & opt (some string) None & info ["f"] ~docv:"fdu uuid")
-let ae_uuid_par = Arg.(value & opt (some string) None & info ["ae"] ~docv:"atomic entity uuid")
-let instance_uuid_par = Arg.(value & opt (some string) None & info ["i"] ~docv:"instance uuid")
-let dest_node_uuid_par = Arg.(value & opt (some string) None & info ["du"] ~docv:"destination uuid")
-let net_uuid_par = Arg.(value & opt (some string) None & info ["net"] ~docv:"network uuid")
-let img_uuid_par = Arg.(value & opt (some string) None & info ["img"] ~docv:"image uuid")
+let node_uuid_par = Arg.(value & opt (some string) None & info ["n";"node-uuid"] ~docv:"node uuid")
+let fdu_uuid_par = Arg.(value & opt (some string) None & info ["f";"fdu-uuid"] ~docv:"fdu uuid")
+let ae_uuid_par = Arg.(value & opt (some string) None & info ["ae";"atomic-entity-uuid"] ~docv:"atomic entity uuid")
+let e_uuid_par = Arg.(value & opt (some string) None & info ["e";"entity-uuid"] ~docv:"atomic entity uuid")
+let instance_uuid_par = Arg.(value & opt (some string) None & info ["i";"instance-uuid"] ~docv:"instance uuid")
+let dest_node_uuid_par = Arg.(value & opt (some string) None & info ["du";"destination-uuid"] ~docv:"destination uuid")
+let net_uuid_par = Arg.(value & opt (some string) None & info ["net";"network-uuid"] ~docv:"network uuid")
+let img_uuid_par = Arg.(value & opt (some string) None & info ["img";"image-uuid"] ~docv:"image uuid")
 let descriptor_par = Arg.(value & opt (some string) None & info ["d";"descriptor"] ~docv:"descriptor file")
 
 let act_t = Arg.(required & pos 2 (some string) None & info [] ~docv:"action")
@@ -481,7 +586,7 @@ let component_t = Arg.(required & pos 0 (some string) None & info [] ~docv:"comp
 let fos_t =
   Term.(
     const p1 $ component_t $ cmd_t $ act_t $ net_uuid_par $ img_uuid_par
-    $ node_uuid_par $ fdu_uuid_par $ instance_uuid_par $ dest_node_uuid_par $ descriptor_par $ ae_uuid_par)
+    $ node_uuid_par $ fdu_uuid_par $ instance_uuid_par $ dest_node_uuid_par $ descriptor_par $ ae_uuid_par $ e_uuid_par)
 
 
 let () =

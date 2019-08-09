@@ -31,7 +31,7 @@ type vintf_t <ocaml module="Base_fdu"> = abstract
 type io_kind <ocaml module="Base_fdu"> = abstract
 type io_port <ocaml module="Base_fdu"> = abstract
 type storage_kind <ocaml module="Base_fdu"> = abstract
-type cp_kind <ocaml module="Base_fdu"> = abstract
+type connection_point_descriptor <ocaml module="User_network"> = abstract
 
 (* Descriptor Related Types *)
 
@@ -75,21 +75,3 @@ type storage_descriptor = {
   ?file_system_protocol : string option; (* only in case of FILE storage *)
   ?cp_id : string option; (* only in case of FILE storage *)
 }
-
-
-(* CPD as ETSI NFV *)
-
-type connection_point_descriptor = {
-  name : string;
-  id : string;
-  ?short_name : string option;
-  ?cp_type : cp_kind option;
-  ?port_security_enabled: bool option;
-  ?internal_vld_ref : string option;
-}
-
-
-
-
-
-

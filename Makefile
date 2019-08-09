@@ -15,6 +15,7 @@ all:
 	make -C src/core/ocaml install
 	make -C src/api/ocaml/fimapi install
 	make -C src/api/ocaml/faemapi install
+	make -C src/api/ocaml/feoapi install
 	make -C src/agent/;
 
 install:

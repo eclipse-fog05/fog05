@@ -18,7 +18,7 @@ let ysystem = Apero.Option.get_or_default (Sys.getenv_opt "FOS_SYS_ID") "0"
 let ytenant = Apero.Option.get_or_default (Sys.getenv_opt "FOS_TENANT_ID") "0"
 
 
-type faemapi = {
+type feoapi = {
   yconnector : Yaks_connector.connector;
   sysid : string;
   tenantid: string;
@@ -30,69 +30,69 @@ type faemapi = {
 
 
 
-module AtomicEntity = struct
+module Entity = struct
 
-  let onboard (ae:User.Descriptors.AtomicEntity.descriptor) api =
+  let onboard (entity:User.Descriptors.Entity.descriptor) api =
     let%lwt nodes = Yaks_connector.Global.Actual.get_all_nodes api.sysid api.tenantid api.yconnector in
     let n = List.nth nodes (Random.int (List.length nodes)) in
-    let%lwt res = Yaks_connector.Global.Actual.onboard_ae_from_node api.sysid api.tenantid n ae api.yconnector in
-    match res.result, res.error, res.error_msg with
-    | Some js, None, None ->
-      Lwt.return @@ User.Descriptors.AtomicEntity.descriptor_of_string (JSON.to_string js)
-    | None, Some id, Some msg -> raise @@ FException (`InternalError (`MsgCode (msg,id)))
+    let%lwt res = Yaks_connector.Global.Actual.onboard_entity_from_node api.sysid api.tenantid n entity api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ User.Descriptors.Entity.descriptor_of_string (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during onboarding")))
 
-
-  let instantiate ae_id api =
+  let instantiate entity_id api =
     let%lwt nodes = Yaks_connector.Global.Actual.get_all_nodes api.sysid api.tenantid api.yconnector in
     let n = List.nth nodes (Random.int (List.length nodes)) in
-    let%lwt res = Yaks_connector.Global.Actual.instantiate_ae_from_node api.sysid api.tenantid n ae_id api.yconnector in
-    match res.result, res.error, res.error_msg with
-    | Some js, None, None ->
-      Lwt.return @@ Infra.Descriptors.AtomicEntity.record_of_string (JSON.to_string js)
-    | None, Some id, Some msg -> raise @@ FException (`InternalError (`MsgCode (msg,id)))
+    let%lwt res = Yaks_connector.Global.Actual.instantiate_entity_from_node api.sysid api.tenantid n entity_id api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ Infra.Descriptors.Entity.record_of_string (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during onboarding")))
+
 
   let terminate inst_id api =
     let%lwt nodes = Yaks_connector.Global.Actual.get_all_nodes api.sysid api.tenantid api.yconnector in
     let n = List.nth nodes (Random.int (List.length nodes)) in
-    let%lwt res = Yaks_connector.Global.Actual.terminate_ae_from_node api.sysid api.tenantid n inst_id api.yconnector in
-    match res.result, res.error, res.error_msg with
-    | Some js, None, None ->
-      Lwt.return @@ Infra.Descriptors.AtomicEntity.record_of_string (JSON.to_string js)
-    | None, Some id, Some msg -> raise @@ FException (`InternalError (`MsgCode (msg,id)))
+    let%lwt res = Yaks_connector.Global.Actual.terminate_entity_from_node api.sysid api.tenantid n inst_id api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ Infra.Descriptors.Entity.record_of_string (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during onboarding")))
 
-  let offload ae_id api =
+  let offload entity_id api =
     let%lwt nodes = Yaks_connector.Global.Actual.get_all_nodes api.sysid api.tenantid api.yconnector in
     let n = List.nth nodes (Random.int (List.length nodes)) in
-    let%lwt res = Yaks_connector.Global.Actual.offload_ae_from_node api.sysid api.tenantid n ae_id api.yconnector in
-    match res.result, res.error, res.error_msg with
-    | Some js, None, None ->
-      Lwt.return @@ User.Descriptors.AtomicEntity.descriptor_of_string (JSON.to_string js)
-    | None, Some id, Some msg -> raise @@ FException (`InternalError (`MsgCode (msg,id)))
+    let%lwt res = Yaks_connector.Global.Actual.offload_entity_from_node api.sysid api.tenantid n entity_id api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ User.Descriptors.Entity.descriptor_of_string (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during onboarding")))
 
-  let get_atomic_entity_descriptor ae_id  api =
-    let%lwt res  = Yaks_connector.Global.Actual.get_catalog_atomic_entity_info api.sysid api.tenantid ae_id api.yconnector in
+  let get_entity_descriptor entity_id  api =
+    let%lwt res  = Yaks_connector.Global.Actual.get_catalog_entity_info api.sysid api.tenantid entity_id api.yconnector in
     match res with
     | Some x -> Lwt.return x
     | None -> raise @@ FException (`InternalError (`Msg ("Atomic Entity not found")))
 
-  let get_atomic_entity_instance_info instance_id  api =
-    let%lwt res = Yaks_connector.Global.Actual.get_records_atomic_entity_instance_info api.sysid api.tenantid "*" instance_id api.yconnector in
+  let get_entity_instance_info instance_id  api =
+    let%lwt res = Yaks_connector.Global.Actual.get_records_entity_instance_info api.sysid api.tenantid "*" instance_id api.yconnector in
     match res with
     | Some x -> Lwt.return x
     | None -> raise @@ FException (`InternalError (`Msg ("Atomic Entity instance not found")))
 
 
   let list api =
-    Yaks_connector.Global.Actual.get_catalog_all_atomic_entities api.sysid api.tenantid api.yconnector
+    Yaks_connector.Global.Actual.get_catalog_all_entities api.sysid api.tenantid api.yconnector
 
 
-  let instance_list atomic_entity_id api =
-    Yaks_connector.Global.Actual.get_records_all_atomic_entity_instances api.sysid api.tenantid atomic_entity_id api.yconnector
+  let instance_list entity_id api =
+    Yaks_connector.Global.Actual.get_records_all_entity_instances api.sysid api.tenantid entity_id api.yconnector
 
 end
 
 
-module FAEMAPI = struct
+module FEOAPI = struct
 
   let connect ?(locator=ylocator) ?(sysid=ysystem) ?(tenantid=ytenant) () =
     let%lwt yconnector = Yaks_connector.get_connector_of_locator locator in

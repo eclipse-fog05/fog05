@@ -13,14 +13,24 @@ atd:
 
 	atdgen -j-std fos-im/router.atd
 
+
+	atdgen -j-std fos-im/base_network.atd
+	atdgen -j-std fos-im/user_network.atd
+	atdgen -j-std fos-im/infra_network.atd
+
 	atdgen -j-std fos-im/base_fdu.atd
 	atdgen -j-std fos-im/base_atomic_entity.atd
+	atdgen -j-std fos-im/base_entity.atd
 
 	atdgen -j-std fos-im/user_fdu.atd
 	atdgen -j-std fos-im/user_atomic_entity.atd
+	atdgen -j-std fos-im/user_entity.atd
 
 	atdgen -j-std fos-im/infra_fdu.atd
 	atdgen -j-std fos-im/infra_atomic_entity.atd
+	atdgen -j-std fos-im/infra_entity.atd
+
+
 
 
 	atdgen -j-std fos-im/nfv.atd
@@ -38,12 +48,17 @@ clean:
 
 	rm -rf fos-im/base_fdu*.ml*
 	rm -rf fos-im/base_atomic_entity*.ml*
+	rm -rf fos-im/base_entity*.ml*
 
 	rm -rf fos-im/user_fdu*.ml*
 	rm -rf fos-im/user_atomic_entity*.ml*
+	rm -rf fos-im/user_entity*.ml*
 
 	rm -rf fos-im/infra_fdu*.ml*
 	rm -rf fos-im/infra_atomic_entity*.ml*
+	rm -rf fos-im/infra_entity*.ml*
+
+	rm -rf fos-im/*_network*.ml*
 
 	rm -rf fos-im/nfv*.ml*
 	rm -rf fos-im/mec*.ml*

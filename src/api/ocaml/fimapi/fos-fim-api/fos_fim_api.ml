@@ -72,6 +72,54 @@ end
 
 module Network = struct
 
+
+  let wait_network_in_node sysid tenantid nodeid netid api =
+    let var = Fos_core.MVar.create_empty  () in
+
+    let cb netid (net:FTypesRecord.virtual_network option) (is_remove:bool) (uuid:string option) =
+      ignore uuid;
+      match is_remove with
+      | true -> Lwt.return_unit
+      | false ->
+        (match net with
+         | Some net ->
+           (if (String.compare net.uuid netid) == 0 then
+              Fos_core.MVar.put var net
+            else
+              Lwt.return_unit)
+         | None -> Lwt.return_unit
+        )
+    in
+
+    let%lwt  _ = Yaks_connector.Global.Actual.observe_node_network sysid tenantid nodeid (cb netid) api.yconnector in
+    Fos_core.MVar.read var
+    >>= fun _ ->
+    Lwt.return_unit
+
+
+  let wait_port_in_node sysid tenantid nodeid portid api =
+    let var = Fos_core.MVar.create_empty  () in
+
+    let cb portid (port:Infra.Descriptors.Network.connection_point_record option) (is_remove:bool) (uuid:string option) =
+      ignore uuid;
+      match is_remove with
+      | true -> Lwt.return_unit
+      | false ->
+        (match port with
+         | Some port ->
+           (if (String.compare port.cp_id portid) == 0 then
+              Fos_core.MVar.put var port
+            else
+              Lwt.return_unit)
+         | None -> Lwt.return_unit
+        )
+    in
+
+    let%lwt  _ = Yaks_connector.Global.Actual.observe_node_ports sysid tenantid nodeid (cb portid) api.yconnector in
+    Fos_core.MVar.read var
+    >>= fun _ ->
+    Lwt.return_unit
+
   let add_network (descriptor:FTypes.virtual_network) api =
     let netid = descriptor.uuid in
     let%lwt n = Yaks_connector.Global.Actual.get_network api.sysid api.tenantid netid api.yconnector in
@@ -88,6 +136,7 @@ module Network = struct
   let list_networks api =
     Yaks_connector.Global.Actual.get_all_networks api.sysid api.tenantid api.yconnector
 
+
   let add_connection_point (descriptor:User.Descriptors.FDU.connection_point_descriptor) api =
     let cpid = descriptor.id in
     Yaks_connector.Global.Desired.add_port api.sysid api.tenantid cpid descriptor api.yconnector
@@ -99,6 +148,102 @@ module Network = struct
 
   let list_connection_points api =
     Yaks_connector.Global.Actual.get_all_ports api.sysid api.tenantid api.yconnector
+
+  let add_network_to_node (descriptor:FTypes.virtual_network) nodeid api =
+    match%lwt Yaks_connector.Global.Actual.get_node_network api.sysid api.tenantid nodeid descriptor.uuid api.yconnector with
+    | Some netr -> Lwt.return netr
+    | None ->
+      let r =  wait_network_in_node api.sysid api.tenantid nodeid descriptor.uuid api in
+      let%lwt res = Yaks_connector.Global.Actual.create_network_in_node api.sysid api.tenantid nodeid descriptor api.yconnector in
+      ( match res.result with
+        | Some js ->
+          r >>= fun _ ->
+          Lwt.return @@ FTypesRecord.virtual_network_of_string (JSON.to_string js)
+        | None -> raise @@ FException (`InternalError (`Msg ("Error during network creation"))))
+
+
+  let remove_network_from_node netid nodeid api =
+    let%lwt res = Yaks_connector.Global.Actual.remove_network_from_node api.sysid api.tenantid nodeid netid api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ FTypesRecord.virtual_network_of_string (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point removal")))
+
+
+  let add_connection_point_to_node (descriptor:User.Descriptors.Network.connection_point_descriptor) nodeid  api =
+    let descriptor =
+      match descriptor.uuid with
+      | Some _ -> descriptor
+      | None -> {descriptor with uuid = Some (Apero.Uuid.to_string @@ Apero.Uuid.make ())}
+    in
+    let r = wait_port_in_node api.sysid api.tenantid nodeid (Apero.Option.get descriptor.uuid) api in
+    let%lwt res = Yaks_connector.Global.Actual.create_cp_in_node api.sysid api.tenantid nodeid descriptor api.yconnector in
+    match res.result with
+    | Some js ->
+      r >>= fun _ ->
+      Lwt.return @@ Infra.Descriptors.Network.connection_point_record_of_string (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point creation")))
+
+
+  let remove_connection_point_from_node cpid nodeid  api =
+    let%lwt res = Yaks_connector.Global.Actual.remove_cp_from_node api.sysid api.tenantid nodeid cpid api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ Infra.Descriptors.Network.connection_point_record_of_string (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point removal")))
+
+
+  let get_node_from_connection_point cpid api =
+    let%lwt res = Yaks_connector.Global.Actual.find_node_port api.sysid api.tenantid cpid api.yconnector in
+    Lwt.return res
+
+
+
+  let connect_cp_to_network cpid netid nodeid api =
+    let%lwt res = Yaks_connector.Global.Actual.connect_cp_to_network api.sysid api.tenantid nodeid cpid netid api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point connection to network")))
+
+
+  let disconnect_cp_from_network cpid nodeid api =
+    let%lwt res = Yaks_connector.Global.Actual.disconnect_cp_from_network api.sysid api.tenantid nodeid cpid api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point disconnection from network")))
+
+
+  let create_floating_ip nodeid api =
+    let%lwt res = Yaks_connector.Global.Actual.create_floating_ip_in_node api.sysid api.tenantid nodeid api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ FTypes.floating_ip_of_string (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during floatig ip creatation")))
+
+
+  let delete_floating_ip ipid nodeid api =
+    let%lwt res = Yaks_connector.Global.Actual.delete_floating_ip_from_node api.sysid api.tenantid nodeid ipid api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ FTypes.floating_ip_of_string (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during floating removal")))
+
+  let assing_floating_ip ipid cpid nodeid api =
+    let%lwt res = Yaks_connector.Global.Actual.assing_floating_ip_in_node api.sysid api.tenantid nodeid ipid cpid api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ FTypes.floating_ip_of_string (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during floating ip assing")))
+
+
+  let retain_floating_ip ipid cpid nodeid api =
+    let%lwt res = Yaks_connector.Global.Actual.remove_floating_ip_from_node api.sysid api.tenantid nodeid ipid cpid api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ FTypes.floating_ip_of_string (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during floating ip retain")))
 
 end
 
@@ -121,16 +266,41 @@ module FDU = struct
     | None -> Lwt.return_unit
 
 
-  let rec wait_fdu_instance_state_change new_state sysid tenantid nodeid fdu_uuid instance_uuid api =
-    Yaks_connector.Global.Actual.get_node_fdu_info sysid tenantid nodeid fdu_uuid instance_uuid api.yconnector
-    >>= fun r ->
-    match r with
-    | Some fduinfo ->
-      if fduinfo.status == new_state then
-        Lwt.return_unit
-      else
-        wait_fdu_instance_state_change new_state sysid tenantid nodeid fdu_uuid instance_uuid api
-    | None -> wait_fdu_instance_state_change new_state sysid tenantid nodeid fdu_uuid instance_uuid api
+  let wait_fdu_instance_state_change new_state sysid tenantid nodeid fdu_uuid instance_uuid api =
+    let var = Fos_core.MVar.create_empty  () in
+
+    let cb new_state fdu_id instance (fdu:Infra.Descriptors.FDU.record option) (is_remove:bool) (fduid:string option) (instanceid:string option) =
+      ignore fduid;
+      ignore instanceid;
+      match is_remove with
+      | true -> Lwt.return_unit
+      | false ->
+        (match fdu with
+         | Some fdu ->
+           (if (String.compare fdu.fdu_id fdu_id) == 0 && (String.compare fdu.uuid instance) ==0 then
+              ( if fdu.status == new_state then
+                  Fos_core.MVar.put var fdu
+                else
+                  Lwt.return_unit)
+            else
+              Lwt.return_unit)
+         | None -> Lwt.return_unit
+        )
+    in
+
+    let%lwt  _ = Yaks_connector.Global.Actual.observe_node_fdu sysid tenantid nodeid (cb new_state fdu_uuid instance_uuid) api.yconnector in
+    Fos_core.MVar.read var
+    >>= fun _ ->
+    Lwt.return_unit
+  (* Yaks_connector.Global.Actual.get_node_fdu_info sysid tenantid nodeid fdu_uuid instance_uuid api.yconnector
+     >>= fun r ->
+     match r with
+     | Some fduinfo ->
+     if fduinfo.status == new_state then
+      Lwt.return_unit
+     else
+      wait_fdu_instance_state_change new_state sysid tenantid nodeid fdu_uuid instance_uuid api
+     | None -> wait_fdu_instance_state_change new_state sysid tenantid nodeid fdu_uuid instance_uuid api *)
 
   let rec wait_fdu_instance_undefine sysid tenantid nodeid fdu_uuid instance_uuid api =
     Yaks_connector.Global.Actual.get_node_fdu_info sysid tenantid nodeid fdu_uuid instance_uuid api.yconnector
@@ -152,10 +322,11 @@ module FDU = struct
     | Some record ->
       let fduid =  record.fdu_id in
       let record = {record with status = state } in
+      let r = wait_fdu_instance_state_change newstate api.sysid api.tenantid nodeid fduid instanceid api in
       let%lwt  _ = Yaks_connector.Global.Desired.add_node_fdu api.sysid api.tenantid nodeid fduid instanceid record api.yconnector in
       (match wait with
        | true ->
-         let%lwt _ = wait_fdu_instance_state_change newstate api.sysid api.tenantid nodeid fduid instanceid api in
+         r >>= fun _ ->
          Lwt.return instanceid
        | false -> Lwt.return instanceid)
     | None -> raise @@ FException (`InternalError (`Msg ("Unable to find record for this instance" ) ))
@@ -299,6 +470,21 @@ module FDU = struct
         (nid, iids)
       ) nids
 
+
+  let connect_interface_to_cp cpid instanceid face nodeid api =
+    let%lwt res = Yaks_connector.Global.Actual.connect_cp_to_interface api.sysid api.tenantid nodeid cpid instanceid face api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ( Apero.Option.get res.error_msg)))
+
+
+  let disconnect_interface_from_cp face instanceid nodeid api =
+    let%lwt res = Yaks_connector.Global.Actual.disconnect_cp_from_interface api.sysid api.tenantid nodeid face instanceid api.yconnector in
+    match res.result with
+    | Some js ->
+      Lwt.return @@ (JSON.to_string js)
+    | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point disconnection from interface")))
 
 
 

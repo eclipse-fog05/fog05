@@ -55,6 +55,7 @@ type plugin_loader_item = {
 type eval_result = {
   ?result : json option;
   ?error : int option;
+  ?error_msg : string option;
 }
 
 

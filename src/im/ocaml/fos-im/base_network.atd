@@ -10,7 +10,7 @@
  * Contributors: 1
  *   Gabriele Baldoni (gabriele (dot) baldoni (at) adlinktech (dot) com ) - IM Update
  *********************************************************************************)
-(* Atomic Entity Shared Types *)
+(* Network Shared Types *)
 
 type json <ocaml module="Abs_json"> = abstract
 

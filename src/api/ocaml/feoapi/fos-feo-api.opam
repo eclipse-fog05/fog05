@@ -8,8 +8,6 @@ bug-reports:  "https://github.com/eclipse/fog05/issues/"
 dev-repo:     "https://github.com/eclipse/fog05.git"
 
 build: [
- [make "atd"]
- ["dune" "subst"] {pinned}
  ["dune" "-p" name "-j" jobs]
 ]
 
@@ -20,22 +18,13 @@ install: [
 
 depends: [
   "dune"
-  "cmdliner"
-  "re"
-  "yojson"
-  "logs"
-  "atdgen"
-  "lwt"
-  "lwt_ppx"
-  "apero-core"
-  "apero-net"
-  "yaks-ocaml"
+  "fos-im"
   "fos-core"
-  "fos-fim-api"
-  "fos-faem-api"
+  "apero-core"
 ]
 
 
-synopsis : "Eclipse fog05 Agent"
+synopsis : "Eclipse fog05 FEO API"
 description: """
-Eclipse fog05 Agent is the running component of Eclipse fog05"""
+Eclipse fog05 FEO API is a collection of OCaml libraries used to interact
+with Eclipse fog05 FEO"""

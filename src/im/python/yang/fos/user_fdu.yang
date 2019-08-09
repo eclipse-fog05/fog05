@@ -325,6 +325,10 @@ module user_fdu {
 
     grouping connection_point {
 
+        leaf uuid {
+            type string;
+        }
+
         leaf name {
             type string;
         }
@@ -345,7 +349,7 @@ module user_fdu {
             type boolean;
         }
 
-        leaf internal_vld_ref {
+        leaf vld_ref {
             description
               "Reference to the VL this CP is connected";
             type string;

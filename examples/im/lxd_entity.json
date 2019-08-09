@@ -1,0 +1,24 @@
+{
+    "id": "one-fdu-atomic-entity",
+    "name": "test_atomic_entity",
+    "description": "this is a simple atomic entity composed by two LXD containers",
+    "atomic_entities": [
+        "one-fdu-atomic-entity"
+    ],
+    "internal_virtual_links": [
+        {
+            "id": "datanet-vl",
+            "name": "datanet",
+            "ip_configuration": {
+                "ip_version": "IPV4",
+                "subnet": "192.168.123.0/24",
+                "gateway": "192.168.123.1",
+                "dhcp_enable": true,
+                "dhcp_range": "192.168.123.2,192.168.123.100",
+                "dns": "8.8.8.8,8.8.4.4"
+            },
+            "cps": []
+        }
+    ],
+    "connection_points": []
+}
