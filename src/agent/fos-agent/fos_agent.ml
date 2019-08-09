@@ -1014,7 +1014,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
 
     with
     | exn ->
-      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-TERMINATE-FDU - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-TERMINATE-ENTITY - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error = Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
@@ -1265,7 +1265,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           let%lwt cp_node = Fos_fim_api.Network.get_node_from_connection_point cp.cp_id state.fim_api in
           (match cp_node with
            |Some cp_node ->
-             let%lwt _ = Fos_fim_api.Network.remove_connection_point_from_node cp.cp_id cp_node state.fim_api in
+             let%lwt _ = Fos_fim_api.Network.remove_connection_point_from_node cp.uuid cp_node state.fim_api in
              Lwt.return_unit
            | None -> Lwt.fail @@ FException (`NotFound (`MsgCode (( Printf.sprintf ("Unable to find a node for this CP %s") cp.uuid ),404) ))
           )
