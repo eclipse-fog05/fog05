@@ -121,8 +121,12 @@ let agent verbose_flag debug_flag configuration custom_uuid =
   List.iter (fun p -> ignore @@ Logs.debug (fun m -> m "[FOS-AGENT] - INIT - %s" p )) (Apero.Option.get_or_default conf.plugins.auto []);
   (* let sys_info = system_info sys_id uuid in *)
   let%lwt yaks = Yaks_connector.get_connector conf in
+<<<<<<< HEAD
   let%lwt fim = Fos_fim_api.FIMAPI.connect ~locator:(Apero.Option.get (Apero_net.Locator.of_string conf.agent.yaks)) () in
   let%lwt faem = Fos_faem_api.FAEMAPI.connect ~locator:(Apero.Option.get (Apero_net.Locator.of_string conf.agent.yaks)) () in
+=======
+  let%lwt fim = Fos_fim_api.FIMAPI.connect ~locator:conf.agent.yaks () in
+>>>>>>> 008cc117e359c784905d04cd43b1efe659530e84
   (*
    * Here we should check if state is present in local persistent YAKS and
    * recoved from that
@@ -1078,8 +1082,11 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       let%lwt fdus = Lwt_list.map_p (fun (fdu:User.Descriptors.FDU.descriptor) ->  Lwt.return {fdu with uuid = Some (Apero.Uuid.to_string (Apero.Uuid.make ())) }) ordered_fdus in
       (* update FDUs with correct id for VLs *)
 <<<<<<< HEAD
+<<<<<<< HEAD
       (* let%lwt fdus = Lwt_list.map_p (fun (fdu:User.Descriptors.FDU.descriptor) ->
 =======
+=======
+>>>>>>> 008cc117e359c784905d04cd43b1efe659530e84
       let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - Update FDU with correct VLs IDs") in
       let%lwt fdus = Lwt_list.map_p (fun (fdu:User.Descriptors.FDU.descriptor) ->
 >>>>>>> added more verbosity in atomic entity instantiation
@@ -1182,7 +1189,10 @@ let agent verbose_flag debug_flag configuration custom_uuid =
 =======
       >>= fun _ ->
       let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - Onboard and instantiate each FDU") in
+<<<<<<< HEAD
 >>>>>>> added more verbosity in atomic entity instantiation
+=======
+>>>>>>> 008cc117e359c784905d04cd43b1efe659530e84
       (* Onboard and Instantiate FDUs descriptors *)
       let%lwt fdurs = Lwt_list.map_p ( fun ((fdu:User.Descriptors.FDU.descriptor),(nodes:string list)) ->
           let n = List.nth nodes (Random.int (List.length nodes)) in
@@ -1255,7 +1265,10 @@ let agent verbose_flag debug_flag configuration custom_uuid =
 =======
       let eval_res = FAgentTypes.{result = Some js ; error=None} in
       let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - Done") in
+<<<<<<< HEAD
 >>>>>>> added more verbosity in atomic entity instantiation
+=======
+>>>>>>> 008cc117e359c784905d04cd43b1efe659530e84
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
 
     with
