@@ -129,7 +129,10 @@ class LinuxBridge(NetworkPlugin):
             'remove_floating_ip': self.remove_floating_ip,
             # utility functions
             'get_overlay_interface': self.get_overlay_face,
-            'get_vlan_interface': self.get_vlan_face
+            'get_vlan_interface': self.get_vlan_face,
+            # fuctions called by agent for CPs
+            'create_port_agent': self.create_port_from_descriptor,
+            'destroy_port_agent':self.destroy_port_agent,
         }
 
         for k in d:
@@ -333,8 +336,8 @@ class LinuxBridge(NetworkPlugin):
             'stop':cmd_stop
         }
         self.ports.update({cp_id: cp_info})
-        if record.get("internal_vld_ref") is not None:
-            pair_id = record.get("internal_vld_ref")
+        if record.get("vld_ref") is not None:
+            pair_id = record.get("vld_ref")
             self.connect_cp_to_vnetwork(cp_id, pair_id)
         properties = {
             'int_name': int_name,
@@ -354,8 +357,8 @@ class LinuxBridge(NetworkPlugin):
             self.logger.error('delete_port','{} does not exist'.format(cp_id))
             return False
         stop_file = port_info.get('stop')
-        if port_info.get('descriptor').get('internal_vld_ref') is not None:
-            pair_id = port_info.get('descriptor').get('internal_vld_ref')
+        if port_info.get('descriptor').get('vld_ref') is not None:
+            pair_id = port_info.get('descriptor').get('vld_ref')
             self.disconnect_cp(cp_id)
         self.os.execute_command(stop_file,blocking=True, external=True)
         self.os.remove_file(stop_file)
@@ -1003,6 +1006,83 @@ class LinuxBridge(NetworkPlugin):
     # ============ #
 
 
+
+    # EVAL called by agent for CPs #
+
+    def create_port_from_descriptor(self, descriptor):
+        descriptor = json.loads(descriptor)
+        try:
+            cp_uuid = '{}'.format(uuid.uuid4())
+            cp_id = descriptor.get('uuid')
+            # descriptor = self.agent.get_port_info(record.get('cp_uuid'))
+            cp_small_id = ''.join([x[0] for x in cp_uuid.split('-')])
+            cp_name = 'br-cp-{}'.format(cp_small_id)
+            int_name = 'cp-{}-i'.format(cp_small_id)
+            ext_name = 'cp-{}-e'.format(cp_small_id)
+            self.logger.info('create_port', 'Creating {} {} {}'.format(cp_name, int_name, ext_name))
+            start_file = self.__generate_port_create_script(int_name, ext_name, cp_name)
+            stop_file = self.__generate_port_destroy_script(ext_name, cp_name)
+            cmd_start = os.path.join(self.BASE_DIR, start_file)
+            cmd_stop = os.path.join(self.BASE_DIR, stop_file)
+            self.os.execute_command(cmd_start,blocking=True, external=True)
+            cp_info = {
+                'descriptor':descriptor,
+                'int_name': int_name,
+                'ext_name':ext_name,
+                'cp_name':cp_name,
+                'start':cmd_start,
+                'stop':cmd_stop
+            }
+            self.ports.update({cp_uuid: cp_info})
+            # if descriptor.get("vld_ref") is not None:
+            #     pair_id = descriptor.get("vld_ref")
+            #     self.connect_cp_to_vnetwork(cp_id, pair_id)
+            properties = {
+                'int_name': int_name,
+                'ext_name':ext_name,
+                'cp_name':cp_name,
+                'start':cmd_start,
+                'stop':cmd_stop
+            }
+
+            record = {
+                'uuid':cp_uuid,
+                'cp_id':cp_id,
+                'cp_type':descriptor.get('cp_type'),
+                'vld_ref':descriptor.get('vld_ref'),
+                'port_secutiry_enabled':descriptor.get('port_security_enabled'),
+                'veth_face_name':ext_name,
+                'br_name':properties['cp_name'],
+                'properties':properties,
+                'status':'CREATE'
+            }
+            self.connector.loc.actual.add_node_port(self.node, self.uuid, cp_uuid,record)
+            return {'result':record}
+        except Exception as e:
+            import traceback
+            self.logger.error('create_port_from_descriptor()', '[ERROR] {}'.format(traceback.format_exc()))
+            traceback.format_exc()
+            self.logger.error('create_port_from_descriptor()', '[ERROR] got error {}'.format(e))
+            return {'error':503, 'error_msg':'{}'.format(e)}
+
+
+    def destroy_port_agent(self, cp_id):
+        port_info = self.ports.get(cp_id)
+        if port_info is None:
+            self.logger.error('delete_port','{} does not exist'.format(cp_id))
+            return False
+        stop_file = port_info.get('stop')
+        self.os.execute_command(stop_file,blocking=True, external=True)
+        self.os.remove_file(stop_file)
+        self.os.remove_file(port_info.get('start'))
+        self.ports.pop(cp_id)
+        rec = self.connector.loc.actual.get_node_port(self.node, self.uuid, cp_id)
+        rec.update({'STATUS':'DESTROY'})
+        self.connector.loc.actual.remove_node_port(self.node, self.uuid, cp_id)
+        return {'result':rec}
+
+        # ================================= #
+
     def __get_cp_ip(self, cp_id):
         cp_rec = self.connector.loc.actual.get_node_port(self.node, self.uuid, cp_id)
         self.logger.info('__get_cp_ip()', 'Get connection point IP for {} Record: {}'.format(cp_id, cp_rec))
@@ -1044,7 +1124,7 @@ class LinuxBridge(NetworkPlugin):
         self.logger.info('__get_cp_routers()', 'Scanning FDU Interfaces')
         for c in fdud['connection_points']:
             if c['uuid'] == cp_rec['cp_uuid']:
-                netid = c['internal_vld_ref']
+                netid = c['vld_ref']
 
         self.logger.info('__get_cp_routers()', 'CP is connected to {}'.format(netid))
         if netid is '':

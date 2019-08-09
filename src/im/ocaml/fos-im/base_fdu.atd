@@ -143,10 +143,3 @@ type storage_kind = [
   | FILE
   | OBJECT
 ]
-
-
-(* CPD as ETSI NFV *)
-
-type cp_kind = [
-  | VPORT
-]

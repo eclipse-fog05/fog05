@@ -28,6 +28,9 @@ depends: [
   "lwt"
   "lwt_ppx"
   "fos-core"
+  "fos-fim-api"
+  "fos-faem-api"
+  "fos-feo-api"
 ]
 
 

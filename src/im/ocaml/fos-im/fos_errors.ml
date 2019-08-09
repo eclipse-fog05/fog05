@@ -1,8 +1,12 @@
-type error_info = [`NoMsg | `Msg of string | `Code of int | `Pos of (string * int * int * int) | `Loc of string] [@@deriving show]
+type error_info = [`NoMsg | `Msg of string | `Code of int | `Pos of (string * int * int * int) | `Loc of string | `MsgCode of (string * int)] [@@deriving show]
 
 type ferror = [
   | `InternalError of error_info
   | `InformationModelError of error_info
+  | `NotFound of error_info
+  | `NotAuthorized of error_info
+  | `PluginNotFound of error_info
+  | `NoCompatibleNodes of error_info
 ] [@@deriving show]
 
 

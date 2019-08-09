@@ -1,3 +1,19 @@
+# Copyright (c) 2014,2019 Contributors to the Eclipse Foundation
+#
+# See the NOTICE file(s) distributed with this work for additional
+# information regarding copyright ownership.
+#
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
+# which is available at https://www.apache.org/licenses/LICENSE-2.0.
+#
+# SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
+#
+# Contributors: Gabriele Baldoni, ADLINK Technology Inc.
+# Connector and helper for YAKS
+
+
 import json
 from fog05.interfaces import Constants
 from yaks import Yaks, Value, Encoding, Change
@@ -72,6 +88,14 @@ class GAD(object):
         return Constants.create_path([self.prefix, sysid, 'tenants',
             tenantid, 'catalog', 'fdu', '*', 'info'])
 
+    def get_catalog_entity_info_path(self, sysid, tenantid, aeid):
+        return Constants.create_path([self.prefix, sysid, 'tenants',
+            tenantid, 'catalog', 'entities', aeid, 'info'])
+
+    def get_catalog_all_entities_selector(self, sysid, tenantid):
+        return Constants.create_path([self.prefix, sysid, 'tenants',
+            tenantid, 'catalog', 'entities', '*', 'info'])
+
     # RECORDS
 
     def get_records_atomic_entity_instance_info_path(self, sysid, tenantid, aeid, instanceid):
@@ -85,6 +109,18 @@ class GAD(object):
     def get_records_all_atomic_entities_instances_selector(self, sysid, tenantid):
         return Constants.create_path([self.prefix, sysid, 'tenants',
             tenantid, 'catalog', 'atomic-entities', '*', 'instances', '*' ,'info'])
+
+    def get_records_entity_instance_info_path(self, sysid, tenantid, aeid, instanceid):
+        return Constants.create_path([self.prefix, sysid, 'tenants',
+            tenantid, 'records', 'entities', aeid, 'instances', instanceid, 'info'])
+
+    def get_records_all_entity_instances_selector(self, sysid, tenantid, aeid):
+        return Constants.create_path([self.prefix, sysid, 'tenants',
+            tenantid, 'records', 'entities', aeid, 'instances','*', 'info'])
+
+    def get_records_all_entities_instances_selector(self, sysid, tenantid):
+        return Constants.create_path([self.prefix, sysid, 'tenants',
+            tenantid, 'catalog', 'entities', '*', 'instances', '*' ,'info'])
 
     # Nodes
 
@@ -322,6 +358,12 @@ class GAD(object):
     def extract_atomic_entity_instanceid_from_path(self, path):
         return path.split('/')[9]
 
+    def extract_entity_id_from_path(self, path):
+        return path.split('/')[7]
+
+    def extract_entity_instanceid_from_path(self, path):
+        return path.split('/')[9]
+
     def extract_fduid_from_path(self, path):
         return path.split('/')[7]
 
@@ -447,6 +489,45 @@ class GAD(object):
 
     # Catalog
 
+    def get_catalog_all_entities(self, sysid, tenantid):
+        s = self.get_catalog_all_entities_selector(sysid, tenantid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            return []
+        else:
+            xs = map(lambda x: self.extract_entity_id_from_path(x[0]), res)
+            return list(xs)
+
+    def get_catalog_entity_info(self, sysid, tenantid, eid):
+        p = self.get_catalog_entity_info_path(sysid, tenantid, eid)
+        res = self.ws.get(p)
+        if len(res) == 0:
+            return None
+        v = res[0][1]
+        return json.loads(v.get_value())
+
+    def add_catalog_entity_info(self, sysid, tenantid, eid, einfo):
+        p = self.get_catalog_entity_info_path(sysid, tenantid, eid)
+        v = Value(json.dumps(einfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def remove_catalog_entity_info(self, sysid, tenantid, eid):
+        p = self.get_catalog_entity_info_path(sysid, tenantid, eid)
+        self.ws.remove(p)
+
+    def observe_catalog_entities(self, sysid, tenantid, callback):
+        s = self.get_catalog_all_entities_selector(sysid, tenantid)
+        def cb(kvs):
+            if len(kvs) == 0:
+                raise ValueError('Listener received empty data')
+            else:
+                v = kvs[0][1].get_value()
+                if v is not None:
+                    callback(json.loads(v.value))
+        subid = self.ws.subscribe(s, cb)
+        self.listeners.append(subid)
+        return subid
+
     def get_catalog_all_atomic_entities(self, sysid, tenantid):
         s = self.get_catalog_all_atomic_entities_selector(sysid, tenantid)
         res = self.ws.get(s)
@@ -541,6 +622,54 @@ class GAD(object):
 
     # Records
 
+
+    def get_records_all_entities_instances(self, sysid, tenantid):
+        s = self.get_records_all_entities_instances_selector(sysid, tenantid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            return []
+        else:
+            xs = map(lambda x: (self.extract_entity_id_from_path(x[0]),self.extract_entity_instanceid_from_path(x[0])), res)
+            return list(xs)
+
+    def get_records_all_entity_instances(self, sysid, tenantid, eid):
+        s = self.get_records_all_entity_instances_selector(sysid, tenantid, eid)
+        res = self.ws.get(s)
+        if len(res) == 0:
+            return []
+        else:
+            xs = map(lambda x: self.extract_entity_instanceid_from_path(x[0]), res)
+            return list(xs)
+
+    def get_records_entity_info(self, sysid, tenantid, eid, instanceid):
+        p = self.get_records_entity_instance_info_path(sysid, tenantid, eid, instanceid)
+        res = self.ws.get(p)
+        if len(res) == 0:
+            return None
+        v = res[0][1]
+        return json.loads(v.get_value())
+
+    def add_records_entity_info(self, sysid, tenantid, eid, instanceid, aeinfo):
+        p = self.get_records_entity_instance_info_path(sysid, tenantid, eid, instanceid)
+        v = Value(json.dumps(aeinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def remove_records_entity_info(self, sysid, tenantid, eid, instanceid):
+        p = self.get_records_entity_instance_info_path(sysid, tenantid, eid, instanceid)
+        self.ws.remove(p)
+
+    def observe_records_entities(self, sysid, tenantid, callback):
+        s = self.get_records_all_entities_instances_selector(sysid, tenantid)
+        def cb(kvs):
+            if len(kvs) == 0:
+                raise ValueError('Listener received empty data')
+            else:
+                v = kvs[0][1].get_value()
+                if v is not None:
+                    callback(json.loads(v.value))
+        subid = self.ws.subscribe(s, cb)
+        self.listeners.append(subid)
+        return subid
 
     def get_records_all_atomic_entities_instances(self, sysid, tenantid):
         s = self.get_records_all_atomic_entities_instances_selector(sysid, tenantid)
@@ -1132,6 +1261,46 @@ class GAD(object):
         else:
             return json.loads(res[0][1].get_value())
 
+    def onboard_entity_from_node(self, sysid, tenantid, nodeid, e_info):
+        fname = 'onboard_entity'
+        params = {'descriptor':e_info}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def instantiate_entity_from_node(self, sysid, tenantid, nodeid, e_id):
+        fname = 'instantiate_entity'
+        params = {'entity_id':e_id}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def offload_entity_from_node(self, sysid, tenantid, nodeid, e_id):
+        fname = 'offload_entity'
+        params = {'entity_id':e_id}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def terminate_entity_from_node(self, sysid, tenantid, nodeid, e_inst_id):
+        fname = 'terminate_entity'
+        params = {'instance_id':e_inst_id}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
 
 
 
@@ -1432,7 +1601,7 @@ class LAD(object):
     def add_plugin_eval(self, nodeid, pluginid, func_name, func):
         p = self.get_node_plugin_eval_path(nodeid, pluginid, func_name)
 
-        def cb(path, props):
+        def cb(path, **props):
             v = Value(json.dumps(func(**props)), encoding=Encoding.STRING)
             return v
         r = self.ws.register_eval(p, cb)

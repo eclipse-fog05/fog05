@@ -1,0 +1,163 @@
+module user_entity {
+    namespace "urn:fog05:im:user:entity";
+    prefix "entityd";
+
+    typedef cp_kind {
+        type enumeration {
+            enum VPORT;
+        }
+    }
+
+    typedef vl_kind {
+        type enumeration {
+            enum ELINE;
+            enum ELAN;
+        }
+    }
+
+    typedef ip_kind {
+        type enumeration {
+            enum IPV4;
+            enum IPV6;
+        }
+    }
+
+    grouping address_information {
+
+        leaf ip_version {
+            type ip_kind;
+        }
+
+        leaf subnet {
+            type string;
+        }
+
+        leaf gateway {
+            type string;
+        }
+
+        leaf checksum {
+            description
+              "SHA1 checksum of the image file";
+            type string;
+        }
+
+        leaf dhcp_enable {
+            type boolean;
+        }
+
+        leaf dhcp_range {
+            type string;
+        }
+
+        leaf-list dns {
+            type string;
+        }
+    }
+
+    grouping cp_ref {
+        leaf component_id_ref {
+            type string;
+        }
+
+        leaf component_index_ref {
+            type int64;
+        }
+
+        leaf cp_id {
+            type string;
+        }
+
+        leaf has_floating_ip {
+            type boolean;
+        }
+    }
+    grouping virtual_link_descriptor {
+        leaf id {
+            type string;
+        }
+
+        leaf name {
+            type string;
+        }
+
+        leaf is_mgmt {
+            type boolean;
+        }
+
+        leaf short_name {
+            type string;
+        }
+
+        leaf description {
+            type string;
+        }
+
+        leaf vl_type {
+            type vl_kind;
+        }
+
+        leaf root_bandwidth {
+            type int64;
+        }
+
+        leaf leaf_bandwidth {
+            type int64;
+        }
+
+        list cps {
+            key "component_index_ref";
+            uses cp_ref;
+        }
+
+        container ip_configuration {
+            uses address_information;
+        }
+    }
+
+    grouping contituent_atomic_entity {
+        leaf id {
+            type string;
+        }
+
+        leaf index {
+            type int64;
+        }
+    }
+
+    grouping descriptor {
+        leaf uuid {
+            type string;
+        }
+
+        leaf id {
+            type string;
+        }
+
+        leaf name {
+            type string;
+        }
+
+        leaf description {
+            type string;
+        }
+
+        leaf version {
+            type string;
+        }
+
+        list atomic_entities {
+            key "index";
+            uses contituent_atomic_entity;
+        }
+
+        list virtual_links {
+            key "id";
+            uses virtual_link_descriptor;
+        }
+    }
+
+    container entity_descriptor {
+        uses descriptor;
+    }
+}

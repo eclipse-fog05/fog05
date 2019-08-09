@@ -46,7 +46,7 @@ class FIMAPI(object):
         self.node = self.Node(self.connector, self.sysid, self.tenantid)
         self.plugin = self.Plugin(self.connector, self.sysid, self.tenantid)
         self.network = self.Network(self.connector, self.sysid, self.tenantid)
-        self.fdu = self.FDU(self.connector, self.sysid, self.tenantid)
+        self.fdu = self.FDUAPI(self.connector, self.sysid, self.tenantid)
         self.image = self.Image(self.connector, self.sysid, self.tenantid)
         self.flavor = self.Flavor(self.connector, self.sysid, self.tenantid)
 
@@ -444,7 +444,7 @@ class FIMAPI(object):
             '''
             pass
 
-    class FDU(object):
+    class FDUAPI(object):
         '''
 
         This class encapsulates the api for interaction with entities
@@ -502,6 +502,8 @@ class FIMAPI(object):
             :return the fdu uuid
 
             '''
+            if not isinstance(descriptor, FDU):
+                raise ValueError("descriptor should be of type FDU")
             nodes = self.connector.glob.actual.get_all_nodes(self.sysid, self.tenantid)
             if len(nodes) == 0:
                 raise SystemError("No nodes in the system!")
@@ -510,7 +512,7 @@ class FIMAPI(object):
             res = self.connector.glob.actual.onboard_fdu_from_node(self.sysid, self.tenantid, n, descriptor.get_uuid(), descriptor.to_json())
             if res.get('result') is None:
                 raise SystemError('Error during onboarding {}'.format(res['error']))
-            return res['result']
+            return FDU(res['result'])
 
 
         def offload(self, fdu_uuid, wait=True):
@@ -524,8 +526,8 @@ class FIMAPI(object):
             '''
             res = self.connector.glob.desired.remove_catalog_fdu_info(
                 self.sysid, self.tenantid, fdu_uuid)
-            if res.get('result') is None:
-                raise SystemError('Error during onboarding {}'.format(res['error']))
+            # if res.get('result') is None:
+            #     raise SystemError('Error during onboarding {}'.format(res['error']))
 
             return fdu_uuid
 
@@ -551,7 +553,7 @@ class FIMAPI(object):
                 raise ValueError('Got Error {}'.format(res['error']))
             if wait:
                 self.__wait_node_fdu_state_change(res['result']['uuid'],'DEFINE')
-            return res['result']
+            return InfraFDU(res['result'])
 
 
         def undefine(self, instanceid, wait=True):
@@ -800,8 +802,8 @@ class FIMAPI(object):
             :param nodeid: node where instantiate
             :return instance uuid
             '''
-            instance_info= self.define(fduid, nodeid)
-            instance_id = instance_info['uuid']
+            instance_info = self.define(fduid, nodeid)
+            instance_id = instance_info.get_uuid()
             self.configure(instance_id)
             self.start(instance_id)
             return instance_info
@@ -847,7 +849,7 @@ class FIMAPI(object):
             '''
             data = self.connector.glob.actual.get_node_fdu_instance(self.sysid, self.tenantid, "*", instanceid)
             fdu = InfraFDU(data)
-            return fdu.to_json()
+            return fdu
 
         def get_nodes(self, fdu_uuid):
             '''
@@ -899,7 +901,7 @@ class FIMAPI(object):
             :param node_uuid: optional node uuid
             :return: dictionary {node uuid: {entity uuid: instance list} list}
             '''
-            return self.connector.glob.actual.get_catalog_all_fdus(self.sysid, self.tenantid)
+            [FDU(x) for x in self.connector.glob.actual.get_catalog_all_fdus(self.sysid, self.tenantid)]
 
 
     class Image(object):

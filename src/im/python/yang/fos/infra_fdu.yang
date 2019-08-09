@@ -377,10 +377,6 @@ module infra_fdu {
             type string;
         }
 
-        leaf status {
-            type net_state;
-        }
-
         leaf cp_type {
             type cp_kind;
         }
@@ -389,13 +385,9 @@ module infra_fdu {
             type boolean;
         }
 
-        leaf internal_vld_ref {
+        leaf vld_ref {
             description
               "Reference to the VL this CP is connected";
-            type string;
-        }
-
-        leaf br_name {
             type string;
         }
 
@@ -403,11 +395,18 @@ module infra_fdu {
             type string;
         }
 
+        leaf br_name {
+            type string;
+        }
+
         leaf properties {
             type string;
         }
-    }
 
+        leaf status {
+            type string;
+        }
+    }
     grouping io_port {
         leaf name {
             description
