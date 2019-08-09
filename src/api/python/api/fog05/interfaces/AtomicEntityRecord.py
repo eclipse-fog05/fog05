@@ -20,7 +20,7 @@ from pyangbind.lib.serialise import pybindJSONDecoder
 from pyangbind.lib.serialise import pybindJSONEncoder
 from collections import OrderedDict
 from fog05.interfaces.InfraFDU import InfraFDU
-
+import copy
 
 class AtomicEntityRecord(object):
 
@@ -43,7 +43,15 @@ class AtomicEntityRecord(object):
         self.connection_points = []
         self.depends_on = []
         if data is not None:
-            pybindJSONDecoder.load_ietf_json({'ae_record':data}, None, None, obj=self.ae)
+
+            def conv(x):
+                x['properties'] = json.dumps(x['properties'])
+                return x
+            cdata = copy.deepcopy(data)
+            xs = list(map(conv, cdata['connection_points']))
+            cdata['connection_points'] = xs
+
+            pybindJSONDecoder.load_ietf_json({'ae_record':cdata}, None, None, obj=self.ae)
             self.enforce()
 
             self.atomic_entity_id = self.ae.ae_record.atomic_entity_id
@@ -75,7 +83,15 @@ class AtomicEntityRecord(object):
             'depends_on': self.depends_on,
         }
         check_obj = infra_atomic_entity.infra_atomic_entity()
-        pybindJSONDecoder.load_ietf_json({'ae_record':data}, None, None, obj=check_obj)
+
+        def conv(x):
+            x['properties'] = json.dumps(x['properties'])
+            return x
+        cdata = copy.deepcopy(data)
+        xs = list(map(conv, cdata['connection_points']))
+        cdata['connection_points'] = xs
+
+        pybindJSONDecoder.load_ietf_json({'ae_record':cdata}, None, None, obj=check_obj)
         return data
 
     def get_uuid(self):

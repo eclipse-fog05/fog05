@@ -50,6 +50,7 @@ module Network : sig
 
   val add_connection_point_to_node : User.Descriptors.Network.connection_point_descriptor -> string -> api -> Infra.Descriptors.Network.connection_point_record Lwt.t
   val remove_connection_point_from_node : string -> string -> api -> Infra.Descriptors.Network.connection_point_record Lwt.t
+  val get_node_from_connection_point : string -> api -> string option Lwt.t
 
 
   val connect_cp_to_network : string -> string -> string -> api -> string Lwt.t

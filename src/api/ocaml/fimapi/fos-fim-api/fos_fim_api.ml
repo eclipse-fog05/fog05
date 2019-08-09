@@ -176,10 +176,11 @@ module Network = struct
       | Some _ -> descriptor
       | None -> {descriptor with uuid = Some (Apero.Uuid.to_string @@ Apero.Uuid.make ())}
     in
+    let r = wait_port_in_node api.sysid api.tenantid nodeid (Apero.Option.get descriptor.uuid) api in
     let%lwt res = Yaks_connector.Global.Actual.create_cp_in_node api.sysid api.tenantid nodeid descriptor api.yconnector in
     match res.result with
     | Some js ->
-      wait_port_in_node api.sysid api.tenantid nodeid (Apero.Option.get descriptor.uuid) api >>= fun _ ->
+      r >>= fun _ ->
       Lwt.return @@ Infra.Descriptors.Network.connection_point_record_of_string (JSON.to_string js)
     | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point creation")))
 
@@ -190,6 +191,12 @@ module Network = struct
     | Some js ->
       Lwt.return @@ Infra.Descriptors.Network.connection_point_record_of_string (JSON.to_string js)
     | None -> raise @@ FException (`InternalError (`Msg ("Error during connection point removal")))
+
+
+  let get_node_from_connection_point cpid api =
+    let%lwt res = Yaks_connector.Global.Actual.find_node_port api.sysid api.tenantid cpid api.yconnector in
+    Lwt.return res
+
 
 
   let connect_cp_to_network cpid netid nodeid api =
@@ -315,10 +322,11 @@ module FDU = struct
     | Some record ->
       let fduid =  record.fdu_id in
       let record = {record with status = state } in
+      let r = wait_fdu_instance_state_change newstate api.sysid api.tenantid nodeid fduid instanceid api in
       let%lwt  _ = Yaks_connector.Global.Desired.add_node_fdu api.sysid api.tenantid nodeid fduid instanceid record api.yconnector in
       (match wait with
        | true ->
-         let%lwt _ = wait_fdu_instance_state_change newstate api.sysid api.tenantid nodeid fduid instanceid api in
+         r >>= fun _ ->
          Lwt.return instanceid
        | false -> Lwt.return instanceid)
     | None -> raise @@ FException (`InternalError (`Msg ("Unable to find record for this instance" ) ))

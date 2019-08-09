@@ -64,6 +64,10 @@ module infra_entity {
             type int64;
         }
 
+        leaf uuid {
+            type string;
+        }
+
         leaf cp_id {
             type string;
         }

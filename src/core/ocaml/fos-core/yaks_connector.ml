@@ -212,6 +212,9 @@ module MakeGAD(P: sig val prefix: string end) = struct
   let get_node_network_ports_selector sysid tenantid nodeid =
     create_selector [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid;"networks"; "ports"; "*"; "info"]
 
+  let get_node_network_port_find_node sysid tenantid portid =
+    create_selector [P.prefix; sysid; "tenants"; tenantid; "nodes"; "*";"networks"; "ports"; portid; "info"]
+
   let get_node_network_router_info_path sysid tenantid nodeid routerid =
     create_path [P.prefix; sysid; "tenants"; tenantid; "nodes"; nodeid; "networks"; "routers"; routerid; "info"]
 
@@ -1159,6 +1162,16 @@ module MakeGAD(P: sig val prefix: string end) = struct
     | [] -> Lwt.return None
     | _ -> let _,v = List.hd kvs in
       Lwt.return @@ Some (Infra.Descriptors.Network.connection_point_record_of_string (Yaks.Value.to_string v))
+
+  let find_node_port sysid tenantid portid connector =
+    let s = get_node_network_port_find_node sysid tenantid portid in
+    MVar.read connector >>= fun connector ->
+    Yaks.Workspace.get s connector.ws
+    >>= fun kvs ->
+    match kvs with
+    | [] -> Lwt.return None
+    | _ -> let p,_ = List.hd kvs in
+      Lwt.return @@ Some (extract_nodeid_from_path p)
 
   let observe_node_ports sysid tenantid nodeid callback connector =
     MVar.guarded connector @@ fun connector ->

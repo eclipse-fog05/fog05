@@ -40,7 +40,6 @@ class Entity(object):
 
         self.atomic_entities = []
         self.virtual_links = []
-        self.connection_points = []
         if data is not None:
             pybindJSONDecoder.load_ietf_json({'entity_descriptor':data}, None, None, obj=self.e)
             self.enforce()
@@ -51,7 +50,6 @@ class Entity(object):
             self.uuid = data.get('uuid', None)
             self.atomic_entities = data.get('atomic_entities')
             self.virtual_links = data.get('virtual_links')
-            self.connection_points = data.get('connection_points')
 
 
     def enforce(self):
@@ -71,8 +69,7 @@ class Entity(object):
             'name': self.name,
             'description': self.description,
             'atomic_entities': self.atomic_entities,
-            'virtual_links': self.virtual_links,
-            'connection_points': self.connection_points
+            'virtual_links': self.virtual_links
         }
         check_obj = user_entity.user_entity()
         pybindJSONDecoder.load_ietf_json({'entity_descriptor':data}, None, None, obj=check_obj)

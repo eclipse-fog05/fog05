@@ -781,6 +781,13 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           let fduid = Apero.Uuid.to_string @@ Apero.Uuid.make_from_alias descriptor.id in
           {descriptor with uuid = Some fduid}
       in
+      (* Adding UUID to CPs *)
+      let cps = List.map (fun  (cp:User.Descriptors.Network.connection_point_descriptor) ->
+          let cp_uuid = Apero.Uuid.to_string (Apero.Uuid.make ()) in
+          {cp with uuid = Some cp_uuid}
+        ) descriptor.connection_points
+      in
+      let descriptor = {descriptor with connection_points = cps} in
       Yaks_connector.Global.Actual.add_catalog_atomic_entity_info sys_id Yaks_connector.default_tenant_id (Apero.Option.get descriptor.uuid) descriptor state.yaks
       >>= fun _ ->
       let js = JSON.of_string (User.Descriptors.AtomicEntity.string_of_descriptor descriptor) in
@@ -861,7 +868,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
         ) descriptor.virtual_links
       in
       (* Adding networks *)
-      let%lwt netdescs = Lwt_list.iter_s (fun (vl:Infra.Descriptors.Entity.virtual_link_record) ->
+      let%lwt netdescs = Lwt_list.map_s (fun (vl:Infra.Descriptors.Entity.virtual_link_record) ->
           (* let cb_gd_net_all self (net:FTypes.virtual_network option) (is_remove:bool) (uuid:string option) = *)
           let ip_conf =
             match vl.ip_configuration with
@@ -893,7 +900,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           (* >>= fun _ ->
              (* This has to be removed! *)
              Lwt.return @@ Unix.sleep 3 *)
-          >>= fun _ -> Lwt.return_unit
+          >>= fun _ -> Lwt.return net_desc
         ) nets
       in
       ignore netdescs;
@@ -911,14 +918,57 @@ let agent verbose_flag debug_flag configuration custom_uuid =
             (match desc with
              | Some _ ->
                let%lwt ae_rec = Fos_faem_api.AtomicEntity.instantiate ae_uuid state.faem_api in
-               Lwt.return Infra.Descriptors.Entity.{
+               Lwt.return @@ Infra.Descriptors.Entity.{
                    id = ae_uuid;
                    uuid = ae_rec.uuid;
                    index = e.index
                  }
+
+
              | None -> Lwt.fail @@ FException (`NotFound (`MsgCode ((Printf.sprintf ("Atomic Entity %s not in catalog")e.id),404))))
           | None -> Lwt.fail @@ FException (`NotFound (`MsgCode ((Printf.sprintf ("Atomic Entity %s not in catalog")e.id),404)))
         ) descriptor.atomic_entities
+      in
+      let%lwt nets = Lwt_list.map_p (fun (vl:Infra.Descriptors.Entity.virtual_link_record) ->
+          let%lwt cps = Lwt_list.map_p (fun (cp:Infra.Descriptors.Entity.cp_ref) ->
+              (match List.find_opt (fun (ae:Infra.Descriptors.Entity.constituent_atomic_entity) -> ae.index == cp.component_index_ref) ae_instances with
+               | Some ae ->
+                 let%lwt ae_dec = Fos_faem_api.AtomicEntity.get_atomic_entity_descriptor ae.id state.faem_api in
+                 let%lwt ae_rec = Fos_faem_api.AtomicEntity.get_atomic_entity_instance_info ae.uuid state.faem_api in
+                 (match List.find_opt (fun (e:User.Descriptors.Network.connection_point_descriptor) -> (String.compare e.id cp.cp_id)==0) ae_dec.connection_points with
+                  | Some ae_cpd ->
+                    ( match List.find_opt (fun (e:Infra.Descriptors.Network.connection_point_record) ->  (String.compare e.cp_id (Apero.Option.get ae_cpd.uuid)==0)) ae_rec.connection_points with
+                      | Some ae_cpr ->
+                        let%lwt cp_node = Fos_fim_api.Network.get_node_from_connection_point ae_cpr.cp_id state.fim_api in
+                        (match cp_node with
+                         |Some cp_node ->
+                           (* Find Network associated with this VL *)
+                           (match List.find_opt (fun (e:FTypes.virtual_network) -> (String.compare e.uuid vl.uuid)==0 ) netdescs with
+                            | Some ndesc ->
+                              (* Adding network to node *)
+                              let%lwt  _ = Fos_fim_api.Network.add_network_to_node ndesc cp_node state.fim_api in
+                              (* Connecting CP to network *)
+                              let%lwt _ = Fos_fim_api.Network.connect_cp_to_network ae_cpr.uuid ndesc.uuid cp_node state.fim_api in
+                              (* Updating Record with correct CP ID  *)
+                              Lwt.return {cp with uuid = ae_cpr.cp_id}
+                            | None -> Lwt.fail @@ FException (`NotFound (`MsgCode (( Printf.sprintf ("Unable to find a network associated to this VL %s") vl.uuid ),404) ))
+                           )
+                         | None -> Lwt.fail @@ FException (`NotFound (`MsgCode (( Printf.sprintf ("Unable to find an node for cp %s:%s")  ae_cpr.cp_id ae_cpr.uuid ),404) ))
+                        )
+                      (* Fos_fim_api.Network.add_network_to_node *)
+                      | None -> Lwt.fail @@ FException (`NotFound (`MsgCode (( Printf.sprintf ("Unable to find an instance for CP %s in AE Record %s") cp.cp_id ae_rec.uuid ),404) ))
+                    )
+
+                  | None -> Lwt.fail @@ FException (`NotFound (`MsgCode (( Printf.sprintf ("Unable to find the CP %s in AE %s") cp.cp_id ae_dec.id ),404) ))
+                 )
+
+               | None -> Lwt.fail @@ FException (`NotFound (`MsgCode (( Printf.sprintf ("Unable to find the AE for CP %s") cp.cp_id ),404) ))
+              )
+            ) vl.cps
+          in
+          Lwt.return {vl with cps = cps}
+
+        ) nets
       in
       let record = Infra.Descriptors.Entity.{
           uuid = instance_id;
@@ -1003,12 +1053,6 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           in Lwt.return record
         ) descriptor.internal_virtual_links
       in
-      let cps = List.map (fun  (cp:User.Descriptors.Network.connection_point_descriptor) ->
-          let cp_uuid = Apero.Uuid.to_string (Apero.Uuid.make ()) in
-          {cp with uuid = Some cp_uuid}
-        ) descriptor.connection_points
-      in
-      let descriptor = {descriptor with connection_points = cps} in
       (* let%lwt cps = Lwt_list.map_p (fun (cp:User.Descriptors.Network.connection_point_descriptor) ->
           let cp_uuid = Apero.Uuid.to_string (Apero.Uuid.make ()) in
           let record = Infra.Descriptors.Network.{
@@ -2063,6 +2107,8 @@ let info =
 let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
 let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
 
+let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
+let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
 let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
 let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
 let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
