@@ -1076,8 +1076,10 @@ class LinuxBridge(NetworkPlugin):
         self.os.remove_file(stop_file)
         self.os.remove_file(port_info.get('start'))
         self.ports.pop(cp_id)
+        rec = self.connector.loc.actual.get_node_port(self.node, self.uuid, cp_id)
+        rec.update({'STATUS':'DESTROY'})
         self.connector.loc.actual.remove_node_port(self.node, self.uuid, cp_id)
-        return {'result':port_info}
+        return {'result':rec}
 
         # ================================= #
 
