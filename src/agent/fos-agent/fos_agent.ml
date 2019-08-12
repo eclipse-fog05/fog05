@@ -1026,16 +1026,13 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     let ae_uuid = Apero.Option.get @@ Apero.Properties.get "ae_id" props in
     try%lwt
       let%lwt descriptor = Yaks_connector.Global.Actual.get_catalog_atomic_entity_info sys_id Yaks_connector.default_tenant_id ae_uuid state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
-      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - Retrieved descriptor from YAKS") in
       (* Check function *)
       let check_fdu_nodes_compatibility sysid tenantid fdu_info =
-        let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - Calling Eval on all nodes in the system") in
         let parameters = [("descriptor",User.Descriptors.FDU.string_of_descriptor fdu_info)] in
         let fname = "check_node_compatibilty" in
         Yaks_connector.Global.Actual.exec_multi_node_eval sysid tenantid fname parameters state.yaks
       in
       (* Add UUID to VLs *)
-      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - Adding UUID to VLs") in
       let%lwt nets = Lwt_list.map_p (fun (ivl:User.Descriptors.AtomicEntity.internal_virtual_link_descriptor) ->
           let net_uuid = Apero.Uuid.to_string (Apero.Uuid.make ()) in
           let record = Infra.Descriptors.AtomicEntity.{
@@ -1074,18 +1071,9 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       (* Pretend we already ordered the fdus *)
       let ordered_fdus = descriptor.fdus in
       (* We assing a UUID to the FDUs *)
-      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - Adding UUID to FDUs") in
       let%lwt fdus = Lwt_list.map_p (fun (fdu:User.Descriptors.FDU.descriptor) ->  Lwt.return {fdu with uuid = Some (Apero.Uuid.to_string (Apero.Uuid.make ())) }) ordered_fdus in
       (* update FDUs with correct id for VLs *)
-<<<<<<< HEAD
-<<<<<<< HEAD
       (* let%lwt fdus = Lwt_list.map_p (fun (fdu:User.Descriptors.FDU.descriptor) ->
-=======
-=======
->>>>>>> 008cc117e359c784905d04cd43b1efe659530e84
-      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - Update FDU with correct VLs IDs") in
-      let%lwt fdus = Lwt_list.map_p (fun (fdu:User.Descriptors.FDU.descriptor) ->
->>>>>>> added more verbosity in atomic entity instantiation
 
           let%lwt cps = Lwt_list.map_p (fun (cp:User.Descriptors.Network.connection_point_descriptor) ->
               let ivl = List.find_opt (fun (vl:Infra.Descriptors.AtomicEntity.internal_virtual_link_record) ->
@@ -1103,10 +1091,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
          )  fdus
          in *)
       (* update the descriptor with ordered FDUs, FDU UUIDs, and VLs connections *)
-      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - Update Descriptor with FDUs") in
       let descriptor = {descriptor with fdus = fdus} in
       (* Get compatible nodes for each FDU *)
-      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - Get Compatible nodes for each FDU") in
       let%lwt fdus_node_maps = Lwt_list.map_p (fun (fdu:User.Descriptors.FDU.descriptor) ->
           let%lwt res = check_fdu_nodes_compatibility sys_id Yaks_connector.default_tenant_id fdu in
           match res with
@@ -1128,7 +1114,6 @@ let agent verbose_flag debug_flag configuration custom_uuid =
 
         ) descriptor.fdus
       in
-      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - Instantiating Virtual Networks") in
       (* Instantiating Virtual Networks *)
       let%lwt netdescs = Lwt_list.map_p (fun (vl:Infra.Descriptors.AtomicEntity.internal_virtual_link_record) ->
           (* let cb_gd_net_all self (net:FTypes.virtual_network option) (is_remove:bool) (uuid:string option) = *)
@@ -1164,7 +1149,6 @@ let agent verbose_flag debug_flag configuration custom_uuid =
              Lwt.return @@ Unix.sleep 3 *)
           >>= fun _ -> Lwt.return net_desc
         ) nets
-<<<<<<< HEAD
       in
       (* Lwt_list.iter_s (fun (cp:Infra.Descriptors.Network.connection_point_record) ->
           let fdu_cp = User.Descriptors.Network.{
@@ -1182,13 +1166,6 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           Lwt.return_unit
          ) cps
          >>= fun _ -> *)
-=======
-      >>= fun _ ->
-      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - Onboard and instantiate each FDU") in
-<<<<<<< HEAD
->>>>>>> added more verbosity in atomic entity instantiation
-=======
->>>>>>> 008cc117e359c784905d04cd43b1efe659530e84
       (* Onboard and Instantiate FDUs descriptors *)
       let%lwt fdurs = Lwt_list.map_p ( fun ((fdu:User.Descriptors.FDU.descriptor),(nodes:string list)) ->
           let n = List.nth nodes (Random.int (List.length nodes)) in
@@ -1240,7 +1217,6 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           Lwt.return (fdur, cprs)
         ) fdus_node_maps
       in
-      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - Creating Record") in
       let instanceid = Apero.Uuid.to_string (Apero.Uuid.make ()) in
       let cprs = List.map (fun (_,cprs) -> cprs) fdurs in
       let cprs = List.flatten cprs in
@@ -1256,15 +1232,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       in
       let js = JSON.of_string (Infra.Descriptors.AtomicEntity.string_of_record ae_record) in
       let%lwt _ = Yaks_connector.Global.Actual.add_records_atomic_entity_instance_info sys_id Yaks_connector.default_tenant_id ae_uuid instanceid ae_record state.yaks in
-<<<<<<< HEAD
       let eval_res = FAgentTypes.{result = Some js ; error = None; error_msg = None} in
-=======
-      let eval_res = FAgentTypes.{result = Some js ; error=None} in
-      let%lwt _ = Logs_lwt.debug (fun m -> m "[FOS-AGENT] - EV-INSTANTIATE-AE - Done") in
-<<<<<<< HEAD
->>>>>>> added more verbosity in atomic entity instantiation
-=======
->>>>>>> 008cc117e359c784905d04cd43b1efe659530e84
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
 
     with
