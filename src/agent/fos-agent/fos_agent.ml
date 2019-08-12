@@ -121,12 +121,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
   List.iter (fun p -> ignore @@ Logs.debug (fun m -> m "[FOS-AGENT] - INIT - %s" p )) (Apero.Option.get_or_default conf.plugins.auto []);
   (* let sys_info = system_info sys_id uuid in *)
   let%lwt yaks = Yaks_connector.get_connector conf in
-<<<<<<< HEAD
-  let%lwt fim = Fos_fim_api.FIMAPI.connect ~locator:(Apero.Option.get (Apero_net.Locator.of_string conf.agent.yaks)) () in
-  let%lwt faem = Fos_faem_api.FAEMAPI.connect ~locator:(Apero.Option.get (Apero_net.Locator.of_string conf.agent.yaks)) () in
-=======
   let%lwt fim = Fos_fim_api.FIMAPI.connect ~locator:conf.agent.yaks () in
->>>>>>> 008cc117e359c784905d04cd43b1efe659530e84
+  let%lwt faem = Fos_faem_api.FAEMAPI.connect ~locator:conf.agent.yaks () in
   (*
    * Here we should check if state is present in local persistent YAKS and
    * recoved from that
