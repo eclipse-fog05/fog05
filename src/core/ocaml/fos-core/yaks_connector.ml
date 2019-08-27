@@ -1084,6 +1084,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     | _ -> let _,v = List.hd kvs in
       Lwt.return @@ Some (Router.descriptor_of_string (Yaks.Value.to_string v))
 
+
   let observe_routers sysid tenantid callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = get_network_routers_selector sysid tenantid in
