@@ -12,19 +12,11 @@
 #
 # Contributors: Gabriele Baldoni, ADLINK Technology Inc. - API v2
 
-
-# import re
-# import uuid
-# import json
-# import fnmatch
-# import time
 import uuid
 import random
 from fog05.yaks_connector import Yaks_Connector
 from fog05.interfaces import Constants
-# from jsonschema import validate, ValidationError
-# from enum import Enum
-# from fog05 import Schemas
+
 from fog05.interfaces.FDU import FDU
 from fog05.interfaces.InfraFDU import InfraFDU
 from mvar import MVar
