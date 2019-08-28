@@ -331,6 +331,22 @@ class FIMAPI(object):
             self.connector.glob.desired.remove_network(
                 self.sysid, self.tenantid, net_uuid)
 
+        def add_network_to_node(self, manifest, nodeid):
+            net_id = manifest.get('uuid')
+            net = self.connector.glob.actual.get_node_network(self.sysid, self.tenantid, nodeid, net_id)
+            if net is not None:
+                return net
+            res = self.connector.glob.actual.create_network_in_node(self.sysid, self.tenantid, nodeid, manifest)
+            if res.get('error') is not None:
+                raise ValueError('Got Error {}'.format(res['error']))
+            return res['result']
+
+        def remove_network_from_node(self, netid, nodeid):
+            res = self.connector.glob.actual.remove_network_from_node(self.sysid, self.tenantid, nodeid, netid)
+            if res.get('error') is not None:
+                raise ValueError('Got Error {}'.format(res['error']))
+            return res['result']
+
 
         def add_connection_point(self, cp_descriptor):
             cp_descriptor.update({'status': 'add'})

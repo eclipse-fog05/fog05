@@ -311,6 +311,11 @@ class GAD(object):
             [self.prefix, sysid, 'tenants', tenantid,
             'nodes', nodeid, 'networks', 'routers', routerid, 'info'])
 
+    def get_node_network_info_path(self, sysid, tenantid, nodeid, networkid):
+        return Constants.create_path([
+            self.prefix,sysid ,'tenants', tenantid,
+            'nodes', nodeid, 'networks', networkid, 'info'])
+
 
     # Evals
 
@@ -1031,6 +1036,24 @@ class GAD(object):
         return d
 
     # Node Network
+
+    def add_node_network(self, sysid, tenantid, nodeid, netid, netinfo):
+        p = self.get_node_network_info_path(sysid, tenantid, nodeid, netid)
+        v = Value(json.dumps(netinfo), encoding=Encoding.STRING)
+        return self.ws.put(p, v)
+
+    def get_node_network(self, sysid, tenantid, nodeid, netid):
+        s = self.get_node_network_info_path(sysid, tenantid, nodeid, netid)
+        kvs = self.ws.get(s)
+        if len(kvs) == 0:
+            return None
+        return json.loads(kvs[0][1].get_value())
+
+    def remove_node_network(self, sysid, tenantid, nodeid, netid):
+        s = self.get_node_network_info_path(sysid, tenantid, nodeid, netid)
+        return self.ws.remove(s)
+
+
     def add_node_floating_ip(self, sysid, tenantid, nodeid,floatingid, ip_info):
 
         p = self.get_node_network_floating_ip_info_path(sysid, tenantid, nodeid, floatingid)
@@ -1203,7 +1226,7 @@ class GAD(object):
 
     def onboard_fdu_from_node(self, sysid, tenantid, nodeid, fdu_id, fdu_info):
         fname = 'onboard_fdu'
-        params = {'descriptor':fdu_info}
+        params = {'descriptor': fdu_info}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
         res = self.ws.eval(s)
         if len(res) == 0:
@@ -1213,7 +1236,7 @@ class GAD(object):
 
     def define_fdu_in_node(self, sysid, tenantid, nodeid, fdu_id):
         fname = 'define_fdu'
-        params = {'fdu_id':fdu_id}
+        params = {'fdu_id': fdu_id}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
         res = self.ws.eval(s)
         if len(res) == 0:
@@ -1223,7 +1246,7 @@ class GAD(object):
 
     def onboard_ae_from_node(self, sysid, tenantid, nodeid, ae_info):
         fname = 'onboard_ae'
-        params = {'descriptor':ae_info}
+        params = {'descriptor': ae_info}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
         res = self.ws.eval(s)
         if len(res) == 0:
@@ -1233,7 +1256,7 @@ class GAD(object):
 
     def instantiate_ae_from_node(self, sysid, tenantid, nodeid, ae_id):
         fname = 'instantiate_ae'
-        params = {'ae_id':ae_id}
+        params = {'ae_id': ae_id}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
         res = self.ws.eval(s)
         if len(res) == 0:
@@ -1243,7 +1266,7 @@ class GAD(object):
 
     def offload_ae_from_node(self, sysid, tenantid, nodeid, ae_id):
         fname = 'offload_ae'
-        params = {'ae_id':ae_id}
+        params = {'ae_id': ae_id}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
         res = self.ws.eval(s)
         if len(res) == 0:
@@ -1253,7 +1276,7 @@ class GAD(object):
 
     def terminate_ae_from_node(self, sysid, tenantid, nodeid, ae_inst_id):
         fname = 'terminate_ae'
-        params = {'instance_id':ae_inst_id}
+        params = {'instance_id': ae_inst_id}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
         res = self.ws.eval(s)
         if len(res) == 0:
@@ -1263,7 +1286,7 @@ class GAD(object):
 
     def onboard_entity_from_node(self, sysid, tenantid, nodeid, e_info):
         fname = 'onboard_entity'
-        params = {'descriptor':e_info}
+        params = {'descriptor': e_info}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
         res = self.ws.eval(s)
         if len(res) == 0:
@@ -1273,7 +1296,7 @@ class GAD(object):
 
     def instantiate_entity_from_node(self, sysid, tenantid, nodeid, e_id):
         fname = 'instantiate_entity'
-        params = {'entity_id':e_id}
+        params = {'entity_id': e_id}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
         res = self.ws.eval(s)
         if len(res) == 0:
@@ -1283,7 +1306,7 @@ class GAD(object):
 
     def offload_entity_from_node(self, sysid, tenantid, nodeid, e_id):
         fname = 'offload_entity'
-        params = {'entity_id':e_id}
+        params = {'entity_id': e_id}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
         res = self.ws.eval(s)
         if len(res) == 0:
@@ -1293,7 +1316,7 @@ class GAD(object):
 
     def terminate_entity_from_node(self, sysid, tenantid, nodeid, e_inst_id):
         fname = 'terminate_entity'
-        params = {'instance_id':e_inst_id}
+        params = {'instance_id': e_inst_id}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
         res = self.ws.eval(s)
         if len(res) == 0:
@@ -1302,6 +1325,25 @@ class GAD(object):
             return json.loads(res[0][1].get_value())
 
 
+    def create_network_in_node(self, sysid, tenantid, nodeid, net_info):
+        fname = 'create_node_network'
+        params = {'descriptor': json.dumps(net_info)}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
+
+    def remove_network_from_node(self, sysid, tenantid, nodeid, net_id):
+        fname = 'remove_node_netwotk'
+        params = {'net_id': net_id}
+        s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
+        res = self.ws.eval(s)
+        if len(res) == 0:
+            raise ValueError('Empty data on exec_agent_eval')
+        else:
+            return json.loads(res[0][1].get_value())
 
 
 class LAD(object):
