@@ -2309,9 +2309,10 @@ class Local(object):
 
 class Yaks_Connector(object):
     def __init__(self, locator):
+        self.executor = concurrent.futures.ThreadPoolExecutor()
         self.yaks_client = Yaks.login(locator)
         self.yaks_admin = self.yaks_client.admin()
-        self.ws = self.yaks_client.workspace(Constants.global_actual_prefix)
+        self.ws = self.yaks_client.workspace(Constants.global_actual_prefix, self.executor)
         self.glob = Global(self.ws)
         self.loc = Local(self.ws)
 
@@ -2322,9 +2323,10 @@ class Yaks_Connector(object):
 
 class Yaks_Constraint_Connector(object):
     def __init__(self, locator):
+        self.executor = concurrent.futures.ThreadPoolExecutor()
         self.yaks_client = Yaks.login(locator)
         self.yaks_admin = self.yaks_client.admin()
-        self.ws = self.yaks_client.workspace(Constants.local_constraint_actual_prefix)
+        self.ws = self.yaks_client.workspace(Constants.local_constraint_actual_prefix, self.executor)
         self.actual = CLAD(self.ws, Constants.local_constraint_actual_prefix)
         self.desired = CLAD(self.ws, Constants.local_constaint_desired_prefix)
 
