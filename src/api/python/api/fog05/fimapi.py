@@ -35,7 +35,7 @@ class FIMAPI(object):
         This class allow the interaction with fog05 FIM
     '''
 
-    def __init__(self, locator='127.0.0.1:7887',
+    def __init__(self, locator='127.0.0.1:7447',
                  sysid=Constants.default_system_id,
                  tenantid=Constants.default_tenant_id):
 

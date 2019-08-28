@@ -57,7 +57,8 @@ let get_yaks_locator () =
   in
   Logs.debug (fun m -> m "YAKS AT %s:%s" host port);
   let strloc = Printf.sprintf "tcp/%s:%s" host port in
-  Apero_net.Locator.of_string strloc |> Apero.Option.get
+  strloc
+  (* Apero_net.Locator.of_string strloc |> Apero.Option.get *)
 
 let run_platform configuration_path fim_plugin =
   ignore configuration_path;
@@ -97,7 +98,7 @@ let run_platform configuration_path fim_plugin =
        (match r with
         | true ->
           let module M = (val FIMPlugin.get_plugin () : FIMPlugin) in
-          let fos_conn = M.make "tcp/127.0.0.1:7887" "" "" (Fos_im.JSON.create_empty ()) in
+          let fos_conn = M.make "tcp/127.0.0.1:7447" "" "" (Fos_im.JSON.create_empty ()) in
           let%lwt _ = RO.add_fim_conn "fos" fos_conn ro in
           Logs.debug (fun m -> m "FIM Plugin Loaded!" );
           Lwt.return_unit

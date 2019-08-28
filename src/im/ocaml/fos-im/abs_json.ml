@@ -11,7 +11,7 @@
  *   Gabriele Baldoni (gabriele (dot) baldoni (at) adlinktech (dot) com ) - OCaml implementation
  *********************************************************************************)
 
-type json = Yojson.Safe.json
+type json = Yojson.Safe.t
 let write_json = Yojson.Safe.write_json
 let read_json = Yojson.Safe.read_json
 let to_string = Yojson.Safe.to_string

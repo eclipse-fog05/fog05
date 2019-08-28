@@ -34,3 +34,8 @@ depends: [
   "fos-im"
   "fos-mm5"
 ]
+
+
+synopsis : "Eclipse fog05 - MEC MEAO"
+description: """
+Eclipse fog05 - MEC MEAO"""

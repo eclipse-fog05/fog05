@@ -11,7 +11,7 @@
  *   Gabriele Baldoni (gabriele (dot) baldoni (at) adlinktech (dot) com ) - OCaml implementation
  *********************************************************************************)
 
-(* type json <ocaml module="Yaks_Core.Abs_json"> = abstract *)
+(* type json <ocaml module="Abs_json"> = abstract *)
 
 (* MEAO Types
  *  These types are the atd version of the YANG models for

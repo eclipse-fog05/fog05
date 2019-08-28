@@ -29,3 +29,7 @@ depends: [
   "httpaf-lwt-unix"
   "faraday"
 ]
+
+synopsis : "Eclipse fog05 - MEC Mm5 API"
+description: """
+Eclipse fog05 MEC Mm5 API"""

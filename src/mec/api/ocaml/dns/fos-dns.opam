@@ -28,4 +28,9 @@ depends: [
   "httpaf"
   "httpaf-lwt-unix"
   "faraday"
+  "fos-im"
 ]
+
+synopsis : "Eclipse fog05 - MEC DynDNS API"
+description: """
+Eclipse fog05 MEC DynDNS API"""

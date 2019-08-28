@@ -34,3 +34,7 @@ depends: [
   "fos-im"
   "fos-fim-api"
 ]
+
+
+synopsis : "Eclipse fog05 - MEC fog05 FIM Connector"
+description: """MEC fog05 FIM Connector"""

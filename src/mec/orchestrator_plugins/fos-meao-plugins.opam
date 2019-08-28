@@ -20,4 +20,11 @@ install: [
 
 depends: [
   "dune"
+  "lwt"
+  "fos-im"
+
 ]
+
+
+synopsis : "Eclipse fog05 - MEC Orchestrator Plugins API"
+description: """MEC Orchestrator Plugins API"""

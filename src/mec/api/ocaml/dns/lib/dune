@@ -2,5 +2,5 @@
   (name            fos_dns)
   (public_name     fos-dns)
   (wrapped     false)
-  (libraries       base lwt lwt.unix httpaf httpaf-lwt-unix faraday apero-core yojson atdgen)
+  (libraries       base lwt lwt.unix httpaf httpaf-lwt-unix faraday apero-core yojson atdgen fos-im)
   (preprocess (pps lwt_ppx)))

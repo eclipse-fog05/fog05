@@ -1,4 +1,4 @@
-open Yojson.Safe
+open Fos_im.JSON
 
 (*    (modules_without_implementation FIM) *)
 
