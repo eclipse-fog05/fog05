@@ -28,7 +28,6 @@ class GAD(object):
         self.prefix = prefix
         self.listeners = []
         self.evals = []
-        self.executor = concurrent.futures.ThreadPoolExecutor()
 
     def unsubscribe(self, subid):
         if subid in self.listeners:
@@ -481,7 +480,7 @@ class GAD(object):
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
-                    self.executor.submit(callback,json.loads(v.value))
+                    callback(json.loads(v.value))
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
@@ -532,7 +531,7 @@ class GAD(object):
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
-                    self.executor.submit(callback,json.loads(v.value))
+                    callback(json.loads(v.value))
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
@@ -571,7 +570,7 @@ class GAD(object):
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
-                    self.executor.submit(callback,json.loads(v.value))
+                    callback(json.loads(v.value))
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
@@ -584,7 +583,7 @@ class GAD(object):
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
-                    self.executor.submit(callback,json.loads(v.value))
+                    callback(json.loads(v.value))
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
@@ -624,7 +623,7 @@ class GAD(object):
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
-                    self.executor.submit(callback,json.loads(v.value))
+                    callback(json.loads(v.value))
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
@@ -675,7 +674,7 @@ class GAD(object):
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
-                    self.executor.submit(callback,json.loads(v.value))
+                    callback(json.loads(v.value))
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
@@ -723,7 +722,7 @@ class GAD(object):
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
-                    self.executor.submit(callback,json.loads(v.value))
+                    callback(json.loads(v.value))
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
@@ -745,7 +744,7 @@ class GAD(object):
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
-                    self.executor.submit(callback,json.loads(v.value))
+                    callback(json.loads(v.value))
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
@@ -835,7 +834,7 @@ class GAD(object):
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
-                    self.executor.submit(callback,json.loads(v.value))
+                    callback(json.loads(v.value))
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
@@ -1138,7 +1137,7 @@ class GAD(object):
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
-                    self.executor.submit(callback,json.loads(v.value))
+                    callback(json.loads(v.value))
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
@@ -1356,7 +1355,6 @@ class LAD(object):
         self.prefix = prefix
         self.listeners = []
         self.evals = []
-        self.executor = concurrent.futures.ThreadPoolExecutor()
 
     def unsubscribe(self, subid):
         if subid in self.listeners:
@@ -1700,7 +1698,7 @@ class LAD(object):
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
-                    self.executor.submit(callback,json.loads(v.value))
+                    callback(json.loads(v.value))
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
@@ -1725,7 +1723,7 @@ class LAD(object):
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
-                    self.executor.submit(callback,json.loads(v.value))
+                    callback(json.loads(v.value))
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
@@ -1739,7 +1737,7 @@ class LAD(object):
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
-                    self.executor.submit(callback,json.loads(v.value))
+                    callback(json.loads(v.value))
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
@@ -1842,7 +1840,7 @@ class LAD(object):
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
-                    self.executor.submit(callback,json.loads(v.value))
+                    callback(json.loads(v.value))
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
@@ -1903,7 +1901,7 @@ class LAD(object):
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
-                    self.executor.submit(callback,json.loads(v.value))
+                    callback(json.loads(v.value))
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
@@ -1941,7 +1939,7 @@ class LAD(object):
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
-                    self.executor.submit(callback,json.loads(v.value))
+                    callback(json.loads(v.value))
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
@@ -1986,7 +1984,7 @@ class LAD(object):
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
-                    self.executor.submit(callback,json.loads(v.value))
+                    callback(json.loads(v.value))
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
@@ -1998,7 +1996,6 @@ class CLAD(object):
         self.prefix = prefix
         self.listeners = []
         self.evals = []
-        self.executor = concurrent.futures.ThreadPoolExecutor()
 
     def unsubscribe(self, subid):
         if subid in self.listeners:
@@ -2089,7 +2086,7 @@ class CLAD(object):
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
-                    self.executor.submit(callback,json.loads(v.value))
+                    callback(json.loads(v.value))
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
@@ -2226,7 +2223,7 @@ class CLAD(object):
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
-                    self.executor.submit(callback,json.loads(v.value))
+                    callback(json.loads(v.value))
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
@@ -2258,7 +2255,7 @@ class CLAD(object):
             else:
                 v = kvs[0][1].get_value()
                 if v is not None:
-                    self.executor.submit(callback,json.loads(v.value))
+                    callback(json.loads(v.value))
         subid = self.ws.subscribe(s, cb)
         self.listeners.append(subid)
         return subid
