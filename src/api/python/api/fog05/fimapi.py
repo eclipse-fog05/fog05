@@ -12,19 +12,11 @@
 #
 # Contributors: Gabriele Baldoni, ADLINK Technology Inc. - API v2
 
-
-# import re
-# import uuid
-# import json
-# import fnmatch
-# import time
 import uuid
 import random
 from fog05.yaks_connector import Yaks_Connector
 from fog05.interfaces import Constants
-# from jsonschema import validate, ValidationError
-# from enum import Enum
-# from fog05 import Schemas
+
 from fog05.interfaces.FDU import FDU
 from fog05.interfaces.InfraFDU import InfraFDU
 from mvar import MVar
@@ -327,9 +319,27 @@ class FIMAPI(object):
             '''
             manifest = self.connector.glob.actual.get_network(
                 self.sysid, self.tenantid, net_uuid)
+            if manifest is None:
+                return
             manifest.update({'status': 'remove'})
             self.connector.glob.desired.remove_network(
                 self.sysid, self.tenantid, net_uuid)
+
+        def add_network_to_node(self, manifest, nodeid):
+            net_id = manifest.get('uuid')
+            net = self.connector.glob.actual.get_node_network(self.sysid, self.tenantid, nodeid, net_id)
+            if net is not None:
+                return net
+            res = self.connector.glob.actual.create_network_in_node(self.sysid, self.tenantid, nodeid, manifest)
+            if res.get('error') is not None:
+                raise ValueError('Got Error {}'.format(res['error']))
+            return res['result']
+
+        def remove_network_from_node(self, netid, nodeid):
+            res = self.connector.glob.actual.remove_network_from_node(self.sysid, self.tenantid, nodeid, netid)
+            if res.get('error') is not None:
+                raise ValueError('Got Error {}'.format(res['error']))
+            return res['result']
 
 
         def add_connection_point(self, cp_descriptor):
