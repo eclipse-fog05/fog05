@@ -282,6 +282,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       let _ = Logs.debug (fun m -> m "[FOS-AGENT] - EV-REMOVE-NET - Properties: %s" (Apero.Properties.to_string props) ) in
       let net_id =Apero.Option.get @@ Apero.Properties.get "net_id" props in
       let%lwt record =  Yaks_connector.Local.Actual.get_node_network  (Apero.Option.get state.configuration.agent.uuid) net_p net_id state.yaks >>= fun x -> Lwt.return @@ Apero.Option.get x in
+      let record = {record with status = `DESTROY} in
+      let%lwt _ = Yaks_connector.Local.Desired.add_node_network (Apero.Option.get state.configuration.agent.uuid) net_p net_id record state.yaks in
       Yaks_connector.Global.Actual.remove_network sys_id Yaks_connector.default_tenant_id record.uuid state.yaks >>= Lwt.return
       >>= fun _ ->
       let js = JSON.of_string @@ FTypesRecord.string_of_virtual_network record in
@@ -2114,14 +2116,4 @@ let info =
   Cmdliner.Term.info "agent" ~version:"%%VERSION%%" ~doc ~exits:Cmdliner.Term.default_exits ~man
 
 
-let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
-let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
-
-let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
-let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
-let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
-let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
-let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
-let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
-let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
 let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)

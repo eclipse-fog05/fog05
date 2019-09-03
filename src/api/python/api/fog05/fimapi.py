@@ -319,6 +319,8 @@ class FIMAPI(object):
             '''
             manifest = self.connector.glob.actual.get_network(
                 self.sysid, self.tenantid, net_uuid)
+            if manifest is None:
+                return
             manifest.update({'status': 'remove'})
             self.connector.glob.desired.remove_network(
                 self.sysid, self.tenantid, net_uuid)
