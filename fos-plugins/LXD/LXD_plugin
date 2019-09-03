@@ -217,9 +217,14 @@ class LXD(RuntimePluginFDU):
                         lxd_img = self.conn.images.create_from_simplestreams(server=self.UBUNTU_IMAGE_SERVER, alias=img_alias)
                     lxd_img.add_alias(fdu_uuid, description='')
                 except LXDAPIException as e:
+                    self.logger.info('define_fdu()', '[ ERRO ] LXD Plugin - LXDAPIException when fetching image: {}'.format(e))
                     if '{}'.format(e) == 'Image with same fingerprint already exists':
-                            self.logger.info('define_fdu()', '[ INFO ] LXD Plugin - Image with same fingerprint already exists')
-                            pass
+                        self.logger.info('define_fdu()', '[ INFO ] LXD Plugin - Image with same fingerprint already exists')
+                    if '{}'.format(e) == 'The requested image couldn\'t be found':
+                        self.logger.info('define_fdu()', '[ ERRO ] LXD Plugin - Unable to find LXD image')
+                        self.write_fdu_error(fdu_uuid, instance_id, 0, 'Cannot find image!')
+                        return
+
                 image_name = ''
                 img_info.update({'uuid': fdu_uuid})
                 img_info.update({'name': '{}_img'.format(fdu.name)})
