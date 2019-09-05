@@ -61,6 +61,8 @@ class LXD(RuntimePluginFDU):
         file_dir = os.path.dirname(__file__)
         self.DIR = os.path.abspath(file_dir)
         self.update_interval =  manifest.get('configuration').get('update_interval', 10)
+        self.lxd_storage_pool = manifest.get('configuration').get('storage_pool', 'default')
+
         self.conn = None
         self.images = {}
         self.flavors = {}
@@ -1032,11 +1034,11 @@ class LXD(RuntimePluginFDU):
         lxd_version = self.conn.host_info['environment']['server_version']
         if version.parse(lxd_version) >= version.parse('2.20'):
             st_n = 'root'
-            st_v = json.loads(str(template_disk % ('/', 'default', int(fdu.get_computation_requirements().get('storage_size_gb')))))
+            st_v = json.loads(str(template_disk % ('/', self.lxd_storage_pool, int(fdu.get_computation_requirements().get('storage_size_gb')))))
             devices.update({st_n: st_v})
             # if fdu.storage is None or len(fdu.storage) == 0:
             #     st_n = 'root'
-            #     st_v = json.loads(str(template_disk % ('/', 'default')))
+            #     st_v = json.loads(str(template_disk % ('/', self.lxd_storage_pool,)))
             #     devices.update({st_n: st_v})
             # else:
             #     for s in fdu.storage:
