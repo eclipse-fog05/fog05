@@ -949,8 +949,7 @@ class FIMAPI(object):
             '''
 
             img_id = descriptor.get('uuid')
-            res = self.connector.glob.actual.add_image(self.sysid,
-             self.tenantid,img_id, descriptor)
+            res = self.connector.glob.actual.add_image(self.sysid, self.tenantid,img_id, descriptor)
             return img_id
 
         def get(self, image_uuid):
