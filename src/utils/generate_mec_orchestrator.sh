@@ -49,7 +49,7 @@ docker network create -d overlay --attachable fog05-meaonet
 sg docker -c "docker build . -f ./docker/Dockerfile-yaks -t fog05/yaks --no-cache"
 sg docker -c "docker build . -f ./docker/Dockerfile-meao -t fog05/meao --no-cache"
 
-docker stack deploy -c ./docker/docker-compose.yaml meao
+docker stack deploy -c ./docker/meao/docker-compose.yaml meao
 
 
 if [ $TEST ]; then

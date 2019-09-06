@@ -8,8 +8,8 @@ RUN apt update && \
     DEBIAN_FRONTEND=noninteractive pip3 install jsonschema flask &&\
     DEBIAN_FRONTEND=noninteractive git clone https://github.com/5GCity/fog05 && cd fog05/src/api/python/api && make install
 
-COPY ../python/rest_proxy/src/service.json /root/service.json
-COPY ../python/rest_proxy/src/service.py /root/service.py
+COPY ./python/rest_proxy/src/service.json /root/service.json
+COPY ./python/rest_proxy/src/service.py /root/service.py
 
 EXPOSE 8080
 
