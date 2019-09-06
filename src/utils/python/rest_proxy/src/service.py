@@ -223,7 +223,7 @@ def image_add():
     img_dict.update({descriptor.get('uuid'):img_filename})
     uri = 'http://{}:{}{}'.format( conf['host'], conf['port'],url_for('get_image_file',fname=img_filename))
     descriptor.update({'uri':uri})
-    return json.dumps({'result':fos_api.image.add(descriptor)})
+    return json.dumps({'result':fos_api.add_from_rest.add(descriptor)})
 
 
 @app.route('/image/<img_id>', methods=['GET'])

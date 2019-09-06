@@ -939,6 +939,47 @@ class FIMAPI(object):
              self.tenantid,img_id, descriptor)
             return img_id
 
+        def add_from_rest(self, descriptor):
+            '''
+
+            Adding an image to a node or to all nodes
+
+            :param manifest: dictionary representing the manifest for the image
+            :param node_uuid: optional node in which add the image
+            :return: boolean
+            '''
+            # manifest.update({'status': 'add'})
+            # json_data = json.dumps(manifest)
+            # if node_uuid is None:
+            #     uri = '{}/*/runtime/*/image/{}'.format(
+            #         self.store.droot, manifest.get('uuid'))
+            # else:
+            #     handler = None
+            #     t = manifest.get('type')
+            #     if t in ['kvm', 'xen']:
+            #         handler = self.__search_plugin_by_name(t, node_uuid)
+            #     elif t in ['container', 'lxd', 'docker']:
+            #         handler = self.__search_plugin_by_name(t, node_uuid)
+            #     else:
+            #         print('type not recognized')
+            #     if handler is None or handler == 'None':
+            #         print('Handler not found!! (Is none)')
+            #         return False
+            #     if handler.get('uuid') is None:
+            #         print('Handler not found!! (Cannot get handler uuid)')
+            #         return False
+            #     uri = '{}/{}/runtime/{}/image/{}'.format(
+            #         self.store.droot, node_uuid, handler.get('uuid'), manifest.get('uuid'))
+            # res = self.store.desired.put(uri, json_data)
+            # if res:
+            #     return True
+            # else:
+            #     return False
+            img_id = descriptor.get('uuid')
+            res = self.connector.glob.actual.add_image(self.sysid,
+             self.tenantid,img_id, descriptor)
+            return img_id
+
         def get(self, image_uuid):
             return self.connector.glob.desired.get_image(self.sysid,
              self.tenantid,image_uuid)
