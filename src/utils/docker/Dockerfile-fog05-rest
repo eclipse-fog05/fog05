@@ -5,7 +5,7 @@ LABEL authors="Gabriele Baldoni"
 RUN apt update && \
     DEBIAN_FRONTEND=noninteractive apt install python3-pip git -y && \
     DEBIAN_FRONTEND=noninteractive mkdir -p /var/fos/images &&\
-    DEBIAN_FRONTEND=noninteractive pip3 install jsonschema flask
+    DEBIAN_FRONTEND=noninteractive pip3 install jsonschema flask &&\
     DEBIAN_FRONTEND=noninteractive git clone https://github.com/5GCity/fog05 && cd fog05/src/api/python/api && make install &&\
 
 COPY ../python/rest_proxy/src/service.json /root/service.json
