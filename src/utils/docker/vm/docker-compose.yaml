@@ -1,0 +1,29 @@
+version: '3'
+volumes:
+    fog05-yaks:
+    fog05-rest:
+
+networks:
+  netREST:
+      external:
+        name: fog05-restnet
+
+services:
+  fog05-yaks:
+    image: fog05/yaks
+    ports:
+      - "7887:7887"
+    networks:
+      - netREST
+  fog05-rest:
+    image: fog05/rest
+    networks:
+      - netREST
+    environment:
+      YAKS_HOST: fog05-yaks
+      YAKS_PORT: 7887
+    ports:
+      - "8080:8080"
+    depends_on:
+      - fog05--yaks
+

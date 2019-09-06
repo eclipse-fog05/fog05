@@ -296,7 +296,9 @@ if __name__ == '__main__':
     global conf
     conf = cfg
     global fos_api
-    fos_api = FIMAPI(locator=conf.get('yaks'), sysid=conf.get('sysid'), tenantid=conf.get('tenantid'))
+
+    yendpoint= conf.get('yaks', os.environ['YAKS_HOST'])
+    fos_api = FIMAPI(locator=yendpoint, sysid=conf.get('sysid'), tenantid=conf.get('tenantid'))
     global img_dict
     img_dict = {}
     app.run(host=conf.get('host'),port=conf.get('port'),debug=conf.get('debug'))

@@ -71,7 +71,7 @@ fi
 
 sleep 5
 
-docker stack deploy -c docker/docker-compose.yaml meao
+docker stack deploy -c docker/meao/docker-compose.yaml meao
 
 
 
