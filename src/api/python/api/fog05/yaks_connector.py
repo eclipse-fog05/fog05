@@ -544,7 +544,7 @@ class GAD(object):
         kvs = self.ws.get(s)
         d = []
         for n in kvs:
-            d.append(json.loads(kvs[0][1].get_value()))
+            d.append(json.loads(n[0][1].get_value()))
         return d
 
     def add_node_image(self, sysid, tenantid, nodeid,imageid, imginfo):
