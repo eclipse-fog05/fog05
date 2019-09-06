@@ -10,13 +10,13 @@ networks:
 
 services:
   fog05-yaks:
-    image: fog05/yaks
+    image: fog05/yaks:5gcity
     ports:
       - "7887:7887"
     networks:
       - netREST
   fog05-rest:
-    image: fog05/rest
+    image: fog05/rest:5gcity
     networks:
       - netREST
     environment:

@@ -23,13 +23,14 @@ case $key in
 esac
 done
 
+docker image pull fog05/yaks:5gcity
+
 if [ $BUILD ]; then
-    sg docker -c "docker build . -f ./docker/Dockerfile-yaks -t fog05/yaks --no-cache"
-    sg docker -c "docker build . -f ./docker/Dockerfile-fog05-rest -t fog05/rest --no-cache"
+    sg docker -c "docker build . -f ./docker/Dockerfile-fog05-rest -t fog05/rest:5gcity --no-cache"
 
 else
-    docker image pull fog05/rest
-    docker image pull fog05/yaks
+    docker image pull fog05/rest:5gcity
+
 fi
 docker network rm fog05-restnet
 docker network create -d overlay --attachable fog05-restnet
