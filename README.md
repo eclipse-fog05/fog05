@@ -1,30 +1,24 @@
-# fog05
+# fog05 Deployment Guide for 5GCity
 
-Unifies compute/networking fabric end-to-end
+The Eclipse fog05 ExtendedEdge-VIM has to be deployed following this instructions.
 
-Thanks to its plugin architecture can manage near everything
+It is divided in two main components
 
-See inside [Wiki](https://github.com/eclipse/fog05/wiki) for more detailed information
-
-See also [Introduction](https://github.com/eclipse/fog05/blob/master/Introduction.md) for more information
-
-Inside [plugins](./plugins) there are some plugins for entity
-
-See [INSTALL](INSTALL.md) for installation instructions
-
-### Interact with the nodes
-
-In the wiki you can find information about:
-
-- [Python3 API](https://github.com/eclipse/fog05/wiki/fog05-Python-API)
+- REST API Server + Image Server + YAKS
+- Compute Portion (Agent, LinuxPlugin, LinuxBridge Plugin, LXD Plugin)
 
 
-REST API are under development as well as CLI interface
-<!-- - [CLI Interface](https://github.com/eclipse/fog05/wiki/CLI-Interface) -->
+The first components as to be deployed in a VM with the following specifications:
+
+- 1 vCPU
+- 1 GB RAM
+- 40 GB Disk (or less this really depends in the space needed for the images)
+- Ubuntu 16.04
+- docker
 
 
-### Contributing
+### VM Configuration
 
-If you want to contribute, please read information in [CONTRIBUTING.md](./CONTRIBUTING.md)
+Install docker-ce [Following these instructions](https://www.google.com)
 
-And take a look to [TODO.md](./TODO.md)
+
