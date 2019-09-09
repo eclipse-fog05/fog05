@@ -151,6 +151,7 @@ class LXD(RuntimePluginFDU):
 
     def define_fdu(self, fdu_record):
         self.logger.info('define_fdu()', ' LXD Plugin - Defining a Container')
+        self.logger.info('define_fdu()', ' LXD Plugin - FDU Record: {}'.format(fdu_record))
 
         fdu_uuid = fdu_record.get('fdu_uuid')
         instance_id = fdu_record.get('uuid')
@@ -265,32 +266,9 @@ class LXD(RuntimePluginFDU):
                                                      'FDU {} is not in DEFINED state'.format(instance_uuid))
         else:
             fdu_uuid  = fdu.fdu_uuid
-            try:
-                self.logger.info('undefine_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(instance_uuid))
-                c = self.conn.containers.get(fdu.name)
-                c.delete()
-            except Exception as e:
-                self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Undefine a Container Exception raised {}'.format(e))
-                fdu.status = 'ERROR'
-                self.current_fdus.update({instance_uuid: fdu})
-                self.write_fdu_error(fdu_uuid, instance_uuid, 1, e)
-                return
 
 
-            try:
-                time.sleep(2)
-                profile = self.conn.profiles.get(instance_uuid)
-                profile.sync()
-                while True:
-                    if len(profile.used_by) == 0:
-                        break
-                    profile.sync()
-                    time.sleep(1)
-                profile.delete()
-            except Exception as e:
-                self.logger.info('undefine_fdu()', '[ ERRO ] LXD Plugin - Undefine a Container Exception raised {}'.format(e))
-
-            if self.get_local_instances(fdu_uuid) == 1:
+            if self.get_local_instances(fdu_uuid) == 0:
                 try:
                     img = self.conn.images.get_by_alias(instance_uuid)
                     img.delete()
@@ -439,6 +417,32 @@ class LXD(RuntimePluginFDU):
                 self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id, cp)
                 # self.call_nw_plugin_function('delete_port',{'cp_id': cp_id})
 
+            try:
+                self.logger.info('clean_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(instance_uuid))
+                c = self.conn.containers.get(fdu.name)
+                c.delete()
+            except Exception as e:
+                self.logger.info('clean_fdu()', '[ ERRO ] LXD Plugin - Clean a Container Exception raised {}'.format(e))
+                fdu.status = 'ERROR'
+                self.current_fdus.update({instance_uuid: fdu})
+                self.write_fdu_error(fdu_uuid, instance_uuid, 1, e)
+                return
+
+
+            try:
+                time.sleep(2)
+                profile = self.conn.profiles.get(instance_uuid)
+                self.logger.info('clean_fdu()', '[ INFO ] LXD Plugin - Is profile None? {}'.format(profile is None))
+                profile.sync()
+                while True:
+                    if profile.used_by is None or len(profile.used_by) == 0:
+                        break
+                    profile.sync()
+                    time.sleep(1)
+                profile.delete()
+            except Exception as e:
+                self.logger.info('clean_fdu()', '[ ERRO ] LXD Plugin - Clean a Container Exception raised {}'.format(e))
+
             self.current_fdus.update({instance_uuid: fdu})
             self.update_fdu_status(fdu_uuid, instance_uuid, 'DEFINE')
             self.logger.info('clean_fdu()', '[ DONE ] LXD Plugin - Clean a Container uuid {} '.format(instance_uuid))
@@ -511,11 +515,17 @@ class LXD(RuntimePluginFDU):
                 while c.status != 'Stopped':
                     c.sync()
             except Exception as e:
-                    self.logger.info('run_fdu()', '[ ERR ] LXD Plugin - {}'.format(e))
-                    fdu.status = 'ERROR'
-                    self.current_fdus.update({instance_uuid: fdu})
-                    self.write_fdu_error(fdu_uuid, instance_uuid, 5, e)
-                    return
+                    tries = 1000
+                    while c.status != 'Stopped' and tries>0:
+                             c.sync()
+                             tries = tries - 1
+                    if c.status != 'Stopped' and tries==0:
+                        self.logger.info('run_fdu()', '[ ERR ] LXD Plugin - {}'.format(e))
+                        fdu.status = 'ERROR'
+                        self.current_fdus.update({instance_uuid: fdu})
+                        self.write_fdu_error(fdu_uuid, instance_uuid, 5, e)
+                        return
+
 
             fdu.on_stop()
 
@@ -859,11 +869,11 @@ class LXD(RuntimePluginFDU):
         i = 0
         interfaces = []
         for intf in fdu.get_interfaces():
-            self.logger.info('__generate_custom_profile_userdata_configuration()','LXD Plugin - Interface info {}'.format(intf_data))
+            self.logger.info('__generate_custom_profile_userdata_configuration()','LXD Plugin - Interface info {}'.format(intf))
             intf_name = intf.get('vintf_name')
             mac = intf.get('mac_address', self.__generate_random_mac())
             if intf.get('if_type').upper() in ['PHYSICAL','BRIDGED']:
-                real_intf_name = intf.get('vpci')
+                real_intf_name = intf.get('phy_face')
                 if self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['ethernet']:
                     nw_v = json.loads(str(template_value_macvlan_mac % (intf_name, real_intf_name, mac)))
                     self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
