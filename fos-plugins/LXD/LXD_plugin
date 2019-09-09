@@ -859,10 +859,11 @@ class LXD(RuntimePluginFDU):
         i = 0
         interfaces = []
         for intf in fdu.get_interfaces():
+            self.logger.info('__generate_custom_profile_userdata_configuration()','LXD Plugin - Interface info {}'.format(intf_data))
             intf_name = intf.get('vintf_name')
             mac = intf.get('mac_address', self.__generate_random_mac())
             if intf.get('if_type').upper() in ['PHYSICAL','BRIDGED']:
-                real_intf_name = intf.get('phy_face')
+                real_intf_name = intf.get('vpci')
                 if self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['ethernet']:
                     nw_v = json.loads(str(template_value_macvlan_mac % (intf_name, real_intf_name, mac)))
                     self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
