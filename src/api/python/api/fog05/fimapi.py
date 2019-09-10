@@ -1058,7 +1058,7 @@ class FIMAPI(object):
              self.tenantid,flv_id, descriptor)
             return flv_id
 
-         def add_from_rest(self, descriptor):
+        def add_from_rest(self, descriptor):
             flv_id = descriptor.get('uuid')
             res = self.connector.glob.actual.add_flavor(self.sysid,
              self.tenantid,flv_id, descriptor)
