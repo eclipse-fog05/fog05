@@ -1,23 +1,15 @@
 #!/usr/bin/env bash
 
-screen -S yaks -dm bash -c 'yaksd -vv'
+screen -S yaks -dm bash -c 'sudo -u fos yaksd -vv'
 sleep 1
-screen -S agent -dm bash -c 'sudo -u fos fagent -c /etc/fos/agent.json -v'
+screen -S rest -dm bash -c 'sudo -u fos python3 /etc/fos/rest/service.py /etc/fos/rest/service.json '
 sleep 1
-screen -S linuxp -dm bash -c 'sudo -u fos fos_linux /etc/fos/plugins/linux/linux_plugin.json'
+screen -S agent -dm bash -c 'sudo -u fos /etc/fos/agent -c /etc/fos/agent.json -v'
+sleep 1
+screen -S linuxp -dm bash -c 'sudo -u fos /etc/fos/plugin/linux/linux_plugin /etc/fos/plugins/linux/linux_plugin.json'
 sleep 1
 screen -S netp -dm bash -c 'sudo -u fos /etc/fos/plugins/linuxbridge/linuxbridge_plugin /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json'
 sleep 1
 screen -S lxdp -dm bash -c 'sudo -u fos /etc/fos/plugins/LXD/LXD_plugin  /etc/fos/plugins/LXD/LXD_plugin.json'
 
-read -n 1 -s -r -p "Press any key to destroy..."
-
-screen -S lxdp -X quit
-sleep 1
-screen -S netp -X quit
-sleep 1
-screen -S linuxp -X quit
-sleep 1
-screen -S agent -X quit
-sleep 1
-screen -S yaks -X quit
+echo "Running on screen..."
