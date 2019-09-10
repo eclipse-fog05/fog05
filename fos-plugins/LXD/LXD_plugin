@@ -326,7 +326,10 @@ class LXD(RuntimePluginFDU):
                     self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id, cp)
                     res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
                     while res is None:
-                        res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
+                        try:
+                            res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
+                        except Exception as e:
+                            res = None
                     cp.update({'status':'CONNECTED'})
                     # record.get('connection_points').append(cp_id)
                 dev, interfaces = self.__generate_custom_profile_devices_configuration(fdu)
