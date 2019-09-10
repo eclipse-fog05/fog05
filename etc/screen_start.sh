@@ -6,7 +6,7 @@ screen -S rest -dm bash -c 'sudo -u fos YAKS_HOST=127.0.0.1 python3 /etc/fos/res
 sleep 1
 screen -S agent -dm bash -c 'sudo -u fos /etc/fos/agent -c /etc/fos/agent.json -v'
 sleep 1
-screen -S linuxp -dm bash -c 'sudo -u fos /etc/fos/plugin/linux/linux_plugin /etc/fos/plugins/linux/linux_plugin.json'
+screen -S linuxp -dm bash -c 'sudo -u fos /etc/fos/plugins/linux/linux_plugin /etc/fos/plugins/linux/linux_plugin.json'
 sleep 1
 screen -S netp -dm bash -c 'sudo -u fos /etc/fos/plugins/linuxbridge/linuxbridge_plugin /etc/fos/plugins/linuxbridge/linuxbridge_plugin.json'
 sleep 1
