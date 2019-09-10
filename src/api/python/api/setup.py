@@ -27,7 +27,7 @@ setup(
     url='https://github.com/eclipse/fog05',
     author_email='gabriele.baldoni@adlinktech.com',
     license='Apache 2.O or EPL 2.0',
-    install_requires=['yaks==0.2.7', 'jsonschema','mvar'],
+    install_requires=['yaks==0.2.8', 'jsonschema','mvar'],
     scripts=[],
     include_package_data=True
 )
