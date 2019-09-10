@@ -272,7 +272,7 @@ def flavor_add():
         data = request.data.decode()
 
     descriptor = json.loads(data)
-    return json.dumps({'result':fos_api.flavor.add(descriptor)})
+    return json.dumps({'result':fos_api.flavor.add_from_rest(descriptor)})
 
 
 @app.route('/flavor/<flv_id>', methods=['GET'])
