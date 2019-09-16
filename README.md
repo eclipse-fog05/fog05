@@ -1,3 +1,5 @@
+[![Gitter](https://badges.gitter.im/adlink-labs/fog05.svg)](https://gitter.im/adlink-labs/fog05?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
 # fog05
 
 Unifies compute/networking fabric end-to-end
