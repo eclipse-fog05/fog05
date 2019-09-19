@@ -1653,7 +1653,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
          (* let%lwt _ = Yaks_connector.Global.Actual.add_network sys_id Yaks_connector.default_tenant_id net.uuid net self.yaks in *)
          (* let record = FTypesRecord.{uuid = net.uuid; status = `CREATE; properties = None; ip_configuration = net.ip_configuration} in *)
          Yaks_connector.Local.Desired.add_node_network (Apero.Option.get self.configuration.agent.uuid) net_p net.uuid net self.yaks
-         >>= Lwt.return
+         >>= fun _ ->
+         Lwt.return net
        | None -> Lwt.return_unit)
     | true ->
       (match uuid with
