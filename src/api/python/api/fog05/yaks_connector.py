@@ -1148,7 +1148,7 @@ class GAD(object):
         fname = 'add_port_to_network'
         params = {'cp_uuid': portid, 'network_uuid':network_id}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_agent_eval')
         else:
@@ -1158,7 +1158,7 @@ class GAD(object):
         fname = 'remove_port_from_network'
         params = {'cp_uuid': portid}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_agent_eval')
         else:
@@ -1167,7 +1167,7 @@ class GAD(object):
     def add_node_floatingip(self, sysid, tenantid, nodeid):
         fname = 'create_floating_ip'
         s = self.get_agent_exec_path(sysid, tenantid, nodeid, fname)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_agent_eval')
         else:
@@ -1177,7 +1177,7 @@ class GAD(object):
         fname = 'delete_floating_ip'
         params = {'floating_uuid': ipid}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_agent_eval')
         else:
@@ -1187,7 +1187,7 @@ class GAD(object):
         fname = 'assign_floating_ip'
         params = {'floating_uuid': ipid, 'cp_uuid': cpid}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_agent_eval')
         else:
@@ -1197,7 +1197,7 @@ class GAD(object):
         fname = 'remove_floating_ip'
         params = {'floating_uuid': ipid, 'cp_uuid': cpid}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_agent_eval')
         else:
@@ -1211,7 +1211,7 @@ class GAD(object):
         if ip_address is not None and ip_address is not '':
             params.update({'ip_address': ip_address})
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_agent_eval')
         else:
@@ -1221,7 +1221,7 @@ class GAD(object):
         fname = 'remove_router_port'
         params = {'router_id': router_id, "vnet_id": vnet_id}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_agent_eval')
         else:
@@ -1231,7 +1231,7 @@ class GAD(object):
         fname = 'onboard_fdu'
         params = {'descriptor': fdu_info}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_agent_eval')
         else:
@@ -1241,7 +1241,7 @@ class GAD(object):
         fname = 'define_fdu'
         params = {'fdu_id': fdu_id}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_agent_eval')
         else:
@@ -1251,7 +1251,7 @@ class GAD(object):
         fname = 'onboard_ae'
         params = {'descriptor': ae_info}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_agent_eval')
         else:
@@ -1261,7 +1261,7 @@ class GAD(object):
         fname = 'instantiate_ae'
         params = {'ae_id': ae_id}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_agent_eval')
         else:
@@ -1271,7 +1271,7 @@ class GAD(object):
         fname = 'offload_ae'
         params = {'ae_id': ae_id}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_agent_eval')
         else:
@@ -1281,7 +1281,7 @@ class GAD(object):
         fname = 'terminate_ae'
         params = {'instance_id': ae_inst_id}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_agent_eval')
         else:
@@ -1291,7 +1291,7 @@ class GAD(object):
         fname = 'onboard_entity'
         params = {'descriptor': e_info}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_agent_eval')
         else:
@@ -1301,7 +1301,7 @@ class GAD(object):
         fname = 'instantiate_entity'
         params = {'entity_id': e_id}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_agent_eval')
         else:
@@ -1311,7 +1311,7 @@ class GAD(object):
         fname = 'offload_entity'
         params = {'entity_id': e_id}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_agent_eval')
         else:
@@ -1321,7 +1321,7 @@ class GAD(object):
         fname = 'terminate_entity'
         params = {'instance_id': e_inst_id}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_agent_eval')
         else:
@@ -1332,7 +1332,7 @@ class GAD(object):
         fname = 'create_node_network'
         params = {'descriptor': json.dumps(net_info)}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_agent_eval')
         else:
@@ -1342,7 +1342,7 @@ class GAD(object):
         fname = 'remove_node_netwotk'
         params = {'net_id': net_id}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_agent_eval')
         else:
@@ -1600,7 +1600,7 @@ class LAD(object):
     def exec_agent_eval(self, nodeid, func_name, parameters):
         s = self.get_agent_exec_path_with_params(
             nodeid, func_name, parameters)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_agent_eval')
         else:
@@ -1609,7 +1609,7 @@ class LAD(object):
     def exec_os_eval(self, nodeid, func_name, parameters):
         s = self.get_node_os_exec_path_with_params(
             nodeid, func_name, parameters)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_os_eval')
         else:
@@ -1628,7 +1628,7 @@ class LAD(object):
     def exec_nw_eval(self, nodeid, nm_uuid, func_name, parameters):
         s = self.get_node_nw_exec_path_with_params(
             nodeid, nm_uuid, func_name, parameters)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_os_eval')
         else:
@@ -1637,7 +1637,7 @@ class LAD(object):
     def exec_plugin_eval(self, nodeid, pluginid, func_name, parameters):
         s = self.get_node_plugin_eval_path_with_params(
             nodeid, pluginid, func_name, parameters)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_os_eval')
         else:
@@ -2116,7 +2116,7 @@ class CLAD(object):
     def exec_agent_eval(self, nodeid, func_name, parameters):
         s = self.get_agent_exec_path_with_params(
             nodeid, func_name, parameters)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_agent_eval')
         else:
@@ -2164,7 +2164,7 @@ class CLAD(object):
     def exec_os_eval(self, nodeid, func_name, parameters):
         s = self.get_node_os_exec_path_with_params(
             nodeid, func_name, parameters)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_os_eval')
         else:
@@ -2173,7 +2173,7 @@ class CLAD(object):
     def exec_plugin_eval(self, nodeid, pluginid, func_name, parameters):
         s = self.get_node_plugin_eval_path_with_params(
             nodeid, pluginid, func_name, parameters)
-        res = self.ws.eval(s)
+        res = self.ws.get(s)
         if len(res) == 0:
             raise ValueError('Empty data on exec_os_eval')
         else:
