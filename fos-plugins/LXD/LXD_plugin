@@ -317,21 +317,21 @@ class LXD(RuntimePluginFDU):
                         'limits.cpu': str(fdu.comp_requirements.get('cpu_min_count')),
                         'limits.memory':'{}MB'.format(int(fdu.comp_requirements.get('ram_size_mb')))
                         }
-                for cp in fdu.get_connection_points():
-                    cp_id = cp.get('uuid')
-                    # cp_record = {
-                    #     'cp_uuid':cp_id,
-                    #     'status':'CREATE'
-                    # }
-                    self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id, cp)
-                    res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
-                    while res is None:
-                        try:
-                            res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
-                        except Exception as e:
-                            res = None
-                    cp.update({'status':'CONNECTED'})
-                    # record.get('connection_points').append(cp_id)
+                # for cp in fdu.get_connection_points():
+                #     cp_id = cp.get('uuid')
+                #     # cp_record = {
+                #     #     'cp_uuid':cp_id,
+                #     #     'status':'CREATE'
+                #     # }
+                #     self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id, cp)
+                #     res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
+                #     while res is None:
+                #         try:
+                #             res = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
+                #         except Exception as e:
+                #             res = None
+                #     cp.update({'status':'CONNECTED'})
+                #     # record.get('connection_points').append(cp_id)
                 dev, interfaces = self.__generate_custom_profile_devices_configuration(fdu)
                 record.update({'interfaces':interfaces})
                 self.logger.info('configure_fdu()', '[ INFO ] Profile devices {}'.format(dev))
@@ -403,22 +403,22 @@ class LXD(RuntimePluginFDU):
             fdu.on_clean()
             fdu_uuid = fdu.fdu_uuid
             i = 0
-            for intf in fdu.get_interfaces():
-                intf_name = intf.get('vintf_name')
-                if intf.get('if_type').upper() not in ['PHYSICAL','BRIDGED']:
-                    intf_id = 'lxd-{}-{}'.format(fdu.get_short_id(), i)
-                    self.call_nw_plugin_function('delete_virtual_interface',{'intf_id':intf_id})
-                else:
-                    real_intf_name = intf.get('phy_face')
-                    self.call_os_plugin_function('set_interface_available', {'intf_name': real_intf_name})
-                i += 1
-            for cp in fdu.get_connection_points():
-                self.logger.info('clean_fdu()', 'LXD Plugin - CP: {}'.format(cp))
-                cp_id = cp.get('uuid')
-                cp = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
-                cp.update({'status':'DESTROY'})
-                self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id, cp)
-                # self.call_nw_plugin_function('delete_port',{'cp_id': cp_id})
+            # for intf in fdu.get_interfaces():
+            #     intf_name = intf.get('vintf_name')
+            #     if intf.get('if_type').upper() not in ['PHYSICAL','BRIDGED']:
+            #         intf_id = 'lxd-{}-{}'.format(fdu.get_short_id(), i)
+            #         self.call_nw_plugin_function('delete_virtual_interface',{'intf_id':intf_id})
+            #     else:
+            #         real_intf_name = intf.get('phy_face')
+            #         self.call_os_plugin_function('set_interface_available', {'intf_name': real_intf_name})
+            #     i += 1
+            # for cp in fdu.get_connection_points():
+            #     self.logger.info('clean_fdu()', 'LXD Plugin - CP: {}'.format(cp))
+            #     cp_id = cp.get('uuid')
+            #     cp = self.connector.loc.actual.get_node_port(self.node, self.nm, cp_id)
+            #     cp.update({'status':'DESTROY'})
+            #     self.connector.loc.desired.add_node_port(self.node, self.nm, cp_id, cp)
+            #     # self.call_nw_plugin_function('delete_port',{'cp_id': cp_id})
 
             try:
                 self.logger.info('clean_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(instance_uuid))
