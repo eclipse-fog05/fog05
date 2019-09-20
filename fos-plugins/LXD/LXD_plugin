@@ -875,24 +875,10 @@ class LXD(RuntimePluginFDU):
             self.logger.info('__generate_custom_profile_userdata_configuration()','LXD Plugin - Interface info {}'.format(intf))
             intf_name = intf.get('vintf_name')
             mac = intf.get('mac_address', self.__generate_random_mac())
-            if intf.get('if_type').upper() in ['PHYSICAL','BRIDGED']:
-                real_intf_name = intf.get('phy_face')
-                if self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['ethernet']:
-                    nw_v = json.loads(str(template_value_macvlan_mac % (intf_name, real_intf_name, mac)))
-                    self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
-                elif self.call_os_plugin_function('get_intf_type', {'name': real_intf_name}) in ['wireless']:
-                    nw_v = json.loads(str(template_value_phy_mac % (intf_name, real_intf_name, mac)))
-                    self.call_os_plugin_function('set_interface_unaviable', {'intf_name': real_intf_name})
-                else:
-                    nw_v = json.loads(str(template_value_bridge_mac % (intf_name, real_intf_name, mac)))
-                interfaces.append(real_intf_name)
-            else:
-                intf_id = 'lxd-{}-{}'.format(fdu.get_short_id(), i)
-                intf_data = self.call_nw_plugin_function('create_virtual_interface', {'intf_id':intf_id, 'descriptor': intf})
-                self.logger.info('__generate_custom_profile_userdata_configuration()','LXD Plugin - Interface info {}'.format(intf_data))
-                dev_name = intf_data.get('int_name')
-                nw_v = json.loads(str(template_vintf % (intf_name, dev_name, mac)))
-                interfaces.append(intf_id)
+
+            #always connect all interfaces to fosbr0
+            real_intf_name = 'fosbr0'
+            nw_v = json.loads(str(template_value_bridge_mac % (intf_name, real_intf_name, mac)))
             devices.update({intf_name: nw_v})
             i += 1
 
