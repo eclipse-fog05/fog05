@@ -270,7 +270,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
     | exn ->
-      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-CREATE-NET - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let bt = Printexc.get_backtrace () in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-CREATE-NET - EXCEPTION: %s TRACE %s " (Printexc.to_string exn) bt) in
       let eval_res = FAgentTypes.{result = None ; error=Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
