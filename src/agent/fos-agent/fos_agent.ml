@@ -2117,4 +2117,6 @@ let info =
   Cmdliner.Term.info "agent" ~version:"%%VERSION%%" ~doc ~exits:Cmdliner.Term.default_exits ~man
 
 
-let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
+let () =
+  Printexc.record_backtrace true;
+  Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
