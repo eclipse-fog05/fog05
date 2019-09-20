@@ -1903,7 +1903,7 @@ module MakeLAD(P: sig val prefix: string end) = struct
 
   let extract_pluginid_from_path path =
     let ps = Yaks.Path.to_string path in
-    Printf.printf "Path is %s" ps;
+    let%lwt _ = Lwt_io.printf "Path is %s" ps in
     List.nth (String.split_on_char '/' ps) 4
 
   let extract_fduid_from_path path =
