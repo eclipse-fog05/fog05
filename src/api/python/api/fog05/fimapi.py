@@ -911,7 +911,7 @@ class FIMAPI(object):
             :param node_uuid: optional node uuid
             :return: dictionary {node uuid: {entity uuid: instance list} list}
             '''
-            [FDU(x) for x in self.connector.glob.actual.get_catalog_all_fdus(self.sysid, self.tenantid)]
+            return self.connector.glob.actual.get_catalog_all_fdus(self.sysid, self.tenantid)
 
 
     class Image(object):
