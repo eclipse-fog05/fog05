@@ -3,7 +3,7 @@
         "system": "0",
         "pid_file": "/var/fos/agent.pid",
         "expose": true,
-        "yaks": "tcp/127.0.0.1:7887",
+        "yaks": "tcp/127.0.0.1:7447",
         "path": "/var/fos",
         "enable_lldp": false,
         "enable_spawner": false,

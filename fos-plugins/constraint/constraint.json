@@ -9,7 +9,7 @@
       ],
       "description": "native fdu plugin",
       "configuration": {
-            "ylocator": "tcp/10.100.1.221:7887",
+            "ylocator": "tcp/10.100.1.221:7447",
             "nodeid": "1",
             "agent": "e0e442af51d14802a9bc71b5e634440e",
             "path": "/var/fos/constraint"

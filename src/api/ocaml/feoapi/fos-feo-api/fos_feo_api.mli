@@ -35,7 +35,7 @@ end
 
 module FEOAPI : sig
 
-  val connect : ?locator:Apero_net.Locator.t -> ?sysid:string -> ?tenantid:string -> unit -> feoapi Lwt.t
+  val connect : ?locator:string -> ?sysid:string -> ?tenantid:string -> unit -> feoapi Lwt.t
   val close : feoapi -> unit Lwt.t
 
 end

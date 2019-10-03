@@ -121,8 +121,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
   List.iter (fun p -> ignore @@ Logs.debug (fun m -> m "[FOS-AGENT] - INIT - %s" p )) (Apero.Option.get_or_default conf.plugins.auto []);
   (* let sys_info = system_info sys_id uuid in *)
   let%lwt yaks = Yaks_connector.get_connector conf in
-  let%lwt fim = Fos_fim_api.FIMAPI.connect ~locator:(Apero.Option.get (Apero_net.Locator.of_string conf.agent.yaks)) () in
-  let%lwt faem = Fos_faem_api.FAEMAPI.connect ~locator:(Apero.Option.get (Apero_net.Locator.of_string conf.agent.yaks)) () in
+  let%lwt fim = Fos_fim_api.FIMAPI.connect ~locator:conf.agent.yaks () in
+  let%lwt faem = Fos_faem_api.FAEMAPI.connect ~locator:conf.agent.yaks () in
   (*
    * Here we should check if state is present in local persistent YAKS and
    * recoved from that
@@ -270,7 +270,8 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
     | exn ->
-      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-CREATE-NET - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let bt = Printexc.get_backtrace () in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-CREATE-NET - EXCEPTION: %s TRACE %s " (Printexc.to_string exn) bt) in
       let eval_res = FAgentTypes.{result = None ; error=Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
@@ -2116,4 +2117,6 @@ let info =
   Cmdliner.Term.info "agent" ~version:"%%VERSION%%" ~doc ~exits:Cmdliner.Term.default_exits ~man
 
 
-let () = Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)
+let () =
+  Printexc.record_backtrace true;
+  Cmdliner.Term.exit @@ Cmdliner.Term.eval (agent_t, info)

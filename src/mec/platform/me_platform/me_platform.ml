@@ -49,7 +49,7 @@ let run_platform mep_id configuration_path =
   try%lwt
     ignore mep_id; ignore configuration_path;
     let%lwt dns_client = DynDNS.create "127.0.0.1" 9999 "http://127.0.0.1:9999" in
-    let%lwt core = MEC_Core.create (Apero.Option.get @@ Apero_net.Locator.of_string "tcp/127.0.0.1:7887") dns_client in
+    let%lwt core = MEC_Core.create "tcp/127.0.0.1:7447" dns_client in
     let%lwt mm5 = Mm5.create "127.0.0.1" "/exampleAPI/mm5/v1/" 8091 core in
     let%lwt mp1 = Mp1.create "127.0.0.1" "/exampleAPI/mp1/v1/" 8081 core in
     Lwt.join [MEC_Core.start core; Mp1.start mp1; Mm5.start mm5]

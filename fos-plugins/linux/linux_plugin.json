@@ -5,7 +5,7 @@
       "type": "os",
       "description": "linux os plugin",
       "configuration": {
-            "ylocator": "tcp/127.0.0.1:7887",
+            "ylocator": "tcp/127.0.0.1:7447",
             "nodeid": "e0e442af51d14802a9bc71b5e634440e",
             "expose": true,
             "update_interval": 5

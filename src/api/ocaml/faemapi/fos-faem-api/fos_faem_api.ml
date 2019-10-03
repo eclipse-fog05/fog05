@@ -13,7 +13,7 @@
 open Fos_im
 open Errors
 
-let ylocator = Apero.Option.get @@ Apero_net.Locator.of_string @@ Apero.Option.get_or_default (Sys.getenv_opt "FOS_YAKS_ENDPOINT") "tcp/127.0.0.1:7887"
+let ylocator = Apero.Option.get_or_default (Sys.getenv_opt "FOS_YAKS_ENDPOINT") "tcp/127.0.0.1:7447"
 let ysystem = Apero.Option.get_or_default (Sys.getenv_opt "FOS_SYS_ID") "0"
 let ytenant = Apero.Option.get_or_default (Sys.getenv_opt "FOS_TENANT_ID") "0"
 
@@ -40,6 +40,7 @@ module AtomicEntity = struct
     | Some js, None, None ->
       Lwt.return @@ User.Descriptors.AtomicEntity.descriptor_of_string (JSON.to_string js)
     | None, Some id, Some msg -> raise @@ FException (`InternalError (`MsgCode (msg,id)))
+    | _ -> raise @@ FException (`InternalError (`MsgCode ("Unknown case",0)))
 
 
   let instantiate ae_id api =
@@ -50,6 +51,7 @@ module AtomicEntity = struct
     | Some js, None, None ->
       Lwt.return @@ Infra.Descriptors.AtomicEntity.record_of_string (JSON.to_string js)
     | None, Some id, Some msg -> raise @@ FException (`InternalError (`MsgCode (msg,id)))
+    | _ -> raise @@ FException (`InternalError (`MsgCode ("Unknown case",0)))
 
   let terminate inst_id api =
     let%lwt nodes = Yaks_connector.Global.Actual.get_all_nodes api.sysid api.tenantid api.yconnector in
@@ -59,6 +61,7 @@ module AtomicEntity = struct
     | Some js, None, None ->
       Lwt.return @@ Infra.Descriptors.AtomicEntity.record_of_string (JSON.to_string js)
     | None, Some id, Some msg -> raise @@ FException (`InternalError (`MsgCode (msg,id)))
+    | _ -> raise @@ FException (`InternalError (`MsgCode ("Unknown case",0)))
 
   let offload ae_id api =
     let%lwt nodes = Yaks_connector.Global.Actual.get_all_nodes api.sysid api.tenantid api.yconnector in
@@ -68,6 +71,7 @@ module AtomicEntity = struct
     | Some js, None, None ->
       Lwt.return @@ User.Descriptors.AtomicEntity.descriptor_of_string (JSON.to_string js)
     | None, Some id, Some msg -> raise @@ FException (`InternalError (`MsgCode (msg,id)))
+    | _ -> raise @@ FException (`InternalError (`MsgCode ("Unknown case",0)))
 
   let get_atomic_entity_descriptor ae_id  api =
     let%lwt res  = Yaks_connector.Global.Actual.get_catalog_atomic_entity_info api.sysid api.tenantid ae_id api.yconnector in
