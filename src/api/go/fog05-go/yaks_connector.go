@@ -670,15 +670,30 @@ func (gad *GAD) ObserveNodeStatus(sysid string, tenantid string, nodeid string, 
 
 // Omiting Entities and Atomic Entities
 
-// GetNodeStatus ...
-func (gad *GAD) GetNodeStatus(sysid string, tenantid string, nodeid string) (*NodeStatus, error) {
-	s, _ := yaks.NewSelector(gad.GetNodeStatusPath(sysid, tenantid, nodeid).ToString())
+// GetCatalogAllFDUs ...
+func (gad *GAD) GetCatalogAllFDUs(sysid string, tenantid string) ([]string, error) {
+	s := gad.GetCatalogAllFDUSelector(sysid, tenantid)
+	kvs := gad.ws.Get(s)
+	if len(kvs) == 0 {
+		return []string{}, nil
+	}
+	var ids []string = []string{}
+	for _, kv := range kvs {
+		p := kv.Path()
+		ids = append(ids, gad.ExtractFDUIDFromPath(p))
+	}
+	return ids, nil
+}
+
+// GetCatalogFDUInfo ...
+func (gad *GAD) GetCatalogFDUInfo(sysid string, tenantid string, fduid string) (*FDU, error) {
+	s, _ := yaks.NewSelector(gad.GetCatalogFDUInfoPath(sysid, tenantid, fduid).ToString())
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
 		return nil, nil
 	}
 	v := kvs[0].Value().ToString()
-	sv := NodeStatus{}
+	sv := FDU{}
 	err := json.Unmarshal([]byte(v), &sv)
 	if err != nil {
 		return nil, err
@@ -686,9 +701,9 @@ func (gad *GAD) GetNodeStatus(sysid string, tenantid string, nodeid string) (*No
 	return &sv, nil
 }
 
-// AddNodeStatus ...
-func (gad *GAD) AddNodeStatus(sysid string, tenantid string, nodeid string, info NodeStatus) error {
-	s := gad.GetNodeStatusPath(sysid, tenantid, nodeid)
+// AddCatalogFDUInfo ...
+func (gad *GAD) AddCatalogFDUInfo(sysid string, tenantid string, fduid string, info FDU) error {
+	s := gad.GetCatalogFDUInfoPath(sysid, tenantid, fduid)
 	v, err := json.Marshal(info)
 	if err != nil {
 		return err
@@ -698,21 +713,21 @@ func (gad *GAD) AddNodeStatus(sysid string, tenantid string, nodeid string, info
 	return err
 }
 
-// RemoveNodeStatus ...
-func (gad *GAD) RemoveNodeStatus(sysid string, tenantid string, nodeid string) error {
-	s := gad.GetNodeStatusPath(sysid, tenantid, nodeid)
+// RemoveCatalogFDUInfo ...
+func (gad *GAD) RemoveCatalogFDUInfo(sysid string, tenantid string, fduid string) error {
+	s := gad.GetNodeStatusPath(sysid, tenantid, fduid)
 	err := gad.ws.Remove(s)
 	return err
 }
 
-// ObserveNodeStatus ...
-func (gad *GAD) ObserveNodeStatus(sysid string, tenantid string, nodeid string, listener func(NodeStatus)) error {
-	s, _ := yaks.NewSelector(gad.GetNodeStatusPath(sysid, tenantid, nodeid).ToString())
+// ObserveCatalogFDUs ...
+func (gad *GAD) ObserveCatalogFDUs(sysid string, tenantid string, fduid string, listener func(FDU)) error {
+	s, _ := yaks.NewSelector(gad.GetCatalogFDUInfoPath(sysid, tenantid, fduid).ToString())
 
 	cb := func(kvs []yaks.Change) {
 		if len(kvs) > 0 {
 			v := kvs[0].Value().ToString()
-			sv := NodeStatus{}
+			sv := FDU{}
 			err := json.Unmarshal([]byte(v), &sv)
 			if err != nil {
 				panic(err.Error())
