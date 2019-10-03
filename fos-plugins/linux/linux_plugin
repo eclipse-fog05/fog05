@@ -471,9 +471,15 @@ class Linux(OSPlugin):
             data = ''
             if root:
                 file_path = 'sudo cat {}'.format(file_path)
+                self.logger.info('read_file()', 'sudo read: {}'.format(file_path))
+
                 p = psutil.Popen(file_path.split(), stdout=PIPE)
+                p.wait()
                 for line in p.stdout:
-                    data = data + '{}'.format(line)
+                    if isinstance(line, bytes):
+                        data = data + line.decode()
+                    else:
+                        data = data + str(line)
             else:
                 with open(file_path, 'r') as f:
                     data = f.read()
@@ -712,6 +718,7 @@ class Linux(OSPlugin):
         else:
             itype = 'unknown'
 
+        self.logger.info('get_intf_type()', 'OS Plugin Interface {} is of type {}'.format(name, itype))
         return {'result':itype}
 
     def __get_processor_name(self):

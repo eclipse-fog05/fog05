@@ -28,7 +28,7 @@ type state = {
   yaks_client : Yaks_api.t
 ; yaks_admin : Yaks.Admin.t
 ; ws : Yaks.Workspace.t
-; listeners : string list
+; listeners : Yaks_api.subid list
 ; evals : Yaks.Path.t list;
 }
 
@@ -36,8 +36,9 @@ type connector = state MVar.t
 
 
 let get_connector (config:configuration)=
-  let loc = Apero.Option.get @@ Apero_net.Locator.of_string config.agent.yaks in
-  let%lwt yclient = Yaks.login loc Apero.Properties.empty in
+  (* let loc = Apero.Option.get @@ Apero_net.Locator.of_string config.agent.yaks in
+     let%lwt yclient = Yaks.login loc Apero.Properties.empty in *)
+  let%lwt yclient = Yaks.login  config.agent.yaks Apero.Properties.empty in
   let%lwt admin = Yaks.admin yclient in
   let%lwt ws = Yaks.workspace (create_path [global_actual_prefix; ""]) yclient in
   Lwt.return @@ MVar.create {  ws = ws
@@ -1083,6 +1084,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     | _ -> let _,v = List.hd kvs in
       Lwt.return @@ Some (Router.descriptor_of_string (Yaks.Value.to_string v))
 
+
   let observe_routers sysid tenantid callback connector =
     MVar.guarded connector @@ fun connector ->
     let s = get_network_routers_selector sysid tenantid in
@@ -1450,7 +1452,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     MVar.read connector >>= fun connector ->
     let s = get_agent_exec_path_with_params sysid tenantid "*" func_name parametes
     in
-    Yaks.Workspace.eval s connector.ws
+    Yaks.Workspace.get s connector.ws
     >>= fun res ->
     match res with
     | [] -> Lwt.return []
@@ -1470,7 +1472,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let fname = "onboard_fdu" in
     let params = [("descriptor",User.Descriptors.FDU.string_of_descriptor fdu_info)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1481,7 +1483,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let fname = "define_fdu" in
     let params = [("fdu_id",fdu_id)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1494,7 +1496,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let fname = "onboard_ae" in
     let params = [("descriptor",User.Descriptors.AtomicEntity.string_of_descriptor ae_info)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1505,7 +1507,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let fname = "instantiate_ae" in
     let params = [("ae_id",ae_id)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1516,7 +1518,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let fname = "offload_ae" in
     let params = [("ae_id",ae_id)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1527,7 +1529,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let fname = "terminate_ae" in
     let params = [("instance_id",ae_inst_id)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1540,7 +1542,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let fname = "onboard_entity" in
     let params = [("descriptor",User.Descriptors.Entity.string_of_descriptor ae_info)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1551,7 +1553,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let fname = "instantiate_entity" in
     let params = [("entity_id",ae_id)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1562,7 +1564,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let fname = "offload_entity" in
     let params = [("entity_id",ae_id)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1573,7 +1575,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let fname = "terminate_entity" in
     let params = [("instance_id",ae_inst_id)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1587,7 +1589,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let fname = "create_cp" in
     let params = [("descriptor",User.Descriptors.Network.string_of_connection_point_descriptor cp)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1598,7 +1600,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let fname = "remove_cp" in
     let params = [("cp_id",cpid)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1609,7 +1611,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let fname = "connect_cp_to_face" in
     let params = [("cp_id",cpid);("instance_id",instanceid);("interface",face)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1620,7 +1622,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let fname = "disconnect_cp_from_face" in
     let params = [("interface",face);("instance_id",instanceid)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1632,7 +1634,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let fname = "add_port_to_network" in
     let params = [("cp_uuid",cpid);("network_uuid",netid)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1643,7 +1645,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let fname = "remove_port_from_network" in
     let params = [("cp_uuid",cpid)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1656,7 +1658,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let fname = "create_node_network" in
     let params = [("descriptor",FTypes.string_of_virtual_network net)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1667,7 +1669,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let fname = "remove_node_netwotk" in
     let params = [("net_id",net_id)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1679,7 +1681,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     MVar.read connector >>= fun connector ->
     let fname = "create_floating_ip" in
     let s = Yaks.Selector.of_path @@ get_agent_exec_path sysid tenantid nodeid fname in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1690,7 +1692,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let fname = "delete_floating_ip" in
     let params = [("ip_id",ip_id)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1701,7 +1703,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let fname = "assign_floating_ip" in
     let params = [("ip_id",ip_id);("cp_id",cp_id)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1712,7 +1714,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let fname = "remove_floating_ip" in
     let params = [("ip_id",ip_id);("cp_id",cp_id)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1735,7 +1737,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
       | None -> parameters
     in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname parameters in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1746,7 +1748,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
     let fname = "remove_router_port" in
     let params = [("router_id", rid); ("vnet_id", vid)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
-    let%lwt res = Yaks.Workspace.eval s connector.ws in
+    let%lwt res = Yaks.Workspace.get s connector.ws in
     match res with
     | [] ->  Lwt.fail @@ FException (`InternalError (`Msg ("Empty value for agent_eval") ))
     | (_,v)::_ ->
@@ -1977,7 +1979,7 @@ module MakeLAD(P: sig val prefix: string end) = struct
       | [] -> get_node_nw_exec_eval  nodeid nm_id func_name
       | _ -> get_node_nw_exec_eval_with_params  nodeid nm_id func_name parametes
     in
-    Yaks.Workspace.eval s connector.ws
+    Yaks.Workspace.get s connector.ws
     >>= fun res ->
     match res with
     | [] -> Lwt.return None
@@ -1995,7 +1997,7 @@ module MakeLAD(P: sig val prefix: string end) = struct
       | [] -> get_node_plugin_eval_path nodeid pluginid func_name
       | _ -> get_node_plugin_eval_path_with_params  nodeid pluginid func_name parametes
     in
-    Yaks.Workspace.eval s connector.ws
+    Yaks.Workspace.get s connector.ws
     >>= fun res ->
     match res with
     | [] -> Lwt.return None

@@ -12,7 +12,7 @@
  *********************************************************************************)
 
 
-type json <ocaml module="Yojson.Safe"> = abstract
+type json <ocaml module="Fos_im.JSON"> = abstract
 
 type add_remove_response = {
   result : string;

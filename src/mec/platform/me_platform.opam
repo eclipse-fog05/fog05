@@ -34,3 +34,7 @@ depends: [
   "fos-im"
   "fos-dns"
 ]
+
+
+synopsis : "Eclipse fog05 - MEC Platform"
+description: """Eclipse fog05 - MEC Platform"""

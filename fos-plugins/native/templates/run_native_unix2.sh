@@ -13,4 +13,5 @@
 #
 # Contributors: Gabriele Baldoni, ADLINK Technology Inc. - Base plugins set
 
-cd {{ path }} && {{ command }} & echo $! > {{outfile}}.pid
+cd {{ path }}
+{{ command }} & echo $! > {{outfile}}.pid

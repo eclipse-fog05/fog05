@@ -19,7 +19,7 @@ type state = {
   yaks_client : Yaks_api.t
 ; yaks_admin : Yaks.Admin.t
 ; ws : Yaks.Workspace.t
-; listeners : string list
+; listeners : Yaks.subid list
 ; evals : Yaks.Path.t list;
 }
 

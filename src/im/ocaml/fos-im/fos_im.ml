@@ -32,8 +32,6 @@ module Router = Router
 
 (* module AtomicEntity = Atomic_entity *)
 
-
-
 module MEC = Mec
 module NFV = Nfv
 module MEC_Interfaces = Mec_interfaces

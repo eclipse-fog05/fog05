@@ -47,7 +47,7 @@ module FOSConn(C : FIM.Conf) : FIM.FIMConn = struct
 
 
   let connect () =
-    let%lwt x = FIMAPI.connect ~locator:(Apero.Option.get (Apero_net.Locator.of_string C.url)) ~sysid:"0" ~tenantid:"0" () in
+    let%lwt x = FIMAPI.connect ~locator:C.url ~sysid:"0" ~tenantid:"0" () in
     Random.self_init ();
     self := Some {client  = x; conf = Fosconn_types.configuration_of_string @@ Yojson.Safe.to_string C.configuration};
     Lwt.return_unit
@@ -123,13 +123,13 @@ module FOSConn(C : FIM.Conf) : FIM.FIMConn = struct
   let get_flavor flv_id =
     let self = Apero.Option.get !self in
     Logs.debug (fun m -> m "[FOSConn] - Get flavor %s" flv_id);
-    let%lwt finfo = Flavor.list self.client >>= Lwt_list.filter_p (fun( x:FDU.computational_requirements) -> Lwt.return @@ ((Apero.Option.get x.uuid) = flv_id)) >>= fun x -> Lwt.return @@ List.hd x in
-    Lwt.return (FDU.string_of_computational_requirements finfo)
+    let%lwt finfo = Flavor.list self.client >>= Lwt_list.filter_p (fun( x:User.Descriptors.FDU.computational_requirements) -> Lwt.return @@ ((Apero.Option.get x.uuid) = flv_id)) >>= fun x -> Lwt.return @@ List.hd x in
+    Lwt.return (User.Descriptors.FDU.string_of_computational_requirements finfo)
 
   let new_flavor flavor_data =
     let self = Apero.Option.get !self in
     Logs.debug (fun m -> m "[FOSConn] - New flavor");
-    let flavor_data = Yojson.Safe.to_string flavor_data |> FDU.computational_requirements_of_string in
+    let flavor_data = Yojson.Safe.to_string flavor_data |> User.Descriptors.FDU.computational_requirements_of_string in
     Flavor.add flavor_data self.client
 
   let delete_flavor flv_id =
@@ -141,14 +141,14 @@ module FOSConn(C : FIM.Conf) : FIM.FIMConn = struct
     let self = Apero.Option.get !self in
     ignore image_data;
     Logs.debug (fun m -> m "[FOSConn] - Add image");
-    let img_data = Yojson.Safe.to_string image_data |> FDU.image_of_string in
+    let img_data = Yojson.Safe.to_string image_data |> User.Descriptors.FDU.image_of_string in
     let%lwt img_id = Image.add  img_data self.client in
     Lwt.return img_id
 
   let get_image_list () =
     let self = Apero.Option.get !self in
     Logs.debug (fun m -> m "[FOSConn] - Get image list");
-    Image.list self.client >>= fun x -> Lwt.return @@ List.map (fun (x:FDU.image) -> Apero.Option.get x.uuid) x
+    Image.list self.client >>= fun x -> Lwt.return @@ List.map (fun (x:User.Descriptors.FDU.image) -> Apero.Option.get x.uuid) x
 
   let new_fdu_instance ~name ~description ~start ~image_id ~flavor_id ~net_list ~cloud_config ~nodeid =
     let self = Apero.Option.get !self in
@@ -162,8 +162,8 @@ module FOSConn(C : FIM.Conf) : FIM.FIMConn = struct
     ignore net_list;
     ignore cloud_config;
 
-    let%lwt image = Image.list self.client >>= Lwt_list.filter_p (fun( x:FDU.image) -> Lwt.return @@ ((Apero.Option.get x.uuid) = image_id)) >>= fun x -> Lwt.return @@ List.hd x in
-    let%lwt comp_requirements = Flavor.list self.client >>= Lwt_list.filter_p (fun( x:FDU.computational_requirements) -> Lwt.return @@ ((Apero.Option.get x.uuid) = flavor_id)) >>= fun x -> Lwt.return @@ List.hd x in
+    let%lwt image = Image.list self.client >>= Lwt_list.filter_p (fun( x:User.Descriptors.FDU.image) -> Lwt.return @@ ((Apero.Option.get x.uuid) = image_id)) >>= fun x -> Lwt.return @@ List.hd x in
+    let%lwt comp_requirements = Flavor.list self.client >>= Lwt_list.filter_p (fun( x:User.Descriptors.FDU.computational_requirements) -> Lwt.return @@ ((Apero.Option.get x.uuid) = flavor_id)) >>= fun x -> Lwt.return @@ List.hd x in
 
     let mgmt_face =
       match self.conf.mgmt_net with
@@ -171,9 +171,9 @@ module FOSConn(C : FIM.Conf) : FIM.FIMConn = struct
         let cp_id = Apero.Uuid.make () |> Apero.Uuid.to_string in
         let pair_id = nid in
         let intf_name = Printf.sprintf "mgmt" in
-        let cp_d = FDU.{uuid = cp_id; pair_id = Some pair_id} in
-        let vif = FDU.{intf_type = `VIRTIO; vpci = "0:0:0"; bandwidth=100} in
-        let faced = FDU.{name=intf_name; is_mgmt=true; if_type=`INTERNAL; virtual_interface=vif; mac_address = None; cp_id = Some cp_id}
+        let cp_d = User.Descriptors.Network.{id = cp_id; name = cp_id; vld_ref = Some pair_id; uuid = None; short_name = None; cp_type = Some `VPORT; port_security_enabled = None } in
+        let vif = User.Descriptors.FDU.{intf_type = `VIRTIO; vpci = "0:0:0"; bandwidth=100} in
+        let faced = User.Descriptors.FDU.{name=intf_name; is_mgmt=true; if_type=`INTERNAL; virtual_interface=vif; mac_address = None; cp_id = Some cp_id}
         in [faced, cp_d]
       | None -> []
     in
@@ -182,9 +182,9 @@ module FOSConn(C : FIM.Conf) : FIM.FIMConn = struct
           let cp_id = Apero.Uuid.make () |> Apero.Uuid.to_string in
           let pair_id = e in
           let intf_name = Printf.sprintf "eth%d" i in
-          let cp_d = FDU.{uuid = cp_id; pair_id = Some pair_id} in
-          let vif = FDU.{intf_type = `VIRTIO; vpci = "0:0:0"; bandwidth=100} in
-          let faced = FDU.{name=intf_name; is_mgmt=false; if_type=`INTERNAL; virtual_interface=vif; mac_address = None; cp_id = Some cp_id}
+          let cp_d = User.Descriptors.Network.{id = cp_id; name = cp_id; vld_ref = Some pair_id; uuid = None; short_name = None; cp_type = Some `VPORT; port_security_enabled = None } in
+          let vif = User.Descriptors.FDU.{intf_type = `VIRTIO; vpci = "0:0:0"; bandwidth=100} in
+          let faced = User.Descriptors.FDU.{name=intf_name; is_mgmt=false; if_type=`INTERNAL; virtual_interface=vif; mac_address = None; cp_id = Some cp_id}
           in faced, cp_d
       ) net_list
     in
@@ -194,7 +194,7 @@ module FOSConn(C : FIM.Conf) : FIM.FIMConn = struct
 
 
 
-    let fdu = FDU.{name; image = Some image; computation_requirements = comp_requirements; geographical_requirements = None;
+    let fdu = User.Descriptors.FDU.{name; image = Some image; computation_requirements = comp_requirements; geographical_requirements = None;
                    energy_requirements = None; hypervisor = (Fos_im.hv_type_of_string (Apero.Option.get_or_default self.conf.hypervisor "LXD"));
                    migration_kind=`LIVE; interfaces=faces; connection_points=cps; configuration = None; io_ports = []; depends_on = []; uuid=None; description= Some description; command = None} in
     let%lwt fduid = Fos_fim_api.FDU.onboard fdu self.client in

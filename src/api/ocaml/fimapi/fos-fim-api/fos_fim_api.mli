@@ -117,7 +117,7 @@ end
 
 module FIMAPI : sig
 
-  val connect : ?locator:Apero_net.Locator.t -> ?sysid:string -> ?tenantid:string -> unit -> api Lwt.t
+  val connect : ?locator:string-> ?sysid:string -> ?tenantid:string -> unit -> api Lwt.t
   val close : api -> unit Lwt.t
 
 end

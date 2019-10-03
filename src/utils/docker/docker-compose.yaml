@@ -12,7 +12,7 @@ services:
   fog05-meao-yaks:
     image: fog05/yaks
     # ports:
-    #   - "7887:7887"
+    #   - "7887:7447"
     networks:
       - netMEAO
   fog05-meao:

@@ -198,13 +198,17 @@ class LinuxBridge(NetworkPlugin):
                 n_small_id = netid.split('-')[0]
                 path = os.path.join(self.BASE_DIR, self.DHCP_DIR)
                 lease_file = os.path.join(path,'net_{}_leases'.format(n_small_id))
-                if self.os.read_file(lease_file):
+                if self.os.file_exists(lease_file):
                     res = self.os.read_file(lease_file).split('\n')
                     for l in res:
                         tok = l.split(' ')
-                        if tok[1] == mac_address:
-                            self.logger.info('get_address()', 'Linux Bridge Plugin - IP address for {} is {}'.format(mac_address, tok[2]))
-                            return {'result': tok[2]}
+                        if len(tok) >= 2:
+                            if tok[1] == mac_address:
+                                self.logger.info('get_address()', 'Linux Bridge Plugin - IP address for {} is {}'.format(mac_address, tok[2]))
+                                return {'result': tok[2]}
+                        else:
+                            self.logger.info('get_address()', 'Linux Bridge Plugin - Unable to get IP address for {} '.format(mac_address))
+                            return {'result': ''}
 
         self.logger.info('get_address()', 'Linux Bridge Plugin - Unable to get IP address for {} '.format(mac_address))
         return {'result': ''}
