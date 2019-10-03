@@ -16,10 +16,10 @@ all:
 	make -C src/api/ocaml/fimapi install
 	make -C src/api/ocaml/faemapi install
 	make -C src/api/ocaml/feoapi install
-	make -C src/agent/;
+	make -C src/agent/
 
 install:
-
+	pip3 install pyangbind pyang
 	make -C src/im/python install
 	make -C src/api/python/api install
 
@@ -29,16 +29,15 @@ ifeq "$(wildcard $(ETC_FOS_DIR))" ""
 endif
 	sudo id -u fos  >/dev/null 2>&1 ||  sudo useradd -r -s /bin/false fos
 	sudo usermod -aG sudo fos
-# ifeq ($(shell uname -m), x86_64)
-# 	# curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/g4tnzvjwlx3zcr2/yaksd.tar.gz
-# 	curl -L -o /etc/fos/yaksd https://github.com/atolab/atobin/raw/master/yaks/latest/ubuntu/16.04/yaksd
-# else ifeq ($(shell uname -m), armv7l)
-# 	curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/lo4s72rc5uoowxw/yaksd_armv7l.tar.gz
-# else ifeq ($(shell uname -m), aarch64)
-# 	curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/j29g35zb9cy28ph/yaksd_arm64.tar.gz
-# endif
-# 	# tar -xzvf /tmp/yaks.tar.gz -C /etc/fos
-# 	# rm -rf /tmp/yaks.tar.gz
+ifeq ($(shell uname -m), x86_64)
+	curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/omlj6chql19g74s/yaks.tar.gz
+else ifeq ($(shell uname -m), armv7l)
+	curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/wi65knmjcj74pgg/yaks.tar.gz
+else ifeq ($(shell uname -m), aarch64)
+	curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/oj4z80c1jwofv2a/yaks.tar.gz
+endif
+	tar -xzvf /tmp/yaks.tar.gz -C /etc/fos
+	rm -rf /tmp/yaks.tar.gz
 
 ifeq "$(wildcard $(VAR_FOS_DIR))" ""
 	sudo mkdir -p /var/fos
@@ -101,6 +100,7 @@ uninstall:
 clean:
 	opam remove fos-im -y
 	make -C src/im/ocaml clean
+	make -C src/im/python clean
 	make -C src/core/ocaml clean
 	make -C src/agent clean
 	make -C src/api/ocaml/fimapi clean
