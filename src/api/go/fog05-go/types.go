@@ -179,3 +179,23 @@ type NodeStatus struct {
 	Disk      []DiskStatus `json:"disk"`
 	Neighbors []Neighbor   `json:"neighbors"`
 }
+
+// Plugin ...
+type Plugin struct {
+	UUID          string   `json:"uuid"`
+	Name          string   `json:"name"`
+	Version       int      `json:"version"`
+	Type          string   `json:"type"`
+	Status        string   `json:"status,omitempty"`
+	Requirements  []string `json:"requirements,omitempty"`
+	Description   string   `json:"description,omitempty"`
+	URL           string   `json:"url,omitempty"`
+	Configuration string   `json:"configuration,omitempty"`
+}
+
+// EvalResult ...
+type EvalResult struct {
+	Result       jsont  `json:"result,omitempty"`
+	Error        int    `json:"error,omitempty"`
+	ErrorMessage string `json:"error_msg,omitempty"`
+}

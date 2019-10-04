@@ -51,3 +51,64 @@ type ConnectionPointRecord struct {
 	Properties          jsont  `json:"properties,omitempty"`
 	Status              string `json:"status"`
 }
+
+// RouterPort ...
+type RouterPort struct {
+	PortType     string `json:"port_type"`
+	VirtualNetID string `json:"vnet_id,omitempty"`
+	IPAddress    string `json:"ip_address,omitempty"`
+}
+
+// RouterDescriptor ...
+type RouterDescriptor struct {
+	UUID  string       `json:"uuid,omitempty"`
+	Ports []RouterPort `json:"ports"`
+}
+
+// RouterPortRecord ...
+type RouterPortRecord struct {
+	PortType     string   `json:"port_type,omitempty"`
+	Faces        []string `json:"faces"`
+	ExternalFace string   `json:"ext_face,omitempty"`
+	IPAddress    string   `json:"ip_address"`
+	PairID       string   `json:"pair_id,omitempty"`
+}
+
+// RouterRecord ...
+type RouterRecord struct {
+	UUID     string             `json:"uuid"`
+	State    string             `json:"state"`
+	Ports    []RouterPortRecord `json:"ports"`
+	RouterNS string             `json:"router_ns"`
+	NodeID   string             `json:"nodeid"`
+}
+
+// VirtualNetwork ...
+type VirtualNetwork struct {
+	UUID             string             `json:"uuid"`
+	Name             string             `json:"name"`
+	NetworkType      string             `json:"net_type"`
+	IsMGMT           string             `json:"is_mgmt"`
+	IPConfiguration  AddressInformation `json:"ip_configuration,omitempty"`
+	Overlay          bool               `json:"overlay,omitempty"`
+	MulticastAddress string             `json:"mcat_addr,omitempty"`
+	VLANID           int                `json:"vlan_id,omitempty"`
+	Face             string             `json:"face,omitempty"`
+}
+
+// FloatingIPDescriptor ...
+type FloatingIPDescriptor struct {
+	UUID      string `json:"uuid"`
+	IPVersion string `json:"ip_version"`
+	Address   string `json:"address"`
+}
+
+// FloatingIPRecord ...
+type FloatingIPRecord struct {
+	UUID        string `json:"uuid"`
+	IPVersion   string `json:"ip_version"`
+	Address     string `json:"address"`
+	Face        string `json:"face"`
+	VirtualFace string `json:"vface"`
+	CPID        string `json:"cp_id"`
+}
