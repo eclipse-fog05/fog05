@@ -1,5 +1,7 @@
 # Eclipse fog05 FIM installation.
 
+
+## Script Installation
 ---
 
 In order to run install Eclipse fog05 as FIM (Fog Infrastrucutre Manager)
@@ -55,6 +57,93 @@ and then edit the LXD plugin configuration file:  `/etc/fos/plugins/LXD/LXD_plug
 
 update the nodeid parameter with the content of `/etc/machine-id`
 this is used to identify the node and to make the plugin connect the right agent.
+
+
+## Manual Installation 
+
+Remove everything:
+
+```
+pip3 uninstall -y fog05 yaks papero 
+
+```
+
+
+Install zenoh API
+
+```
+wget https://github.com/atolab/atobin/blob/master/zenoh-c/unstable/ubuntu/16.04/libzenohc.so
+sudo cp libzenohc.so /usr/local/lib
+git clone https://github.com/atolab/zenoh-python
+cd zenoh-python
+sudo python3 setup.py install
+cd ..
+
+```
+
+Install YAKS API
+
+
+```
+git clone https://github.com/atolab/yaks-python
+cd yaks-python
+sudo make install
+
+```
+
+
+
+Clone fog05
+
+```
+git clone https://github.com/eclipse/fog05 
+cd fog05
+```
+
+Make and install the python types and API
+
+
+```
+sudo pip3 install pyang pyangbind
+make -C src/im/python
+make -C src/im/python install
+make -C src/api/python/api install
+
+```
+
+Copy all the plugins needed plugins in the /etc/fos/plugins directory
+You need to copy all the files except for the configuration ones for each plugins
+
+Update the configuration files of agent `/etc/fos/agent.json` and the one of the plugins `/etc/fos/plugins/<name>/<name>_plugin.json` by replacing the `uuid` with the UUID of the current node from `/etc/machine-id` converted to UUID4 and the IP address of the eventual yaks server in `ylocator`
+
+
+Download and install the agent (this link is for the x86_64 one)
+
+```
+curl -L -o /tmp/agent.tar.gz https://www.dropbox.com/s/y7hvr7j79ibc4pk/fos.tar.gz
+tar -xzvf /tmp/agent.tar.gz
+sudo cp /tmp/agent /etc/fos/agent
+
+```
+
+
+Download and install yaks
+
+
+```
+
+curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/v55js274504z5f5/yaks.tar.gz
+tar -xzvf /tmp/agent.tar.gz
+sudo cp /tmp/zenohd /etc/fos/zenohd
+sudo cp /tmp/yaks-plugin.cmxs /etc/fos/yaks-plugin.cmxs
+sudo cp /tmp/yaksd /etc/fos/yaksd
+```
+
+
+Update your descriptor following: https://github.com/atolab/fog05_demo/blob/master/fim_api/fdu_lxd_net.json
+
+Example of start.py script https://github.com/atolab/fog05_demo/blob/master/fim_api/yaks/start.py
+
 
 
 # Start Eclipse fog05
