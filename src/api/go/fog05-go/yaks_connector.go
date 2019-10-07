@@ -53,6 +53,28 @@ func CreateSelector(tokens []string) *yaks.Selector {
 	return s
 }
 
+// Dict2Args ...
+func Dict2Args(d map[string]interface{}) string {
+
+	var s strings.Builder
+	var i int = 0
+	for k := range d {
+		v := d[k]
+		_, ok := v.(map[string]interface{})
+		if ok {
+			v, _ = json.Marshal(v)
+		}
+		if i == 0 {
+			s.WriteString(fmt.Sprintf("%s=%s", k, v))
+		} else {
+			s.WriteString(fmt.Sprintf(";%s=%s", k, v))
+		}
+		i++
+	}
+
+	return fmt.Sprintf("(%s)", s.String())
+}
+
 // GAD is Global Actual Desired
 type GAD struct {
 	ws        *yaks.Workspace
@@ -352,28 +374,6 @@ func (gad *GAD) GetNodeNetworSelector(sysid string, tenantid string, nodeid stri
 
 // Evals
 
-// Dict2Args ...
-func (gad *GAD) Dict2Args(d map[string]interface{}) string {
-
-	var s strings.Builder
-	var i int = 0
-	for k := range d {
-		v := d[k]
-		_, ok := v.(map[string]interface{})
-		if ok {
-			v, _ = json.Marshal(v)
-		}
-		if i == 0 {
-			s.WriteString(fmt.Sprintf("%s=%s", k, v))
-		} else {
-			s.WriteString(fmt.Sprintf(";%s=%s", k, v))
-		}
-		i++
-	}
-
-	return fmt.Sprintf("(%s)", s.String())
-}
-
 // GetAgentExecPath ...
 func (gad *GAD) GetAgentExecPath(sysid string, tenantid string, nodeid string, funcname string) *yaks.Path {
 	return CreatePath([]string{gad.prefix, sysid, "tenants", tenantid, "nodes", nodeid, "agent", "exec", funcname})
@@ -383,7 +383,7 @@ func (gad *GAD) GetAgentExecPath(sysid string, tenantid string, nodeid string, f
 func (gad *GAD) GetAgentExecSelectorWithParams(sysid string, tenantid string, nodeid string, funcname string, params map[string]interface{}) *yaks.Selector {
 	var f string
 	if len(params) > 0 {
-		p := gad.Dict2Args(params)
+		p := Dict2Args(params)
 		f = fmt.Sprintf("%s?%s", funcname, p)
 	} else {
 		f = funcname
@@ -505,7 +505,7 @@ func (gad *GAD) GetSysInfo(sysid string) (*SystemInfo, error) {
 	s, _ := yaks.NewSelector(gad.GetSysInfoPath(sysid).ToString())
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"Empty sys info", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := SystemInfo{}
@@ -521,7 +521,7 @@ func (gad *GAD) GetSysConfig(sysid string) (*SystemConfig, error) {
 	s, _ := yaks.NewSelector(gad.GetSysConfigurationPath(sysid).ToString())
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"Empty sys config", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := SystemConfig{}
@@ -584,7 +584,7 @@ func (gad *GAD) GetNodeInfo(sysid string, tenantid string, nodeid string) (*Node
 	s, _ := yaks.NewSelector(gad.GetNodeInfoPath(sysid, tenantid, nodeid).ToString())
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"Empty Node Info", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := NodeInfo{}
@@ -619,7 +619,7 @@ func (gad *GAD) GetNodeConfiguration(sysid string, tenantid string, nodeid strin
 	s, _ := yaks.NewSelector(gad.GetNodeConfigurationPath(sysid, tenantid, nodeid).ToString())
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"Empty Node Configuration", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := NodeConfiguration{}
@@ -654,7 +654,7 @@ func (gad *GAD) GetNodeStatus(sysid string, tenantid string, nodeid string) (*No
 	s, _ := yaks.NewSelector(gad.GetNodeStatusPath(sysid, tenantid, nodeid).ToString())
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"Empty Node Status", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := NodeStatus{}
@@ -730,7 +730,7 @@ func (gad *GAD) GetCatalogFDUInfo(sysid string, tenantid string, fduid string) (
 	s, _ := yaks.NewSelector(gad.GetCatalogFDUInfoPath(sysid, tenantid, fduid).ToString())
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"FDU Not Found in catalog", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := FDU{}
@@ -836,7 +836,7 @@ func (gad *GAD) GetNodeFDUInstance(sysid string, tenantid string, nodeid string,
 	s := gad.GetNodeFDUInstanceSelector(sysid, tenantid, nodeid, instanceid)
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"FDU Instance Not Found", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := FDURecord{}
@@ -912,7 +912,7 @@ func (gad *GAD) GetPluginInfo(sysid string, tenantid string, nodeid string, plug
 	s, _ := yaks.NewSelector(gad.GetNodePluginInfoPath(sysid, tenantid, nodeid, pluginid).ToString())
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"Plugin Not found", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := Plugin{}
@@ -981,7 +981,7 @@ func (gad *GAD) GetNetworkPort(sysid string, tenantid string, portid string) (*C
 	s, _ := yaks.NewSelector(gad.GetNetworkPortInfoPath(sysid, tenantid, portid).ToString())
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"Network Port not found", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := ConnectionPointDescriptor{}
@@ -1031,7 +1031,7 @@ func (gad *GAD) GetNetworkRouter(sysid string, tenantid string, portid string) (
 	s, _ := yaks.NewSelector(gad.GetNetworkPortInfoPath(sysid, tenantid, portid).ToString())
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"Network Router not found", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := RouterDescriptor{}
@@ -1081,7 +1081,7 @@ func (gad *GAD) GetNetwork(sysid string, tenantid string, netid string) (*Virtua
 	s, _ := yaks.NewSelector(gad.GetNetworkInfoPath(sysid, tenantid, netid).ToString())
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"Network not found", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := VirtualNetwork{}
@@ -1133,7 +1133,7 @@ func (gad *GAD) GetImage(sysid string, tenantid string, imageid string) (*FDUIma
 	s, _ := yaks.NewSelector(gad.GetImageInfoPath(sysid, tenantid, imageid).ToString())
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"Image not found", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := FDUImage{}
@@ -1185,7 +1185,7 @@ func (gad *GAD) GetNodeImage(sysid string, tenantid string, nodeid string, image
 	s, _ := yaks.NewSelector(gad.GetNodeImageInfoPath(sysid, tenantid, nodeid, imageid).ToString())
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"Image not found", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := FDUImage{}
@@ -1237,7 +1237,7 @@ func (gad *GAD) GetFlavor(sysid string, tenantid string, flvid string) (*FDUComp
 	s, _ := yaks.NewSelector(gad.GetFlavorInfoPath(sysid, tenantid, flvid).ToString())
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"Flavor not found", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := FDUComputationalRequirements{}
@@ -1289,7 +1289,7 @@ func (gad *GAD) GetNodeFlavor(sysid string, tenantid string, nodeid string, flvi
 	s, _ := yaks.NewSelector(gad.GetNodeFlavorInfoPath(sysid, tenantid, nodeid, flvid).ToString())
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"Flavort not found", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := FDUComputationalRequirements{}
@@ -1341,7 +1341,7 @@ func (gad *GAD) GetNodeNetwork(sysid string, tenantid string, nodeid string, net
 	s, _ := yaks.NewSelector(gad.GetNodeNetworkInfoPath(sysid, tenantid, nodeid, netid).ToString())
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"Network not found", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := VirtualNetwork{}
@@ -1391,7 +1391,7 @@ func (gad *GAD) GetNodeFlatingIP(sysid string, tenantid string, nodeid string, f
 	s, _ := yaks.NewSelector(gad.GetNodeNetworkFloatingIPInfoPath(sysid, tenantid, nodeid, floatingid).ToString())
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"Network Floating IP not found", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := FloatingIPRecord{}
@@ -1441,7 +1441,7 @@ func (gad *GAD) GetNodeNetworkPort(sysid string, tenantid string, nodeid string,
 	s, _ := yaks.NewSelector(gad.GetNodeNetworkPortInfoPath(sysid, tenantid, nodeid, portid).ToString())
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"Network Port not found", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := ConnectionPointRecord{}
@@ -1491,7 +1491,7 @@ func (gad *GAD) GetNodeNetworkRouter(sysid string, tenantid string, nodeid strin
 	s, _ := yaks.NewSelector(gad.GetNodeNetworkRouterInfoPath(sysid, tenantid, nodeid, routerid).ToString())
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"Network Router not found", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := RouterRecord{}
@@ -1575,7 +1575,7 @@ func (gad *GAD) AddNodePortToNetwork(sysid string, tenantid string, nodeid strin
 
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"AddNodePortToNetwork function replied nil", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := EvalResult{}
@@ -1598,7 +1598,7 @@ func (gad *GAD) RemoveNodePortFromNetwork(sysid string, tenantid string, nodeid 
 
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"RemoveNodePortFromNetwork function replied nil", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := EvalResult{}
@@ -1618,7 +1618,7 @@ func (gad *GAD) CrateFloatingIPInNode(sysid string, tenantid string, nodeid stri
 
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"CrateFloatingIPInNode function replied nil", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := EvalResult{}
@@ -1641,7 +1641,7 @@ func (gad *GAD) RemoveFloatingIPFromNode(sysid string, tenantid string, nodeid s
 
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"RemoveFloatingIPFromNode function replied nil", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := EvalResult{}
@@ -1665,7 +1665,7 @@ func (gad *GAD) AssignNodeFloatingIP(sysid string, tenantid string, nodeid strin
 
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"AssignNodeFloatingIP function replied nil", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := EvalResult{}
@@ -1689,7 +1689,7 @@ func (gad *GAD) RetainNodeFloatingIP(sysid string, tenantid string, nodeid strin
 
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"RetainNodeFloatingIP function replied nil", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := EvalResult{}
@@ -1719,7 +1719,7 @@ func (gad *GAD) AddPortToRouter(sysid string, tenantid string, nodeid string, ro
 
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"AddPortToRouter function replied nil", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := EvalResult{}
@@ -1743,7 +1743,7 @@ func (gad *GAD) RemovePortFromRouter(sysid string, tenantid string, nodeid strin
 
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"RemovePortFromRouter function replied nil", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := EvalResult{}
@@ -1768,7 +1768,7 @@ func (gad *GAD) OnboardFDUFromNode(sysid string, tenantid string, nodeid string,
 
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"OnboardFDUFromNode function replied nil", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := EvalResult{}
@@ -1791,7 +1791,7 @@ func (gad *GAD) DefineFDUInNode(sysid string, tenantid string, nodeid string, fd
 
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"DefineFDUInNode function replied nil", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := EvalResult{}
@@ -1816,7 +1816,7 @@ func (gad *GAD) CreateNetworkInNode(sysid string, tenantid string, nodeid string
 
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"CreateNetworkInNode function replied nil", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := EvalResult{}
@@ -1839,7 +1839,7 @@ func (gad *GAD) RemoveNetworkFromNode(sysid string, tenantid string, nodeid stri
 
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return nil, nil
+		return nil, &FError{"RemoveNetworkFromNode function replied nil", nil}
 	}
 	v := kvs[0].Value().ToString()
 	sv := EvalResult{}
@@ -1848,4 +1848,1283 @@ func (gad *GAD) RemoveNetworkFromNode(sysid string, tenantid string, nodeid stri
 		return nil, err
 	}
 	return &sv, nil
+}
+
+// LAD is Local Actual Desired
+type LAD struct {
+	ws        *yaks.Workspace
+	prefix    string
+	listeners []*yaks.SubscriptionID
+	evals     []*yaks.Path
+}
+
+// Node
+
+// GetNodeInfoPath ...
+func (lad *LAD) GetNodeInfoPath(nodeid string) *yaks.Path {
+	return CreatePath([]string{lad.prefix, nodeid, "info"})
+}
+
+// GetNodeConfigurationPath ...
+func (lad *LAD) GetNodeConfigurationPath(nodeid string) *yaks.Path {
+	return CreatePath([]string{lad.prefix, nodeid, "configuration"})
+}
+
+// GetNodeStatusPath ...
+func (lad *LAD) GetNodeStatusPath(nodeid string) *yaks.Path {
+	return CreatePath([]string{lad.prefix, nodeid, "status"})
+}
+
+// GetNodePlguinsSelector ...
+func (lad *LAD) GetNodePlguinsSelector(nodeid string) *yaks.Selector {
+	return CreateSelector([]string{lad.prefix, nodeid, "plugins", "*", "info"})
+}
+
+// GetNodePlguinsSubscriberSelector ...
+func (lad *LAD) GetNodePlguinsSubscriberSelector(nodeid string) *yaks.Selector {
+	return CreateSelector([]string{lad.prefix, nodeid, "plugins", "**"})
+}
+
+// GetNodePlguinInfoPath ...
+func (lad *LAD) GetNodePlguinInfoPath(nodeid string, pluginid string) *yaks.Path {
+	return CreatePath([]string{lad.prefix, nodeid, "plugins", pluginid, "info"})
+}
+
+// GetNodeRuntimesSelector ...
+func (lad *LAD) GetNodeRuntimesSelector(nodeid string) *yaks.Selector {
+	return CreateSelector([]string{lad.prefix, nodeid, "runtimes", "**"})
+}
+
+// GetNodeNetworkManagersSelector ...
+func (lad *LAD) GetNodeNetworkManagersSelector(nodeid string) *yaks.Selector {
+	return CreateSelector([]string{lad.prefix, nodeid, "network_managers", "*"})
+}
+
+// Node FDU
+
+// GetNodeRuntimeFDUsSelector ...
+func (lad *LAD) GetNodeRuntimeFDUsSelector(nodeid string, pluginid string) *yaks.Selector {
+	return CreateSelector([]string{lad.prefix, nodeid, "runtimes", pluginid, "fdu", "*", "instances", "*", "info"})
+}
+
+// GetNodeRuntimeFDUsSubcrinerSelector ...
+func (lad *LAD) GetNodeRuntimeFDUsSubcrinerSelector(nodeid string, pluginid string) *yaks.Selector {
+	return CreateSelector([]string{lad.prefix, nodeid, "runtimes", pluginid, "fdu", "*", "instances", "*", "info"})
+}
+
+// GetNodeRuntimeFDUInfoPath ...
+func (lad *LAD) GetNodeRuntimeFDUInfoPath(nodeid string, pluginid string, fduid string, instanceid string) *yaks.Path {
+	return CreatePath([]string{lad.prefix, nodeid, "runtimes", pluginid, "fdu", fduid, "instances", instanceid, "info"})
+}
+
+// GetNodeFDUInstancesSelector ...
+func (lad *LAD) GetNodeFDUInstancesSelector(nodeid string, fduid string) *yaks.Selector {
+	return CreateSelector([]string{lad.prefix, nodeid, "runtimes", "*", "fdu", fduid, "instances", "*", "info"})
+}
+
+// GetNodeFDUInstanceSelector ...
+func (lad *LAD) GetNodeFDUInstanceSelector(nodeid string, instanceid string) *yaks.Selector {
+	return CreateSelector([]string{lad.prefix, nodeid, "runtimes", "*", "fdu", "*", "instances", instanceid, "info"})
+}
+
+// GetNodeFDUIAllnstancesSelector ...
+func (lad *LAD) GetNodeFDUIAllnstancesSelector(nodeid string) *yaks.Selector {
+	return CreateSelector([]string{lad.prefix, nodeid, "runtimes", "*", "fdu", "*", "instances", "*", "info"})
+}
+
+// Node Images
+
+// GetNodeIimageInfoPath ...
+func (lad *LAD) GetNodeIimageInfoPath(nodeid string, pluginid string, imgid string) *yaks.Path {
+	return CreatePath([]string{lad.prefix, nodeid, "runtimes", pluginid, "images", imgid, "info"})
+}
+
+// Node Flavors
+
+// GetNodeFlavorInfoPath ...
+func (lad *LAD) GetNodeFlavorInfoPath(nodeid string, pluginid string, flvid string) *yaks.Path {
+	return CreatePath([]string{lad.prefix, nodeid, "runtimes", pluginid, "flavors", flvid, "info"})
+}
+
+// Node Networks
+
+// GetNodeNetworksSelector ...
+func (lad *LAD) GetNodeNetworksSelector(nodeid string, pluginid string) *yaks.Selector {
+	return CreateSelector([]string{lad.prefix, nodeid, "network_manager", pluginid, "networks", "*", "info"})
+}
+
+// GetNodeNetworksFindSelector ...
+func (lad *LAD) GetNodeNetworksFindSelector(nodeid string, netid string) *yaks.Selector {
+	return CreateSelector([]string{lad.prefix, nodeid, "network_manager", "*", "networks", netid, "info"})
+}
+
+// GetNodeNetworkInfoPath ...
+func (lad *LAD) GetNodeNetworkInfoPath(nodeid string, pluginid string, netid string) *yaks.Path {
+	return CreatePath([]string{lad.prefix, nodeid, "network_manager", pluginid, "networks", netid, "info"})
+}
+
+// GetNodeNetworkPortInfoPath ...
+func (lad *LAD) GetNodeNetworkPortInfoPath(nodeid string, pluginid string, portid string) *yaks.Path {
+	return CreatePath([]string{lad.prefix, nodeid, "network_manager", pluginid, "ports", portid, "info"})
+}
+
+// GetNodeNetworkPortsSelector ...
+func (lad *LAD) GetNodeNetworkPortsSelector(nodeid string, pluginid string) *yaks.Selector {
+	return CreateSelector([]string{lad.prefix, nodeid, "network_manager", pluginid, "ports", "*", "info"})
+}
+
+// GetNodeNetworkRouterInfoPath ...
+func (lad *LAD) GetNodeNetworkRouterInfoPath(nodeid string, pluginid string, routerid string) *yaks.Path {
+	return CreatePath([]string{lad.prefix, nodeid, "network_manager", pluginid, "routers", routerid, "info"})
+}
+
+// GetNodeNetworkRoutersSelector ...
+func (lad *LAD) GetNodeNetworkRoutersSelector(nodeid string, pluginid string) *yaks.Selector {
+	return CreateSelector([]string{lad.prefix, nodeid, "network_manager", pluginid, "routers", "*", "info"})
+}
+
+// GetNodeNetworkFloatingIPInfoPath ...
+func (lad *LAD) GetNodeNetworkFloatingIPInfoPath(nodeid string, pluginid string, ipid string) *yaks.Path {
+	return CreatePath([]string{lad.prefix, nodeid, "network_manager", pluginid, "floating-ips", ipid, "info"})
+}
+
+// GetNodeNetworkFloatingIPsSelector ...
+func (lad *LAD) GetNodeNetworkFloatingIPsSelector(nodeid string, pluginid string) *yaks.Selector {
+	return CreateSelector([]string{lad.prefix, nodeid, "network_manager", pluginid, "floating-ips", "*", "info"})
+}
+
+// Node Evals
+
+// GetAgentExecPath ...
+func (lad *LAD) GetAgentExecPath(nodeid string, funcname string) *yaks.Path {
+	return CreatePath([]string{lad.prefix, nodeid, "agent", "exec", funcname})
+}
+
+// GetAgentExecSelectorWithParams ...
+func (lad *LAD) GetAgentExecSelectorWithParams(nodeid string, funcname string, params map[string]interface{}) *yaks.Selector {
+	var f string
+	if len(params) > 0 {
+		p := Dict2Args(params)
+		f = fmt.Sprintf("%s?%s", funcname, p)
+	} else {
+		f = funcname
+	}
+	return CreateSelector([]string{lad.prefix, nodeid, "agent", "exec", f})
+}
+
+// GetNodeOSExecPath ...
+func (lad *LAD) GetNodeOSExecPath(nodeid string, funcname string) *yaks.Path {
+	return CreatePath([]string{lad.prefix, nodeid, "os", "exec", funcname})
+}
+
+// GetNodeOSExecSelectorWithParams ...
+func (lad *LAD) GetNodeOSExecSelectorWithParams(nodeid string, funcname string, params map[string]interface{}) *yaks.Selector {
+	var f string
+	if len(params) > 0 {
+		p := Dict2Args(params)
+		f = fmt.Sprintf("%s?%s", funcname, p)
+	} else {
+		f = funcname
+	}
+	return CreateSelector([]string{lad.prefix, nodeid, "os", "exec", f})
+}
+
+// GetNodeNMExecPath ...
+func (lad *LAD) GetNodeNMExecPath(nodeid string, pluginid string, funcname string) *yaks.Path {
+	return CreatePath([]string{lad.prefix, nodeid, "network_managers", pluginid, "exec", funcname})
+}
+
+// GetNodeNMExecSelectorWithParams ...
+func (lad *LAD) GetNodeNMExecSelectorWithParams(nodeid string, pluginid string, funcname string, params map[string]interface{}) *yaks.Selector {
+	var f string
+	if len(params) > 0 {
+		p := Dict2Args(params)
+		f = fmt.Sprintf("%s?%s", funcname, p)
+	} else {
+		f = funcname
+	}
+	return CreateSelector([]string{lad.prefix, nodeid, "network_managers", pluginid, "exec", f})
+}
+
+// GetNodePluginEvalPath ...
+func (lad *LAD) GetNodePluginEvalPath(nodeid string, pluginid string, funcname string) *yaks.Path {
+	return CreatePath([]string{lad.prefix, nodeid, "plugins", pluginid, "exec", funcname})
+}
+
+// GetNodePluginEvalSelectorWithParams ...
+func (lad *LAD) GetNodePluginEvalSelectorWithParams(nodeid string, pluginid string, funcname string, params map[string]interface{}) *yaks.Selector {
+	var f string
+	if len(params) > 0 {
+		p := Dict2Args(params)
+		f = fmt.Sprintf("%s?%s", funcname, p)
+	} else {
+		f = funcname
+	}
+	return CreateSelector([]string{lad.prefix, nodeid, "plugins", pluginid, "exec", f})
+}
+
+// GetNodeOSInfoPath ...
+func (lad *LAD) GetNodeOSInfoPath(nodeid string) *yaks.Path {
+	return CreatePath([]string{lad.prefix, nodeid, "os", "info"})
+}
+
+// ID Extraction
+
+// ExtractNodeIDFromPath ...
+func (lad *LAD) ExtractNodeIDFromPath(path *yaks.Path) string {
+	return strings.Split(path.ToString(), URISeparator)[2]
+}
+
+// ExtractPluginIDFromPath ...
+func (lad *LAD) ExtractPluginIDFromPath(path *yaks.Path) string {
+	return strings.Split(path.ToString(), URISeparator)[4]
+}
+
+// ExtractNodeFDUIDFromPath ...
+func (lad *LAD) ExtractNodeFDUIDFromPath(path *yaks.Path) string {
+	return strings.Split(path.ToString(), URISeparator)[6]
+}
+
+// ExtractNodeInstanceIDFromPath ...
+func (lad *LAD) ExtractNodeInstanceIDFromPath(path *yaks.Path) string {
+	return strings.Split(path.ToString(), URISeparator)[8]
+}
+
+// ExtractNodeRouterIDFromPath ...
+func (lad *LAD) ExtractNodeRouterIDFromPath(path *yaks.Path) string {
+	return strings.Split(path.ToString(), URISeparator)[6]
+}
+
+// ExtractNodeNetworkIDFromPath ...
+func (lad *LAD) ExtractNodeNetworkIDFromPath(path *yaks.Path) string {
+	return strings.Split(path.ToString(), URISeparator)[6]
+}
+
+// ExtractNodePortIDFromPath ...
+func (lad *LAD) ExtractNodePortIDFromPath(path *yaks.Path) string {
+	return strings.Split(path.ToString(), URISeparator)[6]
+}
+
+// ExtractNodeFloatingIPIDFromPath ...
+func (lad *LAD) ExtractNodeFloatingIPIDFromPath(path *yaks.Path) string {
+	return strings.Split(path.ToString(), URISeparator)[6]
+}
+
+// Node Evals
+
+// AddOSEval ...
+func (lad *LAD) AddOSEval(nodeid string, funcname string, evalcb func(yaks.Properties) interface{}) error {
+	s := lad.GetNodeOSExecPath(nodeid, funcname)
+
+	cb := func(path *yaks.Path, props yaks.Properties) yaks.Value {
+		v, _ := json.Marshal(evalcb(props))
+		sv := yaks.NewStringValue(string(v))
+		return sv
+	}
+
+	err := lad.ws.RegisterEval(s, cb)
+	lad.evals = append(lad.evals, s)
+	return err
+}
+
+// AddNMEval ...
+func (lad *LAD) AddNMEval(nodeid string, pluginid string, funcname string, evalcb func(yaks.Properties) interface{}) error {
+	s := lad.GetNodeNMExecPath(nodeid, pluginid, funcname)
+
+	cb := func(path *yaks.Path, props yaks.Properties) yaks.Value {
+		v, _ := json.Marshal(evalcb(props))
+		sv := yaks.NewStringValue(string(v))
+		return sv
+	}
+
+	err := lad.ws.RegisterEval(s, cb)
+	lad.evals = append(lad.evals, s)
+	return err
+}
+
+// AddPluginEval ...
+func (lad *LAD) AddPluginEval(nodeid string, pluginid string, funcname string, evalcb func(yaks.Properties) interface{}) error {
+	s := lad.GetNodePluginEvalPath(nodeid, pluginid, funcname)
+
+	cb := func(path *yaks.Path, props yaks.Properties) yaks.Value {
+		v, _ := json.Marshal(evalcb(props))
+		sv := yaks.NewStringValue(string(v))
+		return sv
+	}
+
+	err := lad.ws.RegisterEval(s, cb)
+	lad.evals = append(lad.evals, s)
+	return err
+}
+
+// ExecAgentEval ...
+func (lad *LAD) ExecAgentEval(nodeid string, fname string, props map[string]interface{}) (*EvalResult, error) {
+
+	var s *yaks.Selector
+	if len(props) == 0 {
+		s, _ = yaks.NewSelector(lad.GetAgentExecPath(nodeid, fname).ToString())
+	} else {
+		s = lad.GetAgentExecSelectorWithParams(nodeid, fname, props)
+	}
+
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return nil, &FError{"ExecAgentEval function replied nil", nil}
+	}
+	v := kvs[0].Value().ToString()
+	sv := EvalResult{}
+	err := json.Unmarshal([]byte(v), &sv)
+	if err != nil {
+		return nil, err
+	}
+	return &sv, nil
+}
+
+// ExecOSEval ...
+func (lad *LAD) ExecOSEval(nodeid string, fname string, props map[string]interface{}) (*EvalResult, error) {
+
+	var s *yaks.Selector
+	if len(props) == 0 {
+		s, _ = yaks.NewSelector(lad.GetNodeOSExecPath(nodeid, fname).ToString())
+	} else {
+		s = lad.GetNodeOSExecSelectorWithParams(nodeid, fname, props)
+	}
+
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return nil, &FError{"ExecOSEval function replied nil", nil}
+	}
+	v := kvs[0].Value().ToString()
+	sv := EvalResult{}
+	err := json.Unmarshal([]byte(v), &sv)
+	if err != nil {
+		return nil, err
+	}
+	return &sv, nil
+}
+
+// ExecNMEval ...
+func (lad *LAD) ExecNMEval(nodeid string, pluginid string, fname string, props map[string]interface{}) (*EvalResult, error) {
+
+	var s *yaks.Selector
+	if len(props) == 0 {
+		s, _ = yaks.NewSelector(lad.GetNodeNMExecPath(nodeid, pluginid, fname).ToString())
+	} else {
+		s = lad.GetNodeNMExecSelectorWithParams(nodeid, pluginid, fname, props)
+	}
+
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return nil, &FError{"ExecNMEval function replied nil", nil}
+	}
+	v := kvs[0].Value().ToString()
+	sv := EvalResult{}
+	err := json.Unmarshal([]byte(v), &sv)
+	if err != nil {
+		return nil, err
+	}
+	return &sv, nil
+}
+
+// ExecPluginEval ...
+func (lad *LAD) ExecPluginEval(nodeid string, pluginid string, fname string, props map[string]interface{}) (*EvalResult, error) {
+
+	var s *yaks.Selector
+	if len(props) == 0 {
+		s, _ = yaks.NewSelector(lad.GetNodePluginEvalPath(nodeid, pluginid, fname).ToString())
+	} else {
+		s = lad.GetNodePluginEvalSelectorWithParams(nodeid, pluginid, fname, props)
+	}
+
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return nil, &FError{"ExecPluginEval function replied nil", nil}
+	}
+	v := kvs[0].Value().ToString()
+	sv := EvalResult{}
+	err := json.Unmarshal([]byte(v), &sv)
+	if err != nil {
+		return nil, err
+	}
+	return &sv, nil
+}
+
+// Node
+
+// AddNodePlugin ...
+func (lad *LAD) AddNodePlugin(nodeid string, pluginid string, info Plugin) error {
+	s := lad.GetNodePlguinInfoPath(nodeid, pluginid)
+	v, err := json.Marshal(info)
+	if err != nil {
+		return err
+	}
+	sv := yaks.NewStringValue(string(v))
+	err = lad.ws.Put(s, sv)
+	return err
+}
+
+// GetAllPlugins ...
+func (lad *LAD) GetAllPlugins(nodeid string) ([]string, error) {
+	s := lad.GetNodePlguinsSelector(nodeid)
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return []string{}, nil
+	}
+	var ids []string = []string{}
+	for _, kv := range kvs {
+		p := kv.Path()
+		ids = append(ids, lad.ExtractPluginIDFromPath(p))
+	}
+	return ids, nil
+}
+
+// GetNodePlugin ...
+func (lad *LAD) GetNodePlugin(nodeid string, pluginid string) (*Plugin, error) {
+	s, _ := yaks.NewSelector(lad.GetNodePlguinInfoPath(nodeid, pluginid).ToString())
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return nil, &FError{"Plugin not Found", nil}
+	}
+	v := kvs[0].Value().ToString()
+	sv := Plugin{}
+	err := json.Unmarshal([]byte(v), &sv)
+	if err != nil {
+		return nil, err
+	}
+	return &sv, nil
+}
+
+// AddNodeInformation ...
+func (lad *LAD) AddNodeInformation(nodeid string, info NodeInfo) error {
+	s := lad.GetNodeInfoPath(nodeid)
+	v, err := json.Marshal(info)
+	if err != nil {
+		return err
+	}
+	sv := yaks.NewStringValue(string(v))
+	err = lad.ws.Put(s, sv)
+	return err
+}
+
+// RemoveNodeInformation ...
+func (lad *LAD) RemoveNodeInformation(nodeid string) error {
+	s := lad.GetNodeInfoPath(nodeid)
+	err := lad.ws.Remove(s)
+	return err
+}
+
+// GetNodeInformation ...
+func (lad *LAD) GetNodeInformation(nodeid string) (*NodeInfo, error) {
+	s, _ := yaks.NewSelector(lad.GetNodeInfoPath(nodeid).ToString())
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return nil, &FError{"Node information emtpy", nil}
+	}
+	v := kvs[0].Value().ToString()
+	sv := NodeInfo{}
+	err := json.Unmarshal([]byte(v), &sv)
+	if err != nil {
+		return nil, err
+	}
+	return &sv, nil
+}
+
+// ObserveNodeInformation ...
+func (lad *LAD) ObserveNodeInformation(nodeid string, listener func(NodeInfo)) error {
+	s, _ := yaks.NewSelector(lad.GetNodeInfoPath(nodeid).ToString())
+
+	cb := func(kvs []yaks.Change) {
+		if len(kvs) > 0 {
+			v := kvs[0].Value().ToString()
+			sv := NodeInfo{}
+			err := json.Unmarshal([]byte(v), &sv)
+			if err != nil {
+				panic(err.Error())
+			}
+			listener(sv)
+		}
+	}
+
+	sid, err := lad.ws.Subscribe(s, cb)
+	if err != nil {
+		return err
+	}
+	lad.listeners = append(lad.listeners, sid)
+	return nil
+}
+
+// AddNodeStatus ...
+func (lad *LAD) AddNodeStatus(nodeid string, info NodeStatus) error {
+	s := lad.GetNodeStatusPath(nodeid)
+	v, err := json.Marshal(info)
+	if err != nil {
+		return err
+	}
+	sv := yaks.NewStringValue(string(v))
+	err = lad.ws.Put(s, sv)
+	return err
+}
+
+// RemoveNodeStatus ...
+func (lad *LAD) RemoveNodeStatus(nodeid string) error {
+	s := lad.GetNodeStatusPath(nodeid)
+	err := lad.ws.Remove(s)
+	return err
+}
+
+// GetNodeStatus ...
+func (lad *LAD) GetNodeStatus(nodeid string) (*NodeStatus, error) {
+	s, _ := yaks.NewSelector(lad.GetNodeStatusPath(nodeid).ToString())
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return nil, &FError{"Node status emtpy", nil}
+	}
+	v := kvs[0].Value().ToString()
+	sv := NodeStatus{}
+	err := json.Unmarshal([]byte(v), &sv)
+	if err != nil {
+		return nil, err
+	}
+	return &sv, nil
+}
+
+// ObserveNodeStatus ...
+func (lad *LAD) ObserveNodeStatus(nodeid string, listener func(NodeStatus)) error {
+	s, _ := yaks.NewSelector(lad.GetNodeStatusPath(nodeid).ToString())
+
+	cb := func(kvs []yaks.Change) {
+		if len(kvs) > 0 {
+			v := kvs[0].Value().ToString()
+			sv := NodeStatus{}
+			err := json.Unmarshal([]byte(v), &sv)
+			if err != nil {
+				panic(err.Error())
+			}
+			listener(sv)
+		}
+	}
+
+	sid, err := lad.ws.Subscribe(s, cb)
+	if err != nil {
+		return err
+	}
+	lad.listeners = append(lad.listeners, sid)
+	return nil
+}
+
+// AddNodeConfiguration ...
+func (lad *LAD) AddNodeConfiguration(nodeid string, info NodeConfiguration) error {
+	s := lad.GetNodeConfigurationPath(nodeid)
+	v, err := json.Marshal(info)
+	if err != nil {
+		return err
+	}
+	sv := yaks.NewStringValue(string(v))
+	err = lad.ws.Put(s, sv)
+	return err
+}
+
+// RemoveNodeConfiguration ...
+func (lad *LAD) RemoveNodeConfiguration(nodeid string) error {
+	s := lad.GetNodeConfigurationPath(nodeid)
+	err := lad.ws.Remove(s)
+	return err
+}
+
+// GetNodeConfiguration ...
+func (lad *LAD) GetNodeConfiguration(nodeid string) (*NodeConfiguration, error) {
+	s, _ := yaks.NewSelector(lad.GetNodeConfigurationPath(nodeid).ToString())
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return nil, &FError{"Node configuration emtpy", nil}
+	}
+	v := kvs[0].Value().ToString()
+	sv := NodeConfiguration{}
+	err := json.Unmarshal([]byte(v), &sv)
+	if err != nil {
+		return nil, err
+	}
+	return &sv, nil
+}
+
+// ObserveNodeConfiguration ...
+func (lad *LAD) ObserveNodeConfiguration(nodeid string, listener func(NodeConfiguration)) error {
+	s, _ := yaks.NewSelector(lad.GetNodeConfigurationPath(nodeid).ToString())
+
+	cb := func(kvs []yaks.Change) {
+		if len(kvs) > 0 {
+			v := kvs[0].Value().ToString()
+			sv := NodeConfiguration{}
+			err := json.Unmarshal([]byte(v), &sv)
+			if err != nil {
+				panic(err.Error())
+			}
+			listener(sv)
+		}
+	}
+
+	sid, err := lad.ws.Subscribe(s, cb)
+	if err != nil {
+		return err
+	}
+	lad.listeners = append(lad.listeners, sid)
+	return nil
+}
+
+// ObserveNodePlugins ...
+func (lad *LAD) ObserveNodePlugins(nodeid string, listener func(Plugin)) error {
+	s := lad.GetNodePlguinsSelector(nodeid)
+
+	cb := func(kvs []yaks.Change) {
+		if len(kvs) > 0 {
+			v := kvs[0].Value().ToString()
+			sv := Plugin{}
+			err := json.Unmarshal([]byte(v), &sv)
+			if err != nil {
+				panic(err.Error())
+			}
+			listener(sv)
+		}
+	}
+
+	sid, err := lad.ws.Subscribe(s, cb)
+	if err != nil {
+		return err
+	}
+	lad.listeners = append(lad.listeners, sid)
+	return nil
+}
+
+// AddNodeOSInfo ...
+func (lad *LAD) AddNodeOSInfo(nodeid string, info map[string]interface{}) error {
+	s := lad.GetNodeOSInfoPath(nodeid)
+	v, err := json.Marshal(info)
+	if err != nil {
+		return err
+	}
+	sv := yaks.NewStringValue(string(v))
+	err = lad.ws.Put(s, sv)
+	return err
+}
+
+// RemoveNodeOSInfo ...
+func (lad *LAD) RemoveNodeOSInfo(nodeid string) error {
+	s := lad.GetNodeOSInfoPath(nodeid)
+	err := lad.ws.Remove(s)
+	return err
+}
+
+// GetNodeOSInfo ...
+func (lad *LAD) GetNodeOSInfo(nodeid string) (*map[string]interface{}, error) {
+	s, _ := yaks.NewSelector(lad.GetNodeOSInfoPath(nodeid).ToString())
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return nil, &FError{"Node OS info emtpy", nil}
+	}
+	v := kvs[0].Value().ToString()
+	sv := map[string]interface{}{}
+	err := json.Unmarshal([]byte(v), &sv)
+	if err != nil {
+		return nil, err
+	}
+	return &sv, nil
+}
+
+// ObserveNodeOSInfo ...
+func (lad *LAD) ObserveNodeOSInfo(nodeid string, listener func(map[string]interface{})) error {
+	s, _ := yaks.NewSelector(lad.GetNodeInfoPath(nodeid).ToString())
+
+	cb := func(kvs []yaks.Change) {
+		if len(kvs) > 0 {
+			v := kvs[0].Value().ToString()
+			sv := map[string]interface{}{}
+			err := json.Unmarshal([]byte(v), &sv)
+			if err != nil {
+				panic(err.Error())
+			}
+			listener(sv)
+		}
+	}
+
+	sid, err := lad.ws.Subscribe(s, cb)
+	if err != nil {
+		return err
+	}
+	lad.listeners = append(lad.listeners, sid)
+	return nil
+}
+
+// Node FDU
+
+// AddNodeFDU ...
+func (lad *LAD) AddNodeFDU(nodeid string, pluginid string, fduid string, instanceid string, info FDURecord) error {
+	s := lad.GetNodeRuntimeFDUInfoPath(nodeid, pluginid, fduid, instanceid)
+	v, err := json.Marshal(info)
+	if err != nil {
+		return err
+	}
+	sv := yaks.NewStringValue(string(v))
+	err = lad.ws.Put(s, sv)
+	return err
+}
+
+// RemoveNodeFDU ...
+func (lad *LAD) RemoveNodeFDU(nodeid string, pluginid string, fduid string, instanceid string) error {
+	s := lad.GetNodeRuntimeFDUInfoPath(nodeid, pluginid, fduid, instanceid)
+	err := lad.ws.Remove(s)
+	return err
+}
+
+// GetNodeFDU ...
+func (lad *LAD) GetNodeFDU(nodeid string, pluginid string, fduid string, instanceid string) (*FDURecord, error) {
+	s, _ := yaks.NewSelector(lad.GetNodeRuntimeFDUInfoPath(nodeid, pluginid, fduid, instanceid).ToString())
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return nil, &FError{"FDU Not found", nil}
+	}
+	v := kvs[0].Value().ToString()
+	sv := FDURecord{}
+	err := json.Unmarshal([]byte(v), &sv)
+	if err != nil {
+		return nil, err
+	}
+	return &sv, nil
+}
+
+// GetNodeFDUInstances ...
+func (lad *LAD) GetNodeFDUInstances(nodeid string, fduid string) ([]string, error) {
+	s := lad.GetNodeFDUInstancesSelector(nodeid, fduid)
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return []string{}, nil
+	}
+	var ids []string = []string{}
+	for _, kv := range kvs {
+		p := kv.Path()
+		ids = append(ids, lad.ExtractNodeInstanceIDFromPath(p))
+	}
+	return ids, nil
+}
+
+// GetNodeAllFDUsInstances ...
+func (lad *LAD) GetNodeAllFDUsInstances(nodeid string) ([]FDURecord, error) {
+	s := lad.GetNodeFDUIAllnstancesSelector(nodeid)
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return []FDURecord{}, nil
+	}
+	var instances []FDURecord = []FDURecord{}
+	for _, kv := range kvs {
+		v := kv.Value().ToString()
+		sv := FDURecord{}
+		err := json.Unmarshal([]byte(v), &sv)
+		if err != nil {
+			return nil, err
+		}
+		instances = append(instances, sv)
+	}
+	return instances, nil
+}
+
+// ObserveNodeRuntimeFDU ...
+func (lad *LAD) ObserveNodeRuntimeFDU(nodeid string, pluginid string, listener func(FDURecord)) error {
+	s := lad.GetNodeRuntimeFDUsSelector(nodeid, pluginid)
+
+	cb := func(kvs []yaks.Change) {
+		if len(kvs) > 0 {
+			v := kvs[0].Value().ToString()
+			sv := FDURecord{}
+			err := json.Unmarshal([]byte(v), &sv)
+			if err != nil {
+				panic(err.Error())
+			}
+			listener(sv)
+		}
+	}
+
+	sid, err := lad.ws.Subscribe(s, cb)
+	if err != nil {
+		return err
+	}
+	lad.listeners = append(lad.listeners, sid)
+	return nil
+}
+
+// Node Images
+
+// AddNodeImage ...
+func (lad *LAD) AddNodeImage(nodeid string, pluginid string, imgid string, info FDUImage) error {
+	s := lad.GetNodeIimageInfoPath(nodeid, pluginid, imgid)
+	v, err := json.Marshal(info)
+	if err != nil {
+		return err
+	}
+	sv := yaks.NewStringValue(string(v))
+	err = lad.ws.Put(s, sv)
+	return err
+}
+
+// RemoveNodeImage ...
+func (lad *LAD) RemoveNodeImage(nodeid string, pluginid string, imgid string) error {
+	s := lad.GetNodeIimageInfoPath(nodeid, pluginid, imgid)
+	err := lad.ws.Remove(s)
+	return err
+}
+
+// GetNodeImage ...
+func (lad *LAD) GetNodeImage(nodeid string, pluginid string, imgid string) (*FDUImage, error) {
+	s, _ := yaks.NewSelector(lad.GetNodeIimageInfoPath(nodeid, pluginid, imgid).ToString())
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return nil, &FError{"Image Not found", nil}
+	}
+	v := kvs[0].Value().ToString()
+	sv := FDUImage{}
+	err := json.Unmarshal([]byte(v), &sv)
+	if err != nil {
+		return nil, err
+	}
+	return &sv, nil
+}
+
+// Node Flavors
+
+// AddNodeFlavor ...
+func (lad *LAD) AddNodeFlavor(nodeid string, pluginid string, flvid string, info FDUComputationalRequirements) error {
+	s := lad.GetNodeFlavorInfoPath(nodeid, pluginid, flvid)
+	v, err := json.Marshal(info)
+	if err != nil {
+		return err
+	}
+	sv := yaks.NewStringValue(string(v))
+	err = lad.ws.Put(s, sv)
+	return err
+}
+
+// RemoveNodeFlavor ...
+func (lad *LAD) RemoveNodeFlavor(nodeid string, pluginid string, flvid string) error {
+	s := lad.GetNodeFlavorInfoPath(nodeid, pluginid, flvid)
+	err := lad.ws.Remove(s)
+	return err
+}
+
+// GetNodeFlavor ...
+func (lad *LAD) GetNodeFlavor(nodeid string, pluginid string, flvid string) (*FDUComputationalRequirements, error) {
+	s, _ := yaks.NewSelector(lad.GetNodeIimageInfoPath(nodeid, pluginid, flvid).ToString())
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return nil, &FError{"Flavor Not found", nil}
+	}
+	v := kvs[0].Value().ToString()
+	sv := FDUComputationalRequirements{}
+	err := json.Unmarshal([]byte(v), &sv)
+	if err != nil {
+		return nil, err
+	}
+	return &sv, nil
+}
+
+// Node Network
+
+// AddNodeNetwork ...
+func (lad *LAD) AddNodeNetwork(nodeid string, pluginid string, netid string, info VirtualNetwork) error {
+	s := lad.GetNodeNetworkInfoPath(nodeid, pluginid, netid)
+	v, err := json.Marshal(info)
+	if err != nil {
+		return err
+	}
+	sv := yaks.NewStringValue(string(v))
+	err = lad.ws.Put(s, sv)
+	return err
+}
+
+// RemoveNodeNetwork ...
+func (lad *LAD) RemoveNodeNetwork(nodeid string, pluginid string, netid string) error {
+	s := lad.GetNodeNetworkInfoPath(nodeid, pluginid, netid)
+	err := lad.ws.Remove(s)
+	return err
+}
+
+// GetNodeNetwork ...
+func (lad *LAD) GetNodeNetwork(nodeid string, pluginid string, netid string) (*VirtualNetwork, error) {
+	s, _ := yaks.NewSelector(lad.GetNodeNetworkInfoPath(nodeid, pluginid, netid).ToString())
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return nil, &FError{"Network Not found", nil}
+	}
+	v := kvs[0].Value().ToString()
+	sv := VirtualNetwork{}
+	err := json.Unmarshal([]byte(v), &sv)
+	if err != nil {
+		return nil, err
+	}
+	return &sv, nil
+}
+
+// FindNodeNetwork ...
+func (lad *LAD) FindNodeNetwork(nodeid string, netid string) (*VirtualNetwork, error) {
+	s := lad.GetNodeNetworksFindSelector(nodeid, netid)
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return nil, &FError{"Network Not found", nil}
+	}
+	v := kvs[0].Value().ToString()
+	sv := VirtualNetwork{}
+	err := json.Unmarshal([]byte(v), &sv)
+	if err != nil {
+		return nil, err
+	}
+	return &sv, nil
+}
+
+// GetAllNodeNetworks ...
+func (lad *LAD) GetAllNodeNetworks(nodeid string, plugindid string) ([]VirtualNetwork, error) {
+	var nets []VirtualNetwork = []VirtualNetwork{}
+	s := lad.GetNodeNetworksSelector(nodeid, plugindid)
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return nets, nil
+	}
+
+	for _, kv := range kvs {
+		v := kv.Value().ToString()
+		sv := VirtualNetwork{}
+		err := json.Unmarshal([]byte(v), &sv)
+		if err != nil {
+			return nil, err
+		}
+		nets = append(nets, sv)
+	}
+	return nets, nil
+}
+
+// ObserveNodeNetworks ...
+func (lad *LAD) ObserveNodeNetworks(nodeid string, pluginid string, listener func(VirtualNetwork)) error {
+	s := lad.GetNodeNetworksSelector(nodeid, pluginid)
+
+	cb := func(kvs []yaks.Change) {
+		if len(kvs) > 0 {
+			v := kvs[0].Value().ToString()
+			sv := VirtualNetwork{}
+			err := json.Unmarshal([]byte(v), &sv)
+			if err != nil {
+				panic(err.Error())
+			}
+			listener(sv)
+		}
+	}
+
+	sid, err := lad.ws.Subscribe(s, cb)
+	if err != nil {
+		return err
+	}
+	lad.listeners = append(lad.listeners, sid)
+	return nil
+}
+
+// AddNodePort ...
+func (lad *LAD) AddNodePort(nodeid string, pluginid string, portid string, info ConnectionPointDescriptor) error {
+	s := lad.GetNodeNetworkPortInfoPath(nodeid, pluginid, portid)
+	v, err := json.Marshal(info)
+	if err != nil {
+		return err
+	}
+	sv := yaks.NewStringValue(string(v))
+	err = lad.ws.Put(s, sv)
+	return err
+}
+
+// RemoveNodePort ...
+func (lad *LAD) RemoveNodePort(nodeid string, pluginid string, portid string) error {
+	s := lad.GetNodeNetworkPortInfoPath(nodeid, pluginid, portid)
+	err := lad.ws.Remove(s)
+	return err
+}
+
+// GetNodePort ...
+func (lad *LAD) GetNodePort(nodeid string, pluginid string, portid string) (*ConnectionPointDescriptor, error) {
+	s, _ := yaks.NewSelector(lad.GetNodeNetworkInfoPath(nodeid, pluginid, portid).ToString())
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return nil, &FError{"Port Not found", nil}
+	}
+	v := kvs[0].Value().ToString()
+	sv := ConnectionPointDescriptor{}
+	err := json.Unmarshal([]byte(v), &sv)
+	if err != nil {
+		return nil, err
+	}
+	return &sv, nil
+}
+
+// GetAllNodePorts ...
+func (lad *LAD) GetAllNodePorts(nodeid string, plugindid string) ([]ConnectionPointDescriptor, error) {
+	s := lad.GetNodeNetworksSelector(nodeid, plugindid)
+	var ports []ConnectionPointDescriptor = []ConnectionPointDescriptor{}
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return ports, nil
+	}
+
+	for _, kv := range kvs {
+		v := kv.Value().ToString()
+		sv := ConnectionPointDescriptor{}
+		err := json.Unmarshal([]byte(v), &sv)
+		if err != nil {
+			return nil, err
+		}
+		ports = append(ports, sv)
+	}
+	return ports, nil
+}
+
+// ObserveNodePorts ...
+func (lad *LAD) ObserveNodePorts(nodeid string, pluginid string, listener func(ConnectionPointDescriptor)) error {
+	s := lad.GetNodeNetworkPortsSelector(nodeid, pluginid)
+
+	cb := func(kvs []yaks.Change) {
+		if len(kvs) > 0 {
+			v := kvs[0].Value().ToString()
+			sv := ConnectionPointDescriptor{}
+			err := json.Unmarshal([]byte(v), &sv)
+			if err != nil {
+				panic(err.Error())
+			}
+			listener(sv)
+		}
+	}
+
+	sid, err := lad.ws.Subscribe(s, cb)
+	if err != nil {
+		return err
+	}
+	lad.listeners = append(lad.listeners, sid)
+	return nil
+}
+
+// AddNodeRouter ...
+func (lad *LAD) AddNodeRouter(nodeid string, pluginid string, routerid string, info RouterRecord) error {
+	s := lad.GetNodeNetworkRouterInfoPath(nodeid, pluginid, routerid)
+	v, err := json.Marshal(info)
+	if err != nil {
+		return err
+	}
+	sv := yaks.NewStringValue(string(v))
+	err = lad.ws.Put(s, sv)
+	return err
+}
+
+// RemoveNodeRouter ...
+func (lad *LAD) RemoveNodeRouter(nodeid string, pluginid string, routerid string) error {
+	s := lad.GetNodeNetworkRouterInfoPath(nodeid, pluginid, routerid)
+	err := lad.ws.Remove(s)
+	return err
+}
+
+// GetNodeRouter ...
+func (lad *LAD) GetNodeRouter(nodeid string, pluginid string, routerid string) (*RouterRecord, error) {
+	s, _ := yaks.NewSelector(lad.GetNodeNetworkRouterInfoPath(nodeid, pluginid, routerid).ToString())
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return nil, &FError{"Router Not found", nil}
+	}
+	v := kvs[0].Value().ToString()
+	sv := RouterRecord{}
+	err := json.Unmarshal([]byte(v), &sv)
+	if err != nil {
+		return nil, err
+	}
+	return &sv, nil
+}
+
+// GetAllNodeRouters ...
+func (lad *LAD) GetAllNodeRouters(nodeid string, plugindid string) ([]RouterRecord, error) {
+	s := lad.GetNodeNetworkRoutersSelector(nodeid, plugindid)
+	var routers []RouterRecord = []RouterRecord{}
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return routers, nil
+	}
+
+	for _, kv := range kvs {
+		v := kv.Value().ToString()
+		sv := RouterRecord{}
+		err := json.Unmarshal([]byte(v), &sv)
+		if err != nil {
+			return nil, err
+		}
+		routers = append(routers, sv)
+	}
+	return routers, nil
+}
+
+// ObserveNodeRouters ...
+func (lad *LAD) ObserveNodeRouters(nodeid string, pluginid string, listener func(RouterRecord)) error {
+	s := lad.GetNodeNetworkRoutersSelector(nodeid, pluginid)
+
+	cb := func(kvs []yaks.Change) {
+		if len(kvs) > 0 {
+			v := kvs[0].Value().ToString()
+			sv := RouterRecord{}
+			err := json.Unmarshal([]byte(v), &sv)
+			if err != nil {
+				panic(err.Error())
+			}
+			listener(sv)
+		}
+	}
+
+	sid, err := lad.ws.Subscribe(s, cb)
+	if err != nil {
+		return err
+	}
+	lad.listeners = append(lad.listeners, sid)
+	return nil
+}
+
+// AddNodeFloatingIP ...
+func (lad *LAD) AddNodeFloatingIP(nodeid string, pluginid string, ipid string, info FloatingIPRecord) error {
+	s := lad.GetNodeNetworkFloatingIPInfoPath(nodeid, pluginid, ipid)
+	v, err := json.Marshal(info)
+	if err != nil {
+		return err
+	}
+	sv := yaks.NewStringValue(string(v))
+	err = lad.ws.Put(s, sv)
+	return err
+}
+
+// RemoveNodeFloatingIP ...
+func (lad *LAD) RemoveNodeFloatingIP(nodeid string, pluginid string, ipid string) error {
+	s := lad.GetNodeNetworkFloatingIPInfoPath(nodeid, pluginid, ipid)
+	err := lad.ws.Remove(s)
+	return err
+}
+
+// GetNodeFloatingIP ...
+func (lad *LAD) GetNodeFloatingIP(nodeid string, pluginid string, ipid string) (*FloatingIPRecord, error) {
+	s, _ := yaks.NewSelector(lad.GetNodeNetworkFloatingIPInfoPath(nodeid, pluginid, ipid).ToString())
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return nil, &FError{"Floating IP not found", nil}
+	}
+	v := kvs[0].Value().ToString()
+	sv := FloatingIPRecord{}
+	err := json.Unmarshal([]byte(v), &sv)
+	if err != nil {
+		return nil, err
+	}
+	return &sv, nil
+}
+
+// GetAllNodeFloatingIPs ...
+func (lad *LAD) GetAllNodeFloatingIPs(nodeid string, plugindid string) ([]FloatingIPRecord, error) {
+	s := lad.GetNodeNetworkFloatingIPsSelector(nodeid, plugindid)
+	var ips []FloatingIPRecord = []FloatingIPRecord{}
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return ips, nil
+	}
+
+	for _, kv := range kvs {
+		v := kv.Value().ToString()
+		sv := FloatingIPRecord{}
+		err := json.Unmarshal([]byte(v), &sv)
+		if err != nil {
+			return nil, err
+		}
+		ips = append(ips, sv)
+	}
+	return ips, nil
+}
+
+// ObserveNodeFloatingIPs ...
+func (lad *LAD) ObserveNodeFloatingIPs(nodeid string, pluginid string, listener func(FloatingIPRecord)) error {
+	s := lad.GetNodeNetworkFloatingIPsSelector(nodeid, pluginid)
+
+	cb := func(kvs []yaks.Change) {
+		if len(kvs) > 0 {
+			v := kvs[0].Value().ToString()
+			sv := FloatingIPRecord{}
+			err := json.Unmarshal([]byte(v), &sv)
+			if err != nil {
+				panic(err.Error())
+			}
+			listener(sv)
+		}
+	}
+
+	sid, err := lad.ws.Subscribe(s, cb)
+	if err != nil {
+		return err
+	}
+	lad.listeners = append(lad.listeners, sid)
+	return nil
+}
+
+// Global and Local
+
+// Global is Global Actual and Desired
+type Global struct {
+	ws      *yaks.Workspace
+	actual  GAD
+	desired GAD
+}
+
+// NewGlobal ...
+func NewGlobal(wspace *yaks.Workspace) Global {
+	ac := GAD{evals: []*yaks.Path{}, listeners: []*yaks.SubscriptionID{}, prefix: GlobalActualPrefix, ws: wspace}
+	ds := GAD{evals: []*yaks.Path{}, listeners: []*yaks.SubscriptionID{}, prefix: GlobalDesiredPrefix, ws: wspace}
+	return Global{ws: wspace, actual: ac, desired: ds}
+
+}
+
+// Local is Global Actual and Desired
+type Local struct {
+	ws      *yaks.Workspace
+	actual  LAD
+	desired LAD
+}
+
+// NewLocal ...
+func NewLocal(wspace *yaks.Workspace) Local {
+	ac := LAD{evals: []*yaks.Path{}, listeners: []*yaks.SubscriptionID{}, prefix: LocalActualPrefix, ws: wspace}
+	ds := LAD{evals: []*yaks.Path{}, listeners: []*yaks.SubscriptionID{}, prefix: LocalDesiredPrefix, ws: wspace}
+	return Local{ws: wspace, actual: ac, desired: ds}
+}
+
+// YaksConnector is Yaks Connector
+type YaksConnector struct {
+	yclient *yaks.Yaks
+	yadmin  *yaks.Admin
+	ws      *yaks.Workspace
+	global  Global
+	local   Local
+}
+
+func (yc *YaksConnector) close() error {
+	return yc.yclient.Logout()
+}
+
+// NewYaksConnector ...
+func NewYaksConnector(locator string) (*YaksConnector, error) {
+
+	y, err := yaks.Login(locator, yaks.Properties{})
+	if err != nil {
+		return nil, err
+	}
+
+	ad := y.Admin()
+
+	wpath, err := yaks.NewPath("/**")
+	if err != nil {
+		return nil, err
+	}
+
+	ws := y.Workspace(wpath)
+
+	g := NewGlobal(ws)
+	l := NewLocal(ws)
+
+	return &YaksConnector{ws: ws, global: g, local: l, yadmin: ad, yclient: y}, nil
 }

@@ -1,14 +1,17 @@
 package fog05
 
-/*
-
-type MyStruct struct {
-    Name  string `json:"name,omitempty"`
-    Age   int    `json:"age"`
-    Email string `json:"email,omitempty"`
+// FError ...
+type FError struct {
+	msg   string
+	cause error
 }
 
-*/
+func (e *FError) Error() string {
+	if e.cause != nil {
+		return e.msg + " - caused by:" + e.cause.Error()
+	}
+	return e.msg
+}
 
 // SystemInfo ...
 type SystemInfo struct {
