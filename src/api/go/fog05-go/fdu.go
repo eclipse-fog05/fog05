@@ -222,7 +222,7 @@ type FDURecord struct {
 	Status                   string                       `json:"status"`
 	Image                    FDUImage                     `json:"image,omitempty"`
 	Command                  FDUConfiguration             `json:"command,omitempty"`
-	Storage                  FDUStorageRecord             `json:"storage,omitempty"`
+	Storage                  []FDUStorageRecord           `json:"storage,omitempty"`
 	ComputationRequirements  FDUComputationalRequirements `json:"computation_requirement"`
 	GeographicalRequirements FDUGeographicalRequirements  `json:"geographical_requirements,omitempty"`
 	EnergyRequirements       FDUEnergyRequirements        `json:"energy_requirements,omitempty"`
