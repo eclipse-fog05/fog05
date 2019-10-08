@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 )
 
 // FOSRuntimePluginFDU ...
@@ -15,6 +16,7 @@ type FOSRuntimePluginFDU struct {
 	node          string
 	configuration map[string]string
 	plugin        *FOSPlugin
+	logger        *log.Logger
 }
 
 // NewFOSRuntimePluginFDU ...
@@ -34,7 +36,7 @@ func NewFOSRuntimePluginFDU(name string, version string, pluginid string, manife
 	pl.connector = con
 	pl.node = conf["nodeid"]
 
-	return &FOSRuntimePluginFDU{pid: -1, name: name, connector: con, node: conf["nodeid"], plugin: pl}, nil
+	return &FOSRuntimePluginFDU{pid: -1, name: name, connector: con, node: conf["nodeid"], plugin: pl, logger: log.New()}, nil
 }
 
 // WaitDestinationReady ...
