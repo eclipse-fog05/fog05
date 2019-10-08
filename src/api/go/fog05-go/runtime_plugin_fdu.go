@@ -1,7 +1,6 @@
 package fog05
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,33 +9,37 @@ import (
 
 // FOSRuntimePluginFDU ...
 type FOSRuntimePluginFDU struct {
-	pid           int
-	name          string
-	connector     *YaksConnector
-	node          string
-	configuration map[string]string
-	plugin        *FOSPlugin
-	logger        *log.Logger
+	Pid           int
+	Name          string
+	Connector     *YaksConnector
+	Node          string
+	Configuration map[string]string
+	Plugin        *FOSPlugin
+	Logger        *log.Logger
 }
 
 // NewFOSRuntimePluginFDU ...
-func NewFOSRuntimePluginFDU(name string, version string, pluginid string, manifest Plugin) (*FOSRuntimePluginFDU, error) {
+func NewFOSRuntimePluginFDU(name string, version int, pluginid string, manifest Plugin) (*FOSRuntimePluginFDU, error) {
 	if pluginid == "" {
 		pluginid = uuid.UUID.String(uuid.New())
 	}
 	pl := NewPlugin(version, pluginid)
 
-	conf := map[string]string{}
-	json.Unmarshal([]byte(manifest.Configuration), &conf)
-
-	con, err := NewYaksConnector(conf["ylocator"])
+	conf := manifest.Configuration
+	// json.Unmarshal([]byte(manifest.Configuration), &conf)
+	con, err := NewYaksConnector(conf["ylocator"].(string))
 	if err != nil {
 		return nil, err
 	}
 	pl.connector = con
-	pl.node = conf["nodeid"]
+	pl.node = conf["nodeid"].(string)
 
-	return &FOSRuntimePluginFDU{pid: -1, name: name, connector: con, node: conf["nodeid"], plugin: pl, logger: log.New()}, nil
+	return &FOSRuntimePluginFDU{Pid: -1, Name: name, Connector: con, Node: conf["nodeid"].(string), Plugin: pl, Logger: log.New()}, nil
+}
+
+// Close ...
+func (rt *FOSRuntimePluginFDU) Close() {
+	rt.Connector.Close()
 }
 
 // WaitDestinationReady ...
@@ -46,13 +49,13 @@ func (rt *FOSRuntimePluginFDU) WaitDestinationReady(fduid string, instanceid str
 
 // WaitDependencies ...
 func (rt *FOSRuntimePluginFDU) WaitDependencies() {
-	rt.plugin.GetAgent()
-	for rt.plugin.os == nil {
-		rt.plugin.GetOSPlugin()
+	rt.Plugin.GetAgent()
+	for rt.Plugin.OS == nil {
+		rt.Plugin.GetOSPlugin()
 		time.Sleep(1 * time.Second)
 	}
-	for rt.plugin.nm == nil {
-		rt.plugin.GetNMPlugin()
+	for rt.Plugin.NM == nil {
+		rt.Plugin.GetNMPlugin()
 		time.Sleep(1 * time.Second)
 	}
 
@@ -60,7 +63,7 @@ func (rt *FOSRuntimePluginFDU) WaitDependencies() {
 
 // WriteFDUError ...
 func (rt *FOSRuntimePluginFDU) WriteFDUError(fduid string, instanceid string, errno int, errmsg string) error {
-	record, err := rt.connector.local.actual.GetNodeFDU(rt.node, rt.plugin.uuid, fduid, instanceid)
+	record, err := rt.Connector.Local.Actual.GetNodeFDU(rt.Node, rt.Plugin.UUID, fduid, instanceid)
 	if err != nil {
 		return err
 	}
@@ -69,25 +72,25 @@ func (rt *FOSRuntimePluginFDU) WriteFDUError(fduid string, instanceid string, er
 	record.ErrorCode = errno
 	record.ErrorMsg = errmsg
 
-	err = rt.connector.local.actual.AddNodeFDU(rt.node, rt.plugin.uuid, fduid, instanceid, *record)
+	err = rt.Connector.Local.Actual.AddNodeFDU(rt.Node, rt.Plugin.UUID, fduid, instanceid, *record)
 	return err
 }
 
 // UpdateFDUStatus ...
 func (rt *FOSRuntimePluginFDU) UpdateFDUStatus(fduid string, instanceid string, status string) error {
-	record, err := rt.connector.local.actual.GetNodeFDU(rt.node, rt.plugin.uuid, fduid, instanceid)
+	record, err := rt.Connector.Local.Actual.GetNodeFDU(rt.Node, rt.Plugin.UUID, fduid, instanceid)
 	if err != nil {
 		return err
 	}
 
 	record.Status = status
 
-	err = rt.connector.local.actual.AddNodeFDU(rt.node, rt.plugin.uuid, fduid, instanceid, *record)
+	err = rt.Connector.Local.Actual.AddNodeFDU(rt.Node, rt.Plugin.UUID, fduid, instanceid, *record)
 	return err
 }
 
 // GetLocalInstances ...
 func (rt *FOSRuntimePluginFDU) GetLocalInstances(fduid string) ([]string, error) {
-	return rt.connector.local.actual.GetNodeFDUInstances(rt.node, fduid)
+	return rt.Connector.Local.Actual.GetNodeFDUInstances(rt.Node, fduid)
 
 }

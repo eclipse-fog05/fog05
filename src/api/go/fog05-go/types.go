@@ -206,7 +206,7 @@ type Plugin struct {
 	Requirements  []string `json:"requirements,omitempty"`
 	Description   string   `json:"description,omitempty"`
 	URL           string   `json:"url,omitempty"`
-	Configuration string   `json:"configuration,omitempty"`
+	Configuration jsont    `json:"configuration,omitempty"`
 }
 
 // EvalResult ...

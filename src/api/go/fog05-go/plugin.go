@@ -17,7 +17,7 @@ type OS struct {
 
 // CallOSPluginFunction ...
 func (os *OS) CallOSPluginFunction(fname string, fparameters map[string]interface{}) (*interface{}, error) {
-	res, err := os.connector.local.actual.ExecOSEval(os.node, fname, fparameters)
+	res, err := os.connector.Local.Actual.ExecOSEval(os.node, fname, fparameters)
 	if err != nil {
 		return nil, err
 	}
@@ -345,7 +345,7 @@ type NM struct {
 
 // CallNMPluginFunction ...
 func (nm *NM) CallNMPluginFunction(fname string, fparameters map[string]interface{}) (*interface{}, error) {
-	res, err := nm.connector.local.actual.ExecNMEval(nm.node, nm.uuid, fname, fparameters)
+	res, err := nm.connector.Local.Actual.ExecNMEval(nm.node, nm.uuid, fname, fparameters)
 	if err != nil {
 		return nil, err
 	}
@@ -701,7 +701,7 @@ type Agent struct {
 
 // CallAgentFunction ...
 func (ag *Agent) CallAgentFunction(fname string, fparameters map[string]interface{}) (*interface{}, error) {
-	res, err := ag.connector.local.actual.ExecAgentEval(ag.node, fname, fparameters)
+	res, err := ag.connector.Local.Actual.ExecAgentEval(ag.node, fname, fparameters)
 	if err != nil {
 		return nil, err
 	}
@@ -738,7 +738,7 @@ func (ag *Agent) GetImageInfo(imgid string) (*FDUImage, error) {
 
 // GetFDUInfo ...
 func (ag *Agent) GetFDUInfo(nodeid string, fduid string, instanceid string) (*FDU, error) {
-	r, err := ag.CallAgentFunction("get_node_fdu_info", map[string]interface{}{"fdu_uuid": fduid, "instance_uuid": instanceid, "node_uuid", nodeid})
+	r, err := ag.CallAgentFunction("get_node_fdu_info", map[string]interface{}{"fdu_uuid": fduid, "instance_uuid": instanceid, "node_uuid": nodeid})
 	if err != nil {
 		return nil, err
 	}
@@ -827,36 +827,36 @@ func (ag *Agent) GetNodeMGMTAddress(nodeid string) (string, error) {
 
 // FOSPlugin ...
 type FOSPlugin struct {
-	version   string
+	version   int
 	connector *YaksConnector
 	node      string
-	nm        *NM
-	os        *OS
-	agent     *Agent
-	uuid      string
+	NM        *NM
+	OS        *OS
+	Agent     *Agent
+	UUID      string
 }
 
 // NewPlugin ...
-func NewPlugin(version string, pluginuuid string) *FOSPlugin {
+func NewPlugin(version int, pluginuuid string) *FOSPlugin {
 	if pluginuuid == "" {
 		pluginuuid = uuid.UUID.String(uuid.New())
 	}
-	return &FOSPlugin{version: version, uuid: pluginuuid, node: "", nm: nil, os: nil, connector: nil, agent: nil}
+	return &FOSPlugin{version: version, UUID: pluginuuid, node: "", NM: nil, OS: nil, connector: nil, Agent: nil}
 }
 
 // GetOSPlugin ...
 func (pl *FOSPlugin) GetOSPlugin() bool {
-	pls, err := pl.connector.local.actual.GetAllPlugins(pl.node)
+	pls, err := pl.connector.Local.Actual.GetAllPlugins(pl.node)
 	if err != nil {
 		panic(err.Error())
 	}
 	for _, pid := range pls {
-		pld, err := pl.connector.local.actual.GetNodePlugin(pl.node, pid)
+		pld, err := pl.connector.Local.Actual.GetNodePlugin(pl.node, pid)
 		if err != nil {
 			panic(err.Error())
 		}
 		if pld.Type == "os" {
-			pl.os = &OS{uuid: pld.UUID, connector: pl.connector, node: pl.node}
+			pl.OS = &OS{uuid: pld.UUID, connector: pl.connector, node: pl.node}
 			return true
 		}
 	}
@@ -865,17 +865,17 @@ func (pl *FOSPlugin) GetOSPlugin() bool {
 
 // GetNMPlugin ...
 func (pl *FOSPlugin) GetNMPlugin() bool {
-	pls, err := pl.connector.local.actual.GetAllPlugins(pl.node)
+	pls, err := pl.connector.Local.Actual.GetAllPlugins(pl.node)
 	if err != nil {
 		panic(err.Error())
 	}
 	for _, pid := range pls {
-		pld, err := pl.connector.local.actual.GetNodePlugin(pl.node, pid)
+		pld, err := pl.connector.Local.Actual.GetNodePlugin(pl.node, pid)
 		if err != nil {
 			panic(err.Error())
 		}
 		if pld.Type == "network" {
-			pl.nm = &NM{uuid: pld.UUID, connector: pl.connector, node: pl.node}
+			pl.NM = &NM{uuid: pld.UUID, connector: pl.connector, node: pl.node}
 			return true
 		}
 	}
@@ -884,17 +884,17 @@ func (pl *FOSPlugin) GetNMPlugin() bool {
 
 // GetAgent ...
 func (pl *FOSPlugin) GetAgent() bool {
-	pls, err := pl.connector.local.actual.GetAllPlugins(pl.node)
+	pls, err := pl.connector.Local.Actual.GetAllPlugins(pl.node)
 	if err != nil {
 		panic(err.Error())
 	}
 	for _, pid := range pls {
-		pld, err := pl.connector.local.actual.GetNodePlugin(pl.node, pid)
+		pld, err := pl.connector.Local.Actual.GetNodePlugin(pl.node, pid)
 		if err != nil {
 			panic(err.Error())
 		}
 		if pld.Type == "network" {
-			pl.agent = &Agent{connector: pl.connector, node: pl.node}
+			pl.Agent = &Agent{connector: pl.connector, node: pl.node}
 			return true
 		}
 	}
@@ -903,7 +903,7 @@ func (pl *FOSPlugin) GetAgent() bool {
 
 // GetLocalMGMTAddress ...
 func (pl *FOSPlugin) GetLocalMGMTAddress() string {
-	ip, err := pl.os.LocalMgmtAddress()
+	ip, err := pl.OS.LocalMgmtAddress()
 	if err != nil {
 		panic(err.Error())
 	}
@@ -912,7 +912,7 @@ func (pl *FOSPlugin) GetLocalMGMTAddress() string {
 
 // GetPluginState ...
 func (pl *FOSPlugin) GetPluginState() map[string]interface{} {
-	s, err := pl.connector.local.actual.GetNodePluginState(pl.node, pl.uuid)
+	s, err := pl.connector.Local.Actual.GetNodePluginState(pl.node, pl.UUID)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -921,10 +921,10 @@ func (pl *FOSPlugin) GetPluginState() map[string]interface{} {
 
 // SavePluginState ...
 func (pl *FOSPlugin) SavePluginState(state map[string]interface{}) error {
-	return pl.connector.local.actual.AddNodePluginState(pl.node, pl.uuid, state)
+	return pl.connector.Local.Actual.AddNodePluginState(pl.node, pl.UUID, state)
 }
 
 // RemovePluginState ...
 func (pl *FOSPlugin) RemovePluginState(state map[string]interface{}) error {
-	return pl.connector.local.actual.RemoveNodePluginState(pl.node, pl.uuid)
+	return pl.connector.Local.Actual.RemoveNodePluginState(pl.node, pl.UUID)
 }

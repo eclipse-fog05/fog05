@@ -3120,30 +3120,30 @@ func (lad *LAD) ObserveNodeFloatingIPs(nodeid string, pluginid string, listener 
 // Global is Global Actual and Desired
 type Global struct {
 	ws      *yaks.Workspace
-	actual  GAD
-	desired GAD
+	Actual  GAD
+	Desired GAD
 }
 
 // NewGlobal ...
 func NewGlobal(wspace *yaks.Workspace) Global {
 	ac := GAD{evals: []*yaks.Path{}, listeners: []*yaks.SubscriptionID{}, prefix: GlobalActualPrefix, ws: wspace}
 	ds := GAD{evals: []*yaks.Path{}, listeners: []*yaks.SubscriptionID{}, prefix: GlobalDesiredPrefix, ws: wspace}
-	return Global{ws: wspace, actual: ac, desired: ds}
+	return Global{ws: wspace, Actual: ac, Desired: ds}
 
 }
 
 // Local is Global Actual and Desired
 type Local struct {
 	ws      *yaks.Workspace
-	actual  LAD
-	desired LAD
+	Actual  LAD
+	Desired LAD
 }
 
 // NewLocal ...
 func NewLocal(wspace *yaks.Workspace) Local {
 	ac := LAD{evals: []*yaks.Path{}, listeners: []*yaks.SubscriptionID{}, prefix: LocalActualPrefix, ws: wspace}
 	ds := LAD{evals: []*yaks.Path{}, listeners: []*yaks.SubscriptionID{}, prefix: LocalDesiredPrefix, ws: wspace}
-	return Local{ws: wspace, actual: ac, desired: ds}
+	return Local{ws: wspace, Actual: ac, Desired: ds}
 }
 
 // YaksConnector is Yaks Connector
@@ -3151,25 +3151,26 @@ type YaksConnector struct {
 	yclient *yaks.Yaks
 	yadmin  *yaks.Admin
 	ws      *yaks.Workspace
-	global  Global
-	local   Local
+	Global  Global
+	Local   Local
 }
 
-func (yc *YaksConnector) close() error {
+// Close ...
+func (yc *YaksConnector) Close() error {
 	return yc.yclient.Logout()
 }
 
 // NewYaksConnector ...
 func NewYaksConnector(locator string) (*YaksConnector, error) {
 
-	y, err := yaks.Login(locator, yaks.Properties{})
+	y, err := yaks.Login(locator, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	ad := y.Admin()
 
-	wpath, err := yaks.NewPath("/**")
+	wpath, err := yaks.NewPath("/")
 	if err != nil {
 		return nil, err
 	}
@@ -3179,5 +3180,5 @@ func NewYaksConnector(locator string) (*YaksConnector, error) {
 	g := NewGlobal(ws)
 	l := NewLocal(ws)
 
-	return &YaksConnector{ws: ws, global: g, local: l, yadmin: ad, yclient: y}, nil
+	return &YaksConnector{ws: ws, Global: g, Local: l, yadmin: ad, yclient: y}, nil
 }
