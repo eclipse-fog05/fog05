@@ -925,6 +925,6 @@ func (pl *FOSPlugin) SavePluginState(state map[string]interface{}) error {
 }
 
 // RemovePluginState ...
-func (pl *FOSPlugin) RemovePluginState(state map[string]interface{}) error {
+func (pl *FOSPlugin) RemovePluginState() error {
 	return pl.connector.Local.Actual.RemoveNodePluginState(pl.node, pl.UUID)
 }
