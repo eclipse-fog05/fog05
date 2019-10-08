@@ -1903,6 +1903,11 @@ func (lad *LAD) GetNodePlguinInfoPath(nodeid string, pluginid string) *yaks.Path
 	return CreatePath([]string{lad.prefix, nodeid, "plugins", pluginid, "info"})
 }
 
+// GetNodePlguinStatePath ...
+func (lad *LAD) GetNodePlguinStatePath(nodeid string, pluginid string) *yaks.Path {
+	return CreatePath([]string{lad.prefix, nodeid, "plugins", pluginid, "state"})
+}
+
 // GetNodeRuntimesSelector ...
 func (lad *LAD) GetNodeRuntimesSelector(nodeid string) *yaks.Selector {
 	return CreateSelector([]string{lad.prefix, nodeid, "runtimes", "**"})
@@ -2305,6 +2310,41 @@ func (lad *LAD) GetNodePlugin(nodeid string, pluginid string) (*Plugin, error) {
 		return nil, err
 	}
 	return &sv, nil
+}
+
+// AddNodePluginState ...
+func (lad *LAD) AddNodePluginState(nodeid string, pluginid string, state map[string]interface{}) error {
+	s := lad.GetNodePlguinStatePath(nodeid, pluginid)
+	v, err := json.Marshal(state)
+	if err != nil {
+		return err
+	}
+	sv := yaks.NewStringValue(string(v))
+	err = lad.ws.Put(s, sv)
+	return err
+}
+
+// GetNodePluginState ...
+func (lad *LAD) GetNodePluginState(nodeid string, pluginid string) (*map[string]interface{}, error) {
+	s, _ := yaks.NewSelector(lad.GetNodePlguinInfoPath(nodeid, pluginid).ToString())
+	kvs := lad.ws.Get(s)
+	if len(kvs) == 0 {
+		return nil, &FError{"Plugin not Found", nil}
+	}
+	v := kvs[0].Value().ToString()
+	sv := map[string]interface{}{}
+	err := json.Unmarshal([]byte(v), &sv)
+	if err != nil {
+		return nil, err
+	}
+	return &sv, nil
+}
+
+// RemoveNodePluginState ...
+func (lad *LAD) RemoveNodePluginState(nodeid string, pluginid string) error {
+	s := lad.GetNodePlguinInfoPath(nodeid, pluginid)
+	err := lad.ws.Remove(s)
+	return err
 }
 
 // AddNodeInformation ...

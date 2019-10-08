@@ -837,11 +837,11 @@ type FOSPlugin struct {
 }
 
 // NewPlugin ...
-func NewPlugin(version string, pluginuuid string) FOSPlugin {
+func NewPlugin(version string, pluginuuid string) *FOSPlugin {
 	if pluginuuid == "" {
 		pluginuuid = uuid.UUID.String(uuid.New())
 	}
-	return FOSPlugin{version: version, uuid: pluginuuid, node: "", nm: nil, os: nil, connector: nil, agent: nil}
+	return &FOSPlugin{version: version, uuid: pluginuuid, node: "", nm: nil, os: nil, connector: nil, agent: nil}
 }
 
 // GetOSPlugin ...
@@ -908,4 +908,23 @@ func (pl *FOSPlugin) GetLocalMGMTAddress() string {
 		panic(err.Error())
 	}
 	return ip
+}
+
+// GetPluginState ...
+func (pl *FOSPlugin) GetPluginState() map[string]interface{} {
+	s, err := pl.connector.local.actual.GetNodePluginState(pl.node, pl.uuid)
+	if err != nil {
+		panic(err.Error())
+	}
+	return *s
+}
+
+// SavePluginState ...
+func (pl *FOSPlugin) SavePluginState(state map[string]interface{}) error {
+	return pl.connector.local.actual.AddNodePluginState(pl.node, pl.uuid, state)
+}
+
+// RemovePluginState ...
+func (pl *FOSPlugin) RemovePluginState(state map[string]interface{}) error {
+	return pl.connector.local.actual.RemoveNodePluginState(pl.node, pl.uuid)
 }
