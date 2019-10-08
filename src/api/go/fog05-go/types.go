@@ -211,7 +211,7 @@ type Plugin struct {
 
 // EvalResult ...
 type EvalResult struct {
-	Result       jsont  `json:"result,omitempty"`
-	Error        int    `json:"error,omitempty"`
-	ErrorMessage string `json:"error_msg,omitempty"`
+	Result       interface{} `json:"result,omitempty"`
+	Error        int         `json:"error,omitempty"`
+	ErrorMessage string      `json:"error_msg,omitempty"`
 }

@@ -140,7 +140,7 @@ class Plugin(object):
             return self.call_nw_plugin_function('get_address',{'mac_address':mac_address})
 
         def add_port_to_router(self, router_id, port_type, vnet_id=None, ip_address=None):
-            return self.call_nw_plugin_function('add_port_to_router',{'router_id':router_id,'port_type':port_type,'vnet_id':vnet_id,'ip_address':ip_address})
+            return self.call_nw_plugin_function('add_router_port',{'router_id':router_id,'port_type':port_type,'vnet_id':vnet_id,'ip_address':ip_address})
 
         def remove_port_from_router(self, router_id, vnet_id):
             return self.call_nw_plugin_function('remove_port_from_router',{'router_id':router_id,'vnet_id':vnet_id})
