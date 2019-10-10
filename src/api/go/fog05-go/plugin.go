@@ -21,11 +21,11 @@ func (os *OS) CallOSPluginFunction(fname string, fparameters map[string]interfac
 	if err != nil {
 		return nil, err
 	}
-	if res.Error != 0 {
-		er := FError{res.ErrorMessage + " ErrNo: " + string(res.Error), nil}
+	if res.Error != nil {
+		er := FError{*res.ErrorMessage + " ErrNo: " + string(*res.Error), nil}
 		return nil, &er
 	}
-	return &res.Result, nil
+	return res.Result, nil
 }
 
 // DirExists ...
@@ -349,11 +349,11 @@ func (nm *NM) CallNMPluginFunction(fname string, fparameters map[string]interfac
 	if err != nil {
 		return nil, err
 	}
-	if res.Error != 0 {
-		er := FError{res.ErrorMessage + " ErrNo: " + string(res.Error), nil}
+	if res.Error != nil {
+		er := FError{*res.ErrorMessage + " ErrNo: " + string(*res.Error), nil}
 		return nil, &er
 	}
-	return &res.Result, nil
+	return res.Result, nil
 }
 
 // CreateVirtualInterface ...
@@ -705,11 +705,11 @@ func (ag *Agent) CallAgentFunction(fname string, fparameters map[string]interfac
 	if err != nil {
 		return nil, err
 	}
-	if res.Error != 0 {
-		er := FError{res.ErrorMessage + " ErrNo: " + string(res.Error), nil}
+	if res.Error != nil {
+		er := FError{*res.ErrorMessage + " ErrNo: " + string(*res.Error), nil}
 		return nil, &er
 	}
-	return &res.Result, nil
+	return res.Result, nil
 }
 
 // GetImageInfo ...

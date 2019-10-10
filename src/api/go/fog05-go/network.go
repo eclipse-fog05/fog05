@@ -15,6 +15,12 @@ package fog05
 
 type jsont = map[string]interface{}
 
+//Couple ..
+type Couple struct {
+	St string
+	Nd string
+}
+
 // VPORT ...
 const (
 	VPORT string = "VPORT"
@@ -50,6 +56,7 @@ type ConnectionPointDescriptor struct {
 	ShortName           string `json:"short_name,omitempty"`
 	CPType              string `json:"cp_type,omitempty"`
 	PortSecurityEnabled bool   `json:"port_security_enabled,omitempty"`
+	Status              string `json:"status,omitempty"`
 }
 
 // ConnectionPointRecord ...
@@ -107,6 +114,7 @@ type VirtualNetwork struct {
 	MulticastAddress string             `json:"mcat_addr,omitempty"`
 	VLANID           int                `json:"vlan_id,omitempty"`
 	Face             string             `json:"face,omitempty"`
+	Status           string             `json:"status,omitempty"`
 }
 
 // FloatingIPDescriptor ...

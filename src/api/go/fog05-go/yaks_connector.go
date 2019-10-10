@@ -830,16 +830,16 @@ func (gad *GAD) GetFDUNodes(sysid string, tenantid string, fduid string) ([]stri
 }
 
 // GetNodeFDUInstances ...
-func (gad *GAD) GetNodeFDUInstances(sysid string, tenantid string, nodeid string, fduid string) ([]string, error) {
+func (gad *GAD) GetNodeFDUInstances(sysid string, tenantid string, nodeid string, fduid string) ([]Couple, error) {
 	s := gad.GetNodeFDUInstancesSelector(sysid, tenantid, nodeid, fduid)
 	kvs := gad.ws.Get(s)
+	var ids []Couple = []Couple{}
 	if len(kvs) == 0 {
-		return []string{}, nil
+		return []Couple{}, nil
 	}
-	var ids []string = []string{}
 	for _, kv := range kvs {
 		p := kv.Path()
-		ids = append(ids, gad.ExtractNodeInstanceIDFromPath(p))
+		ids = append(ids, Couple{gad.ExtractNodeIDFromPath(p), gad.ExtractNodeInstanceIDFromPath(p)})
 	}
 	return ids, nil
 }
@@ -858,6 +858,18 @@ func (gad *GAD) GetNodeFDUInstance(sysid string, tenantid string, nodeid string,
 		return nil, err
 	}
 	return &sv, nil
+}
+
+// GetFDUInstanceNode ...
+func (gad *GAD) GetFDUInstanceNode(sysid string, tenantid string, instanceid string) (string, error) {
+	s := gad.GetFDUInstanceSelector(sysid, tenantid, instanceid)
+	kvs := gad.ws.Get(s)
+	if len(kvs) == 0 {
+		return "", &FError{"FDU Instance Not Found", nil}
+	}
+	p := kvs[0].Path()
+
+	return gad.ExtractNodeIDFromPath(p), nil
 }
 
 // AddNodeFDU ...
@@ -880,18 +892,24 @@ func (gad *GAD) RemoveNodeFDU(sysid string, tenantid string, nodeid string, fdui
 }
 
 // ObserveNodeFDU ...
-func (gad *GAD) ObserveNodeFDU(sysid string, tenantid string, nodeid string, listener func(FDURecord)) error {
+func (gad *GAD) ObserveNodeFDU(sysid string, tenantid string, nodeid string, listener func(*FDURecord, bool)) error {
 	s, _ := yaks.NewSelector(gad.GetCatalogFDUInfoPath(sysid, tenantid, nodeid).ToString())
 
 	cb := func(kvs []yaks.Change) {
-		if len(kvs) > 0 {
-			v := kvs[0].Value().ToString()
-			sv := FDURecord{}
-			err := json.Unmarshal([]byte(v), &sv)
-			if err != nil {
-				panic(err.Error())
+		for _, v := range kvs {
+			switch v.Kind() {
+			case yaks.REMOVE:
+				listener(nil, true)
+			default:
+				v := v.Value().ToString()
+				sv := FDURecord{}
+				err := json.Unmarshal([]byte(v), &sv)
+				if err != nil {
+					panic(err.Error())
+				}
+				listener(&sv, false)
 			}
-			listener(sv)
+
 		}
 	}
 
@@ -1025,16 +1043,17 @@ func (gad *GAD) RemoveNetworkPort(sysid string, tenantid string, portid string) 
 }
 
 // GetAllNetworkPorts ...
-func (gad *GAD) GetAllNetworkPorts(sysid string, tenantid string) ([]string, error) {
+func (gad *GAD) GetAllNetworkPorts(sysid string, tenantid string) ([]Couple, error) {
 	s := gad.GetAllPortsSelector(sysid, tenantid)
 	kvs := gad.ws.Get(s)
+	var ids []Couple = [](Couple){}
 	if len(kvs) == 0 {
-		return []string{}, nil
+		return ids, nil
 	}
-	var ids []string = []string{}
+
 	for _, kv := range kvs {
 		p := kv.Path()
-		ids = append(ids, gad.ExtractPortIDFromPath(p))
+		ids = append(ids, Couple{gad.ExtractNodeIDFromPath(p), gad.ExtractPortIDFromPath(p)})
 	}
 	return ids, nil
 }
@@ -1075,16 +1094,18 @@ func (gad *GAD) RemoveNetworkRouter(sysid string, tenantid string, routerid stri
 }
 
 // GetAllNetworkRouters ...
-func (gad *GAD) GetAllNetworkRouters(sysid string, tenantid string) ([]string, error) {
+func (gad *GAD) GetAllNetworkRouters(sysid string, tenantid string) ([]Couple, error) {
 	s := gad.GetAllRoutersSelector(sysid, tenantid)
 	kvs := gad.ws.Get(s)
+	var ids []Couple = []Couple{}
+
 	if len(kvs) == 0 {
-		return []string{}, nil
+		return ids, nil
 	}
-	var ids []string = []string{}
+
 	for _, kv := range kvs {
 		p := kv.Path()
-		ids = append(ids, gad.ExtractPortIDFromPath(p))
+		ids = append(ids, Couple{gad.ExtractNodeIDFromPath(p), gad.ExtractPortIDFromPath(p)})
 	}
 	return ids, nil
 }
