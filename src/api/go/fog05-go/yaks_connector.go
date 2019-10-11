@@ -567,7 +567,7 @@ func (gad *GAD) GetAllTenantsIDs(sysid string) ([]string, error) {
 	s := gad.GetAllTenantsSelector(sysid)
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return []string{}, nil
+		return []string{}, &FError{"Empty Tenants", nil}
 	}
 	var ids []string = []string{}
 	for _, kv := range kvs {
@@ -582,7 +582,7 @@ func (gad *GAD) GetAllNodes(sysid string, tenantid string) ([]string, error) {
 	s := gad.GetAllNodesSelector(sysid, tenantid)
 	kvs := gad.ws.Get(s)
 	if len(kvs) == 0 {
-		return []string{}, nil
+		return []string{}, &FError{"Empty Node List", nil}
 	}
 	var ids []string = []string{}
 	for _, kv := range kvs {

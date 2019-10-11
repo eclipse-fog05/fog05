@@ -425,22 +425,22 @@ func (f *FDUAPI) Offload(fduid string) (string, error) {
 }
 
 // Define ...
-func (f *FDUAPI) Define(nodeid string, fduid string) (string, error) {
+func (f *FDUAPI) Define(nodeid string, fduid string) (*FDURecord, error) {
 	_, err := f.connector.Global.Actual.GetCatalogFDUInfo(f.sysid, f.tenantid, fduid)
 	if err != nil {
-		return fduid, err
+		return nil, err
 	}
 	res, err := f.connector.Global.Actual.DefineFDUInNode(f.sysid, f.tenantid, nodeid, fduid)
 	if err != nil {
-		return fduid, err
+		return nil, err
 	}
 
 	if res.Error != nil {
-		return fduid, &FError{*res.ErrorMessage + " ErrNo: " + string(*res.Error), nil}
+		return nil, &FError{*res.ErrorMessage + " ErrNo: " + string(*res.Error), nil}
 	}
 
 	v := (*res.Result).(FDURecord)
-	return v.UUID, nil
+	return &v, nil
 
 }
 
@@ -496,18 +496,18 @@ func (f *FDUAPI) Migrate(instanceid string, destination string) (string, error) 
 
 // Instantiate ...
 func (f *FDUAPI) Instantiate(nodeid string, fduid string) (string, error) {
-	instanceid, err := f.Define(nodeid, fduid)
+	fdur, err := f.Define(nodeid, fduid)
 	if err != nil {
 		return fduid, err
 	}
 	time.Sleep(500 * time.Millisecond)
-	_, err = f.Configure(instanceid)
+	_, err = f.Configure(fdur.UUID)
 	if err != nil {
-		return instanceid, err
+		return fdur.UUID, err
 	}
 	time.Sleep(500 * time.Millisecond)
-	_, err = f.Start(instanceid)
-	return instanceid, err
+	_, err = f.Start(fdur.UUID)
+	return fdur.UUID, err
 }
 
 // Terminate ...
@@ -549,7 +549,8 @@ func (f *FDUAPI) List() ([]string, error) {
 // InstanceList ...
 func (f *FDUAPI) InstanceList(fduid string, nodeid *string) (map[string][]string, error) {
 	if nodeid == nil {
-		*nodeid = "*"
+		x := "*"
+		nodeid = &x
 	}
 	res := map[string][]string{}
 	instances, err := f.connector.Global.Actual.GetNodeFDUInstances(f.sysid, f.tenantid, *nodeid, fduid)
@@ -599,7 +600,7 @@ func (i *ImageAPI) Add(descriptor FDUImage) (string, error) {
 
 // Remove ...
 func (i *ImageAPI) Remove(imgid string) (string, error) {
-	err := i.connector.Global.Desired.RemoveImage(i.sysid, i.tenantid, imag)
+	err := i.connector.Global.Desired.RemoveImage(i.sysid, i.tenantid, imgid)
 	return imgid, err
 }
 
@@ -631,7 +632,7 @@ func (f *FlavorAPI) Add(descriptor FDUComputationalRequirements) (string, error)
 
 // Remove ...
 func (f *FlavorAPI) Remove(flvid string) (string, error) {
-	err := f.connector.Global.Desired.RemoveFlavor(f.sysid, f.tenantid, imag)
+	err := f.connector.Global.Desired.RemoveFlavor(f.sysid, f.tenantid, flvid)
 	return flvid, err
 }
 
@@ -656,11 +657,13 @@ type FIMAPI struct {
 func NewFIMAPI(locator string, sysid *string, tenantid *string) (*FIMAPI, error) {
 
 	if sysid == nil {
-		*sysid = DefaultSysID
+		v := DefaultSysID
+		sysid = &v
 	}
 
 	if tenantid == nil {
-		*tenantid = DefaultTenantID
+		v := DefaultTenantID
+		tenantid = &v
 	}
 
 	yco, err := NewYaksConnector(locator)

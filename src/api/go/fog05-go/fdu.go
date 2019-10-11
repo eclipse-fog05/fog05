@@ -147,9 +147,9 @@ type FDUIOPort struct {
 type FDUInterfaceDescriptor struct {
 	Name             string              `json:"name"`
 	IsMGMT           bool                `json:"is_mgmt"`
-	InterfaceType    FDUVirtualInterface `json:"if_type"`
+	InterfaceType    string              `json:"if_type"`
 	MACAddress       string              `json:"mac_address,omitempty"`
-	VirtualInterface string              `json:"virtual_interface"`
+	VirtualInterface FDUVirtualInterface `json:"virtual_interface"`
 	CPID             string              `json:"cp_id,omitempty"`
 	ExtCPID          string              `json:"ext_cp_id,omitempty"`
 }
@@ -172,7 +172,7 @@ type FDU struct {
 	Image                    FDUImage                    `json:"image,omitempty"`
 	Command                  FDUCommand                  `json:"command,omitempty"`
 	Storage                  []FDUStorageDescriptor      `json:"storage"`
-	GeographicalRequirements FDUEnergyRequirements       `json:"geographical_requirements"`
+	GeographicalRequirements FDUGeographicalRequirements `json:"geographical_requirements"`
 	EnergyRequirements       FDUEnergyRequirements       `json:"energy_requirements"`
 	Hypervisor               string                      `json:"hypervisor"`
 	MigrationKind            string                      `json:"migration_kind"`
@@ -221,7 +221,7 @@ type FDURecord struct {
 	FDUID                    string                       `json:"fdu_id"`
 	Status                   string                       `json:"status"`
 	Image                    FDUImage                     `json:"image,omitempty"`
-	Command                  FDUConfiguration             `json:"command,omitempty"`
+	Command                  FDUCommand                   `json:"command,omitempty"`
 	Storage                  []FDUStorageRecord           `json:"storage,omitempty"`
 	ComputationRequirements  FDUComputationalRequirements `json:"computation_requirement"`
 	GeographicalRequirements FDUGeographicalRequirements  `json:"geographical_requirements,omitempty"`
