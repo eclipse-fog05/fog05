@@ -1,1 +1,1 @@
-from fimapi import FIMAPI
+from fog05rest.fimapi import FIMAPI
