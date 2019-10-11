@@ -22,8 +22,9 @@ install:
 	pip3 install pyangbind pyang
 	curl -L -o /usr/local/lib/libzenohc.so https://github.com/atolab/atobin/blob/master/zenoh-c/unstable/ubuntu/16.04/libzenohc.so
 	git clone https://github.com/atolab/zenoh-python
-	cd zenoh-python && python3 setup.py install
+	cd zenoh-python && git checkout 1ced877917816acea13e58c151e02cf950ad8009 && python3 setup.py install
 	git clone https://github.com/atolab/yaks-python
+	cd yaks-python && git checkout 50c9fc7d022636433709340f220e7b58cd74cefc 
 	make -C yaks-python install
 	make -C src/im/python install
 	make -C src/api/python/api install
