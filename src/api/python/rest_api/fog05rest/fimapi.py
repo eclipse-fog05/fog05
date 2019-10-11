@@ -46,7 +46,10 @@ class FIMAPI(object):
 
     def check(self):
         url = '{}'.format(self.base_url)
-        return json.loads(str(requests.get(url).content))
+        data = requests.get(url).content
+        if isinstance(data,bytes):
+                data = data.decode()
+        return json.loads(data)
 
     def close(self):
         pass
@@ -64,19 +67,32 @@ class FIMAPI(object):
 
         def list(self):
             url = '{}/node/list'.format(self.base_url)
-            return json.loads(str(requests.get(url).content))
+            data = requests.get(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
+
 
         def info(self, node_uuid):
             url = '{}/node/info/{}'.format(self.base_url, node_uuid)
-            return json.loads(str(requests.get(url).content))
+            data = requests.get(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
         def status(self, node_uuid):
             url = '{}/node/status/{}'.format(self.base_url, node_uuid)
-            return json.loads(str(requests.get(url).content))
+            data = requests.get(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
         def plugins(self, node_uuid):
             url = '{}/node/plugins/{}'.format(self.base_url, node_uuid)
-            return json.loads(str(requests.get(url).content))
+            data = requests.get(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
     class Plugin(object):
         '''
@@ -88,7 +104,10 @@ class FIMAPI(object):
 
         def info(self, node_uuid, pluginid):
             url = '{}/plugin/info/{}/{}'.format(self.base_url, pluginid, node_uuid)
-            return json.loads(str(requests.get(url).content))
+            data = requests.get(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
 
     class Network(object):
@@ -103,23 +122,38 @@ class FIMAPI(object):
 
         def add_network(self, manifest):
             url = '{}/network/add'.format(self.base_url)
-            return json.loads(str(requests.post(url, data=json.dumps(manifest)).content))
+            data = requests.post(url, data=json.dumps(manifest)).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
         def remove_network(self, net_uuid):
             url = '{}/network/remove/{}'.format(self.base_url, net_uuid)
-            return json.loads(str(requests.delete(url).content))
+            data = requests.delete(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
         def add_connection_point(self, cp_descriptor):
             url = '{}/connection_point/add'.format(self.base_url)
-            return json.loads(str(requests.post(url, data=json.dumps(cp_descriptor)).content))
+            data = requests.post(url, data=json.dumps(cp_descriptor)).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
         def delete_connection_point(self, cp_uuid):
             url = '{}/connection_point/remove/{}'.format(self.base_url, cp_uuid)
-            return json.loads(str(requests.delete(url).content))
+            data = requests.delete(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
         def list(self):
             url = '{}/network/list'.format(self.base_url)
-            return json.loads(str(requests.get(url).content))
+            data = requests.get(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
 
     class FDU(object):
@@ -134,109 +168,166 @@ class FIMAPI(object):
 
         def onboard(self, descriptor):
             url = '{}/fdu/onboard'.format(self.base_url)
-            return json.loads(str(requests.post(url, data=json.dumps(descriptor)).content))
+            data = requests.post(url, data=json.dumps(descriptor)).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
         def offload(self, fdu_uuid):
             url = '{}/fdu/offload/{}'.format(self.base_url, fdu_uuid)
-            return json.loads(str(requests.delete(url).content))
+            data = requests.delete(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
         def define(self, fduid, node_uuid):
             url = '{}/fdu/define/{}/{}'.format(self.base_url, fduid, node_uuid)
-            return json.loads(str(requests.post(url).content))
+            data = requests.post(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
         def undefine(self, instanceid):
             url = '{}/fdu/undefine/{}'.format(self.base_url, instanceid)
-            res = json.loads(str(requests.delete(url).content))
+            data = requests.delete(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            res = json.loads(data)
             if 'error' in res:
                 raise ValueError(res['error'])
             return res['result']
 
         def configure(self, instanceid):
             url = '{}/fdu/configure/{}'.format(self.base_url, instanceid)
-            res = json.loads(str(requests.post(url).content))
+            data = requests.post(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            res = json.loads(data)
             if 'error' in res:
                 raise ValueError(res['error'])
             return res['result']
 
         def clean(self, instanceid):
             url = '{}/fdu/clean/{}'.format(self.base_url, instanceid)
-            res = json.loads(str(requests.post(url).content))
+            data = requests.post(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            res =  json.loads(data)
             if 'error' in res:
                 raise ValueError(res['error'])
             return res['result']
 
         def start(self, instanceid):
             url = '{}/fdu/start/{}'.format(self.base_url, instanceid)
-            res = json.loads(str(requests.post(url).content))
+            data = requests.post(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            res =  json.loads(data)
             if 'error' in res:
                 raise ValueError(res['error'])
             return res['result']
 
         def stop(self, instanceid):
             url = '{}/fdu/stop/{}'.format(self.base_url, instanceid)
-            res = json.loads(str(requests.post(url).content))
+            data = requests.post(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            res =  json.loads(data)
             if 'error' in res:
                 raise ValueError(res['error'])
             return res['result']
 
         def pause(self, instanceid):
             url = '{}/fdu/pause/{}'.format(self.base_url, instanceid)
-            res = json.loads(str(requests.post(url).content))
+            data = requests.post(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            res =  json.loads(data)
             if 'error' in res:
                 raise ValueError(res['error'])
             return res['result']
 
         def resume(self, instanceid):
             url = '{}/fdu/resume/{}'.format(self.base_url, instanceid)
-            res = json.loads(str(requests.post(url).content))
+            data = requests.post(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            res =  json.loads(data)
             if 'error' in res:
                 raise ValueError(res['error'])
             return res['result']
 
         def migrate(self, instanceid, destination_node_uuid):
             url = '{}/fdu/migrate/{}/{}'.format(self.base_url, instanceid, destination_node_uuid)
-            res = json.loads(str(requests.post(url).content))
+            data = requests.post(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            res =  json.loads(data)
             if 'error' in res:
                 raise ValueError(res['error'])
             return res['result']
 
         def instantiate(self, fduid, nodeid):
             url = '{}/fdu/instantiate/{}/{}'.format(self.base_url, fduid, nodeid)
-            res = json.loads(str(requests.post(url).content))
+            data = requests.post(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            res =  json.loads(data)
             if 'error' in res:
                 raise ValueError(res['error'])
             return res['result']
 
         def terminate(self, instanceid):
             url = '{}/fdu/terminate/{}'.format(self.base_url, instanceid)
-            res = json.loads(str(requests.post(url).content))
+            data = requests.post(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            res = json.loads(data)
             if 'error' in res:
                 raise ValueError(res['error'])
             return res['result']
 
         def get_nodes(self, fdu_uuid, node_uuid):
             url = '{}/fdu/get_nodes/{}'.format(self.base_url, fdu_uuid)
-            return json.loads(str(requests.get(url).content))
+            data = requests.get(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
         def list_node(self, node_uuid):
             url = '{}/fdu/list_node/{}'.format(self.base_url, node_uuid)
-            return json.loads(str(requests.get(url).content))
+            data = requests.get(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
         def instance_list(self, fduid):
             url = '{}/fdu/instance_list/{}'.format(self.base_url, fduid)
-            return json.loads(str(requests.get(url).content))
+            data = requests.get(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
         def info(self, fdu_uuid):
             url = '{}/fdu/info/{}'.format(self.base_url, fdu_uuid)
-            return json.loads(str(requests.get(url).content))
+            data = requests.get(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
         def instance_info(self, instanceid):
             url = '{}/fdu/instance_info/{}'.format(self.base_url, instanceid)
-            return json.loads(str(requests.get(url).content))
+            data = requests.get(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
         def list(self):
             url = '{}/fdu/list'.format(self.base_url)
-            return json.loads(str(requests.get(url).content))
+            data = requests.get(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
 
     class Image(object):
@@ -259,7 +350,8 @@ class FIMAPI(object):
             desc_filename = '{}.json'.format(descriptor['uuid'])
             temp_desc_file = save_file(json.dumps(descriptor),desc_filename)
             files = {'descriptor': open(temp_desc_file, 'rb'), 'image': open(image_path, 'rb')}
-            res = json.loads(str(requests.post(url, files=files).content))
+            data = requests.post(url, files=files).content
+            res = json.loads(data)
             os.remove(temp_desc_file)
             if res.get('result') == True:
                 return img_id
@@ -267,15 +359,24 @@ class FIMAPI(object):
 
         def get(self, image_uuid):
             url = '{}/image/{}'.format(self.base_url, image_uuid)
-            return json.loads(str(requests.get(url).content))
+            data = requests.get(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
         def remove(self, image_uuid):
             url = '{}/image/{}'.format(self.base_url, image_uuid)
-            return json.loads(str(requests.delete(url).content))
+            data = requests.delete(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
         def list(self):
             url = '{}/image/list'.format(self.base_url)
-            return json.loads(str(requests.get(url).content))
+            data = requests.get(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
 
     class Flavor(object):
@@ -289,16 +390,28 @@ class FIMAPI(object):
 
         def add(self, descriptor):
             url = '{}/flavor/add'.format(self.base_url)
-            return json.loads(str(requests.post(url, data=json.dumps(descriptor)).content))
+            data = requests.post(url, data=json.dumps(descriptor)).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
         def get(self, flavor_id):
             url = '{}/flavor/{}'.format(self.base_url, flavor_id)
-            return json.loads(str(requests.get(url).content))
+            data = requests.get(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
         def remove(self, flavor_id):
             url = '{}/flavor/{}'.format(self.base_url, flavor_id)
-            return json.loads(str(requests.delete(url).content))
+            data = requests.delete(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
 
         def list(self):
             url = '{}/flavor/list'.format(self.base_url)
-            return json.loads(str(requests.get(url).content))
+            data = requests.get(url).content
+            if isinstance(data,bytes):
+                data = data.decode()
+            return json.loads(data)
