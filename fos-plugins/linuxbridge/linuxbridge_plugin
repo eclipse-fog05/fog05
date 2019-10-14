@@ -414,11 +414,13 @@ class LinuxBridge(NetworkPlugin):
                 cmd_add_macvlan = 'sudo ip link add {} link {} type macvlan mode vepa'.format(p['faces'][0], p['ext_face'])
                 cmd_port_to_ns = 'sudo ip link set {} netns {}'.format(p['faces'][0], record['router_ns'])
                 cmd_port_up = 'sudo ip netns exec {} ip link set {} up'.format(record['router_ns'], p['faces'][0])
+                cmd_port_e_up = 'sudo ip link set {} up'.format(p['faces'][1])
 
                 self.logger.info('create_router()', 'Creating EXTERNAL PORT: {} and assiging to router NS {}'.format(p['faces'][0], record['router_ns']))
                 self.os.execute_command(cmd_add_macvlan, blocking=True, external=True)
                 self.os.execute_command(cmd_port_to_ns, blocking=True, external=True)
                 self.os.execute_command(cmd_port_up, blocking=True, external=True)
+                self.os.execute_command(cmd_port_e_up, blocking=True, external=True)
                 if p['ip_address'] == '':
 
                     self.logger.info('create_router()', 'Asking address for face: {}'.format(p['faces'][0]))
