@@ -1666,7 +1666,7 @@ module MakeGAD(P: sig val prefix: string end) = struct
 
   let remove_network_from_node sysid tenantid nodeid net_id connector =
     MVar.read connector >>= fun connector ->
-    let fname = "remove_node_netwotk" in
+    let fname = "remove_node_network" in
     let params = [("net_id",net_id)] in
     let s = get_agent_exec_path_with_params sysid tenantid nodeid fname params in
     let%lwt res = Yaks.Workspace.get s connector.ws in

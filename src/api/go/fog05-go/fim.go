@@ -1,8 +1,11 @@
 package fog05
 
 import (
+	"encoding/json"
 	"math/rand"
 	"time"
+
+	"github.com/atolab/yaks-go"
 
 	"github.com/google/uuid"
 )
@@ -70,7 +73,8 @@ func NewNetworkAPI(connector *YaksConnector, sysid string, tenantid string) *Net
 
 // AddNetwork ...
 func (n *NetworkAPI) AddNetwork(descriptor VirtualNetwork) error {
-	descriptor.Status = "add"
+	v := "add"
+	descriptor.Status = &v
 	return n.connector.Global.Desired.AddNetwork(n.sysid, n.tenantid, descriptor.UUID, descriptor)
 }
 
@@ -83,12 +87,12 @@ func (n *NetworkAPI) RemoveNetwork(netid string) error {
 // AddNetworkToNode ...
 func (n *NetworkAPI) AddNetworkToNode(nodeid string, descriptor VirtualNetwork) (*VirtualNetwork, error) {
 	netid := descriptor.UUID
-	_, err := n.connector.Global.Actual.GetNodeNetwork(n.sysid, n.tenantid, nodeid, netid)
-	if err == nil {
-		return &descriptor, nil
-	}
+	// _, err := n.connector.Global.Actual.GetNodeNetwork(n.sysid, n.tenantid, nodeid, netid)
+	// if err == nil {
+	// 	return &descriptor, nil
+	// }
 
-	res, err := n.connector.Global.Desired.CreateNetworkInNode(n.sysid, n.tenantid, nodeid, netid, descriptor)
+	res, err := n.connector.Global.Actual.CreateNetworkInNode(n.sysid, n.tenantid, nodeid, netid, descriptor)
 	if err != nil {
 		return nil, err
 	}
@@ -96,18 +100,27 @@ func (n *NetworkAPI) AddNetworkToNode(nodeid string, descriptor VirtualNetwork) 
 		return nil, &FError{*res.ErrorMessage + " ErrNo: " + string(*res.Error), nil}
 	}
 
-	v := (*res.Result).(VirtualNetwork)
-	return &v, nil
+	var net VirtualNetwork
+	v, err := json.Marshal(*res.Result)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal([]byte(v), &net)
+	if err != nil {
+		return nil, err
+	}
+	return &net, nil
 }
 
 // RemoveNetworkFromNode ...
 func (n *NetworkAPI) RemoveNetworkFromNode(nodeid string, netid string) (*VirtualNetwork, error) {
-	_, err := n.connector.Global.Actual.GetNodeNetwork(n.sysid, n.tenantid, nodeid, netid)
-	if err != nil {
-		return nil, err
-	}
+	// _, err := n.connector.Global.Actual.GetNodeNetwork(n.sysid, n.tenantid, nodeid, netid)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	res, err := n.connector.Global.Desired.RemoveNetworkFromNode(n.sysid, n.tenantid, nodeid, netid)
+	res, err := n.connector.Global.Actual.RemoveNetworkFromNode(n.sysid, n.tenantid, nodeid, netid)
 	if err != nil {
 		return nil, err
 	}
@@ -115,14 +128,24 @@ func (n *NetworkAPI) RemoveNetworkFromNode(nodeid string, netid string) (*Virtua
 		return nil, &FError{*res.ErrorMessage + " ErrNo: " + string(*res.Error), nil}
 	}
 
-	v := (*res.Result).(VirtualNetwork)
-	return &v, nil
+	var net VirtualNetwork
+	v, err := json.Marshal(*res.Result)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal([]byte(v), &net)
+	if err != nil {
+		return nil, err
+	}
+	return &net, nil
 }
 
 // AddConnectionPoint ...
 func (n *NetworkAPI) AddConnectionPoint(descriptor ConnectionPointDescriptor) error {
-	descriptor.Status = "add"
-	return n.connector.Global.Desired.AddNetworkPort(n.sysid, n.tenantid, descriptor.UUID, descriptor)
+	v := "add"
+	descriptor.Status = &v
+	return n.connector.Global.Desired.AddNetworkPort(n.sysid, n.tenantid, *descriptor.UUID, descriptor)
 }
 
 // DeleteConnectionPoint ...
@@ -131,8 +154,9 @@ func (n *NetworkAPI) DeleteConnectionPoint(cpid string) error {
 	if err != nil {
 		return err
 	}
-	descriptor.Status = "remove"
-	return n.connector.Global.Desired.AddNetworkPort(n.sysid, n.tenantid, descriptor.UUID, *descriptor)
+	v := "remove"
+	descriptor.Status = &v
+	return n.connector.Global.Desired.AddNetworkPort(n.sysid, n.tenantid, *descriptor.UUID, *descriptor)
 
 }
 
@@ -252,8 +276,17 @@ func (n *NetworkAPI) AddRouterPort(nodeid string, routerid string, portType stri
 		return nil, &FError{*res.ErrorMessage + " ErrNo: " + string(*res.Error), nil}
 	}
 
-	v := (*res.Result).(RouterRecord)
-	return &v, nil
+	var r RouterRecord
+	v, err := json.Marshal(*res.Result)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal([]byte(v), &r)
+	if err != nil {
+		return nil, err
+	}
+	return &r, nil
 }
 
 // RemoveRouterPort ...
@@ -267,8 +300,17 @@ func (n *NetworkAPI) RemoveRouterPort(nodeid string, routerid string, vnetid str
 		return nil, &FError{*res.ErrorMessage + " ErrNo: " + string(*res.Error), nil}
 	}
 
-	v := (*res.Result).(RouterRecord)
-	return &v, nil
+	var r RouterRecord
+	v, err := json.Marshal(*res.Result)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal([]byte(v), &r)
+	if err != nil {
+		return nil, err
+	}
+	return &r, nil
 }
 
 // CreateFloatingIP ...
@@ -282,8 +324,17 @@ func (n *NetworkAPI) CreateFloatingIP(nodeid string) (*FloatingIPRecord, error) 
 		return nil, &FError{*res.ErrorMessage + " ErrNo: " + string(*res.Error), nil}
 	}
 
-	v := (*res.Result).(FloatingIPRecord)
-	return &v, nil
+	var fip FloatingIPRecord
+	v, err := json.Marshal(*res.Result)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal([]byte(v), &fip)
+	if err != nil {
+		return nil, err
+	}
+	return &fip, nil
 }
 
 // DeleteFloatingIP ...
@@ -297,8 +348,17 @@ func (n *NetworkAPI) DeleteFloatingIP(nodeid string, ipid string) (*FloatingIPRe
 		return nil, &FError{*res.ErrorMessage + " ErrNo: " + string(*res.Error), nil}
 	}
 
-	v := (*res.Result).(FloatingIPRecord)
-	return &v, nil
+	var fip FloatingIPRecord
+	v, err := json.Marshal(*res.Result)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal([]byte(v), &fip)
+	if err != nil {
+		return nil, err
+	}
+	return &fip, nil
 }
 
 // AssignFloatingIP ...
@@ -327,8 +387,17 @@ func (n *NetworkAPI) RetainFloatingIP(nodeid string, ipid string, cpid string) (
 		return nil, &FError{*res.ErrorMessage + " ErrNo: " + string(*res.Error), nil}
 	}
 
-	v := (*res.Result).(FloatingIPRecord)
-	return &v, nil
+	var fip FloatingIPRecord
+	v, err := json.Marshal(*res.Result)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal([]byte(v), &fip)
+	if err != nil {
+		return nil, err
+	}
+	return &fip, nil
 }
 
 // List ...
@@ -357,7 +426,7 @@ func (f *FDUAPI) waitFDUOffloading(fduid string) {
 	}
 }
 
-func (f *FDUAPI) waitFDUInstanceStateChange(nodeid string, fduid string, instanceid, newState string) chan bool {
+func (f *FDUAPI) waitFDUInstanceStateChange(nodeid string, fduid string, instanceid, newState string) (chan bool, *yaks.SubscriptionID) {
 
 	c := make(chan bool, 1)
 	cb := func(fdu *FDURecord, isRemove bool) {
@@ -370,8 +439,11 @@ func (f *FDUAPI) waitFDUInstanceStateChange(nodeid string, fduid string, instanc
 		return
 	}
 
-	f.connector.Global.Actual.ObserveNodeFDU(f.sysid, f.tenantid, nodeid, cb)
-	return c
+	sid, err := f.connector.Global.Actual.ObserveNodeFDU(f.sysid, f.tenantid, nodeid, cb)
+	if err != nil {
+		panic(err.Error())
+	}
+	return c, sid
 }
 
 func (f *FDUAPI) waitFDUInstanceUndefine(nodeid string, instanceid string) {
@@ -392,20 +464,28 @@ func (f *FDUAPI) changeFDUInstanceState(instanceid string, state string, newStat
 	if err != nil {
 		return instanceid, err
 	}
-	record.Status = newState
-	c := f.waitFDUInstanceStateChange(node, record.FDUID, instanceid, newState)
+	record.Status = state
+	c, sid := f.waitFDUInstanceStateChange(node, record.FDUID, instanceid, newState)
+
+	f.connector.Global.Desired.AddNodeFDU(f.sysid, f.tenantid, node, record.FDUID, record.UUID, *record)
+
 	<-c
+
+	f.connector.Global.Actual.Unsubscribe(sid)
+
 	return instanceid, nil
 }
 
 // Onboard ...
 func (f *FDUAPI) Onboard(descriptor FDU) (*FDU, error) {
+	var fdu FDU
+
 	nodes, err := f.connector.Global.Actual.GetAllNodes(f.sysid, f.tenantid)
 	if err != nil {
 		return nil, err
 	}
 	nid := nodes[rand.Intn(len(nodes))]
-	res, err := f.connector.Global.Actual.OnboardFDUFromNode(f.sysid, f.tenantid, nid, descriptor.UUID, descriptor)
+	res, err := f.connector.Global.Actual.OnboardFDUFromNode(f.sysid, f.tenantid, nid, descriptor)
 	if err != nil {
 		return nil, err
 	}
@@ -414,8 +494,16 @@ func (f *FDUAPI) Onboard(descriptor FDU) (*FDU, error) {
 		return nil, &FError{*res.ErrorMessage + " ErrNo: " + string(*res.Error), nil}
 	}
 
-	v := (*res.Result).(FDU)
-	return &v, nil
+	v, err := json.Marshal(*res.Result)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal([]byte(v), &fdu)
+	if err != nil {
+		return nil, err
+	}
+	return &fdu, nil
 }
 
 // Offload ...
@@ -426,6 +514,7 @@ func (f *FDUAPI) Offload(fduid string) (string, error) {
 
 // Define ...
 func (f *FDUAPI) Define(nodeid string, fduid string) (*FDURecord, error) {
+	var fdu FDURecord
 	_, err := f.connector.Global.Actual.GetCatalogFDUInfo(f.sysid, f.tenantid, fduid)
 	if err != nil {
 		return nil, err
@@ -439,8 +528,23 @@ func (f *FDUAPI) Define(nodeid string, fduid string) (*FDURecord, error) {
 		return nil, &FError{*res.ErrorMessage + " ErrNo: " + string(*res.Error), nil}
 	}
 
-	v := (*res.Result).(FDURecord)
-	return &v, nil
+	v, err := json.Marshal(*res.Result)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal([]byte(v), &fdu)
+	if err != nil {
+		return nil, err
+	}
+
+	c, sid := f.waitFDUInstanceStateChange(nodeid, fdu.FDUID, fdu.UUID, DEFINE)
+
+	<-c
+
+	f.connector.Global.Actual.Unsubscribe(sid)
+
+	return &fdu, nil
 
 }
 
@@ -591,11 +695,12 @@ func NewImageAPI(connector *YaksConnector, sysid string, tenantid string) *Image
 
 // Add ...
 func (i *ImageAPI) Add(descriptor FDUImage) (string, error) {
-	if descriptor.UUID == "" {
-		descriptor.UUID = uuid.UUID.String(uuid.New())
+	if *descriptor.UUID == "" {
+		v := (uuid.UUID.String(uuid.New()))
+		descriptor.UUID = &v
 	}
-	err := i.connector.Global.Desired.AddImage(i.sysid, i.tenantid, descriptor.UUID, descriptor)
-	return descriptor.UUID, err
+	err := i.connector.Global.Desired.AddImage(i.sysid, i.tenantid, *descriptor.UUID, descriptor)
+	return *descriptor.UUID, err
 }
 
 // Remove ...
@@ -623,11 +728,12 @@ func NewFlavorAPI(connector *YaksConnector, sysid string, tenantid string) *Flav
 
 // Add ...
 func (f *FlavorAPI) Add(descriptor FDUComputationalRequirements) (string, error) {
-	if descriptor.UUID == "" {
-		descriptor.UUID = uuid.UUID.String(uuid.New())
+	if *descriptor.UUID == "" {
+		v := (uuid.UUID.String(uuid.New()))
+		descriptor.UUID = &v
 	}
-	err := f.connector.Global.Desired.AddFlavor(f.sysid, f.tenantid, descriptor.UUID, descriptor)
-	return descriptor.UUID, err
+	err := f.connector.Global.Desired.AddFlavor(f.sysid, f.tenantid, *descriptor.UUID, descriptor)
+	return *descriptor.UUID, err
 }
 
 // Remove ...

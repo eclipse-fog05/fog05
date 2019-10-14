@@ -25,7 +25,7 @@ func NewFOSRuntimePluginFDU(name string, version int, pluginid string, manifest 
 	}
 	pl := NewPlugin(version, pluginid)
 
-	conf := manifest.Configuration
+	conf := *manifest.Configuration
 	// json.Unmarshal([]byte(manifest.Configuration), &conf)
 	con, err := NewYaksConnector(conf["ylocator"].(string))
 	if err != nil {
@@ -69,8 +69,8 @@ func (rt *FOSRuntimePluginFDU) WriteFDUError(fduid string, instanceid string, er
 	}
 
 	record.Status = ERROR
-	record.ErrorCode = errno
-	record.ErrorMsg = errmsg
+	record.ErrorCode = &errno
+	record.ErrorMsg = &errmsg
 
 	err = rt.Connector.Local.Actual.AddNodeFDU(rt.Node, rt.Plugin.UUID, fduid, instanceid, *record)
 	return err

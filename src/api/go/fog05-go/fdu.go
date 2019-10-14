@@ -71,11 +71,11 @@ const (
 
 // FDUImage ...
 type FDUImage struct {
-	UUID     string `json:"uuid,omitempty"`
-	Name     string `json:"name,omitempty"`
-	URI      string `json:"uri"`
-	Checksum string `json:"checksum"` //SHA1SUM
-	Format   string `json:"format"`
+	UUID     *string `json:"uuid,omitempty"`
+	Name     *string `json:"name,omitempty"`
+	URI      string  `json:"uri"`
+	Checksum string  `json:"checksum"` //SHA1SUM
+	Format   string  `json:"format"`
 }
 
 // FDUCommand ...
@@ -86,8 +86,8 @@ type FDUCommand struct {
 
 // FDUGeographicalRequirements ...
 type FDUGeographicalRequirements struct {
-	Position  FDUPosition  `json:"position,omitempty"`
-	Proximity FDUProximity `json:"proximity,omitempty"`
+	Position  *FDUPosition  `json:"position,omitempty"`
+	Proximity *FDUProximity `json:"proximity,omitempty"`
 }
 
 // FDUPosition ...
@@ -110,16 +110,16 @@ type FDUEnergyRequirements struct {
 
 // FDUComputationalRequirements ...
 type FDUComputationalRequirements struct {
-	Name            string  `json:"name,omitempty"`
-	UUID            string  `json:"uuid,omitempty"`
-	CPUArch         string  `json:"cpu_arch"`
-	CPUMinFrequency int     `json:"cpu_min_freq"`
-	CPUMinCount     int     `json:"cpu_min_count"`
-	GPUMinCount     int     `json:"gpu_min_count,omitempty"`
-	FPGAMinCount    int     `json:"fpga_min_count,omitempty"`
-	RAMSizeMB       float64 `json:"ram_size_mb"`
-	StorageSizeGB   float64 `json:"storage_size_gb"`
-	DutyCycle       float64 `json:"duty_cycle,omitempty"`
+	Name            *string  `json:"name,omitempty"`
+	UUID            *string  `json:"uuid,omitempty"`
+	CPUArch         string   `json:"cpu_arch"`
+	CPUMinFrequency int      `json:"cpu_min_freq"`
+	CPUMinCount     int      `json:"cpu_min_count"`
+	GPUMinCount     *int     `json:"gpu_min_count,omitempty"`
+	FPGAMinCount    *int     `json:"fpga_min_count,omitempty"`
+	RAMSizeMB       float64  `json:"ram_size_mb"`
+	StorageSizeGB   float64  `json:"storage_size_gb"`
+	DutyCycle       *float64 `json:"duty_cycle,omitempty"`
 }
 
 // FDUConfiguration ...
@@ -148,65 +148,66 @@ type FDUInterfaceDescriptor struct {
 	Name             string              `json:"name"`
 	IsMGMT           bool                `json:"is_mgmt"`
 	InterfaceType    string              `json:"if_type"`
-	MACAddress       string              `json:"mac_address,omitempty"`
+	MACAddress       *string             `json:"mac_address,omitempty"`
 	VirtualInterface FDUVirtualInterface `json:"virtual_interface"`
-	CPID             string              `json:"cp_id,omitempty"`
-	ExtCPID          string              `json:"ext_cp_id,omitempty"`
+	CPID             *string             `json:"cp_id,omitempty"`
+	ExtCPID          *string             `json:"ext_cp_id,omitempty"`
 }
 
 // FDUStorageDescriptor ...
 type FDUStorageDescriptor struct {
-	ID                 string `json:"id"`
-	StorageType        string `json:"storage_type"`
-	Size               int    `json:"size"`
-	FileSystemProtocol string `json:"file_system_protocol,omitempty"`
-	CPID               string `json:"cp_id,omitempty"`
+	ID                 string  `json:"id"`
+	StorageType        string  `json:"storage_type"`
+	Size               int     `json:"size"`
+	FileSystemProtocol *string `json:"file_system_protocol,omitempty"`
+	CPID               *string `json:"cp_id,omitempty"`
 }
 
 // FDU ...
 type FDU struct {
-	ID                       string                      `json:"id"`
-	Name                     string                      `json:"name"`
-	UUID                     string                      `json:"uuid,omitempty"`
-	Description              string                      `json:"description,omitempty"`
-	Image                    FDUImage                    `json:"image,omitempty"`
-	Command                  FDUCommand                  `json:"command,omitempty"`
-	Storage                  []FDUStorageDescriptor      `json:"storage"`
-	GeographicalRequirements FDUGeographicalRequirements `json:"geographical_requirements"`
-	EnergyRequirements       FDUEnergyRequirements       `json:"energy_requirements"`
-	Hypervisor               string                      `json:"hypervisor"`
-	MigrationKind            string                      `json:"migration_kind"`
-	Configuration            FDUConfiguration            `json:"configuration,omitempty"`
-	Interfaces               []FDUInterfaceDescriptor    `json:"interfaces"`
-	IOPorts                  []FDUIOPort                 `json:"io_ports"`
-	ConnectionPoints         []ConnectionPointDescriptor `json:"connection_points"`
-	DependsOn                []string                    `json:"depends_on"`
+	ID                       string                       `json:"id"`
+	Name                     string                       `json:"name"`
+	UUID                     *string                      `json:"uuid,omitempty"`
+	Description              *string                      `json:"description,omitempty"`
+	ComputationRequirements  FDUComputationalRequirements `json:"computation_requirements"`
+	Image                    *FDUImage                    `json:"image,omitempty"`
+	Command                  *FDUCommand                  `json:"command,omitempty"`
+	Storage                  []FDUStorageDescriptor       `json:"storage"`
+	GeographicalRequirements *FDUGeographicalRequirements `json:"geographical_requirements,omitempty"`
+	EnergyRequirements       *FDUEnergyRequirements       `json:"energy_requirements,omitempty"`
+	Hypervisor               string                       `json:"hypervisor"`
+	MigrationKind            string                       `json:"migration_kind"`
+	Configuration            *FDUConfiguration            `json:"configuration,omitempty"`
+	Interfaces               []FDUInterfaceDescriptor     `json:"interfaces"`
+	IOPorts                  []FDUIOPort                  `json:"io_ports"`
+	ConnectionPoints         []ConnectionPointDescriptor  `json:"connection_points"`
+	DependsOn                []string                     `json:"depends_on"`
 }
 
 // FDUStorageRecord ...
 type FDUStorageRecord struct {
-	UUID               string `json:"uuid"`
-	StorageID          string `json:"storage_id"`
-	StorageType        string `json:"storage_type"`
-	Size               int    `json:"size"`
-	FileSystemProtocol string `json:"file_system_protocol,omitempty"`
-	CPID               string `json:"cp_id,omitempty"`
+	UUID               string  `json:"uuid"`
+	StorageID          string  `json:"storage_id"`
+	StorageType        string  `json:"storage_type"`
+	Size               int     `json:"size"`
+	FileSystemProtocol *string `json:"file_system_protocol,omitempty"`
+	CPID               *string `json:"cp_id,omitempty"`
 }
 
 // FDUInterfaceRecord ...
 type FDUInterfaceRecord struct {
-	Name                 string              `json:"name"`
-	IsMGMT               bool                `json:"is_mgmt"`
-	InterfaceType        string              `json:"if_type"`
-	MACAddress           string              `json:"mac_address,omitempty"`
-	VirtualInterface     FDUVirtualInterface `json:"virtual_intertface,omitempty"`
-	CPID                 string              `json:"cp_id,omitempty"`
-	ExtCPID              string              `json:"ext_cp_id,omitempty"`
-	VirtualInterfaceName string              `json:"vintf_name"`
-	Status               string              `json:"status"`
-	PhysicalFace         string              `json:"phy_face,omitempty"`
-	VEthFaceName         string              `json:"veth_face_name,omitempty"`
-	Properties           jsont               `json:"properties,omitempty"`
+	Name                 string               `json:"name"`
+	IsMGMT               bool                 `json:"is_mgmt"`
+	InterfaceType        string               `json:"if_type"`
+	MACAddress           *string              `json:"mac_address,omitempty"`
+	VirtualInterface     *FDUVirtualInterface `json:"virtual_interface,omitempty"`
+	CPID                 *string              `json:"cp_id,omitempty"`
+	ExtCPID              *string              `json:"ext_cp_id,omitempty"`
+	VirtualInterfaceName string               `json:"vintf_name"`
+	Status               string               `json:"status"`
+	PhysicalFace         *string              `json:"phy_face,omitempty"`
+	VEthFaceName         *string              `json:"veth_face_name,omitempty"`
+	Properties           *jsont               `json:"properties,omitempty"`
 }
 
 // FDUMigrationProperties ...
@@ -220,21 +221,21 @@ type FDURecord struct {
 	UUID                     string                       `json:"uuid"`
 	FDUID                    string                       `json:"fdu_id"`
 	Status                   string                       `json:"status"`
-	Image                    FDUImage                     `json:"image,omitempty"`
-	Command                  FDUCommand                   `json:"command,omitempty"`
-	Storage                  []FDUStorageRecord           `json:"storage,omitempty"`
-	ComputationRequirements  FDUComputationalRequirements `json:"computation_requirement"`
-	GeographicalRequirements FDUGeographicalRequirements  `json:"geographical_requirements,omitempty"`
-	EnergyRequirements       FDUEnergyRequirements        `json:"energy_requirements,omitempty"`
+	Image                    *FDUImage                    `json:"image,omitempty"`
+	Command                  *FDUCommand                  `json:"command,omitempty"`
+	Storage                  []FDUStorageRecord           `json:"storage"`
+	ComputationRequirements  FDUComputationalRequirements `json:"computation_requirements"`
+	GeographicalRequirements *FDUGeographicalRequirements `json:"geographical_requirements,omitempty"`
+	EnergyRequirements       *FDUEnergyRequirements       `json:"energy_requirements,omitempty"`
 	Hypervisor               string                       `json:"hypervisor"`
 	MigrationKind            string                       `json:"migration_kind"`
-	Configuration            FDUConfiguration             `json:"configuration,omitempty"`
-	Interfaces               []FDUInterfaceRecord         `json:"interfaces,omitempty"`
+	Configuration            *FDUConfiguration            `json:"configuration,omitempty"`
+	Interfaces               *[]FDUInterfaceRecord        `json:"interfaces,omitempty"`
 	IOPorts                  []FDUIOPort                  `json:"io_ports"`
 	ConnectionPoints         []ConnectionPointRecord      `json:"connection_points"`
 	DependsOn                []string                     `json:"depends_on"`
-	ErrorCode                int                          `json:"error_code,omitempty"`
-	ErrorMsg                 string                       `json:"error_msg,omitempty"`
-	MigrationProperties      FDUMigrationProperties       `json:"migration_properties,omitempty"`
-	HypervisorInfo           jsont                        `json:"hypervisor_info"`
+	ErrorCode                *int                         `json:"error_code,omitempty"`
+	ErrorMsg                 *string                      `json:"error_msg,omitempty"`
+	MigrationProperties      *FDUMigrationProperties      `json:"migration_properties,omitempty"`
+	HypervisorInfo           *jsont                       `json:"hypervisor_info,omitempty"`
 }

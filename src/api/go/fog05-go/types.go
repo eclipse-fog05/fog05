@@ -93,13 +93,13 @@ type AcceleratorSpec struct {
 
 // InterfaceConfiguration ...
 type InterfaceConfiguration struct {
-	IPV4Address string `json:"ipv4_address"`
-	IPV4Netmask string `json:"ipv4_netmask"`
-	IPV4Gateway string `json:"ipv4_gateway"`
-	IPV6Address string `json:"ipv6_address"`
-	IPV6Netmask string `json:"ipv6_netmask"`
-	IPV6Gateway string `json:"ipv6_gateway,omitempty"`
-	BUSAddress  string `json:"bus_address,omitempty"`
+	IPV4Address string  `json:"ipv4_address"`
+	IPV4Netmask string  `json:"ipv4_netmask"`
+	IPV4Gateway string  `json:"ipv4_gateway"`
+	IPV6Address string  `json:"ipv6_address"`
+	IPV6Netmask string  `json:"ipv6_netmask"`
+	IPV6Gateway *string `json:"ipv6_gateway,omitempty"`
+	BUSAddress  *string `json:"bus_address,omitempty"`
 }
 
 // PositionSpec ...
@@ -130,24 +130,24 @@ type NodeInfo struct {
 	IO          []IOSpec          `json:"io"`
 	Accelerator []AcceleratorSpec `json:"accelerator"`
 	Network     []NetworkSpec     `json:"network"`
-	Position    PositionSpec      `json:"position,omitempty"`
-	Volatility  VolatilitySpec    `json:"volatility,omitempty"`
+	Position    *PositionSpec     `json:"position,omitempty"`
+	Volatility  *VolatilitySpec   `json:"volatility,omitempty"`
 }
 
 // AgentConfiguration ...
 type AgentConfiguration struct {
-	System        string `json:"system,omitempty"`
-	UUID          string `json:"uuid,omitempty"`
-	Expose        bool   `json:"expose"`
-	User          string `json:"user,omitempty"`
-	Password      string `json:"passwd,omitempty"`
-	YAKS          string `json:"yaks"`
-	Path          string `json:"path"`
-	EnableLLDP    bool   `json:"enable_lldp"`
-	EnableSpawner bool   `json:"enable_spawner"`
-	PIDFile       string `json:"pid_file"`
-	MGMTInterface string `json:"mgmt_interface"`
-	LLDPConf      string `json:"lldp_conf"`
+	System        string  `json:"system,omitempty"`
+	UUID          *string `json:"uuid,omitempty"`
+	Expose        bool    `json:"expose"`
+	User          *string `json:"user,omitempty"`
+	Password      *string `json:"passwd,omitempty"`
+	YAKS          string  `json:"yaks"`
+	Path          string  `json:"path"`
+	EnableLLDP    bool    `json:"enable_lldp"`
+	EnableSpawner bool    `json:"enable_spawner"`
+	PIDFile       string  `json:"pid_file"`
+	MGMTInterface string  `json:"mgmt_interface"`
+	LLDPConf      string  `json:"lldp_conf"`
 }
 
 // PluginsConfiguration ...
@@ -208,11 +208,11 @@ type Plugin struct {
 	Name          string   `json:"name"`
 	Version       int      `json:"version"`
 	Type          string   `json:"type"`
-	Status        string   `json:"status,omitempty"`
+	Status        *string  `json:"status,omitempty"`
 	Requirements  []string `json:"requirements,omitempty"`
-	Description   string   `json:"description,omitempty"`
-	URL           string   `json:"url,omitempty"`
-	Configuration jsont    `json:"configuration,omitempty"`
+	Description   *string  `json:"description,omitempty"`
+	URL           *string  `json:"url,omitempty"`
+	Configuration *jsont   `json:"configuration,omitempty"`
 }
 
 // EvalResult ...

@@ -39,59 +39,59 @@ const (
 
 // AddressInformation ...
 type AddressInformation struct {
-	IPVersion  string `json:"ip_kind"`
-	Subnet     string `json:"subnet"`
-	Gateway    string `json:"gateway,omitempty"`
-	DHCPEnable bool   `json:"dhcp_enable"`
-	DHCPRange  string `json:"dhcp_range,omitempty"`
-	DNS        string `json:"dns,omitempty"`
+	IPVersion  string  `json:"ip_version"`
+	Subnet     string  `json:"subnet"`
+	Gateway    *string `json:"gateway,omitempty"`
+	DHCPEnable bool    `json:"dhcp_enable"`
+	DHCPRange  *string `json:"dhcp_range,omitempty"`
+	DNS        *string `json:"dns,omitempty"`
 }
 
 // ConnectionPointDescriptor ...
 type ConnectionPointDescriptor struct {
-	UUID                string `json:"uuid,omitempty"`
-	Name                string `json:"name"`
-	ID                  string `json:"id"`
-	VLDRef              string `json:"vld_ref,omitempty"`
-	ShortName           string `json:"short_name,omitempty"`
-	CPType              string `json:"cp_type,omitempty"`
-	PortSecurityEnabled bool   `json:"port_security_enabled,omitempty"`
-	Status              string `json:"status,omitempty"`
+	UUID                *string `json:"uuid,omitempty"`
+	Name                string  `json:"name"`
+	ID                  string  `json:"id"`
+	VLDRef              *string `json:"vld_ref,omitempty"`
+	ShortName           *string `json:"short_name,omitempty"`
+	CPType              *string `json:"cp_type,omitempty"`
+	PortSecurityEnabled *bool   `json:"port_security_enabled,omitempty"`
+	Status              *string `json:"status,omitempty"`
 }
 
 // ConnectionPointRecord ...
 type ConnectionPointRecord struct {
-	UUID                string `json:"uuid"`
-	CPID                string `json:"cp_id"`
-	CPType              string `json:"cp_type,omitempty"`
-	VLDRef              string `json:"vld_ref,omitempty"`
-	PortSecurityEnabled bool   `json:"port_security_enabled,omitempty"`
-	VEthFaceName        string `json:"veth_face_name,omitempty"`
-	BrName              string `json:"br_name,omitempty"`
-	Properties          jsont  `json:"properties,omitempty"`
-	Status              string `json:"status"`
+	UUID                string  `json:"uuid"`
+	CPID                string  `json:"cp_id"`
+	CPType              *string `json:"cp_type,omitempty"`
+	VLDRef              *string `json:"vld_ref,omitempty"`
+	PortSecurityEnabled *bool   `json:"port_security_enabled,omitempty"`
+	VEthFaceName        *string `json:"veth_face_name,omitempty"`
+	BrName              *string `json:"br_name,omitempty"`
+	Properties          *jsont  `json:"properties,omitempty"`
+	Status              string  `json:"status"`
 }
 
 // RouterPort ...
 type RouterPort struct {
-	PortType     string `json:"port_type"`
-	VirtualNetID string `json:"vnet_id,omitempty"`
-	IPAddress    string `json:"ip_address,omitempty"`
+	PortType     string  `json:"port_type"`
+	VirtualNetID *string `json:"vnet_id,omitempty"`
+	IPAddress    *string `json:"ip_address,omitempty"`
 }
 
 // RouterDescriptor ...
 type RouterDescriptor struct {
-	UUID  string       `json:"uuid,omitempty"`
+	UUID  *string      `json:"uuid,omitempty"`
 	Ports []RouterPort `json:"ports"`
 }
 
 // RouterPortRecord ...
 type RouterPortRecord struct {
-	PortType     string   `json:"port_type,omitempty"`
+	PortType     *string  `json:"port_type,omitempty"`
 	Faces        []string `json:"faces"`
-	ExternalFace string   `json:"ext_face,omitempty"`
+	ExternalFace *string  `json:"ext_face,omitempty"`
 	IPAddress    string   `json:"ip_address"`
-	PairID       string   `json:"pair_id,omitempty"`
+	PairID       *string  `json:"pair_id,omitempty"`
 }
 
 // RouterRecord ...
@@ -105,16 +105,16 @@ type RouterRecord struct {
 
 // VirtualNetwork ...
 type VirtualNetwork struct {
-	UUID             string             `json:"uuid"`
-	Name             string             `json:"name"`
-	NetworkType      string             `json:"net_type"`
-	IsMGMT           string             `json:"is_mgmt"`
-	IPConfiguration  AddressInformation `json:"ip_configuration,omitempty"`
-	Overlay          bool               `json:"overlay,omitempty"`
-	MulticastAddress string             `json:"mcat_addr,omitempty"`
-	VLANID           int                `json:"vlan_id,omitempty"`
-	Face             string             `json:"face,omitempty"`
-	Status           string             `json:"status,omitempty"`
+	UUID             string              `json:"uuid"`
+	Name             string              `json:"name"`
+	NetworkType      string              `json:"net_type"`
+	IsMGMT           bool                `json:"is_mgmt"`
+	IPConfiguration  *AddressInformation `json:"ip_configuration,omitempty"`
+	Overlay          *bool               `json:"overlay,omitempty"`
+	MulticastAddress *string             `json:"mcat_addr,omitempty"`
+	VLANID           *int                `json:"vlan_id,omitempty"`
+	Face             *string             `json:"face,omitempty"`
+	Status           *string             `json:"status,omitempty"`
 }
 
 // FloatingIPDescriptor ...

@@ -96,6 +96,48 @@ type GAD struct {
 	evals     []*yaks.Path
 }
 
+// Unsubscribe ...
+func (gad *GAD) Unsubscribe(sid *yaks.SubscriptionID) error {
+	err := gad.ws.Unsubscribe(sid)
+	if err != nil {
+		return err
+	}
+
+	p := -1
+
+	for i, e := range gad.listeners {
+		if e == sid {
+			p = i
+		}
+	}
+	if p == -1 {
+		return &FError{"Subscriber not found!!", nil}
+	}
+	gad.listeners = append(gad.listeners[:p], gad.listeners[p+1:]...)
+	return nil
+}
+
+// RemoveEval ...
+func (gad *GAD) RemoveEval(sid *yaks.Path) error {
+	err := gad.ws.UnregisterEval(sid)
+	if err != nil {
+		return err
+	}
+	p := -1
+
+	for i, e := range gad.evals {
+		if e == sid {
+			p = i
+		}
+	}
+	if p == -1 {
+		return &FError{"Eval not found!!", nil}
+	}
+	gad.evals = append(gad.evals[:p], gad.evals[p+1:]...)
+	return nil
+
+}
+
 // GetSysInfoPath ...
 func (gad *GAD) GetSysInfoPath(sysid string) *yaks.Path {
 	return CreatePath([]string{gad.prefix, sysid, "info"})
@@ -267,32 +309,32 @@ func (gad *GAD) GetFDUInstanceSelector(sysid string, tenantid string, instanceid
 
 // GetAllNetworksSelector ...
 func (gad *GAD) GetAllNetworksSelector(sysid string, tenantid string) *yaks.Selector {
-	return CreateSelector([]string{gad.prefix, sysid, "tenants", tenantid, "network", "*", "info"})
+	return CreateSelector([]string{gad.prefix, sysid, "tenants", tenantid, "networks", "*", "info"})
 }
 
 // GetNetworkInfoPath ...
 func (gad *GAD) GetNetworkInfoPath(sysid string, tenantid string, networkid string) *yaks.Path {
-	return CreatePath([]string{gad.prefix, sysid, "tenants", tenantid, "network", networkid, "info"})
+	return CreatePath([]string{gad.prefix, sysid, "tenants", tenantid, "networks", networkid, "info"})
 }
 
 // GetNetworkPortInfoPath ...
 func (gad *GAD) GetNetworkPortInfoPath(sysid string, tenantid string, portid string) *yaks.Path {
-	return CreatePath([]string{gad.prefix, sysid, "tenants", tenantid, "network", "ports", portid, "info"})
+	return CreatePath([]string{gad.prefix, sysid, "tenants", tenantid, "networks", "ports", portid, "info"})
 }
 
 // GetAllPortsSelector ...
 func (gad *GAD) GetAllPortsSelector(sysid string, tenantid string) *yaks.Selector {
-	return CreateSelector([]string{gad.prefix, sysid, "tenants", tenantid, "network", "ports", "*", "info"})
+	return CreateSelector([]string{gad.prefix, sysid, "tenants", tenantid, "networks", "ports", "*", "info"})
 }
 
 // GetNetworkRouterInfoPath ..
 func (gad *GAD) GetNetworkRouterInfoPath(sysid string, tenantid string, routerid string) *yaks.Path {
-	return CreatePath([]string{gad.prefix, sysid, "tenants", tenantid, "network", "routers", routerid, "info"})
+	return CreatePath([]string{gad.prefix, sysid, "tenants", tenantid, "networks", "routers", routerid, "info"})
 }
 
 // GetAllRoutersSelector ...
 func (gad *GAD) GetAllRoutersSelector(sysid string, tenantid string) *yaks.Selector {
-	return CreateSelector([]string{gad.prefix, sysid, "tenants", tenantid, "network", "routers", "*", "info"})
+	return CreateSelector([]string{gad.prefix, sysid, "tenants", tenantid, "networks", "routers", "*", "info"})
 }
 
 // Images
@@ -698,7 +740,7 @@ func (gad *GAD) RemoveNodeStatus(sysid string, tenantid string, nodeid string) e
 }
 
 // ObserveNodeStatus ...
-func (gad *GAD) ObserveNodeStatus(sysid string, tenantid string, nodeid string, listener func(NodeStatus)) error {
+func (gad *GAD) ObserveNodeStatus(sysid string, tenantid string, nodeid string, listener func(NodeStatus)) (*yaks.SubscriptionID, error) {
 	s, _ := yaks.NewSelector(gad.GetNodeStatusPath(sysid, tenantid, nodeid).ToString())
 
 	cb := func(kvs []yaks.Change) {
@@ -715,10 +757,10 @@ func (gad *GAD) ObserveNodeStatus(sysid string, tenantid string, nodeid string, 
 
 	sid, err := gad.ws.Subscribe(s, cb)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	gad.listeners = append(gad.listeners, sid)
-	return nil
+	return sid, nil
 }
 
 // Omiting Entities and Atomic Entities
@@ -774,7 +816,7 @@ func (gad *GAD) RemoveCatalogFDUInfo(sysid string, tenantid string, fduid string
 }
 
 // ObserveCatalogFDUs ...
-func (gad *GAD) ObserveCatalogFDUs(sysid string, tenantid string, fduid string, listener func(FDU)) error {
+func (gad *GAD) ObserveCatalogFDUs(sysid string, tenantid string, fduid string, listener func(FDU)) (*yaks.SubscriptionID, error) {
 	s, _ := yaks.NewSelector(gad.GetCatalogFDUInfoPath(sysid, tenantid, fduid).ToString())
 
 	cb := func(kvs []yaks.Change) {
@@ -791,10 +833,10 @@ func (gad *GAD) ObserveCatalogFDUs(sysid string, tenantid string, fduid string, 
 
 	sid, err := gad.ws.Subscribe(s, cb)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	gad.listeners = append(gad.listeners, sid)
-	return nil
+	return sid, nil
 }
 
 // NodeFDU
@@ -892,8 +934,8 @@ func (gad *GAD) RemoveNodeFDU(sysid string, tenantid string, nodeid string, fdui
 }
 
 // ObserveNodeFDU ...
-func (gad *GAD) ObserveNodeFDU(sysid string, tenantid string, nodeid string, listener func(*FDURecord, bool)) error {
-	s, _ := yaks.NewSelector(gad.GetCatalogFDUInfoPath(sysid, tenantid, nodeid).ToString())
+func (gad *GAD) ObserveNodeFDU(sysid string, tenantid string, nodeid string, listener func(*FDURecord, bool)) (*yaks.SubscriptionID, error) {
+	s, _ := yaks.NewSelector(gad.GetNodeFDUSelector(sysid, tenantid, nodeid).ToString())
 
 	cb := func(kvs []yaks.Change) {
 		for _, v := range kvs {
@@ -915,10 +957,10 @@ func (gad *GAD) ObserveNodeFDU(sysid string, tenantid string, nodeid string, lis
 
 	sid, err := gad.ws.Subscribe(s, cb)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	gad.listeners = append(gad.listeners, sid)
-	return nil
+	return sid, nil
 }
 
 // Plugins
@@ -982,7 +1024,7 @@ func (gad *GAD) AddNodePluginEval(sysid string, tenantid string, nodeid string, 
 }
 
 // ObserveNodePlugins ...
-func (gad *GAD) ObserveNodePlugins(sysid string, tenantid string, nodeid string, listener func(Plugin)) error {
+func (gad *GAD) ObserveNodePlugins(sysid string, tenantid string, nodeid string, listener func(Plugin)) (*yaks.SubscriptionID, error) {
 	s := gad.GetNodePluginsSelector(sysid, tenantid, nodeid)
 
 	cb := func(kvs []yaks.Change) {
@@ -999,10 +1041,10 @@ func (gad *GAD) ObserveNodePlugins(sysid string, tenantid string, nodeid string,
 
 	sid, err := gad.ws.Subscribe(s, cb)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	gad.listeners = append(gad.listeners, sid)
-	return nil
+	return sid, nil
 }
 
 // Network
@@ -1571,7 +1613,7 @@ func (gad *GAD) GetNodeAllNetworkRouters(sysid string, tenantid string, nodeid s
 }
 
 // ObserveNodeNetworkRouters ...
-func (gad *GAD) ObserveNodeNetworkRouters(sysid string, tenantid string, nodeid string, listener func(RouterRecord)) error {
+func (gad *GAD) ObserveNodeNetworkRouters(sysid string, tenantid string, nodeid string, listener func(RouterRecord)) (*yaks.SubscriptionID, error) {
 	s, _ := yaks.NewSelector(gad.GetNodeNetworkRoutersSelector(sysid, tenantid, nodeid).ToString())
 
 	cb := func(kvs []yaks.Change) {
@@ -1588,10 +1630,10 @@ func (gad *GAD) ObserveNodeNetworkRouters(sysid string, tenantid string, nodeid 
 
 	sid, err := gad.ws.Subscribe(s, cb)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	gad.listeners = append(gad.listeners, sid)
-	return nil
+	return sid, nil
 }
 
 // Agent Evals
@@ -1789,7 +1831,7 @@ func (gad *GAD) RemovePortFromRouter(sysid string, tenantid string, nodeid strin
 }
 
 // OnboardFDUFromNode ...
-func (gad *GAD) OnboardFDUFromNode(sysid string, tenantid string, nodeid string, fduid string, info FDU) (*EvalResult, error) {
+func (gad *GAD) OnboardFDUFromNode(sysid string, tenantid string, nodeid string, info FDU) (*EvalResult, error) {
 
 	fname := "onboard_fdu"
 	params := make(map[string]interface{})
@@ -1864,7 +1906,7 @@ func (gad *GAD) CreateNetworkInNode(sysid string, tenantid string, nodeid string
 // RemoveNetworkFromNode ...
 func (gad *GAD) RemoveNetworkFromNode(sysid string, tenantid string, nodeid string, netid string) (*EvalResult, error) {
 
-	fname := "remove_node_netwotk"
+	fname := "remove_node_network"
 	params := make(map[string]interface{})
 
 	params["net_id"] = netid
@@ -1890,6 +1932,48 @@ type LAD struct {
 	prefix    string
 	listeners []*yaks.SubscriptionID
 	evals     []*yaks.Path
+}
+
+// Unsubscribe ...
+func (lad *LAD) Unsubscribe(sid *yaks.SubscriptionID) error {
+	err := lad.ws.Unsubscribe(sid)
+	if err != nil {
+		return err
+	}
+
+	p := -1
+
+	for i, e := range lad.listeners {
+		if e == sid {
+			p = i
+		}
+	}
+	if p == -1 {
+		return &FError{"Subscriber not found!!", nil}
+	}
+	lad.listeners = append(lad.listeners[:p], lad.listeners[p+1:]...)
+	return nil
+}
+
+// RemoveEval ...
+func (lad *LAD) RemoveEval(sid *yaks.Path) error {
+	err := lad.ws.UnregisterEval(sid)
+	if err != nil {
+		return err
+	}
+	p := -1
+
+	for i, e := range lad.evals {
+		if e == sid {
+			p = i
+		}
+	}
+	if p == -1 {
+		return &FError{"Eval not found!!", nil}
+	}
+	lad.evals = append(lad.evals[:p], lad.evals[p+1:]...)
+	return nil
+
 }
 
 // Node
@@ -2404,7 +2488,7 @@ func (lad *LAD) GetNodeInformation(nodeid string) (*NodeInfo, error) {
 }
 
 // ObserveNodeInformation ...
-func (lad *LAD) ObserveNodeInformation(nodeid string, listener func(NodeInfo)) error {
+func (lad *LAD) ObserveNodeInformation(nodeid string, listener func(NodeInfo)) (*yaks.SubscriptionID, error) {
 	s, _ := yaks.NewSelector(lad.GetNodeInfoPath(nodeid).ToString())
 
 	cb := func(kvs []yaks.Change) {
@@ -2421,10 +2505,10 @@ func (lad *LAD) ObserveNodeInformation(nodeid string, listener func(NodeInfo)) e
 
 	sid, err := lad.ws.Subscribe(s, cb)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	lad.listeners = append(lad.listeners, sid)
-	return nil
+	return sid, nil
 }
 
 // AddNodeStatus ...
@@ -2463,7 +2547,7 @@ func (lad *LAD) GetNodeStatus(nodeid string) (*NodeStatus, error) {
 }
 
 // ObserveNodeStatus ...
-func (lad *LAD) ObserveNodeStatus(nodeid string, listener func(NodeStatus)) error {
+func (lad *LAD) ObserveNodeStatus(nodeid string, listener func(NodeStatus)) (*yaks.SubscriptionID, error) {
 	s, _ := yaks.NewSelector(lad.GetNodeStatusPath(nodeid).ToString())
 
 	cb := func(kvs []yaks.Change) {
@@ -2480,10 +2564,10 @@ func (lad *LAD) ObserveNodeStatus(nodeid string, listener func(NodeStatus)) erro
 
 	sid, err := lad.ws.Subscribe(s, cb)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	lad.listeners = append(lad.listeners, sid)
-	return nil
+	return sid, nil
 }
 
 // AddNodeConfiguration ...
@@ -2522,7 +2606,7 @@ func (lad *LAD) GetNodeConfiguration(nodeid string) (*NodeConfiguration, error) 
 }
 
 // ObserveNodeConfiguration ...
-func (lad *LAD) ObserveNodeConfiguration(nodeid string, listener func(NodeConfiguration)) error {
+func (lad *LAD) ObserveNodeConfiguration(nodeid string, listener func(NodeConfiguration)) (*yaks.SubscriptionID, error) {
 	s, _ := yaks.NewSelector(lad.GetNodeConfigurationPath(nodeid).ToString())
 
 	cb := func(kvs []yaks.Change) {
@@ -2539,14 +2623,14 @@ func (lad *LAD) ObserveNodeConfiguration(nodeid string, listener func(NodeConfig
 
 	sid, err := lad.ws.Subscribe(s, cb)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	lad.listeners = append(lad.listeners, sid)
-	return nil
+	return sid, nil
 }
 
 // ObserveNodePlugins ...
-func (lad *LAD) ObserveNodePlugins(nodeid string, listener func(Plugin)) error {
+func (lad *LAD) ObserveNodePlugins(nodeid string, listener func(Plugin)) (*yaks.SubscriptionID, error) {
 	s := lad.GetNodePlguinsSelector(nodeid)
 
 	cb := func(kvs []yaks.Change) {
@@ -2563,10 +2647,10 @@ func (lad *LAD) ObserveNodePlugins(nodeid string, listener func(Plugin)) error {
 
 	sid, err := lad.ws.Subscribe(s, cb)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	lad.listeners = append(lad.listeners, sid)
-	return nil
+	return sid, nil
 }
 
 // AddNodeOSInfo ...
@@ -2605,7 +2689,7 @@ func (lad *LAD) GetNodeOSInfo(nodeid string) (*map[string]interface{}, error) {
 }
 
 // ObserveNodeOSInfo ...
-func (lad *LAD) ObserveNodeOSInfo(nodeid string, listener func(map[string]interface{})) error {
+func (lad *LAD) ObserveNodeOSInfo(nodeid string, listener func(map[string]interface{})) (*yaks.SubscriptionID, error) {
 	s, _ := yaks.NewSelector(lad.GetNodeInfoPath(nodeid).ToString())
 
 	cb := func(kvs []yaks.Change) {
@@ -2622,10 +2706,10 @@ func (lad *LAD) ObserveNodeOSInfo(nodeid string, listener func(map[string]interf
 
 	sid, err := lad.ws.Subscribe(s, cb)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	lad.listeners = append(lad.listeners, sid)
-	return nil
+	return sid, nil
 }
 
 // Node FDU
@@ -2701,7 +2785,7 @@ func (lad *LAD) GetNodeAllFDUsInstances(nodeid string) ([]FDURecord, error) {
 }
 
 // ObserveNodeRuntimeFDU ...
-func (lad *LAD) ObserveNodeRuntimeFDU(nodeid string, pluginid string, listener func(FDURecord)) error {
+func (lad *LAD) ObserveNodeRuntimeFDU(nodeid string, pluginid string, listener func(FDURecord)) (*yaks.SubscriptionID, error) {
 	s := lad.GetNodeRuntimeFDUsSelector(nodeid, pluginid)
 
 	cb := func(kvs []yaks.Change) {
@@ -2718,10 +2802,10 @@ func (lad *LAD) ObserveNodeRuntimeFDU(nodeid string, pluginid string, listener f
 
 	sid, err := lad.ws.Subscribe(s, cb)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	lad.listeners = append(lad.listeners, sid)
-	return nil
+	return sid, nil
 }
 
 // Node Images
@@ -2873,7 +2957,7 @@ func (lad *LAD) GetAllNodeNetworks(nodeid string, plugindid string) ([]VirtualNe
 }
 
 // ObserveNodeNetworks ...
-func (lad *LAD) ObserveNodeNetworks(nodeid string, pluginid string, listener func(VirtualNetwork)) error {
+func (lad *LAD) ObserveNodeNetworks(nodeid string, pluginid string, listener func(VirtualNetwork)) (*yaks.SubscriptionID, error) {
 	s := lad.GetNodeNetworksSelector(nodeid, pluginid)
 
 	cb := func(kvs []yaks.Change) {
@@ -2890,10 +2974,10 @@ func (lad *LAD) ObserveNodeNetworks(nodeid string, pluginid string, listener fun
 
 	sid, err := lad.ws.Subscribe(s, cb)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	lad.listeners = append(lad.listeners, sid)
-	return nil
+	return sid, nil
 }
 
 // AddNodePort ...
@@ -2953,7 +3037,7 @@ func (lad *LAD) GetAllNodePorts(nodeid string, plugindid string) ([]ConnectionPo
 }
 
 // ObserveNodePorts ...
-func (lad *LAD) ObserveNodePorts(nodeid string, pluginid string, listener func(ConnectionPointDescriptor)) error {
+func (lad *LAD) ObserveNodePorts(nodeid string, pluginid string, listener func(ConnectionPointDescriptor)) (*yaks.SubscriptionID, error) {
 	s := lad.GetNodeNetworkPortsSelector(nodeid, pluginid)
 
 	cb := func(kvs []yaks.Change) {
@@ -2970,10 +3054,10 @@ func (lad *LAD) ObserveNodePorts(nodeid string, pluginid string, listener func(C
 
 	sid, err := lad.ws.Subscribe(s, cb)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	lad.listeners = append(lad.listeners, sid)
-	return nil
+	return sid, nil
 }
 
 // AddNodeRouter ...
@@ -3033,7 +3117,7 @@ func (lad *LAD) GetAllNodeRouters(nodeid string, plugindid string) ([]RouterReco
 }
 
 // ObserveNodeRouters ...
-func (lad *LAD) ObserveNodeRouters(nodeid string, pluginid string, listener func(RouterRecord)) error {
+func (lad *LAD) ObserveNodeRouters(nodeid string, pluginid string, listener func(RouterRecord)) (*yaks.SubscriptionID, error) {
 	s := lad.GetNodeNetworkRoutersSelector(nodeid, pluginid)
 
 	cb := func(kvs []yaks.Change) {
@@ -3050,10 +3134,10 @@ func (lad *LAD) ObserveNodeRouters(nodeid string, pluginid string, listener func
 
 	sid, err := lad.ws.Subscribe(s, cb)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	lad.listeners = append(lad.listeners, sid)
-	return nil
+	return sid, nil
 }
 
 // AddNodeFloatingIP ...
@@ -3113,7 +3197,7 @@ func (lad *LAD) GetAllNodeFloatingIPs(nodeid string, plugindid string) ([]Floati
 }
 
 // ObserveNodeFloatingIPs ...
-func (lad *LAD) ObserveNodeFloatingIPs(nodeid string, pluginid string, listener func(FloatingIPRecord)) error {
+func (lad *LAD) ObserveNodeFloatingIPs(nodeid string, pluginid string, listener func(FloatingIPRecord)) (*yaks.SubscriptionID, error) {
 	s := lad.GetNodeNetworkFloatingIPsSelector(nodeid, pluginid)
 
 	cb := func(kvs []yaks.Change) {
@@ -3130,10 +3214,10 @@ func (lad *LAD) ObserveNodeFloatingIPs(nodeid string, pluginid string, listener 
 
 	sid, err := lad.ws.Subscribe(s, cb)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	lad.listeners = append(lad.listeners, sid)
-	return nil
+	return sid, nil
 }
 
 // Global and Local
