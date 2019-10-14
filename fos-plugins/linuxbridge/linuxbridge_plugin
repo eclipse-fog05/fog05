@@ -512,6 +512,7 @@ class LinuxBridge(NetworkPlugin):
             if p['port_type'] == 'EXTERNAL':
                 self.logger.info('delete_router()', 'Removing External Face {}'.format(p['faces'][0]))
                 cmd_remove_face = 'sudo ip netns exec {} ip link del {}'.format(router_info['router_ns'], p['faces'][0])
+                cmd_remove_face_e = 'sudo ip link del {}'.format(p['faces'][1])
 
                 self.os.execute_command(cmd_remove_face, blocking=True, external=True)
 
