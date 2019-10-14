@@ -1433,7 +1433,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
         (* Convertion from record *)
         let router = Router.record_of_string @@ JSON.to_string (Apero.Option.get r.result) in
         let%lwt ports = Lwt_list.map_p (fun (e:Router.router_port_record) ->
-            Lwt.return Router.{port_type = e.port_type; vnet_id = e.pair_id; ip_address = Some e.ip_address}
+            Lwt.return Router.{port_type = e.port_type; vnet_id = e.vnet_id; ip_address = Some e.ip_address}
           ) router.ports
         in
         let router_desc = Router.{uuid = Some router.uuid; ports = ports; } in
@@ -1470,7 +1470,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
         (* Convertion from record *)
         let router = Router.record_of_string @@ JSON.to_string (Apero.Option.get r.result) in
         let%lwt ports = Lwt_list.map_p (fun (e:Router.router_port_record) ->
-            Lwt.return Router.{port_type = e.port_type; vnet_id = e.pair_id; ip_address = Some e.ip_address}
+            Lwt.return Router.{port_type = e.port_type; vnet_id = e.vnet_id; ip_address = Some e.ip_address}
           ) router.ports
         in
         let router_desc = Router.{uuid = Some router.uuid; ports = ports; } in
@@ -1797,7 +1797,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           | _ ->
             (* Convert to back to descriptor *)
             let%lwt ports = Lwt_list.map_p (fun (e:Router.router_port_record) ->
-                Lwt.return Router.{port_type = e.port_type; vnet_id = e.pair_id; ip_address = Some e.ip_address}
+                Lwt.return Router.{port_type = e.port_type; vnet_id = e.vnet_id; ip_address = Some e.ip_address}
               ) router.ports
             in
             let router_desc = Router.{uuid = Some router.uuid; ports = ports; } in
