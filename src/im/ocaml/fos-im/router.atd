@@ -43,7 +43,7 @@ type router_port_record = {
   faces : string list;
   ?ext_face : string option;
   ip_address : string;
-  ?pair_id : string option;
+  ?vnet_id : string option;
 }
 
 type record = {

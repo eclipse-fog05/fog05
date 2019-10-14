@@ -91,7 +91,7 @@ type RouterPortRecord struct {
 	Faces        []string `json:"faces"`
 	ExternalFace *string  `json:"ext_face,omitempty"`
 	IPAddress    string   `json:"ip_address"`
-	PairID       *string  `json:"pair_id,omitempty"`
+	PairID       *string  `json:"vnet_id,omitempty"`
 }
 
 // RouterRecord ...
