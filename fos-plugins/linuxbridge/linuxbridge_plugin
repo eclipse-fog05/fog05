@@ -515,7 +515,7 @@ class LinuxBridge(NetworkPlugin):
                 cmd_remove_face_e = 'sudo ip link del {}'.format(p['faces'][1])
 
                 self.os.execute_command(cmd_remove_face, blocking=True, external=True)
-                 self.os.execute_command(cmd_remove_face_e, blocking=True, external=True)
+                self.os.execute_command(cmd_remove_face_e, blocking=True, external=True)
 
 
                 self.logger.info('delete_router()', 'Removed External Face {}'.format(p['faces'][0]))
