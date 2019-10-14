@@ -10,81 +10,81 @@ import (
 	"github.com/google/uuid"
 )
 
-// NodeAPI ...
+// NodeAPI is a component of FIMAPI
 type NodeAPI struct {
 	connector *YaksConnector
 	sysid     string
 	tenantid  string
 }
 
-// NewNodeAPI ...
+// NewNodeAPI returns a new NodeAPI objects
 func NewNodeAPI(connector *YaksConnector, sysid string, tenantid string) *NodeAPI {
 	return &NodeAPI{connector, sysid, tenantid}
 }
 
-// List ...
+// List returns a slice with the node id of the nodes in the system
 func (n *NodeAPI) List() ([]string, error) {
 	return n.connector.Global.Actual.GetAllNodes(n.sysid, n.tenantid)
 }
 
-// Info ...
+// Info returns a NodeInfo object with information on the specified node
 func (n *NodeAPI) Info(nodeid string) (*NodeInfo, error) {
 	return n.connector.Global.Actual.GetNodeInfo(n.sysid, n.tenantid, nodeid)
 }
 
-// Status ...
+// Status returns a NodeStatus object with status information on the specified node
 func (n *NodeAPI) Status(nodeid string) (*NodeStatus, error) {
 	return n.connector.Global.Actual.GetNodeStatus(n.sysid, n.tenantid, nodeid)
 }
 
-// Plugins ...
+// Plugins returns a slice of olugin ids for the specified node
 func (n *NodeAPI) Plugins(nodeid string) ([]string, error) {
 	return n.connector.Global.Actual.GetAllPluginsIDs(n.sysid, n.tenantid, nodeid)
 }
 
-// PluginAPI ...
+// PluginAPI is a component of FIMAPI
 type PluginAPI struct {
 	connector *YaksConnector
 	sysid     string
 	tenantid  string
 }
 
-// NewPluginAPI ...
+// NewPluginAPI returns a new PluginAPI object
 func NewPluginAPI(connector *YaksConnector, sysid string, tenantid string) *PluginAPI {
 	return &PluginAPI{connector, sysid, tenantid}
 }
 
-// Info ...
+// Info returns a PluginInfo object with information on the specified plugin in the specified node
 func (p *PluginAPI) Info(nodeid string, pluginid string) (*Plugin, error) {
 	return p.connector.Global.Actual.GetPluginInfo(p.sysid, p.tenantid, nodeid, pluginid)
 }
 
-// NetworkAPI ...
+// NetworkAPI is a component of FIMAPI
 type NetworkAPI struct {
 	connector *YaksConnector
 	sysid     string
 	tenantid  string
 }
 
-// NewNetworkAPI ...
+// NewNetworkAPI returns a new NetworkAPI object
 func NewNetworkAPI(connector *YaksConnector, sysid string, tenantid string) *NetworkAPI {
 	return &NetworkAPI{connector, sysid, tenantid}
 }
 
-// AddNetwork ...
+// AddNetwork registers a new virtual network in the system catalog
 func (n *NetworkAPI) AddNetwork(descriptor VirtualNetwork) error {
 	v := "add"
 	descriptor.Status = &v
 	return n.connector.Global.Desired.AddNetwork(n.sysid, n.tenantid, descriptor.UUID, descriptor)
 }
 
-// RemoveNetwork ...
+// RemoveNetwork remove a virtual network from the system catalog
 func (n *NetworkAPI) RemoveNetwork(netid string) error {
 	return n.connector.Global.Desired.RemoveNetwork(n.sysid, n.tenantid, netid)
 
 }
 
-// AddNetworkToNode ...
+// AddNetworkToNode creates a virtual network on a specified node and returns a VirtualNetwork object associated to the created network
 func (n *NetworkAPI) AddNetworkToNode(nodeid string, descriptor VirtualNetwork) (*VirtualNetwork, error) {
 	netid := descriptor.UUID
 	// _, err := n.connector.Global.Actual.GetNodeNetwork(n.sysid, n.tenantid, nodeid, netid)
@@ -113,7 +113,7 @@ func (n *NetworkAPI) AddNetworkToNode(nodeid string, descriptor VirtualNetwork) 
 	return &net, nil
 }
 
-// RemoveNetworkFromNode ...
+// RemoveNetworkFromNode removes a virtual network from the specified node and returns the VirtualNetwork object associated
 func (n *NetworkAPI) RemoveNetworkFromNode(nodeid string, netid string) (*VirtualNetwork, error) {
 	// _, err := n.connector.Global.Actual.GetNodeNetwork(n.sysid, n.tenantid, nodeid, netid)
 	// if err != nil {
@@ -141,14 +141,14 @@ func (n *NetworkAPI) RemoveNetworkFromNode(nodeid string, netid string) (*Virtua
 	return &net, nil
 }
 
-// AddConnectionPoint ...
+// AddConnectionPoint registers a new connection point in the system catalog
 func (n *NetworkAPI) AddConnectionPoint(descriptor ConnectionPointDescriptor) error {
 	v := "add"
 	descriptor.Status = &v
 	return n.connector.Global.Desired.AddNetworkPort(n.sysid, n.tenantid, *descriptor.UUID, descriptor)
 }
 
-// DeleteConnectionPoint ...
+// DeleteConnectionPoint removes the specified connection point from the system catalog
 func (n *NetworkAPI) DeleteConnectionPoint(cpid string) error {
 	descriptor, err := n.connector.Global.Actual.GetNetworkPort(n.sysid, n.tenantid, cpid)
 	if err != nil {
@@ -160,7 +160,7 @@ func (n *NetworkAPI) DeleteConnectionPoint(cpid string) error {
 
 }
 
-// ConnectCPToNetwork ...
+// ConnectCPToNetwork connects the specified connection point with the specified virtual network and returns the connection point id
 func (n *NetworkAPI) ConnectCPToNetwork(cpid string, netid string) (*string, error) {
 
 	ports, err := n.connector.Global.Actual.GetAllNetworkPorts(n.sysid, n.tenantid)
@@ -196,7 +196,7 @@ func (n *NetworkAPI) ConnectCPToNetwork(cpid string, netid string) (*string, err
 	return &v, nil
 }
 
-// DisconnectCP ...
+// DisconnectCP disconnect the specified connection point and returns its id
 func (n *NetworkAPI) DisconnectCP(cpid string) (*string, error) {
 	ports, err := n.connector.Global.Actual.GetAllNetworkPorts(n.sysid, n.tenantid)
 	if err != nil {
@@ -230,7 +230,7 @@ func (n *NetworkAPI) DisconnectCP(cpid string) (*string, error) {
 	return &v, nil
 }
 
-// AddRouter ...
+// AddRouter creates a new virtual router in the specified node and returns the associated RouterRecord object
 func (n *NetworkAPI) AddRouter(nodeid string, router RouterRecord) (*RouterRecord, error) {
 	err := n.connector.Global.Desired.AddNodeNetworkRouter(n.sysid, n.tenantid, nodeid, router.UUID, router)
 	if err != nil {
@@ -244,12 +244,12 @@ func (n *NetworkAPI) AddRouter(nodeid string, router RouterRecord) (*RouterRecor
 	return routerInfo, nil
 }
 
-// RemoveRouter ...
+// RemoveRouter removes the specified virtual router from the specified node
 func (n *NetworkAPI) RemoveRouter(nodeid string, routerid string) error {
 	return n.connector.Global.Desired.RemoveNodeNetworkRouter(n.sysid, n.tenantid, nodeid, routerid)
 }
 
-// AddRouterPort ...
+// AddRouterPort add a port to the specified virtual router in the specified node and returns the RouterRecord object associated
 func (n *NetworkAPI) AddRouterPort(nodeid string, routerid string, portType string, vnetid *string, ipAddress *string) (*RouterRecord, error) {
 
 	var cont bool = false
@@ -289,7 +289,7 @@ func (n *NetworkAPI) AddRouterPort(nodeid string, routerid string, portType stri
 	return &r, nil
 }
 
-// RemoveRouterPort ...
+// RemoveRouterPort removes the specified port from the specified router in the specified node and returns the RouterRecord object associated
 func (n *NetworkAPI) RemoveRouterPort(nodeid string, routerid string, vnetid string) (*RouterRecord, error) {
 	res, err := n.connector.Global.Actual.RemovePortFromRouter(n.sysid, n.tenantid, nodeid, routerid, vnetid)
 	if err != nil {
@@ -313,7 +313,7 @@ func (n *NetworkAPI) RemoveRouterPort(nodeid string, routerid string, vnetid str
 	return &r, nil
 }
 
-// CreateFloatingIP ...
+// CreateFloatingIP create a floating ip in the specified node and returns the FloatingIPRecord object associated
 func (n *NetworkAPI) CreateFloatingIP(nodeid string) (*FloatingIPRecord, error) {
 	res, err := n.connector.Global.Actual.CrateFloatingIPInNode(n.sysid, n.tenantid, nodeid)
 	if err != nil {
@@ -337,7 +337,7 @@ func (n *NetworkAPI) CreateFloatingIP(nodeid string) (*FloatingIPRecord, error) 
 	return &fip, nil
 }
 
-// DeleteFloatingIP ...
+// DeleteFloatingIP delete the specified floating ip from the specified node and returns the FloatingIPRecord object associated
 func (n *NetworkAPI) DeleteFloatingIP(nodeid string, ipid string) (*FloatingIPRecord, error) {
 	res, err := n.connector.Global.Actual.RemoveFloatingIPFromNode(n.sysid, n.tenantid, nodeid, ipid)
 	if err != nil {
@@ -361,7 +361,7 @@ func (n *NetworkAPI) DeleteFloatingIP(nodeid string, ipid string) (*FloatingIPRe
 	return &fip, nil
 }
 
-// AssignFloatingIP ...
+// AssignFloatingIP assign the specified floating ip to the specified connection point and returns the FloatingIPRecord object associated
 func (n *NetworkAPI) AssignFloatingIP(nodeid string, ipid string, cpid string) (*FloatingIPRecord, error) {
 	res, err := n.connector.Global.Actual.AssignNodeFloatingIP(n.sysid, n.tenantid, nodeid, ipid, cpid)
 	if err != nil {
@@ -376,7 +376,7 @@ func (n *NetworkAPI) AssignFloatingIP(nodeid string, ipid string, cpid string) (
 	return &v, nil
 }
 
-// RetainFloatingIP ...
+// RetainFloatingIP retain the previously assigned floating ip and returns the FloatingIPRecord object associated
 func (n *NetworkAPI) RetainFloatingIP(nodeid string, ipid string, cpid string) (*FloatingIPRecord, error) {
 	res, err := n.connector.Global.Actual.RetainNodeFloatingIP(n.sysid, n.tenantid, nodeid, ipid, cpid)
 	if err != nil {
@@ -400,19 +400,19 @@ func (n *NetworkAPI) RetainFloatingIP(nodeid string, ipid string, cpid string) (
 	return &fip, nil
 }
 
-// List ...
+// List returns a slice with the networks registered in the system catalog
 func (n *NetworkAPI) List() ([]string, error) {
 	return n.connector.Global.Actual.GetAllNetwork(n.sysid, n.tenantid)
 }
 
-// FDUAPI ...
+// FDUAPI is a component of FIMAPI
 type FDUAPI struct {
 	connector *YaksConnector
 	sysid     string
 	tenantid  string
 }
 
-// NewFDUAPI ...
+// NewFDUAPI returns a new FDUAPI object
 func NewFDUAPI(connector *YaksConnector, sysid string, tenantid string) *FDUAPI {
 	rand.Seed(time.Now().Unix())
 	return &FDUAPI{connector, sysid, tenantid}
@@ -476,7 +476,7 @@ func (f *FDUAPI) changeFDUInstanceState(instanceid string, state string, newStat
 	return instanceid, nil
 }
 
-// Onboard ...
+// Onboard register an FDU in the system catalog and returns the associated FDU object
 func (f *FDUAPI) Onboard(descriptor FDU) (*FDU, error) {
 	var fdu FDU
 
@@ -506,13 +506,13 @@ func (f *FDUAPI) Onboard(descriptor FDU) (*FDU, error) {
 	return &fdu, nil
 }
 
-// Offload ...
+// Offload removes a registered FDU from the system catalog and returns its UUID
 func (f *FDUAPI) Offload(fduid string) (string, error) {
 	err := f.connector.Global.Desired.RemoveCatalogFDUInfo(f.sysid, f.tenantid, fduid)
 	return fduid, err
 }
 
-// Define ...
+// Define creates and FDU Instance for the specified FDU in the specified node and returns the FDURecord object associated
 func (f *FDUAPI) Define(nodeid string, fduid string) (*FDURecord, error) {
 	var fdu FDURecord
 	_, err := f.connector.Global.Actual.GetCatalogFDUInfo(f.sysid, f.tenantid, fduid)
@@ -548,7 +548,7 @@ func (f *FDUAPI) Define(nodeid string, fduid string) (*FDURecord, error) {
 
 }
 
-// Undefine ...
+// Undefine removes the specified FDU instance and returns its UUID
 func (f *FDUAPI) Undefine(instanceid string) (string, error) {
 	node, err := f.connector.Global.Actual.GetFDUInstanceNode(f.sysid, f.tenantid, instanceid)
 	if err != nil {
@@ -563,42 +563,42 @@ func (f *FDUAPI) Undefine(instanceid string) (string, error) {
 	return instanceid, err
 }
 
-// Configure ...
+// Configure the specified FDU instance and returns its UUID
 func (f *FDUAPI) Configure(instanceid string) (string, error) {
 	return f.changeFDUInstanceState(instanceid, CONFIGURE, CONFIGURE)
 }
 
-// Clean ...
+// Clean the specified FDU instance and returns its UUID
 func (f *FDUAPI) Clean(instanceid string) (string, error) {
 	return f.changeFDUInstanceState(instanceid, CLEAN, DEFINE)
 }
 
-// Start ...
+// Start the specified FDU instance and returns its UUID
 func (f *FDUAPI) Start(instanceid string) (string, error) {
 	return f.changeFDUInstanceState(instanceid, RUN, RUN)
 }
 
-// Stop ...
+// Stop the specified FDU instance and returns its UUID
 func (f *FDUAPI) Stop(instanceid string) (string, error) {
 	return f.changeFDUInstanceState(instanceid, STOP, CONFIGURE)
 }
 
-// Pause ...
+// Pause the specified FDU instance and returns its UUID
 func (f *FDUAPI) Pause(instanceid string) (string, error) {
 	return f.changeFDUInstanceState(instanceid, PAUSE, PAUSE)
 }
 
-// Resume ...
+// Resume the specified FDU instance and returns its UUID
 func (f *FDUAPI) Resume(instanceid string) (string, error) {
 	return f.changeFDUInstanceState(instanceid, RESUME, RUN)
 }
 
-// Migrate ...
+// Migrate the specified FDU instance to the specified node and returns the FDU instance UUID
 func (f *FDUAPI) Migrate(instanceid string, destination string) (string, error) {
 	return "", &FError{"Not Implemented", nil}
 }
 
-// Instantiate ...
+// Instantiate is a commodity function that does Define, Configure and Start for a specified FDU in the specified node and returns the FDU instance UUID
 func (f *FDUAPI) Instantiate(nodeid string, fduid string) (string, error) {
 	fdur, err := f.Define(nodeid, fduid)
 	if err != nil {
@@ -614,7 +614,7 @@ func (f *FDUAPI) Instantiate(nodeid string, fduid string) (string, error) {
 	return fdur.UUID, err
 }
 
-// Terminate ...
+// Terminate is a commodity function that does  Stop, Clean and Undefine for the specified FDU instance and returns its UUID
 func (f *FDUAPI) Terminate(instanceid string) (string, error) {
 	_, err := f.Stop(instanceid)
 	if err != nil {
@@ -630,27 +630,27 @@ func (f *FDUAPI) Terminate(instanceid string) (string, error) {
 	return instanceid, err
 }
 
-// GetNodes ...
+// GetNodes returns a slice with the node id in which the FDU is running
 func (f *FDUAPI) GetNodes(fduid string) ([]string, error) {
 	return f.connector.Global.Actual.GetFDUNodes(f.sysid, f.tenantid, fduid)
 }
 
-// Info ...
+// Info returns the FDU object with information on the specified FDU
 func (f *FDUAPI) Info(fduid string) (*FDU, error) {
 	return f.connector.Global.Actual.GetCatalogFDUInfo(f.sysid, f.tenantid, fduid)
 }
 
-// InstanceInfo ...
+// InstanceInfo return the FDURecord object with information on the specified FDU instance
 func (f *FDUAPI) InstanceInfo(instanceid string) (*FDURecord, error) {
 	return f.connector.Global.Actual.GetNodeFDUInstance(f.sysid, f.tenantid, "*", instanceid)
 }
 
-// List ...
+// List returns a slice with the UUID of all the FDU registered in the system catalog
 func (f *FDUAPI) List() ([]string, error) {
 	return f.connector.Global.Actual.GetCatalogAllFDUs(f.sysid, f.tenantid)
 }
 
-// InstanceList ...
+// InstanceList for a given FDU and node returns the a map of FDU instances running
 func (f *FDUAPI) InstanceList(fduid string, nodeid *string) (map[string][]string, error) {
 	if nodeid == nil {
 		x := "*"
@@ -671,29 +671,29 @@ func (f *FDUAPI) InstanceList(fduid string, nodeid *string) (map[string][]string
 
 }
 
-// ConnectInterfaceToCP ...
+// ConnectInterfaceToCP given a connection point, and FDU instance and interface and a node connects the connection point to the specified interface and returns the FDU instance UUID
 func (f *FDUAPI) ConnectInterfaceToCP(cpid string, instanceid string, face string, nodeid string) (string, error) {
 	return "", &FError{"Not Implemented", nil}
 }
 
-// DisconnectInterfaceToCP ...
+// DisconnectInterfaceToCP disconnect the given interface and returns the FDU instance UUID
 func (f *FDUAPI) DisconnectInterfaceToCP(face string, instanceid string, nodeid string) (string, error) {
 	return "", &FError{"Not Implemented", nil}
 }
 
-// ImageAPI ...
+// ImageAPI is a component of FIMAPI
 type ImageAPI struct {
 	connector *YaksConnector
 	sysid     string
 	tenantid  string
 }
 
-// NewImageAPI ...
+// NewImageAPI returns a new ImageAPI object
 func NewImageAPI(connector *YaksConnector, sysid string, tenantid string) *ImageAPI {
 	return &ImageAPI{connector, sysid, tenantid}
 }
 
-// Add ...
+// Add registers an image in the system catalog and returns its UUID
 func (i *ImageAPI) Add(descriptor FDUImage) (string, error) {
 	if *descriptor.UUID == "" {
 		v := (uuid.UUID.String(uuid.New()))
@@ -703,30 +703,30 @@ func (i *ImageAPI) Add(descriptor FDUImage) (string, error) {
 	return *descriptor.UUID, err
 }
 
-// Remove ...
+// Remove removes the given image from the system catalog and returns its UUID
 func (i *ImageAPI) Remove(imgid string) (string, error) {
 	err := i.connector.Global.Desired.RemoveImage(i.sysid, i.tenantid, imgid)
 	return imgid, err
 }
 
-// List ...
+// List returns a slice with the UUIDs of the images registered in the system catalog
 func (i *ImageAPI) List() ([]string, error) {
 	return i.connector.Global.Actual.GetAllImages(i.sysid, i.tenantid)
 }
 
-// FlavorAPI ...
+// FlavorAPI is a component of FIMAPI
 type FlavorAPI struct {
 	connector *YaksConnector
 	sysid     string
 	tenantid  string
 }
 
-// NewFlavorAPI ...
+// NewFlavorAPI returns a new FlavorAPI object
 func NewFlavorAPI(connector *YaksConnector, sysid string, tenantid string) *FlavorAPI {
 	return &FlavorAPI{connector, sysid, tenantid}
 }
 
-// Add ...
+// Add registers a new flavor in the system catalog and returns its UUID
 func (f *FlavorAPI) Add(descriptor FDUComputationalRequirements) (string, error) {
 	if *descriptor.UUID == "" {
 		v := (uuid.UUID.String(uuid.New()))
@@ -736,18 +736,18 @@ func (f *FlavorAPI) Add(descriptor FDUComputationalRequirements) (string, error)
 	return *descriptor.UUID, err
 }
 
-// Remove ...
+// Remove removes the given flavor from the system catalog and returns its UUID
 func (f *FlavorAPI) Remove(flvid string) (string, error) {
 	err := f.connector.Global.Desired.RemoveFlavor(f.sysid, f.tenantid, flvid)
 	return flvid, err
 }
 
-// List ...
+// List returns a slice with the UUIDs of the flavors registered in the system catalog
 func (f *FlavorAPI) List() ([]string, error) {
 	return f.connector.Global.Actual.GetAllFlavors(f.sysid, f.tenantid)
 }
 
-// FIMAPI is FIM API
+// FIMAPI is the api to interact with Eclipse fog05 FIM
 type FIMAPI struct {
 	connector *YaksConnector
 	sysid     string
@@ -759,7 +759,7 @@ type FIMAPI struct {
 	Plugin    *PluginAPI
 }
 
-// NewFIMAPI ...
+// NewFIMAPI returns a new FIMAPI object, locators has to be in this form tcp/<yaks server address>:<yaks port>
 func NewFIMAPI(locator string, sysid *string, tenantid *string) (*FIMAPI, error) {
 
 	if sysid == nil {
@@ -786,7 +786,7 @@ func NewFIMAPI(locator string, sysid *string, tenantid *string) (*FIMAPI, error)
 	return &FIMAPI{yco, *sysid, *tenantid, img, fdu, net, node, pl}, nil
 }
 
-// Close ...
+// Close closes the connection of the FIM API
 func (f *FIMAPI) Close() error {
 	return f.connector.Close()
 }
