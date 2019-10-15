@@ -292,7 +292,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
     with
     | exn ->
-      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-REMOVE-CP - EXCEPTION: %s" (Printexc.to_string exn)) in
+      let _ = Logs.err (fun m -> m "[FOS-AGENT] - EV-REMOVE-NET - EXCEPTION: %s" (Printexc.to_string exn)) in
       let eval_res = FAgentTypes.{result = None ; error=Some 11; error_msg = Some (Printexc.to_string exn)} in
       Lwt.return @@ FAgentTypes.string_of_eval_result eval_res
   in
@@ -1433,7 +1433,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
         (* Convertion from record *)
         let router = Router.record_of_string @@ JSON.to_string (Apero.Option.get r.result) in
         let%lwt ports = Lwt_list.map_p (fun (e:Router.router_port_record) ->
-            Lwt.return Router.{port_type = e.port_type; vnet_id = e.pair_id; ip_address = Some e.ip_address}
+            Lwt.return Router.{port_type = e.port_type; vnet_id = e.vnet_id; ip_address = Some e.ip_address}
           ) router.ports
         in
         let router_desc = Router.{uuid = Some router.uuid; ports = ports; } in
@@ -1470,7 +1470,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
         (* Convertion from record *)
         let router = Router.record_of_string @@ JSON.to_string (Apero.Option.get r.result) in
         let%lwt ports = Lwt_list.map_p (fun (e:Router.router_port_record) ->
-            Lwt.return Router.{port_type = e.port_type; vnet_id = e.pair_id; ip_address = Some e.ip_address}
+            Lwt.return Router.{port_type = e.port_type; vnet_id = e.vnet_id; ip_address = Some e.ip_address}
           ) router.ports
         in
         let router_desc = Router.{uuid = Some router.uuid; ports = ports; } in
@@ -1710,11 +1710,11 @@ let agent verbose_flag debug_flag configuration custom_uuid =
                (* This is a bad example of removing the escape characters, the JSON.string  *)
                let face = String.sub face 1 ((String.length face)-2) in
                let wan_face = Printf.sprintf "r-%s-e%d" (List.hd (String.split_on_char '-' rid)) i in
-               Lwt.return Router.{port_type = `EXTERNAL; faces = [wan_face]; ext_face = Some face; ip_address = ""; pair_id = None}
+               Lwt.return Router.{port_type = `EXTERNAL; faces = [wan_face]; ext_face = Some face; ip_address = ""; vnet_id = None}
              | `INTERNAL ->
                let face_i = Printf.sprintf "r-%s-e%d-i" (List.hd (String.split_on_char '-' rid)) i in
                let face_e = Printf.sprintf "r-%s-e%d-e" (List.hd (String.split_on_char '-' rid)) i in
-               Lwt.return Router.{port_type = `INTERNAL; faces = [face_i; face_e]; ip_address = Apero.Option.get_or_default e.ip_address ""; ext_face = None; pair_id = e.vnet_id}
+               Lwt.return Router.{port_type = `INTERNAL; faces = [face_i; face_e]; ip_address = Apero.Option.get_or_default e.ip_address ""; ext_face = None; vnet_id = e.vnet_id}
            ) router.ports
          in
          let vrouter_ns =  Printf.sprintf "r-%s-ns" (List.hd (String.split_on_char '-' rid))  in
@@ -1797,7 +1797,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
           | _ ->
             (* Convert to back to descriptor *)
             let%lwt ports = Lwt_list.map_p (fun (e:Router.router_port_record) ->
-                Lwt.return Router.{port_type = e.port_type; vnet_id = e.pair_id; ip_address = Some e.ip_address}
+                Lwt.return Router.{port_type = e.port_type; vnet_id = e.vnet_id; ip_address = Some e.ip_address}
               ) router.ports
             in
             let router_desc = Router.{uuid = Some router.uuid; ports = ports; } in
@@ -1992,7 +1992,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
   let%lwt _ = Yaks_connector.Local.Actual.add_agent_eval uuid "get_image_info" (eval_get_image_info state) yaks in
   (* Network Mgmt Evals *)
   let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "create_node_network" (eval_create_net state) yaks in
-  let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "remove_node_netwotk" (eval_remove_net state) yaks in
+  let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "remove_node_network" (eval_remove_net state) yaks in
   let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "create_cp" (eval_create_cp state) yaks in
   let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "remove_cp" (eval_remove_cp state) yaks in
   let%lwt _ = Yaks_connector.Global.Actual.add_agent_eval sys_id Yaks_connector.default_tenant_id uuid "connect_cp_to_face" (eval_connect_cp_to_fdu_face state) yaks in

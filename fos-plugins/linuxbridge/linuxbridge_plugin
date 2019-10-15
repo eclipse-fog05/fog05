@@ -451,7 +451,7 @@ class LinuxBridge(NetworkPlugin):
                 self.os.execute_command(cmd_i_face_to_ns, blocking=True, external=True)
                 self.os.execute_command(cmd_i_face_up, blocking=True, external=True)
 
-                net_record = self.networks.get(p['pair_id'])
+                net_record = self.networks.get(p['vnet_id'])
                 net_ns = net_record['properties']['net_ns']
                 net_dev = net_record['properties']['virtual_device'] + '-ns'
 
@@ -519,7 +519,7 @@ class LinuxBridge(NetworkPlugin):
             elif p['port_type'] == 'INTERNAL':
                 self.logger.info('delete_router()', 'Removing Internal Face {}'.format(p['faces'][0]))
 
-                net_record = self.networks.get(p['pair_id'])
+                net_record = self.networks.get(p['vnet_id'])
                 net_ns = net_record['properties']['net_ns']
 
                 cmd_remove_face = 'sudo ip netns exec {} ip link del {}'.format(net_ns, p['faces'][1])
