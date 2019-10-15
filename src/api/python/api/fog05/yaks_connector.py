@@ -1339,7 +1339,7 @@ class GAD(object):
             return json.loads(res[0][1].get_value())
 
     def remove_network_from_node(self, sysid, tenantid, nodeid, net_id):
-        fname = 'remove_node_netwotk'
+        fname = 'remove_node_network'
         params = {'net_id': net_id}
         s = self.get_agent_exec_path_with_params(sysid, tenantid, nodeid, fname, params)
         res = self.ws.get(s)
