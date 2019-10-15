@@ -752,8 +752,6 @@ class LinuxBridge(NetworkPlugin):
     def allocate_bandwidth(self, intf_uuid, bandwidth):
         raise NotImplementedError
 
-    def assign_interface_to_network(self, network_uuid, intf_uuid):
-        pass
 
     # eval
     def connect_interface_to_connection_point(self, intf_id, cp_id):
@@ -815,10 +813,6 @@ class LinuxBridge(NetworkPlugin):
         self.logger.info('disconnect_cp()','Disconnected CP {}'.format(cp_id))
         return {'result':{'int':cp_id, 'ext':None}}
 
-
-
-    def remove_interface_from_network(self, network_uuid, intf_uuid):
-        pass
 
     def delete_virtual_network(self, network_uuid):
         self.logger.info('delete_virtual_network()','Deletting {}'.format(network_uuid))

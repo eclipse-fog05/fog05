@@ -34,57 +34,174 @@ class OSPlugin(Plugin):
 
     def execute_command(self, command, blocking, external):
         '''
-        Execute a command to cli of underlying os,
-         IDK should return bool or the command output?
+        Executes a command on underlying os,
 
-        :command: String
-        :return: String or bool?
+        parameters
+        ---------
+
+        command : string
+            command to be executed
+
+        blocking : bool
+            true if the call has to block until the end of the command
+
+        external : bool
+            true if the command has to be executed in an external os shell
+
+        returns
+        ------
+        dictionary
+
+            {'result': string}
+
         '''
 
         raise NotImplementedError('This is and interface!')
 
     def install_package(self, packages):
         '''
-        Install all packages passed within the parameter, return a bool
+        Installs all packages passed within the parameter, return a bool
         to know the retult of operation
 
-        :packages: tuple
-        :return: bool
+        parameters
+        ----------
 
+        packages : string list
+
+            name of the packages to be installed
+
+        returns
+        -------
+        list (string, bool)
+
+            name of package, bool
         '''
 
         raise NotImplementedError('This is and interface!')
 
     def store_file(self, content, file_path, filename):
         '''
-        Store a file in local disk, maybe can convert
+        Stores a file in local disk, maybe can convert
          from windows dir separator to unix dir separator
 
-        :content: byte
-        :file_path: string
-        :filename: string
-        :return: bool
+        parameters
+        ----------
 
+        content : string
+            base64 encoded and hexified bytes of the file content
+
+        file_path : string
+            path where the content will stored
+
+        filename : string
+            name of the file
+
+        returns
+        -------
+        dictionary
+            {'result':bool}
         '''
 
         raise NotImplementedError('This is and interface!')
 
     def file_exists(self, file_path):
+        '''
+        Checks if the given file exists
+
+        parameters
+        ----------
+        file_path : string
+            path to the file
+
+        returns
+        -------
+        dictionary
+            {'result':bool}
+        '''
         raise NotImplementedError
 
     def dir_exists(self, path):
+        '''
+        Checks if the given directory exists
+
+        parameters
+        ----------
+        path : string
+            path to the directory
+
+        returns
+        -------
+        dictionary
+            {'result':bool}
+
+
+        '''
         raise NotImplementedError
 
     def create_dir(self, path):
+        '''
+        Creates the given new directory
+
+        parameters
+        ----------
+        path : string
+            path to the directory
+
+        returns
+        -------
+        dictionary
+            {'result':bool}
+
+        '''
         raise NotImplementedError
 
     def create_file(self, path):
+        '''
+        Creates the given new empty file
+
+        parameters
+        ----------
+        path : string
+            path to the file
+
+        returns
+        -------
+        dictionary
+            {'result':bool}
+        '''
         raise NotImplementedError
 
     def remove_dir(self, path):
+        '''
+        Removes the given directory
+
+        parameters
+        ----------
+        path : string
+            path to the directory
+
+        returns
+        -------
+        dictionary
+            {'result':bool}
+
+        '''
         raise NotImplementedError
 
     def remove_file(self, path):
+        '''
+        Removes the given file
+
+        parameters
+        ----------
+        path : string
+            path to the directory
+
+        returns
+        -------
+        dictionary
+            {'result':bool}
+        '''
         raise NotImplementedError
 
     def read_file(self, file_path, root=False):
