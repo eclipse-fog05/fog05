@@ -69,7 +69,7 @@ const (
 	ERROR     string = "ERROR"
 )
 
-// FDUImage ...
+// FDUImage represents an FDU image
 type FDUImage struct {
 	UUID     *string `json:"uuid,omitempty"`
 	Name     *string `json:"name,omitempty"`
@@ -78,37 +78,37 @@ type FDUImage struct {
 	Format   string  `json:"format"`
 }
 
-// FDUCommand ...
+// FDUCommand represents an FDU command in case of Native FDU
 type FDUCommand struct {
 	Binary string   `json:"binary"`
 	Args   []string `json:"args"`
 }
 
-// FDUGeographicalRequirements ...
+// FDUGeographicalRequirements represents the FDU Geographical Requirements
 type FDUGeographicalRequirements struct {
 	Position  *FDUPosition  `json:"position,omitempty"`
 	Proximity *FDUProximity `json:"proximity,omitempty"`
 }
 
-// FDUPosition ...
+// FDUPosition represents the FDU Position
 type FDUPosition struct {
 	Latitude  string  `json:"lat"`
 	Longitude string  `json:"lon"`
 	Radius    float64 `json:"radius"`
 }
 
-// FDUProximity ...
+// FDUProximity represents the FDU Proximity
 type FDUProximity struct {
 	Neighbor string  `json:"neighbour"`
 	Radius   float64 `json:"radius"`
 }
 
-// FDUEnergyRequirements ...
+// FDUEnergyRequirements represents the FDU Energy Requirements
 type FDUEnergyRequirements struct {
 	Key string `json:"key"`
 }
 
-// FDUComputationalRequirements ...
+// FDUComputationalRequirements represents the FDU Computational Requirements aka Flavor
 type FDUComputationalRequirements struct {
 	Name            *string  `json:"name,omitempty"`
 	UUID            *string  `json:"uuid,omitempty"`
@@ -122,28 +122,28 @@ type FDUComputationalRequirements struct {
 	DutyCycle       *float64 `json:"duty_cycle,omitempty"`
 }
 
-// FDUConfiguration ...
+// FDUConfiguration represents the FDU Configuration
 type FDUConfiguration struct {
 	ConfType string   `json:"conf_type"`
 	Script   string   `json:"script"`
 	SSHKeys  []string `json:"ssh_keys,omitempty"`
 }
 
-// FDUVirtualInterface ...
+// FDUVirtualInterface represents the FDU Virtual Interface
 type FDUVirtualInterface struct {
 	InterfaceType string `json:"intf_type"`
 	VPCI          string `json:"vpci"`
 	Bandwidth     int    `json:"bandwidth"`
 }
 
-// FDUIOPort ...
+// FDUIOPort represenrs an FDU IO Port requirements
 type FDUIOPort struct {
 	Address    string `json:"address"`
 	IOKind     string `json:"io_kind"`
 	MinIOPorts int    `json:"min_io_ports"`
 }
 
-// FDUInterfaceDescriptor ...
+// FDUInterfaceDescriptor represent and FDU Network Interface descriptor
 type FDUInterfaceDescriptor struct {
 	Name             string              `json:"name"`
 	IsMGMT           bool                `json:"is_mgmt"`
@@ -154,7 +154,7 @@ type FDUInterfaceDescriptor struct {
 	ExtCPID          *string             `json:"ext_cp_id,omitempty"`
 }
 
-// FDUStorageDescriptor ...
+// FDUStorageDescriptor represents an FDU Storage Descriptor
 type FDUStorageDescriptor struct {
 	ID                 string  `json:"id"`
 	StorageType        string  `json:"storage_type"`
@@ -163,7 +163,7 @@ type FDUStorageDescriptor struct {
 	CPID               *string `json:"cp_id,omitempty"`
 }
 
-// FDU ...
+// FDU represent and FDU descriptor
 type FDU struct {
 	ID                       string                       `json:"id"`
 	Name                     string                       `json:"name"`
@@ -184,7 +184,7 @@ type FDU struct {
 	DependsOn                []string                     `json:"depends_on"`
 }
 
-// FDUStorageRecord ...
+// FDUStorageRecord represent an FDU Storage Record
 type FDUStorageRecord struct {
 	UUID               string  `json:"uuid"`
 	StorageID          string  `json:"storage_id"`
@@ -194,7 +194,7 @@ type FDUStorageRecord struct {
 	CPID               *string `json:"cp_id,omitempty"`
 }
 
-// FDUInterfaceRecord ...
+// FDUInterfaceRecord represent an FDU Interface Record
 type FDUInterfaceRecord struct {
 	Name                 string               `json:"name"`
 	IsMGMT               bool                 `json:"is_mgmt"`
@@ -210,13 +210,13 @@ type FDUInterfaceRecord struct {
 	Properties           *jsont               `json:"properties,omitempty"`
 }
 
-// FDUMigrationProperties ...
+// FDUMigrationProperties represent FDU Migration Properties used during migration
 type FDUMigrationProperties struct {
 	Destination string `json:"destination"`
 	Source      string `json:"source"`
 }
 
-// FDURecord ...
+// FDURecord represent an FDU instance record
 type FDURecord struct {
 	UUID                     string                       `json:"uuid"`
 	FDUID                    string                       `json:"fdu_id"`

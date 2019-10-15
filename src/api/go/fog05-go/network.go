@@ -15,7 +15,7 @@ package fog05
 
 type jsont = map[string]interface{}
 
-//Couple ..
+//Couple represent a Couple object usefull in case of functions returning couples
 type Couple struct {
 	St string
 	Nd string
@@ -37,7 +37,7 @@ const (
 	DESTROY      string = "DESTROY"
 )
 
-// AddressInformation ...
+// AddressInformation represents Address configuration for a network
 type AddressInformation struct {
 	IPVersion  string  `json:"ip_version"`
 	Subnet     string  `json:"subnet"`
@@ -47,7 +47,7 @@ type AddressInformation struct {
 	DNS        *string `json:"dns,omitempty"`
 }
 
-// ConnectionPointDescriptor ...
+// ConnectionPointDescriptor represents a Connection Point
 type ConnectionPointDescriptor struct {
 	UUID                *string `json:"uuid,omitempty"`
 	Name                string  `json:"name"`
@@ -59,7 +59,7 @@ type ConnectionPointDescriptor struct {
 	Status              *string `json:"status,omitempty"`
 }
 
-// ConnectionPointRecord ...
+// ConnectionPointRecord represent a Connection Point record
 type ConnectionPointRecord struct {
 	UUID                string  `json:"uuid"`
 	CPID                string  `json:"cp_id"`
@@ -72,20 +72,20 @@ type ConnectionPointRecord struct {
 	Status              string  `json:"status"`
 }
 
-// RouterPort ...
+// RouterPort represent a router port
 type RouterPort struct {
 	PortType     string  `json:"port_type"`
 	VirtualNetID *string `json:"vnet_id,omitempty"`
 	IPAddress    *string `json:"ip_address,omitempty"`
 }
 
-// RouterDescriptor ...
+// RouterDescriptor represent a Virtual Router
 type RouterDescriptor struct {
 	UUID  *string      `json:"uuid,omitempty"`
 	Ports []RouterPort `json:"ports"`
 }
 
-// RouterPortRecord ...
+// RouterPortRecord represent a router port record
 type RouterPortRecord struct {
 	PortType     *string  `json:"port_type,omitempty"`
 	Faces        []string `json:"faces"`
@@ -94,7 +94,7 @@ type RouterPortRecord struct {
 	PairID       *string  `json:"vnet_id,omitempty"`
 }
 
-// RouterRecord ...
+// RouterRecord represent a virtual router record
 type RouterRecord struct {
 	UUID     string             `json:"uuid"`
 	State    string             `json:"state"`
@@ -103,7 +103,7 @@ type RouterRecord struct {
 	NodeID   string             `json:"nodeid"`
 }
 
-// VirtualNetwork ...
+// VirtualNetwork represent a virtual network
 type VirtualNetwork struct {
 	UUID             string              `json:"uuid"`
 	Name             string              `json:"name"`
@@ -117,14 +117,14 @@ type VirtualNetwork struct {
 	Status           *string             `json:"status,omitempty"`
 }
 
-// FloatingIPDescriptor ...
+// FloatingIPDescriptor represent a floating IP
 type FloatingIPDescriptor struct {
 	UUID      string `json:"uuid"`
 	IPVersion string `json:"ip_version"`
 	Address   string `json:"address"`
 }
 
-// FloatingIPRecord ...
+// FloatingIPRecord represent a floating IP record
 type FloatingIPRecord struct {
 	UUID        string `json:"uuid"`
 	IPVersion   string `json:"ip_version"`

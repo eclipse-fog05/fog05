@@ -13,13 +13,13 @@
 
 package fog05
 
-// DefaultSysID ...
+// DefaultSysID constant for Default System ID
 const DefaultSysID = "0"
 
-// DefaultTenantID ...
+// DefaultTenantID constant for Default Tenant ID
 const DefaultTenantID = "0"
 
-// FError ...
+// FError fog05 Error
 type FError struct {
 	msg   string
 	cause error
@@ -32,36 +32,36 @@ func (e *FError) Error() string {
 	return e.msg
 }
 
-// SystemInfo ...
+// SystemInfo rapresent system information
 type SystemInfo struct {
 	Name string `json:"name"`
 	UUID string `json:"uuid"`
 }
 
-// SystemConfig ...
+// SystemConfig represents system configuration
 type SystemConfig struct {
 	Config string `json:"config"`
 }
 
-// TenantInfo ...
+// TenantInfo represents tenant information
 type TenantInfo struct {
 	Name string `json:"name"`
 	UUID string `json:"uuid"`
 }
 
-// CPUSpec ...
+// CPUSpec represents CPU specification
 type CPUSpec struct {
 	Model     string  `json:"model"`
 	Frequency float64 `json:"frequency"`
 	Arch      string  `json:"arch"`
 }
 
-// RAMSpec ...
+// RAMSpec represents RAM specification
 type RAMSpec struct {
 	Size float64 `json:"size"`
 }
 
-// DiskSpec ...
+// DiskSpec rapresent Disk specification
 type DiskSpec struct {
 	LocalAddress string  `json:"local_address"`
 	Dimension    float64 `json:"dimension"`
@@ -69,7 +69,7 @@ type DiskSpec struct {
 	FileSystem   string  `json:"filesystem"`
 }
 
-// IOSpec ...
+// IOSpec represents I/O specification
 type IOSpec struct {
 	Name      string `json:"name"`
 	IOType    string `json:"io_type"`
@@ -77,13 +77,13 @@ type IOSpec struct {
 	Available bool   `json:"available"`
 }
 
-// VolatilitySpec ...
+// VolatilitySpec represents Volatility specification
 type VolatilitySpec struct {
 	AverageAvailabilityMinutes   int   `json:"avg_availability_minutes"`
 	QuartilesAvailabilityMinutes []int `json:"quartiles_availability_minutes"`
 }
 
-// AcceleratorSpec ...
+// AcceleratorSpec rapresent HW Accelerators specification
 type AcceleratorSpec struct {
 	HWAddress        string   `json:"hw_address"`
 	Name             string   `json:"name"`
@@ -91,7 +91,7 @@ type AcceleratorSpec struct {
 	Available        bool     `json:"available"`
 }
 
-// InterfaceConfiguration ...
+// InterfaceConfiguration rapresent network interface specification
 type InterfaceConfiguration struct {
 	IPV4Address string  `json:"ipv4_address"`
 	IPV4Netmask string  `json:"ipv4_netmask"`
@@ -102,13 +102,13 @@ type InterfaceConfiguration struct {
 	BUSAddress  *string `json:"bus_address,omitempty"`
 }
 
-// PositionSpec ...
+// PositionSpec represents Position specification
 type PositionSpec struct {
 	Latitude  float64 `json:"lat"`
 	Longitude float64 `json:"lon"`
 }
 
-// NetworkSpec ...
+// NetworkSpec represents network specification
 type NetworkSpec struct {
 	InterfaceName       string                 `json:"intf_name"`
 	InterfaceMACAddress string                 `json:"intf_mac_address"`
@@ -119,7 +119,7 @@ type NetworkSpec struct {
 	InterfaceConf       InterfaceConfiguration `json:"intf_configuration"`
 }
 
-// NodeInfo ...
+// NodeInfo represents node information
 type NodeInfo struct {
 	UUID        string            `json:"uuid"`
 	Name        string            `json:"name"`
@@ -134,7 +134,7 @@ type NodeInfo struct {
 	Volatility  *VolatilitySpec   `json:"volatility,omitempty"`
 }
 
-// AgentConfiguration ...
+// AgentConfiguration represents agent configuration
 type AgentConfiguration struct {
 	System        string  `json:"system,omitempty"`
 	UUID          *string `json:"uuid,omitempty"`
@@ -150,51 +150,51 @@ type AgentConfiguration struct {
 	LLDPConf      string  `json:"lldp_conf"`
 }
 
-// PluginsConfiguration ...
+// PluginsConfiguration represents Ageng plugin configuration
 type PluginsConfiguration struct {
 	PluginPath string   `json:"plugin_path"`
 	Autoload   bool     `json:"autoload"`
 	Auto       []string `json:"auto,omitempty"`
 }
 
-// NodeConfiguration ...
+// NodeConfiguration represents node configuration
 type NodeConfiguration struct {
 	Agent   AgentConfiguration   `json:"agent"`
 	Plugins PluginsConfiguration `json:"plugins"`
 }
 
-// RAMStatus ...
+// RAMStatus represents RAM status
 type RAMStatus struct {
 	Total float64 `json:"total"`
 	Free  float64 `json:"free"`
 }
 
-// DiskStatus ...
+// DiskStatus represents disk status
 type DiskStatus struct {
 	MountPoint string  `json:"mount_point"`
 	Total      float64 `json:"total"`
 	Free       float64 `json:"free"`
 }
 
-// NeighborPeerInfo ...
+// NeighborPeerInfo represents node neighbor peer
 type NeighborPeerInfo struct {
 	Name string `json:"name"`
 	ID   string `json:"id"`
 }
 
-// NeighborInfo ...
+// NeighborInfo represents node neighbor
 type NeighborInfo struct {
 	Node NeighborPeerInfo `json:"node"`
 	Port NeighborPeerInfo `json:"port"`
 }
 
-// Neighbor ...
+// Neighbor represents node neighbor
 type Neighbor struct {
 	Src NeighborInfo `json:"src"`
 	Dst NeighborInfo `json:"dst"`
 }
 
-// NodeStatus ...
+// NodeStatus represents node status
 type NodeStatus struct {
 	UUID      string       `json:"uuid"`
 	RAM       RAMStatus    `json:"ram"`
@@ -202,7 +202,7 @@ type NodeStatus struct {
 	Neighbors []Neighbor   `json:"neighbors"`
 }
 
-// Plugin ...
+// Plugin represents plugin configuration
 type Plugin struct {
 	UUID          string   `json:"uuid"`
 	Name          string   `json:"name"`
@@ -215,7 +215,7 @@ type Plugin struct {
 	Configuration *jsont   `json:"configuration,omitempty"`
 }
 
-// EvalResult ...
+// EvalResult represents results of Eval
 type EvalResult struct {
 	Result       *interface{} `json:"result,omitempty"`
 	Error        *int         `json:"error,omitempty"`

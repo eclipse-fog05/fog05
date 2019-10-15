@@ -8,14 +8,14 @@ import (
 	"github.com/google/uuid"
 )
 
-// OS ...
+// OS is the object to interact with OS Plugin
 type OS struct {
 	uuid      string
 	connector *YaksConnector
 	node      string
 }
 
-// CallOSPluginFunction ...
+// CallOSPluginFunction calls an Eval registered within the OS Plugin, returns a pointer to a genering interface{}
 func (os *OS) CallOSPluginFunction(fname string, fparameters map[string]interface{}) (*interface{}, error) {
 	res, err := os.connector.Local.Actual.ExecOSEval(os.node, fname, fparameters)
 	if err != nil {
@@ -28,7 +28,7 @@ func (os *OS) CallOSPluginFunction(fname string, fparameters map[string]interfac
 	return res.Result, nil
 }
 
-// DirExists ...
+// DirExists check if the given directory exists
 func (os *OS) DirExists(dirpath string) (bool, error) {
 	r, err := os.CallOSPluginFunction("dir_exists", map[string]interface{}{"dir_path": dirpath})
 	if err != nil {
@@ -45,7 +45,7 @@ func (os *OS) DirExists(dirpath string) (bool, error) {
 	}
 }
 
-// CreateDir ...
+// CreateDir creates the given directory
 func (os *OS) CreateDir(dirpath string) (bool, error) {
 	r, err := os.CallOSPluginFunction("create_dir", map[string]interface{}{"dir_path": dirpath})
 	if err != nil {
@@ -62,7 +62,7 @@ func (os *OS) CreateDir(dirpath string) (bool, error) {
 	}
 }
 
-// RemoveDir ...
+// RemoveDir removes the given directory
 func (os *OS) RemoveDir(dirpath string) (bool, error) {
 	r, err := os.CallOSPluginFunction("remove_dir", map[string]interface{}{"dir_path": dirpath})
 	if err != nil {
@@ -79,7 +79,7 @@ func (os *OS) RemoveDir(dirpath string) (bool, error) {
 	}
 }
 
-// DownloadFile ...
+// DownloadFile downloads the given file into the given path
 func (os *OS) DownloadFile(url string, filepath string) (bool, error) {
 	r, err := os.CallOSPluginFunction("download_file", map[string]interface{}{"url": url, "file_path": filepath})
 	if err != nil {
@@ -96,7 +96,7 @@ func (os *OS) DownloadFile(url string, filepath string) (bool, error) {
 	}
 }
 
-// ExecuteCommand ...
+// ExecuteCommand executes the given command, with given flags
 func (os *OS) ExecuteCommand(command string, blocking bool, external bool) (string, error) {
 	r, err := os.CallOSPluginFunction("execute_command", map[string]interface{}{"command": command, "blocking": blocking, "external": external})
 	if err != nil {
@@ -113,7 +113,7 @@ func (os *OS) ExecuteCommand(command string, blocking bool, external bool) (stri
 	}
 }
 
-// CreateFile ...
+// CreateFile creates the empty given file
 func (os *OS) CreateFile(filepath string) (bool, error) {
 	r, err := os.CallOSPluginFunction("create_file", map[string]interface{}{"file_path": filepath})
 	if err != nil {
@@ -130,7 +130,7 @@ func (os *OS) CreateFile(filepath string) (bool, error) {
 	}
 }
 
-// RemoveFile ...
+// RemoveFile removes the given file
 func (os *OS) RemoveFile(filepath string) (bool, error) {
 	r, err := os.CallOSPluginFunction("remove_file", map[string]interface{}{"file_path": filepath})
 	if err != nil {
@@ -147,7 +147,7 @@ func (os *OS) RemoveFile(filepath string) (bool, error) {
 	}
 }
 
-// StoreFile ...
+// StoreFile creates and stores the given content into the given file
 func (os *OS) StoreFile(content string, filepath string, filename string) (bool, error) {
 
 	c := hex.EncodeToString([]byte(b64.StdEncoding.EncodeToString([]byte(content))))
@@ -166,7 +166,7 @@ func (os *OS) StoreFile(content string, filepath string, filename string) (bool,
 	}
 }
 
-// ReadFile ...
+// ReadFile reads the given file
 func (os *OS) ReadFile(filepath string, root bool) (string, error) {
 	r, err := os.CallOSPluginFunction("read_file", map[string]interface{}{"file_path": filepath, "root": root})
 	if err != nil {
@@ -183,7 +183,7 @@ func (os *OS) ReadFile(filepath string, root bool) (string, error) {
 	}
 }
 
-// FileExists ...
+// FileExists checks if the given file exists
 func (os *OS) FileExists(filepath string) (bool, error) {
 	r, err := os.CallOSPluginFunction("file_exists", map[string]interface{}{"file_path": filepath})
 	if err != nil {
@@ -200,7 +200,7 @@ func (os *OS) FileExists(filepath string) (bool, error) {
 	}
 }
 
-// SendSigInt ...
+// SendSigInt sends INT signal to the given PID
 func (os *OS) SendSigInt(pid int) (bool, error) {
 	r, err := os.CallOSPluginFunction("send_sig_int", map[string]interface{}{"pid": pid})
 	if err != nil {
@@ -217,7 +217,7 @@ func (os *OS) SendSigInt(pid int) (bool, error) {
 	}
 }
 
-// SendSigKill ...
+// SendSigKill sends the KILL signal to the given PID
 func (os *OS) SendSigKill(pid int) (bool, error) {
 	r, err := os.CallOSPluginFunction("send_sig_kill", map[string]interface{}{"pid": pid})
 	if err != nil {
@@ -234,7 +234,7 @@ func (os *OS) SendSigKill(pid int) (bool, error) {
 	}
 }
 
-// CheckIfPIDExists ...
+// CheckIfPIDExists check if the PID is still running
 func (os *OS) CheckIfPIDExists(pid int) (bool, error) {
 	r, err := os.CallOSPluginFunction("check_if_pid_exists", map[string]interface{}{"pid": pid})
 	if err != nil {
@@ -251,7 +251,7 @@ func (os *OS) CheckIfPIDExists(pid int) (bool, error) {
 	}
 }
 
-// GetInterfaceType ...
+// GetInterfaceType get the interface type for the given network interface
 func (os *OS) GetInterfaceType(facename string) (string, error) {
 	r, err := os.CallOSPluginFunction("get_intf_type", map[string]interface{}{"name": facename})
 	if err != nil {
@@ -268,7 +268,7 @@ func (os *OS) GetInterfaceType(facename string) (string, error) {
 	}
 }
 
-// SetInterfaceUnaviable ...
+// SetInterfaceUnaviable sets the given network interface as unaviable
 func (os *OS) SetInterfaceUnaviable(facename string) (bool, error) {
 	r, err := os.CallOSPluginFunction("set_interface_unaviable", map[string]interface{}{"intf_name": facename})
 	if err != nil {
@@ -285,7 +285,7 @@ func (os *OS) SetInterfaceUnaviable(facename string) (bool, error) {
 	}
 }
 
-// SetInterfaceAvailable ...
+// SetInterfaceAvailable sets the given network interface as available
 func (os *OS) SetInterfaceAvailable(facename string) (bool, error) {
 	r, err := os.CallOSPluginFunction("set_interface_available", map[string]interface{}{"intf_name": facename})
 	if err != nil {
@@ -302,7 +302,7 @@ func (os *OS) SetInterfaceAvailable(facename string) (bool, error) {
 	}
 }
 
-// Checksum ...
+// Checksum computes the checksum (SHA1SUM) for the given file
 func (os *OS) Checksum(filepath string) (string, error) {
 	r, err := os.CallOSPluginFunction("checksum", map[string]interface{}{"file_path": filepath})
 	if err != nil {
@@ -319,7 +319,7 @@ func (os *OS) Checksum(filepath string) (string, error) {
 	}
 }
 
-// LocalMgmtAddress ...
+// LocalMgmtAddress gets the local management ip address
 func (os *OS) LocalMgmtAddress() (string, error) {
 	r, err := os.CallOSPluginFunction("local_mgmt_address", map[string]interface{}{})
 	if err != nil {
@@ -336,14 +336,14 @@ func (os *OS) LocalMgmtAddress() (string, error) {
 	}
 }
 
-// NM ...
+// NM is the object to interact with the network manager plugin
 type NM struct {
 	uuid      string
 	connector *YaksConnector
 	node      string
 }
 
-// CallNMPluginFunction ...
+// CallNMPluginFunction calls an Eval register within the network manager, returns a genering pointer to interface{}
 func (nm *NM) CallNMPluginFunction(fname string, fparameters map[string]interface{}) (*interface{}, error) {
 	res, err := nm.connector.Local.Actual.ExecNMEval(nm.node, nm.uuid, fname, fparameters)
 	if err != nil {
@@ -356,7 +356,7 @@ func (nm *NM) CallNMPluginFunction(fname string, fparameters map[string]interfac
 	return res.Result, nil
 }
 
-// CreateVirtualInterface ...
+// CreateVirtualInterface creates the given virtual interface and returns its information
 func (nm *NM) CreateVirtualInterface(intfid string, descriptor map[string]interface{}) (*map[string]interface{}, error) {
 	r, err := nm.CallNMPluginFunction("create_virtual_interface", map[string]interface{}{"intf_id": intfid, "descriptor": descriptor})
 	if err != nil {
@@ -374,7 +374,7 @@ func (nm *NM) CreateVirtualInterface(intfid string, descriptor map[string]interf
 	}
 }
 
-// DeleteVirtualInterface ...
+// DeleteVirtualInterface deletes the given network interface and returns its information
 func (nm *NM) DeleteVirtualInterface(intfid string) (*map[string]interface{}, error) {
 	r, err := nm.CallNMPluginFunction("delete_virtual_interface", map[string]interface{}{"intf_id": intfid})
 	if err != nil {
@@ -392,7 +392,7 @@ func (nm *NM) DeleteVirtualInterface(intfid string) (*map[string]interface{}, er
 	}
 }
 
-// CreateVirtualBridge ...
+// CreateVirtualBridge creates the given virtual bridge and returns its information
 func (nm *NM) CreateVirtualBridge(name string, uuid string) (*map[string]interface{}, error) {
 	r, err := nm.CallNMPluginFunction("create_virtual_bridge", map[string]interface{}{"name": name, "uuid": uuid})
 	if err != nil {
@@ -410,7 +410,7 @@ func (nm *NM) CreateVirtualBridge(name string, uuid string) (*map[string]interfa
 	}
 }
 
-// DeleteVirtualBridge ...
+// DeleteVirtualBridge removes the given virtual bridge and returns its information
 func (nm *NM) DeleteVirtualBridge(uuid string) (string, error) {
 	r, err := nm.CallNMPluginFunction("delete_virtual_bridge", map[string]interface{}{"br_uuid": uuid})
 	if err != nil {
@@ -427,7 +427,7 @@ func (nm *NM) DeleteVirtualBridge(uuid string) (string, error) {
 	}
 }
 
-// CreateBridgesIfNotExists ...
+// CreateBridgesIfNotExists create the given bridges if they are not existing and returns a slice with the bridges informations
 func (nm *NM) CreateBridgesIfNotExists(expected []string) (*[]map[string]interface{}, error) {
 	r, err := nm.CallNMPluginFunction("create_bridges_if_not_exist", map[string]interface{}{"expected_bridges": expected})
 	if err != nil {
@@ -445,7 +445,7 @@ func (nm *NM) CreateBridgesIfNotExists(expected []string) (*[]map[string]interfa
 	}
 }
 
-// ConnectInterfaceToConnectionPoint ...
+// ConnectInterfaceToConnectionPoint connects the given interface to the given connection point and returns interface information
 func (nm *NM) ConnectInterfaceToConnectionPoint(intfid string, cpid string) (*map[string]interface{}, error) {
 	r, err := nm.CallNMPluginFunction("connect_interface_to_connection_point", map[string]interface{}{"intf_id": intfid, "cp_id": cpid})
 	if err != nil {
@@ -463,7 +463,7 @@ func (nm *NM) ConnectInterfaceToConnectionPoint(intfid string, cpid string) (*ma
 	}
 }
 
-// DisconnectInterface ...
+// DisconnectInterface disconnects the given interface and returns its information
 func (nm *NM) DisconnectInterface(intfid string) (*map[string]interface{}, error) {
 	r, err := nm.CallNMPluginFunction("disconnect_interface", map[string]interface{}{"intf_id": intfid})
 	if err != nil {
@@ -481,7 +481,7 @@ func (nm *NM) DisconnectInterface(intfid string) (*map[string]interface{}, error
 	}
 }
 
-// ConnectCPToVNetwork ...
+// ConnectCPToVNetwork connect the given connection point to the given network and returns connection point information
 func (nm *NM) ConnectCPToVNetwork(cpid string, vnetid string) (*map[string]interface{}, error) {
 	r, err := nm.CallNMPluginFunction("connect_cp_to_vnetwork", map[string]interface{}{"cp_id": cpid, "vnet_id": vnetid})
 	if err != nil {
@@ -499,7 +499,7 @@ func (nm *NM) ConnectCPToVNetwork(cpid string, vnetid string) (*map[string]inter
 	}
 }
 
-// DisconnectCP ...
+// DisconnectCP disconnect the given connection point and returns its information
 func (nm *NM) DisconnectCP(cpid string) (*map[string]interface{}, error) {
 	r, err := nm.CallNMPluginFunction("disconnect_cp", map[string]interface{}{"cp_id": cpid})
 	if err != nil {
@@ -517,7 +517,7 @@ func (nm *NM) DisconnectCP(cpid string) (*map[string]interface{}, error) {
 	}
 }
 
-// DeletePort ...
+// DeletePort deletes the given connection point
 func (nm *NM) DeletePort(cpid string) (bool, error) {
 	r, err := nm.CallNMPluginFunction("delete_port", map[string]interface{}{"cp_id": cpid})
 	if err != nil {
@@ -534,7 +534,7 @@ func (nm *NM) DeletePort(cpid string) (bool, error) {
 	}
 }
 
-// GetAddress ...
+// GetAddress gets the IP address of the specified connection point
 func (nm *NM) GetAddress(cpid string) (string, error) {
 	r, err := nm.CallNMPluginFunction("delete_port", map[string]interface{}{"cp_id": cpid})
 	if err != nil {
@@ -551,7 +551,7 @@ func (nm *NM) GetAddress(cpid string) (string, error) {
 	}
 }
 
-// AddPortToRouter ...
+// AddPortToRouter adds the given port to the given router and returns router information
 func (nm *NM) AddPortToRouter(routerid string, porttype string, vnetid string, ipaddress string) (*map[string]interface{}, error) {
 	r, err := nm.CallNMPluginFunction("add_router_port", map[string]interface{}{"router_id": routerid, "port_type": porttype, "vnet_id": vnetid, "ip_address": ipaddress})
 	if err != nil {
@@ -569,7 +569,7 @@ func (nm *NM) AddPortToRouter(routerid string, porttype string, vnetid string, i
 	}
 }
 
-// RemovePortFromRouter ...
+// RemovePortFromRouter remove the given port from the given router and returns router information
 func (nm *NM) RemovePortFromRouter(routerid string, vnetid string) (*map[string]interface{}, error) {
 	r, err := nm.CallNMPluginFunction("remove_port_from_router", map[string]interface{}{"router_id": routerid, "vnet_id": vnetid})
 	if err != nil {
@@ -587,7 +587,7 @@ func (nm *NM) RemovePortFromRouter(routerid string, vnetid string) (*map[string]
 	}
 }
 
-// CreateFloatingIP ...
+// CreateFloatingIP creates a floating IP and returns its information
 func (nm *NM) CreateFloatingIP() (*map[string]interface{}, error) {
 	r, err := nm.CallNMPluginFunction("create_floating_ip", map[string]interface{}{})
 	if err != nil {
@@ -605,7 +605,7 @@ func (nm *NM) CreateFloatingIP() (*map[string]interface{}, error) {
 	}
 }
 
-// DeleteFloatingIP ...
+// DeleteFloatingIP deletes the given floaing IP and returns its information
 func (nm *NM) DeleteFloatingIP(ipid string) (*map[string]interface{}, error) {
 	r, err := nm.CallNMPluginFunction("delete_floating_ip", map[string]interface{}{"ip_id": ipid})
 	if err != nil {
@@ -623,7 +623,7 @@ func (nm *NM) DeleteFloatingIP(ipid string) (*map[string]interface{}, error) {
 	}
 }
 
-// AssignFloatingIP ...
+// AssignFloatingIP assign the given floating IP to the given connection point and returns floating IP information
 func (nm *NM) AssignFloatingIP(ipid string, cpid string) (*map[string]interface{}, error) {
 	r, err := nm.CallNMPluginFunction("assign_floating_ip", map[string]interface{}{"ip_id": ipid, "cp_id": cpid})
 	if err != nil {
@@ -641,7 +641,7 @@ func (nm *NM) AssignFloatingIP(ipid string, cpid string) (*map[string]interface{
 	}
 }
 
-// RemoveFloatingIP ...
+// RemoveFloatingIP retain the given floating ip from the given connection point and returns floating IP information
 func (nm *NM) RemoveFloatingIP(ipid string, cpid string) (*map[string]interface{}, error) {
 	r, err := nm.CallNMPluginFunction("remove_floating_ip", map[string]interface{}{"ip_id": ipid, "cp_id": cpid})
 	if err != nil {
@@ -659,7 +659,7 @@ func (nm *NM) RemoveFloatingIP(ipid string, cpid string) (*map[string]interface{
 	}
 }
 
-// GetOverlayFace ...
+// GetOverlayFace gets the configured network interface for overlay networks
 func (nm *NM) GetOverlayFace() (string, error) {
 	r, err := nm.CallNMPluginFunction("get_overlay_face", map[string]interface{}{})
 	if err != nil {
@@ -676,7 +676,7 @@ func (nm *NM) GetOverlayFace() (string, error) {
 	}
 }
 
-// GetVLANFace ...
+// GetVLANFace gets the configured network interfaces for VLAN networks
 func (nm *NM) GetVLANFace() (string, error) {
 	r, err := nm.CallNMPluginFunction("get_vlan_face", map[string]interface{}{})
 	if err != nil {
@@ -693,13 +693,13 @@ func (nm *NM) GetVLANFace() (string, error) {
 	}
 }
 
-// Agent ...
+// Agent is the object to interect with the Agent
 type Agent struct {
 	connector *YaksConnector
 	node      string
 }
 
-// CallAgentFunction ...
+// CallAgentFunction calls an Eval registered within the Agent and returns a generic pointer to interface
 func (ag *Agent) CallAgentFunction(fname string, fparameters map[string]interface{}) (*interface{}, error) {
 	res, err := ag.connector.Local.Actual.ExecAgentEval(ag.node, fname, fparameters)
 	if err != nil {
@@ -712,7 +712,7 @@ func (ag *Agent) CallAgentFunction(fname string, fparameters map[string]interfac
 	return res.Result, nil
 }
 
-// GetImageInfo ...
+// GetImageInfo given an image UUID retruns the FDUImage object associated
 func (ag *Agent) GetImageInfo(imgid string) (*FDUImage, error) {
 	r, err := ag.CallAgentFunction("get_image_info", map[string]interface{}{"image_uuid": imgid})
 	if err != nil {
@@ -736,7 +736,7 @@ func (ag *Agent) GetImageInfo(imgid string) (*FDUImage, error) {
 	}
 }
 
-// GetFDUInfo ...
+// GetFDUInfo given a node id, fdu id and instance id returns the FDU object associated
 func (ag *Agent) GetFDUInfo(nodeid string, fduid string, instanceid string) (*FDU, error) {
 	r, err := ag.CallAgentFunction("get_node_fdu_info", map[string]interface{}{"fdu_uuid": fduid, "instance_uuid": instanceid, "node_uuid": nodeid})
 	if err != nil {
@@ -760,7 +760,7 @@ func (ag *Agent) GetFDUInfo(nodeid string, fduid string, instanceid string) (*FD
 	}
 }
 
-// GetNetworkInfo ...
+// GetNetworkInfo given a network id returns the VirtualNetwork object associated
 func (ag *Agent) GetNetworkInfo(netid string) (*VirtualNetwork, error) {
 	r, err := ag.CallAgentFunction("get_network_info", map[string]interface{}{"uuid": netid})
 	if err != nil {
@@ -784,7 +784,7 @@ func (ag *Agent) GetNetworkInfo(netid string) (*VirtualNetwork, error) {
 	}
 }
 
-// GetPortInfo ...
+// GetPortInfo given a connection point id returns the ConnectionPointDescriptor associated
 func (ag *Agent) GetPortInfo(cpid string) (*ConnectionPointDescriptor, error) {
 	r, err := ag.CallAgentFunction("get_port_info", map[string]interface{}{"cp_uuid": cpid})
 	if err != nil {
@@ -808,7 +808,7 @@ func (ag *Agent) GetPortInfo(cpid string) (*ConnectionPointDescriptor, error) {
 	}
 }
 
-// GetNodeMGMTAddress ...
+// GetNodeMGMTAddress given a node id return the node management IP address
 func (ag *Agent) GetNodeMGMTAddress(nodeid string) (string, error) {
 	r, err := ag.CallAgentFunction("get_node_mgmt_address", map[string]interface{}{"node_uuid": nodeid})
 	if err != nil {
@@ -825,7 +825,7 @@ func (ag *Agent) GetNodeMGMTAddress(nodeid string) (string, error) {
 	}
 }
 
-// FOSPlugin ...
+// FOSPlugin rapresents an Eclipse fog05 Plugin
 type FOSPlugin struct {
 	version   int
 	connector *YaksConnector
@@ -836,7 +836,7 @@ type FOSPlugin struct {
 	UUID      string
 }
 
-// NewPlugin ...
+// NewPlugin returns a new FOSPlugin object
 func NewPlugin(version int, pluginuuid string) *FOSPlugin {
 	if pluginuuid == "" {
 		pluginuuid = uuid.UUID.String(uuid.New())
@@ -844,7 +844,7 @@ func NewPlugin(version int, pluginuuid string) *FOSPlugin {
 	return &FOSPlugin{version: version, UUID: pluginuuid, node: "", NM: nil, OS: nil, connector: nil, Agent: nil}
 }
 
-// GetOSPlugin ...
+// GetOSPlugin loads the OS plugin discovering it from YAKS
 func (pl *FOSPlugin) GetOSPlugin() bool {
 	pls, err := pl.connector.Local.Actual.GetAllPlugins(pl.node)
 	if err != nil {
@@ -863,7 +863,7 @@ func (pl *FOSPlugin) GetOSPlugin() bool {
 	return false
 }
 
-// GetNMPlugin ...
+// GetNMPlugin loads the Network Manager plugin discovering it from YAKS
 func (pl *FOSPlugin) GetNMPlugin() bool {
 	pls, err := pl.connector.Local.Actual.GetAllPlugins(pl.node)
 	if err != nil {
@@ -882,7 +882,7 @@ func (pl *FOSPlugin) GetNMPlugin() bool {
 	return false
 }
 
-// GetAgent ...
+// GetAgent loads the Agent discovering it from YAKS
 func (pl *FOSPlugin) GetAgent() bool {
 	pls, err := pl.connector.Local.Actual.GetAllPlugins(pl.node)
 	if err != nil {
@@ -901,7 +901,7 @@ func (pl *FOSPlugin) GetAgent() bool {
 	return false
 }
 
-// GetLocalMGMTAddress ...
+// GetLocalMGMTAddress returns the local management IP address
 func (pl *FOSPlugin) GetLocalMGMTAddress() string {
 	ip, err := pl.OS.LocalMgmtAddress()
 	if err != nil {
@@ -910,7 +910,7 @@ func (pl *FOSPlugin) GetLocalMGMTAddress() string {
 	return ip
 }
 
-// GetPluginState ...
+// GetPluginState returns the plugin state, retrives it from YAKS, as a map[string]interface, each implementation of the plugin can have his own state representation
 func (pl *FOSPlugin) GetPluginState() map[string]interface{} {
 	s, err := pl.connector.Local.Actual.GetNodePluginState(pl.node, pl.UUID)
 	if err != nil {
@@ -919,12 +919,12 @@ func (pl *FOSPlugin) GetPluginState() map[string]interface{} {
 	return *s
 }
 
-// SavePluginState ...
+// SavePluginState stores the plugin state into YAKS
 func (pl *FOSPlugin) SavePluginState(state map[string]interface{}) error {
 	return pl.connector.Local.Actual.AddNodePluginState(pl.node, pl.UUID, state)
 }
 
-// RemovePluginState ...
+// RemovePluginState removes the plugin state from YAKS
 func (pl *FOSPlugin) RemovePluginState() error {
 	return pl.connector.Local.Actual.RemoveNodePluginState(pl.node, pl.UUID)
 }

@@ -25,16 +25,16 @@ import (
 
 var logger = log.WithFields(log.Fields{"pkg": "fog05"})
 
-// GlobalActualPrefix ...
+// GlobalActualPrefix constant for Actual Global store
 const GlobalActualPrefix string = "/agfos"
 
-// GlobalDesiredPrefix ...
+// GlobalDesiredPrefix constant for Desired Global store
 const GlobalDesiredPrefix string = "/dgfos"
 
-// LocalActualPrefix ...
+// LocalActualPrefix constant for Actual Local store
 const LocalActualPrefix string = "/alfos"
 
-// LocalDesiredPrefix ...
+// LocalDesiredPrefix constant for Local Desired store
 const LocalDesiredPrefix string = "/dlfos"
 
 // Not Used
@@ -45,7 +45,7 @@ const LocalConstraintActualPrefix string = "/aclfos"
 // LocalConstraintDesiredPrefix ...
 const LocalConstraintDesiredPrefix string = "/dclfos"
 
-// URISeparator ...
+// URISeparator constant for URI token separation
 const URISeparator string = "/"
 
 // CreatePath ...

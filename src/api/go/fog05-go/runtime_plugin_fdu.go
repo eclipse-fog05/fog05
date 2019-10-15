@@ -7,7 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// FOSRuntimePluginFDU ...
+// FOSRuntimePluginFDU represents a Runtime Plugin for Eclipse fog05
 type FOSRuntimePluginFDU struct {
 	Pid           int
 	Name          string
@@ -18,7 +18,7 @@ type FOSRuntimePluginFDU struct {
 	Logger        *log.Logger
 }
 
-// NewFOSRuntimePluginFDU ...
+// NewFOSRuntimePluginFDU returns a new FOSRuntimePluginFDU object
 func NewFOSRuntimePluginFDU(name string, version int, pluginid string, manifest Plugin) (*FOSRuntimePluginFDU, error) {
 	if pluginid == "" {
 		pluginid = uuid.UUID.String(uuid.New())
@@ -37,17 +37,17 @@ func NewFOSRuntimePluginFDU(name string, version int, pluginid string, manifest 
 	return &FOSRuntimePluginFDU{Pid: -1, Name: name, Connector: con, Node: conf["nodeid"].(string), Plugin: pl, Logger: log.New()}, nil
 }
 
-// Close ...
+// Close closes the Plugin
 func (rt *FOSRuntimePluginFDU) Close() {
 	rt.Connector.Close()
 }
 
-// WaitDestinationReady ...
+// WaitDestinationReady waits for the destination node of a migration to be ready
 func (rt *FOSRuntimePluginFDU) WaitDestinationReady(fduid string, instanceid string, destinationid string) bool {
 	return false
 }
 
-// WaitDependencies ...
+// WaitDependencies waits that the Agent, OS and NM Plugins are up and gets those from YAKS
 func (rt *FOSRuntimePluginFDU) WaitDependencies() {
 	rt.Plugin.GetAgent()
 	for rt.Plugin.OS == nil {
@@ -61,7 +61,7 @@ func (rt *FOSRuntimePluginFDU) WaitDependencies() {
 
 }
 
-// WriteFDUError ...
+// WriteFDUError given an fdu id, instance id, error number and error message, stores the error in YAKS
 func (rt *FOSRuntimePluginFDU) WriteFDUError(fduid string, instanceid string, errno int, errmsg string) error {
 	record, err := rt.Connector.Local.Actual.GetNodeFDU(rt.Node, rt.Plugin.UUID, fduid, instanceid)
 	if err != nil {
@@ -76,7 +76,7 @@ func (rt *FOSRuntimePluginFDU) WriteFDUError(fduid string, instanceid string, er
 	return err
 }
 
-// UpdateFDUStatus ...
+// UpdateFDUStatus given an fdu id, instance id and status updates the status in YAKS
 func (rt *FOSRuntimePluginFDU) UpdateFDUStatus(fduid string, instanceid string, status string) error {
 	record, err := rt.Connector.Local.Actual.GetNodeFDU(rt.Node, rt.Plugin.UUID, fduid, instanceid)
 	if err != nil {
@@ -89,7 +89,7 @@ func (rt *FOSRuntimePluginFDU) UpdateFDUStatus(fduid string, instanceid string, 
 	return err
 }
 
-// GetLocalInstances ...
+// GetLocalInstances given an fdu id returns all the instances of that fdu running locally, returns string slice
 func (rt *FOSRuntimePluginFDU) GetLocalInstances(fduid string) ([]string, error) {
 	return rt.Connector.Local.Actual.GetNodeFDUInstances(rt.Node, fduid)
 
