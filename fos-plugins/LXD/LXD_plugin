@@ -853,10 +853,10 @@ class LXD(RuntimePluginFDU):
 
 
 
-    def before_migrate_entity_actions(self, fdu_uuid, dst=False):
+    def before_migrate_entity_actions(self, instance_uuid, dst=False):
         pass
 
-    def after_migrate_entity_actions(self, fdu_uuid, dst=False):
+    def after_migrate_entity_actions(self, instance_uuid, dst=False):
         pass
 
 
