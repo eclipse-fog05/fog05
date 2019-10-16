@@ -23,6 +23,13 @@ from fog05.DLogger import DLogger
 from fog05.interfaces.InfraFDU import InfraFDU
 
 class RuntimePluginFDU(Plugin):
+    '''
+    Class: RuntimePluginFDU
+
+    This class is an interface for plugins that implements the FDU lifecycle management,
+    and provides an abstraction layer
+    for virtualisation capabilities
+    '''
 
     def __init__(self,name, version, plugin_uuid, manifest):
         super(RuntimePluginFDU, self).__init__(version, plugin_uuid)
@@ -38,6 +45,22 @@ class RuntimePluginFDU(Plugin):
         self.current_fdus = {}
 
     def wait_destination_ready(self, fduid, instanceid, destinationid):
+        '''
+        Waits the destination node of a migration to be ready
+
+        parameters
+        ----------
+        fduid : string
+            UUID of the FDU
+        instanceid : string
+            UUID of the instance
+        destinationid : string
+            UUID of the destination node
+
+        returns
+        -------
+        bool
+        '''
         flag = False
         while not flag:
             try:
@@ -52,6 +75,9 @@ class RuntimePluginFDU(Plugin):
 
 
     def wait_dependencies(self):
+        '''
+        Waits fot the Agent, OS and NM plugin to be up
+        '''
         self.get_agent()
         os = None
         while os is None:
@@ -69,6 +95,20 @@ class RuntimePluginFDU(Plugin):
 
 
     def write_fdu_error(self, fdu_uuid, instance_uuid, errno, errmsg):
+        '''
+        Writes the given error for the given FDU instance in YAKS
+
+        parameters
+        ----------
+        fdu_uuid : string
+            UUID of the FDU
+        instance_uuid : string
+            UUID of the instance
+        errno : int
+            Error number
+        errmsg : string
+            Error message
+        '''
         record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
         if record is None:
             record = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
@@ -79,6 +119,18 @@ class RuntimePluginFDU(Plugin):
         self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid, record.to_json())
 
     def update_fdu_status(self, fdu_uuid, instance_uuid, status):
+        '''
+        Updates the status of the given FDU instance in YAKS
+
+        parameters
+        ----------
+        fdu_uuid : string
+            UUID of the FDU
+        instance_uuid : string
+            UUID of the instance
+        status : string
+            New status of the instance
+        '''
         record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
         if record is None:
             record = self.connector.loc.desired.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_uuid)
@@ -87,204 +139,198 @@ class RuntimePluginFDU(Plugin):
         self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid,instance_uuid, record.to_json())
 
     def get_local_instances(self, fdu_uuid):
+        '''
+        Gets all the local instances from YAKS
+
+        returns
+        -------
+        string list
+        '''
         return self.connector.loc.actual.get_node_fdu_instances(self.node, fdu_uuid)
 
     def start_runtime(self):
         '''
-        start the runtime
-        :return: runtime pid or runtime uuid?
+        Starts the plugin
         '''
         raise NotImplementedError('This is and interface!')
 
     def stop_runtime(self):
         '''
-        stop this runtime
+        Stops the plugin
         '''
         raise NotImplementedError('This is and interface!')
 
     def get_fdus(self):
-        raise NotImplementedError('This is and interface!')
-
-    def define_fdu(self, fdu_manifest):
         '''
-        Define fdu from args of from manifest file passed within parameters
-        return the fdu uuid
-        :args: manifest of the FDU
+        Gets all FDU and instances information
 
-        ##### ASSUMING FDU MANIFEST = old ATOMIC ENTITY MANIFEST
-
-        :return: String
-        '''
-
-        raise NotImplementedError('This is and interface!')
-
-    def undefine_fdu(self, fdu_uuid):
-        '''
-        Undefine the fdu identified by fdu_uuid
-        if the fdu state do not allow transition to UNDEFINED
-        should throw an exception
-
-        :fdu_uuid: String
-        :return: bool
-
+        returns
+        -------
+        dictionary
         '''
         raise NotImplementedError('This is and interface!')
 
-    def run_fdu(self, fdu_uuid):
+    def define_fdu(self, fdu_record):
         '''
-        Start the fdu identified by fdu_uuid
-        if the fdu state do not allow transition to RUN (eg is non CONFIGURED)
-        should throw an exception
+        Defines an FDU instance from the given record
 
-        :fdu_uuid: String
-        :return: bool
-
-        '''
-        raise NotImplementedError('This is and interface!')
-
-    def stop_fdu(self, fdu_uuid):
-        '''
-        Stop the fdu identified by fdu_uuid
-        if the fdu state do not allow transition to CONFIGURED
-        (in this case is not in RUNNING)
-        should throw an exception
-
-        :fdu_uuid: String
-        :return: bool
-
-        '''
-        raise NotImplementedError('This is and interface!')
-
-    def migrate_fdu(self, fdu_uuid, dst=False):
-        '''
-        Migrate the fdu identified by fdu_uuid to the new FogNode
-        identified by fognode_uuid
-        The migration depend to the nature of the fdu
-         (native app, µSvc, VM, Container)
-        if the fdu state do not allow transition to
-         MIGRATE (eg a native app can't be migrated)
-        should throw an exception
-        if the destination node can't handle the
-         migration an exception should be throwed
-
-        To help migration should use the two methods:
-
-        - before_migrate_fdu_actions()
-        - after_migrate_fdu_actions()
-
-        After the migration the fdu on the source node has to be undefined
-        the one on the destination node has to be in RUNNING
-
-
-        :fdu_uuid: String
-        :fognode_uuid: String
-        :return: bool
+        parameters
+        ----------
+        fdu_record : dictionary
+            FDU instance record
 
         '''
 
         raise NotImplementedError('This is and interface!')
 
-    def before_migrate_fdu_actions(self, fdu_uuid, dst=False):
+    def undefine_fdu(self, instance_uuid):
         '''
-        Action to be taken before a migration
-        eg. copy disks of vms, save state of µSvc
+        Undefines the given FDU instance
 
-        :fdu_uuid: String
-        :return: bool
+        parameters
+        ----------
+        instance_uuid : string
+            UUID of the instance
+
+        '''
+        raise NotImplementedError('This is and interface!')
+
+    def run_fdu(self, instance_uuid):
+        '''
+        Starts the given FDU instance
+
+        parameters
+        ----------
+        instance_uuid : string
+            UUID of the instance
+
+        '''
+        raise NotImplementedError('This is and interface!')
+
+    def stop_fdu(self, instance_uuid):
+        ''''
+        Stops the given FDU instance
+
+        parameters
+        ----------
+        instance_uuid : string
+            UUID of the instance
+
+        '''
+        raise NotImplementedError('This is and interface!')
+
+    def migrate_fdu(self, instance_uuid):
+        '''
+        Migrates the given FDU instance
+
+        parameters
+        ----------
+        instance_uuid : string
+            UUID of the instance
 
         '''
 
         raise NotImplementedError('This is and interface!')
 
-    def after_migrate_fdu_actions(self, fdu_uuid, dst=False):
+    def before_migrate_fdu_actions(self, instance_uuid, dst=False):
         '''
-        Action to be taken after a migration
-        eg. delete disks of vms, delete state of µSvc, undefine fdu
+        Actions to be taken before migration of the given FDU instance
 
-        :fdu_uuid: String
-        :return: bool
+        parameters
+        ----------
+        instance_uuid : string
+            UUID of the instance
 
         '''
 
         raise NotImplementedError('This is and interface!')
 
-    def scale_fdu(self, fdu_uuid):
+    def after_migrate_fdu_actions(self, instance_uuid, dst=False):
+        ''''
+        Actions to be taken after the migration of the given FDU instance
+
+        parameters
+        ----------
+        instance_uuid : string
+            UUID of the instance
+
         '''
-        Scale an fdu
-        eg. give more cpu/ram/disk, maybe passed
-         by parameter the new scale value?
 
-        if the fdu state do not allow transition to
-        SCALE (in this case is not in RUNNING)
-        should throw an exception
+        raise NotImplementedError('This is and interface!')
 
-        :fdu_uuid: String
-        :return: bool
+    def scale_fdu(self, instance_uuid):
+        '''
+        Scales the given FDU instance
 
+        parameters
+        ----------
+        instance_uuid : string
+            UUID of the instance
 
         '''
         raise NotImplementedError('This is and interface!')
 
-    def pause_fdu(self, fdu_uuid):
+    def pause_fdu(self, instance_uuid):
         '''
-        Pause an fdu
+        Pauses the given FDU instance
 
-        if the fdu state do not allow transition
-        to PAUSED (in this case is not in RUNNING)
-        should throw an exception
-
-        :fdu_uuid: String
-        :return: bool
-
+        parameters
+        ----------
+        instance_uuid : string
+            UUID of the instance
 
         '''
         raise NotImplementedError('This is and interface!')
 
-    def resume_fdu(self, fdu_uuid):
+    def resume_fdu(self, instance_uuid):
         '''
-        Resume an fdu
+        Resumes the given FDU instance
 
-        if the fdu state do not allow transition to
-         RUNNING (in this case is not in PAUSED)
-        should throw an exception
-
-        :fdu_uuid: String
-        :return: bool
-
+        parameters
+        ----------
+        instance_uuid : string
+            UUID of the instance
 
         '''
         raise NotImplementedError('This is and interface!')
 
-    def configure_fdu(self, fdu_uuid):
+    def configure_fdu(self, instance_uuid):
         '''
-        TBD
+        Configures the given FDU instance
 
-        :fdu_uuid: String
-        :return: bool
-
+        parameters
+        ----------
+        instance_uuid : string
+            UUID of the instance
 
         '''
         raise NotImplementedError('This is and interface!')
 
-    def clean_fdu(self, fdu_uuid):
+    def clean_fdu(self, instance_uuid):
         '''
-        Clean an fdu
+        Cleans the given FDU instance
 
-        this mode destroy the fdu instance
-
-
-        if the fdu state do not allow transition
-        to DEFINED (in this case is not in CONFIGURED)
-        should throw an exception
-
-        :fdu_uuid: String
-        :return: bool
-
+        parameters
+        ----------
+        instance_uuid : string
+            UUID of the instance
 
         '''
         raise NotImplementedError('This is and interface!')
 
     def is_uuid(self, uuid_string):
+        '''
+        Verifies if the given string is a correct UUID4
+
+        parameters
+        ----------
+        uuid_string : string
+            the string to be verified
+
+        returns
+        -------
+        bool
+        '''
         try:
             val = uuid.UUID(uuid_string, version=4)
         except ValueError:
