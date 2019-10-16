@@ -285,7 +285,7 @@ type network_spec_type = {
   intf_type <json name="type"> : string;
   available : bool;
   default_gw : bool;
-  intf_configuration <json name="inft_configuration"> : intf_conf_type;
+  intf_configuration : intf_conf_type;
 }
 
 type intf_conf_type = {
