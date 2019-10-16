@@ -22,7 +22,7 @@ class NetworkPlugin(Plugin):
     Class: NetworkPlugin
 
     This class is an interface for plugins that control the network resouces,
-    and provide an abstraction layer
+    and provides an abstraction layer
     for networking managment functions
     '''
 
@@ -42,21 +42,20 @@ class NetworkPlugin(Plugin):
                 time.sleep(1)
         return
 
-    def create_virtual_interface(self, name, uuid):
+    def create_virtual_interface(self, intf_id, descriptor):
         '''
         This should create a virtual network interface
 
         paramters
         ---------
-
-        name : string
-
-            name of the virtual interface to be created
+        intf_id : string
+            UUID of the virtual interface
+        descriptor : dictionary
+            descriptor of the virtual interface
 
         returns
         ---------
         dictionary
-
             in the form of {'result':interface_info}
 
         '''
@@ -150,18 +149,15 @@ class NetworkPlugin(Plugin):
 
         raise NotImplementedError('This is and interface!')
 
-    def delete_virtual_interface(self, intf_uuid):
+    def delete_virtual_interface(self, intf_id):
         '''
-        This should delete a virtual interface identified by intf_uuid, if the
-         interface is assigned to a network
-        maybe can also call removeInterfaceFromNetwork() to avoid any problem,
-        if the interface not exists throw an exception
+        Deletes the given virtual interface
 
 
         parameters
         ---------
 
-        intf_uuid : string
+        intf_id : string
 
 
         returns
@@ -176,7 +172,7 @@ class NetworkPlugin(Plugin):
 
     def delete_virtual_bridge(self, br_uuid):
         '''
-        Delete a virtual bride, if the bridge is one assigned to a network
+        Deletes a virtual bride, if the bridge is one assigned to a network
          should throw an exception, if the bridge not exists throw an exception
 
         parameters
@@ -274,6 +270,229 @@ class NetworkPlugin(Plugin):
 
             in the form {'result': string list}
 
+        '''
+        raise NotImplementedError
+
+    def connect_interface_to_connection_point(self, intf_id, cp_id):
+        '''
+        Connects the given interace to the given connection point
+
+        parameters
+        ----------
+        intf_id : string
+            ID of the virtual interface
+        cp_id : string
+            UUID of the connection point
+
+        returns
+        -------
+        dictionary
+            {'result':{'int':string, 'ext':string}}
+        '''
+        raise NotImplementedError
+
+    def disconnect_interface(self, intf_id):
+        '''
+        Disconnects the given interface
+
+        parameters
+        ----------
+        intf_id : string
+            ID of the virtual interace
+
+        returns
+        -------
+        dictionary
+            {'result':{'int':string, 'ext':string}}
+        '''
+        raise NotImplementedError
+
+    def connect_cp_to_vnetwork(self, cp_id, vnet_id):
+        '''
+        Connects the given connection point to the given network
+
+        parameters
+        ----------
+        cp_id : string
+            UUID of the connection point
+        vnet_id : string
+            UUID of the virtual network
+
+        returns
+        -------
+        dictionary
+            {'result':{'int':string, 'ext':string}}
+
+        '''
+        raise NotImplementedError
+
+    def disconnect_cp(self, cp_id):
+        '''
+        Disconnects the given connection point
+
+        parameters
+        ----------
+        cp_id : string
+            UUID of connection point
+
+        returns
+        -------
+        dictionary
+            {'result':{'int':string, 'ext':string}}
+        '''
+        raise NotImplementedError
+
+    def delete_port(self, cp_id):
+        '''
+        Deletes the given connection point
+
+        parameters
+        ----------
+        cp_id : string
+            UUID of the connection point
+
+        returns
+        -------
+        dictionary
+            {'result':dictionary}
+        '''
+        raise NotImplementedError
+
+    def get_address(self, mac_address):
+        '''
+        Gets the IP address associated to the interface with the given MAC address
+
+        parameters
+        ----------
+        mac_address : string
+            the MAC address of the interface
+
+        returns
+        -------
+        dictionary
+            {'result':string}
+        '''
+        raise NotImplementedError
+
+    def add_port_to_router(self, router_id, port_type, vnet_id=None, ip_address=None):
+        '''
+        Adds a port to the given virtual router
+
+        parameters
+        ----------
+        router_id : string
+            UUID of the virtual router
+        port_type : string
+            kind of the port to be added (INTERNAL, EXTERNAL)
+        vnet_id : string
+            eventual network to be connected
+        ip_address : string
+            eventual address for the new router port
+
+        returns
+        -------
+        dictionary
+        '''
+        raise NotImplementedError
+
+    def remove_port_from_router(self, router_id, vnet_id):
+        '''
+        Removes a port from the given router
+
+        parameters
+        ----------
+        router_id : string
+            UUID of the virtual router
+        vnet_id : string
+            network to be disconnected
+
+        returns
+        -------
+        dictionary
+            {'result':dictionary}
+        '''
+        raise NotImplementedError
+
+    def create_floating_ip(self):
+        '''
+        Creates a floating IP
+
+        returns
+        -------
+        dictionary
+            {'result':dictionary}
+        '''
+        raise NotImplementedError
+
+    def delete_floating_ip(self, ip_id):
+        '''
+        Deletes the given floating IP
+
+        parameters
+        ----------
+        ip_id : string
+            UUID of the floating IP
+
+        returns
+        -------
+        dictionary
+            {'result':dictionary}
+        '''
+        raise NotImplementedError
+
+    def assign_floating_ip(self, ip_id, cp_id):
+        '''
+        Assigns the given floating IP to the given conncetion point
+
+        parameters
+        ----------
+        ip_id : string
+            UUID of the floating IP
+        cp_id : string
+            UUID of the connection point
+
+        returns
+        -------
+        dictionary
+            {'result':dictionary}
+        '''
+        raise NotImplementedError
+
+    def remove_floating_ip(self, ip_id, cp_id):
+        '''
+        Retains the given floating IP to the given conncetion point
+
+        parameters
+        ----------
+        ip_id : string
+            UUID of the floating IP
+        cp_id : string
+            UUID of the connection point
+
+        returns
+        -------
+        dictionary
+            {'result':dictionary}
+        '''
+        raise NotImplementedError
+
+    def get_overlay_face(self):
+        '''
+        Gets the configured interface for overlay networks
+
+        returns
+        -------
+        string
+        '''
+        raise NotImplementedError
+
+    def get_vlan_face(self):
+        '''
+        Gets the configured interface for VLAN networks
+
+        returns
+        -------
+        string
         '''
         raise NotImplementedError
 

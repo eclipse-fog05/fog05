@@ -19,9 +19,11 @@ import uuid
 
 class OSPlugin(Plugin):
     '''
-    Interfaces for plugins that allow interaction with underlying operating
-     systemprovide an abstraction layer for some management
-      and monitoring functions
+    Class: OSPlugin
+
+    This class is an interface for plugins that allow interaction with underlying operating
+    system provides an abstraction layer for some management
+    and monitoring functions
 
     '''
 
@@ -83,6 +85,21 @@ class OSPlugin(Plugin):
 
         raise NotImplementedError('This is and interface!')
 
+    def checksum(self, file_path):
+        '''
+        Calculates the SHA256 checksum for the given file
+
+        parameters
+        -----------
+        file_path : string
+            path to file
+
+        returns
+        -------
+        dictionary
+            {'result':string}
+        '''
+        raise NotImplementedError('This is and interface!')
     def file_exists(self, file_path):
         '''
         Checks if the given file exists
@@ -99,13 +116,13 @@ class OSPlugin(Plugin):
         '''
         raise NotImplementedError
 
-    def dir_exists(self, path):
+    def dir_exists(self, dir_path):
         '''
         Checks if the given directory exists
 
         parameters
         ----------
-        path : string
+        dir_path : string
             path to the directory
 
         returns
@@ -117,13 +134,13 @@ class OSPlugin(Plugin):
         '''
         raise NotImplementedError
 
-    def create_dir(self, path):
+    def create_dir(self, dir_path):
         '''
         Creates the given new directory
 
         parameters
         ----------
-        path : string
+        dir_path : string
             path to the directory
 
         returns
@@ -134,13 +151,13 @@ class OSPlugin(Plugin):
         '''
         raise NotImplementedError
 
-    def create_file(self, path):
+    def create_file(self, file_path):
         '''
         Creates the given new empty file
 
         parameters
         ----------
-        path : string
+        file_path : string
             path to the file
 
         returns
@@ -150,14 +167,14 @@ class OSPlugin(Plugin):
         '''
         raise NotImplementedError
 
-    def remove_dir(self, path):
+    def remove_dir(self, dir_path):
         '''
         Removes the given directory
 
         parameters
         ----------
-        path : string
-            path to the directory
+        dir_path : string
+            dir_path to the directory
 
         returns
         -------
@@ -167,13 +184,13 @@ class OSPlugin(Plugin):
         '''
         raise NotImplementedError
 
-    def remove_file(self, path):
+    def remove_file(self, file_path):
         '''
         Removes the given file
 
         parameters
         ----------
-        path : string
+        file_path : string
             path to the directory
 
         returns
@@ -658,6 +675,17 @@ class OSPlugin(Plugin):
         returns
         -------
         string
+        '''
+        raise NotImplementedError
+
+    def local_mgmt_address(self):
+        '''
+        Gets node management IP address
+
+        returns
+        -------
+        dictionary
+            {'result':string}
         '''
         raise NotImplementedError
 
