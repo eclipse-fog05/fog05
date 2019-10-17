@@ -255,7 +255,7 @@ class Native(RuntimePluginFDU):
                 native_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name)
                 source_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name)
                 pid_file = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name, instance_uuid)
-                run_script = self.__generate_run_script(fdu.command, fdu.args, source_dir, pid_file)
+                run_script = self.__generate_run_script(fdu.cmd, fdu.args, source_dir, pid_file)
                 if self.operating_system.lower() == 'linux':
                     self.os.store_file(run_script, native_dir, '{}_run.sh'.format(instance_uuid))
                     chmod_cmd = 'chmod +x {}'.format(os.path.join(native_dir, '{}_run.sh'.format(instance_uuid)))
@@ -285,7 +285,7 @@ class Native(RuntimePluginFDU):
                         pid_file = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name, instance_uuid)
                         template_xml = self.os.read_file(os.path.join(self.DIR, 'templates', 'run_native_unix2.sh'))
                         na_script = Environment().from_string(template_xml)
-                        cmd = '{} {}'.format(fdu.command, ' '.join(fdu.args))
+                        cmd = '{} {}'.format(fdu.cmd, ' '.join(fdu.args))
                         na_script = na_script.render(command=cmd, outfile=pid_file, path=native_dir)
                         self.logger.info('run_fdu()', '[ INFO ] Lenght of runscript is {}'.format(len(na_script)))
                         self.os.store_file(na_script, native_dir, f_name)
@@ -296,7 +296,7 @@ class Native(RuntimePluginFDU):
                 elif self.operating_system.lower() == 'windows':
                     native_dir = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name)
                     pid_file = os.path.join(self.BASE_DIR, self.STORE_DIR, fdu_uuid, fdu.name, instance_uuid)
-                    run_script = self.__generate_run_script(fdu.command, fdu.args, None, pid_file)
+                    run_script = self.__generate_run_script(fdu.cmd, fdu.args, None, pid_file)
                     self.logger.info('run_fdu()', '[ INFO ] PowerShell script is {}'.format(run_script))
                     self.os.store_file(run_script, native_dir, '{}_run.ps1'.format(instance_uuid))
                     cmd = '{}'.format(os.path.join(native_dir, '{}_run.ps1'.format(instance_uuid)))
