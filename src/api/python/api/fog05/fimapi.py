@@ -821,8 +821,6 @@ class FIMAPI(object):
                 UUID of the node
             wait : bool
                 optional, call will block until FDU is defined
-            :param fduid: id of the fdu you want to instantiate
-
             returns
             -------
             InfraFDU
@@ -1137,7 +1135,6 @@ class FIMAPI(object):
                 UUID of the node
             wait : bool
                 optional, call will block until FDU is defined
-            :param fduid: id of the fdu you want to instantiate
 
             returns
             -------

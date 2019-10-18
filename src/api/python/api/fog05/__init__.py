@@ -11,7 +11,7 @@
 # SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
 #
 # Contributors: Gabriele Baldoni, ADLINK Technology Inc.
-# OCaml implementation and API
+# Eclipse fog05 Python3 API
 
 from fog05.fimapi import FIMAPI
 # from fog05.faemapi import FAEMAPI
