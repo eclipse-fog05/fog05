@@ -101,6 +101,10 @@ class FDU(object):
     def to_json(self):
         '''
         Converts the FDU into a dictionary
+
+        returns
+        -------
+        dictionary
         '''
         data = {
             'uuid': self.uuid,
