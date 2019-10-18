@@ -13,17 +13,17 @@ Plugin
 
 OS
 ------
-.. autoclass:: fog05.interfaces.Plugin.OS
+.. autoclass:: fog05.interfaces.Plugin.Plugin.OS
     :members:
 
 NM
 ------
-.. autoclass:: fog05.interfaces.Plugin.OS
+.. autoclass:: fog05.interfaces.Plugin.Plugin.NM
     :members:
 
 Agent
 ------
-.. autoclass:: fog05.interfaces.Plugin.Agent
+.. autoclass:: fog05.interfaces.Plugin.Plugin.Agent
     :members:
 
 
