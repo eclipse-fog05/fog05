@@ -3,12 +3,16 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Eclipse fog05's documentation!
+Welcome to Eclipse fog05's Python APIs documentation!
 =========================================
-
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+    :maxdepth: 2
+
+    installation
+    helloworld
+    api
+    fdu
+
 
 Indices and tables
 ==================
@@ -17,24 +21,3 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
-
-
-
-FIMAPI
-======
-.. automodule:: fog05.fimapi
-    :members:
-
-
-
-PluginAPI
-=========
-.. automodule:: fog05.interfaces.Plugin
-    :members:
-
-
-
-RuntimePluginFDU
-=================
-.. automodule:: fog05.interfaces.RuntimePluginFDU
-    :members:
