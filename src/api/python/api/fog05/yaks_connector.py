@@ -2306,6 +2306,12 @@ class Local(object):
 
 
 class Yaks_Connector(object):
+    '''
+    Class: Yaks_Connector
+
+    This is an utility class to create Path, Selector and wraps YAKS API
+    Users are not supposed to directly use methods from this class and its components
+    '''
     def __init__(self, locator):
         self.executor = concurrent.futures.ThreadPoolExecutor()
         self.yaks_client = Yaks.login(locator)

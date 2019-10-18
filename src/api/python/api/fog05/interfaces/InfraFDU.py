@@ -119,6 +119,9 @@ class InfraFDU(object):
     def to_json(self):
         '''
         Converts the InfraFDU into a dictionary
+        returns
+        -------
+        dictionary
         '''
         data = {
             'uuid': self.uuid,

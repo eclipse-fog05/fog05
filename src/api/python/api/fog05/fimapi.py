@@ -14,17 +14,20 @@
 
 import uuid
 import random
+import time
+from enum import Enum
 from fog05.yaks_connector import Yaks_Connector
 from fog05.interfaces import Constants
-
 from fog05.interfaces.FDU import FDU
 from fog05.interfaces.InfraFDU import InfraFDU
 from mvar import MVar
-import time
+
 
 class FIMAPI(object):
     '''
-        This class allow the interaction with fog05 FIM
+    Class: FIMAPI
+
+    This class implements the API to interact with Eclipse fog05 FIM
     '''
 
     def __init__(self, locator='127.0.0.1:7447',
@@ -34,7 +37,7 @@ class FIMAPI(object):
         self.connector = Yaks_Connector(locator)
         self.sysid = sysid
         self.tenantid = tenantid
-        self.manifest = self.Manifest()
+        self.descriptor = self.Descriptor()
         self.node = self.Node(self.connector, self.sysid, self.tenantid)
         self.plugin = self.Plugin(self.connector, self.sysid, self.tenantid)
         self.network = self.Network(self.connector, self.sysid, self.tenantid)
@@ -45,38 +48,46 @@ class FIMAPI(object):
     def close(self):
         self.connector.close()
 
-    class Manifest(object):
+    class Descriptor(object):
         '''
-        This class encapsulates API for manifests
+        Class: Descriptor
 
+        This class encapsulates API for descriptors
         '''
 
         def __init__(self):
             pass
 
-        def check(self, manifest, manifest_type):
+        def check(self, descriptor, descriptor_type):
             '''
 
-            This method allow you to check a manifest
+            Checks the given descriptor
 
-            :param manifest: a dictionary rapresenting the JSON manifest
-            :param manifest_type: the manifest type from API.Manifest.Type
-            :return: boolean
+            parameters
+            ----------
+            descriptor : dictionary
+                the descriptor to be checked
+            descriptor_type : API.Descriptor.Type
+                type of descriptor
+
+            returns
+            -------
+            bool
             '''
-            # if manifest_type == self.Type.ENTITY:
-            #     t = manifest.get('type')
+            # if descriptor_type == self.Type.ENTITY:
+            #     t = descriptor.get('type')
             #     try:
             #         if t == 'vm':
-            #             validate(manifest.get('entity_data'),
+            #             validate(descriptor.get('entity_data'),
             #                      Schemas.vm_schema)
             #         elif t == 'container':
-            #             validate(manifest.get('entity_data'),
+            #             validate(descriptor.get('entity_data'),
             #                      Schemas.container_schema)
             #         elif t == 'native':
-            #             validate(manifest.get('entity_data'),
+            #             validate(descriptor.get('entity_data'),
             #                      Schemas.native_schema)
             #         elif t == 'ros2':
-            #             validate(manifest.get('entity_data'),
+            #             validate(descriptor.get('entity_data'),
             #                      Schemas.ros2_schema)
             #         elif t == 'usvc':
             #             return False
@@ -84,34 +95,33 @@ class FIMAPI(object):
             #             return False
             #     except ValidationError as ve:
             #         return False
-            # if manifest_type == self.Type.NETWORK:
+            # if descriptor_type == self.Type.NETWORK:
             #     try:
-            #         validate(manifest, Schemas.network_schema)
+            #         validate(descriptor, Schemas.network_schema)
             #     except ValidationError as ve:
             #         return False
-            # if manifest_type == self.Type.ENTITY:
+            # if descriptor_type == self.Type.ENTITY:
             #     try:
-            #         validate(manifest, Schemas.entity_schema)
+            #         validate(descriptor, Schemas.entity_schema)
             #     except ValidationError as ve:
             #         return False
 
             return True
 
-        # class Type(Enum):
-        #     '''
-        #     Manifest types
-        #     '''
-        #     ENTITY = 0
-        #     IMAGE = 1
-        #     FLAVOR = 3
-        #     NETWORK = 4
-        #     PLUGIN = 5
+        class Type(Enum):
+            '''
+            Descriptor types
+            '''
+            ENTITY = 0
+            IMAGE = 1
+            FLAVOR = 3
+            NETWORK = 4
+            PLUGIN = 5
 
     class Node(object):
         '''
-
-        This class encapsulates the command for Node interaction
-
+        Class: Node
+        This class encapsulates API for Nodes
         '''
 
         def __init__(self, connector=None, sysid=Constants.default_system_id,
@@ -125,21 +135,30 @@ class FIMAPI(object):
 
         def list(self):
             '''
-            Get all nodes in the current system/tenant
+            Gets all nodes in the current system/tenant
 
-            :return: list of tuples (uuid, hostname)
+            returns
+            -------
+            string list
+
             '''
             nodes = self.connector.glob.actual.get_all_nodes(
                 self.sysid, self.tenantid)
             return nodes
 
         def info(self, node_uuid):
-            """
-            Provide all information about a specific node
+            '''
+            Provides all information about the given node
 
-            :param node_uuid: the uuid of the node you want info
-            :return: a dictionary with all information about the node
-            """
+            parameters
+            ----------
+            node_uuid : string
+                UUID of the node
+
+            returns
+            -------
+            dictionary
+            '''
             if node_uuid is None:
                 return None
             node_info = self.connector.glob.actual.get_node_info(
@@ -147,13 +166,18 @@ class FIMAPI(object):
             return node_info
 
         def status(self, node_uuid):
-            """
-            Provide all status information about a specific node,
-            including network neighbors
+            '''
+            Provides all status information about the given node,
 
-            :param node_uuid: the uuid of the node you want info
-            :return: a dictionary with all information about the node
-            """
+            parameters
+            ----------
+            node_uuid : string
+                UUID of the node
+
+            returns
+            -------
+            dictionary
+            '''
             if node_uuid is None:
                 return None
             node_status = self.connector.glob.actual.get_node_status(
@@ -162,13 +186,16 @@ class FIMAPI(object):
 
         def plugins(self, node_uuid):
             '''
+            Gets the list of plugins in the given node
 
-            Get the list of plugin installed on the specified node
+            parameters
+            ----------
+            node_uuid : string
+                UUID of the node
 
-            :param node_uuid: the uuid of the node you want info
-            :return: a list of the plugins installed in the node with
-            detailed informations
-
+            returns
+            -------
+            string list
             '''
             plugins = self.connector.glob.actual.get_all_plugins_ids(
                 self.sysid, self.tenantid, node_uuid)
@@ -176,19 +203,23 @@ class FIMAPI(object):
 
         def search(self, search_dict):
             '''
+            Searches for nodes that satisfies the parameter
 
-            Will search for a node that match information provided
-             in the parameter
+            parameters
+            ----------
+            search_dict : dictionary
+                search parameters
 
-            :param search_dict: dictionary contains all information to match
-            :return: a list of node matching the dictionary
+            returns
+            -------
+            string list
             '''
-            pass
+            raise NotImplementedError("Not yet...")
 
     class Plugin(object):
         '''
-        This class encapsulates the commands for Plugin interaction
-
+        Class: Plugin
+        This class encapsulates API for Plugins
         '''
 
         def __init__(self, connector=None, sysid=Constants.default_system_id,
@@ -200,18 +231,24 @@ class FIMAPI(object):
             self.sysid = sysid
             self.tenantid = tenantid
 
-        def add(self, manifest, node_uuid=None):
+        def add(self, descriptor, node_uuid):
+            '''
+            Adds the given plugin to the given node
+
+            parameters
+            ----------
+            descriptor : dictionary
+                the plugin descriptor
+            node_uuid : string
+                UUID of the node
+
+            returns
+            -------
+            bool
             '''
 
-            Add a plugin to a node or to all node in the system/tenant
-
-            :param manifest: the dictionary representing the plugin manifest
-            :param node_uuid: optional the node in which add the plugin
-            :return: boolean
-            '''
-
-            # manifest.update({'status': 'add'})
-            # plugins = {"plugins": [manifest]}
+            # descriptor.update({'status': 'add'})
+            # plugins = {'plugins': [descriptor]}
             # plugins = json.dumps(plugins)
             # if node_uuid is None:
             #     uri = '{}/*/plugins'.format(self.store.droot)
@@ -223,51 +260,64 @@ class FIMAPI(object):
             #     return True
             # else:
             #     return False
-            pass
+            raise NotImplementedError("Not yet...")
 
-        def remove(self, plugin_uuid, node_uuid=None):
+        def remove(self, plugin_uuid, node_uuid):
             '''
+            Removes the given plugin from the given node
 
-            Will remove a plugin for a node or all nodes
+            parameters
+            ----------
+            plugin_uuid : string
+                UUID of the plugin
+            node_uuid : string
+                UUID of the node
 
-            :param plugin_uuid: the plugin you want to remove
-            :param node_uuid: optional the node that will remove the plugin
-            :return: boolean
+            returns
+            -------
+            bool
             '''
-            pass
+            raise NotImplementedError("Not yet...")
 
-        def info(self, node_uuid, pluginid):
+        def info(self, plugin_uuid, node_uuid):
             '''
+            Gets information about the given plugin in the given node
 
-            Same as API.Node.Plugins but can work for all node un the system,
-            \return a dictionary with key node uuid and value the plugin list
+            parameters
+            ----------
+            plugin_uuid : string
+                UUID of the plugin
+            node_uuid : string
+                UUID of the node
 
-            :param node_uuid: can be none
-            :return: dictionary {node_uuid, plugin list }
+            returns
+            -------
+            dictionary
             '''
-            if node_uuid is not None:
-                return self.connector.glob.actual.get_plugin_info(
-                    self.sysid, self.tenantid, node_uuid, pluginid)
-            return None
+            return self.connector.glob.actual.get_plugin_info(
+                self.sysid, self.tenantid, node_uuid, plugin_uuid)
 
         def search(self, search_dict, node_uuid=None):
             '''
+            Searches for plugin that satisfies the parameter
 
-            Will search for a plugin matching the dictionary in a
-             single node or in all nodes
+            parameters
+            ----------
+            search_dict : dictionary
+                search parameters
+            node_uuid : string
+                optional node UUID where search
 
-            :param search_dict: dictionary contains all information to match
-            :param node_uuid: optional node uuid in which search
-            :return: a dictionary with {node_uuid, plugin uuid list} with
-             matches
+            returns
+            -------
+            string list
             '''
-            pass
+            raise NotImplementedError("Not yet...")
 
     class Network(object):
         '''
-
-        This class encapsulates the command for Network element interaction
-
+        Class: Plugin
+        This class encapsulates API for networks
         '''
 
         def __init__(self, connector=None, sysid=Constants.default_system_id,
@@ -279,63 +329,89 @@ class FIMAPI(object):
             self.sysid = sysid
             self.tenantid = tenantid
 
-        def __get_all_node_plugin(self, node_uuid):
-            pass
-            # uri = '{}/{}/plugins'.format(self.store.aroot, node_uuid)
-            # response = self.store.actual.resolve(uri)
-            # if response is not None and response != '':
-            #     return json.loads(response).get('plugins')
-            # else:
-            #     return None
+        def add_network(self, descriptor):
+            '''
+            Registers a network in the system catalog
 
-        def add_network(self, manifest):
+            Needs at least one node in the system!
+
+            parameters
+            ----------
+            descriptor : dictionary
+                network descriptor
+
+            returns
+            -------
+            bool
             '''
 
-            Add a network element to a node o to all nodes
-
-
-            :param manifest: dictionary representing the manifest of
-             that network element
-            :param node_uuid: optional the node uuid in which add
-            the network element
-            :return: boolean
-            '''
-
-            manifest.update({'status': 'add'})
-            net_id = manifest.get('uuid')
+            descriptor.update({'status': 'add'})
+            net_id = descriptor.get('uuid')
 
             self.connector.glob.desired.add_network(
-                self.sysid, self.tenantid, net_id, manifest)
+                self.sysid, self.tenantid, net_id, descriptor)
 
         def remove_network(self, net_uuid):
             '''
+            Removes the given network from the system catalog
+            Needs at least one node in the system!
 
-            Remove a network element form one or all nodes
+            parameters
+            ----------
+            net_uuid : string
+                UUID of network
 
-            :param net_uuid: uuid of the network you want to remove
-            :param node_uuid: optional node from which remove
-             the network element
-            :return: boolean
+            returns
+            -------
+            bool
             '''
-            manifest = self.connector.glob.actual.get_network(
+            descriptor = self.connector.glob.actual.get_network(
                 self.sysid, self.tenantid, net_uuid)
-            if manifest is None:
+            if descriptor is None:
                 return
-            manifest.update({'status': 'remove'})
+            descriptor.update({'status': 'remove'})
             self.connector.glob.desired.remove_network(
                 self.sysid, self.tenantid, net_uuid)
 
-        def add_network_to_node(self, manifest, nodeid):
-            net_id = manifest.get('uuid')
+        def add_network_to_node(self, descriptor, nodeid):
+            '''
+            Creates the given virtual network in the given node
+
+            parameters
+            ----------
+            descriptor : dictionary
+                network descriptor
+            nodeid : string
+                UUID of node
+
+            returns
+            -------
+            dictionary
+            '''
+            net_id = descriptor.get('uuid')
             net = self.connector.glob.actual.get_node_network(self.sysid, self.tenantid, nodeid, net_id)
             if net is not None:
                 return net
-            res = self.connector.glob.actual.create_network_in_node(self.sysid, self.tenantid, nodeid, manifest)
+            res = self.connector.glob.actual.create_network_in_node(self.sysid, self.tenantid, nodeid, descriptor)
             if res.get('error') is not None:
                 raise ValueError('Got Error {}'.format(res['error']))
             return res['result']
 
         def remove_network_from_node(self, netid, nodeid):
+            '''
+            Removes the given virtual network from the given node
+
+            parameters
+            ----------
+            netid : string
+                network uuid
+            nodeid : string
+                UUID of node
+
+            returns
+            -------
+            dictionary
+            '''
             res = self.connector.glob.actual.remove_network_from_node(self.sysid, self.tenantid, nodeid, netid)
             if res.get('error') is not None:
                 raise ValueError('Got Error {}'.format(res['error']))
@@ -343,19 +419,60 @@ class FIMAPI(object):
 
 
         def add_connection_point(self, cp_descriptor):
+            '''
+            Registers a connection point in the system catalog
+
+            Needs at least one node in the system!
+
+            parameters
+            ----------
+            descriptor : dictionary
+                connection descriptor
+
+            returns
+            -------
+            bool
+            '''
             cp_descriptor.update({'status': 'add'})
             cp_id = cp_descriptor.get('uuid')
             self.connector.glob.desired.add_network_port(
                 self.sysid, self.tenantid, cp_id, cp_descriptor)
 
         def delete_connection_point(self, cp_uuid):
-            manifest = self.connector.glob.actual.get_network_port(
+            '''
+            Removes the given connection point from the system catalog
+            Needs at least one node in the system!
+
+            parameters
+            ----------
+            cp_uuid : string
+                UUID of connection point
+
+            returns
+            -------
+            bool
+            '''
+            descriptor = self.connector.glob.actual.get_network_port(
                 self.sysid, self.tenantid, cp_uuid)
-            manifest.update({'status': 'remove'})
+            descriptor.update({'status': 'remove'})
             self.connector.glob.desired.add_network_port(
-                self.sysid, self.tenantid, cp_uuid, manifest)
+                self.sysid, self.tenantid, cp_uuid, descriptor)
 
         def connect_cp_to_network(self, cp_uuid, net_uuid):
+            '''
+            Connects the given connection point to the given network
+
+            parameters
+            ----------
+            cp_uuid : string
+                UUID of the connection point
+            net_uuid : string
+                UUID of the virtual network
+
+            returns
+            -------
+            string
+            '''
             ports = self.connector.glob.actual.get_all_nodes_network_ports(self.sysid, self.tenantid)
             node = None
             port_info = None
@@ -372,6 +489,18 @@ class FIMAPI(object):
             raise ValueError('Error connecting: {}'.format(res['error']))
 
         def disconnect_cp(self, cp_uuid):
+            '''
+            Disconnects the given connection point
+
+            parameters
+            ----------
+            cp_uuid : string
+                UUID of connection point
+
+            returns
+            -------
+            string
+            '''
             ports = self.connector.glob.actual.get_all_nodes_network_ports(self.sysid, self.tenantid)
             node = None
             port_info = None
@@ -387,10 +516,24 @@ class FIMAPI(object):
                 return cp_uuid
             raise ValueError('Error connecting: {}'.format(res['error']))
 
-        def add_router(self, nodeid, manifest):
-            router_id = manifest.get('uuid')
+        def add_router(self, nodeid, descriptor):
+            '''
+            Creates the given virtual router in the given node
+
+            parameters
+            ----------
+            descriptor : dictionary
+                descriptor of the router
+            nodeid : string
+                UUID of the node
+
+            returns
+            -------
+            dictionary
+            '''
+            router_id = descriptor.get('uuid')
             self.connector.glob.desired.add_node_network_router(
-                self.sysid, self.tenantid, nodeid, router_id, manifest)
+                self.sysid, self.tenantid, nodeid, router_id, descriptor)
             router_info = self.connector.glob.actual.get_node_network_router(
                 self.sysid, self.tenantid, nodeid, router_id)
             while router_info is None:
@@ -400,65 +543,176 @@ class FIMAPI(object):
 
 
         def remove_router(self, node_id, router_id):
+            '''
+            Removes the given virtual router in the given node
+
+            parameters
+            ----------
+            router_id : string
+                UUID of the router
+            node_id : string
+                UUID of the node
+
+            returns
+            -------
+            dictionary
+            '''
             self.connector.glob.desired.remove_node_network_router(
                 self.sysid, self.tenantid, node_id, router_id)
 
         def add_router_port(self, nodeid, router_id, port_type, vnet_id=None, ip_address=None):
+            '''
+            Adds a port to the given virtual router
+
+            parameters
+            ----------
+            nodeid : string
+                UUID of the node
+            router_id : string
+                UUID of the virtual router
+            port_type : string
+                kind of the port to be added (INTERNAL, EXTERNAL)
+            vnet_id : string
+                eventual network to be connected
+            ip_address : string
+                eventual address for the new router port
+
+            returns
+            -------
+            dictionary
+            '''
             if port_type.upper() not in ['EXTERNAL', 'INTERNAL']:
-                raise ValueError("port_type can be only one of : INTERNAL, EXTERNAL")
+                raise ValueError('port_type can be only one of : INTERNAL, EXTERNAL')
 
             port_type = port_type.upper()
             return self.connector.glob.actual.add_port_to_router(self.sysid, self.tenantid, nodeid, router_id, port_type, vnet_id, ip_address)
 
         def remove_router_port(self, nodeid, router_id, vnet_id):
+            '''
+            Removes a port from the given router
+
+            parameters
+            ----------
+            nodeid : string
+                UUID of the node
+            router_id : string
+                UUID of the virtual router
+            vnet_id : string
+                network to be disconnected
+
+            returns
+            -------
+            dictionary
+
+            '''
             return self.connector.glob.actual.remove_port_from_router(self.sysid, self.tenantid, nodeid, router_id, vnet_id)
 
 
 
         def create_floating_ip(self, nodeid):
+            '''
+            Creates a floating IP in the given node
+
+            parameters
+            ----------
+            nodeid : string
+                UUID of the node
+
+            returns
+            -------
+            dictionary
+            '''
             return self.connector.glob.actual.add_node_floatingip(self.sysid, self.tenantid, nodeid)
 
         def delete_floating_ip(self, nodeid, ip_id):
+            '''
+            Deletes the given floating IP from the given node
+
+            parameters
+            ----------
+            nodeid : string
+                UUID of the node
+            ip_id : string
+                UUID of the floating IP
+
+            returns
+            -------
+            dictionary
+
+            '''
             return self.connector.glob.actual.remove_node_floatingip(self.sysid, self.tenantid, nodeid, ip_id)
 
 
         def assign_floating_ip(self, nodeid, ip_id, cp_id):
+            '''
+            Assigns the given floating IP to the given conncetion point in the given node
+
+            parameters
+            ----------
+            nodeid : string
+                UUID of the node
+            ip_id : string
+                UUID of the floating IP
+            cp_id : string
+                UUID of the connection point
+
+            returns
+            -------
+            dictionary
+            '''
             return self.connector.glob.actual.assign_node_floating_ip(self.sysid, self.tenantid, nodeid, ip_id, cp_id)
 
         def retain_floating_ip(self, nodeid, ip_id, cp_id):
+            '''
+            Retains the given floating IP from the given connection point in the given node
+
+            parameters
+            ----------
+            nodeid : string
+                UUID of the node
+            ip_id : string
+                UUID of the floating IP
+            cp_id : string
+                UUID of the connection point
+
+            returns
+            -------
+            dictionary
+            '''
             return self.connector.glob.actual.retain_node_floating_ip(self.sysid, self.tenantid, nodeid, ip_id, cp_id)
 
         def list(self):
             '''
+            Gets all networks registered in the system catalog
 
-            List all network element available in the system/teneant or in a
-             specified node
-
-            :param node_uuid: optional node uuid
-            :return: dictionary {network uuid:
-             {network manifest dictionary, pluginid, nodes}}
+            returns
+            -------
+            string list
             '''
             return self.connector.glob.actual.get_all_networks(
                 self.sysid, self.tenantid)
 
         def search(self, search_dict, node_uuid=None):
             '''
+            Searches for plugin that satisfies the parameter
 
-            Will search for a network element matching the dictionary in a
-             single node or in all nodes
+            parameters
+            ----------
+            search_dict : dictionary
+                search parameters
+            node_uuid : string
+                optional node UUID where search
 
-            :param search_dict: dictionary contains all information to match
-            :param node_uuid: optional node uuid in which search
-            :return: a dictionary
-            {node_uuid, network element uuid list} with matches
+            returns
+            -------
+            string list
             '''
-            pass
+            raise NotImplementedError("Not yet...")
 
     class FDUAPI(object):
         '''
-
-        This class encapsulates the api for interaction with entities
-
+        Class: FDUAPI
+        This class encapsulates API for FDUs
         '''
 
         def __init__(self, connector=None, sysid=Constants.default_system_id,
@@ -472,16 +726,18 @@ class FIMAPI(object):
 
         def __wait_node_fdu_state_change(self, instanceid, state):
             '''
+            Waits an FDU instance state to change
 
-            Function used to wait if an instance changest state
-             (eg. configured -> run) or goes to error state
+            parameters
+            ----------
+            instanceid : string
+                UUID of instance
+            state : string
+                new state
 
-            :param node_uuid
-            :param fdu_uuid
-            :param state the new expected state
-
-            :return dict {'status':<new status>,
-                            'fdu_uuid':fdu_uuid}
+            returns
+            --------
+            dictionary
 
             '''
 
@@ -503,20 +759,25 @@ class FIMAPI(object):
                     state, instanceid,fdu_info.get('error_code'), fdu_info.get('error_msg')))
             return fdu_info
 
-        def onboard(self, descriptor, wait=True):
+        def onboard(self, descriptor):
             '''
+            Registers an FDU descriptor in the system catalog
+            Needs at least one node in the system!
 
-            Onboard the FDU descriptor in the Catalog
-            :param descriptor: the fdu descriptor
-            :param wait: make the call wait for completio
-            :return the fdu uuid
+            parameters
+            ----------
+            descriptor : FDU
+                FDU descriptor
 
+            returns
+            -------
+            FDU
             '''
             if not isinstance(descriptor, FDU):
-                raise ValueError("descriptor should be of type FDU")
+                raise ValueError('descriptor should be of type FDU')
             nodes = self.connector.glob.actual.get_all_nodes(self.sysid, self.tenantid)
             if len(nodes) == 0:
-                raise SystemError("No nodes in the system!")
+                raise SystemError('No nodes in the system!')
             n = random.choice(nodes)
 
             res = self.connector.glob.actual.onboard_fdu_from_node(self.sysid, self.tenantid, n, descriptor.get_uuid(), descriptor.to_json())
@@ -525,14 +786,19 @@ class FIMAPI(object):
             return FDU(res['result'])
 
 
-        def offload(self, fdu_uuid, wait=True):
+        def offload(self, fdu_uuid):
             '''
+            Removes the given FDU from the system catalog
+            Needs at least one node in the system!
 
-            Offload the FDU descriptor from the Catalog
-            :param fdu_uuid: fdu uuid you want to remove
-            :param wait: make the call wait for completion
-            :return the fdu uuid
+            parameters
+            ----------
+            fdu_uuid : string
+                UUID of fdu
 
+            returns
+            --------
+            string
             '''
             res = self.connector.glob.desired.remove_catalog_fdu_info(
                 self.sysid, self.tenantid, fdu_uuid)
@@ -543,15 +809,23 @@ class FIMAPI(object):
 
         def define(self, fduid, node_uuid, wait=True):
             '''
+            Defines the given fdu in the given node
 
-            Defines an FDU instance in a node, this method will check
-             the descriptor before sending the definition to the node
+            Instance UUID is system-wide unique
 
+            parameters
+            ----------
+            fduid : string
+                UUID of the FDU
+            node_uuid : string
+                UUID of the node
+            wait : bool
+                optional, call will block until FDU is defined
             :param fduid: id of the fdu you want to instantiate
-            :param node_uuid: destination node uuid
-            :param wait: if wait that the definition is complete before
-             returning
-            :return: instance id
+
+            returns
+            -------
+            InfraFDU
             '''
             desc = self.connector.glob.actual.get_catalog_fdu_info(
                 self.sysid, self.tenantid, fduid)
@@ -566,17 +840,21 @@ class FIMAPI(object):
             return InfraFDU(res['result'])
 
 
-        def undefine(self, instanceid, wait=True):
+        def undefine(self, instanceid):
             '''
+            Undefines the given instance
 
-            This method undefine an FDU instance from a None
+            paremeters
+            ----------
+            instanceid : string
+                UUID of instance
 
-            :param instanceid: FDU instance you want to undefine
-            :param wait: if wait before returning that the entity is undefined
-            :return: instanceid
+
+            returns
+            -------
+            string
             '''
-            node = self.connector.glob.actual.get_fdu_instance_node(
-                self.sysid, self.tenantid, instanceid)
+            node = self.connector.glob.actual.get_fdu_instance_node(self.sysid, self.tenantid, instanceid)
             if node is None:
                 raise ValueError('Unable to find node for this instanceid')
 
@@ -593,12 +871,18 @@ class FIMAPI(object):
 
         def configure(self, instanceid, wait=True):
             '''
+            Configures the given instance
 
-            Configure an FDU instance
+            paremeters
+            ----------
+            instanceid : string
+                UUID of instance
+            wait : bool
+                optional, call will block until FDU is configured
 
-            :param instanceid: FDU instance you want to configure
-            :param wait: make the function blocking
-            :return: instanceid
+            returns
+            -------
+            string
             '''
             node = self.connector.glob.actual.get_fdu_instance_node(
                 self.sysid, self.tenantid, instanceid)
@@ -616,16 +900,22 @@ class FIMAPI(object):
             res = self.connector.glob.desired.add_node_fdu(self.sysid, self.tenantid, node, fduid, instanceid, record.to_json())
             if wait:
                 self.__wait_node_fdu_state_change(instanceid,  'CONFIGURE')
-            return res
+            return instanceid
 
         def clean(self, instanceid, wait=True):
             '''
+            Cleans the given instance
 
-            Clean an FDU instance
+            paremeters
+            ----------
+            instanceid : string
+                UUID of instance
+            wait : bool
+                optional, call will block until FDU is cleaned
 
-            :param instanceid: FDU instance you want to clean
-            :param wait: make the function blocking
-            :return: instanceid
+            returns
+            -------
+            string
             '''
 
             node = self.connector.glob.actual.get_fdu_instance_node(
@@ -644,16 +934,22 @@ class FIMAPI(object):
             res = self.connector.glob.desired.add_node_fdu(self.sysid, self.tenantid, node, fduid, instanceid, record.to_json())
             if wait:
                 self.__wait_node_fdu_state_change(instanceid,  'DEFINE')
-            return res
+            return instanceid
 
         def start(self, instanceid, wait=True):
             '''
+            Starts the given instance
 
-            Start an FDU instance
+            paremeters
+            ----------
+            instanceid : string
+                UUID of instance
+            wait : bool
+                optional, call will block until FDU is started
 
-            :param instanceid: FDU instance you want to start
-            :param wait: make the function blocking
-            :return: instanceid
+            returns
+            -------
+            string
             '''
 
             node = self.connector.glob.actual.get_fdu_instance_node(
@@ -672,16 +968,22 @@ class FIMAPI(object):
             res = self.connector.glob.desired.add_node_fdu(self.sysid, self.tenantid, node, fduid, instanceid, record.to_json())
             if wait:
                 self.__wait_node_fdu_state_change(instanceid,  'RUN')
-            return res
+            return instanceid
 
         def stop(self, instanceid, wait=True):
             '''
+            Stops the given instance
 
-            Stop an FDU instance
+            paremeters
+            ----------
+            instanceid : string
+                UUID of instance
+            wait : bool
+                optional, call will block until FDU is stopeed
 
-            :param instanceid: FDU instance you want to stop
-            :param wait: make the function blocking
-            :return: instanceid
+            returns
+            -------
+            string
             '''
 
             node = self.connector.glob.actual.get_fdu_instance_node(
@@ -700,16 +1002,22 @@ class FIMAPI(object):
             res = self.connector.glob.desired.add_node_fdu(self.sysid, self.tenantid, node, fduid, instanceid, record.to_json())
             if wait:
                 self.__wait_node_fdu_state_change(instanceid,  'CONFIGURE')
-            return res
+            return instanceid
 
         def pause(self, instanceid, wait=True):
             '''
+            Pauses the given instance
 
-            Pause an FDU instance
+            paremeters
+            ----------
+            instanceid : string
+                UUID of instance
+            wait : bool
+                optional, call will block until FDU is paused
 
-            :param instanceid: FDU instance you want to pause
-            :param wait: make the function blocking
-            :return: instanceid
+            returns
+            -------
+            string
             '''
 
             node = self.connector.glob.actual.get_fdu_instance_node(
@@ -728,16 +1036,22 @@ class FIMAPI(object):
             res = self.connector.glob.desired.add_node_fdu(self.sysid, self.tenantid, node, fduid, instanceid, record.to_json())
             if wait:
                 self.__wait_node_fdu_state_change(instanceid,  'PAUSE')
-            return res
+            return instanceid
 
         def resume(self, instanceid, wait=True):
             '''
+            Resumes the given instance
 
-            Resume an FDU instance
+            paremeters
+            ----------
+            instanceid : string
+                UUID of instance
+            wait : bool
+                optional, call will block until FDU is resumed
 
-            :param instanceid: FDU instance you want to resume
-            :param wait: make the function blocking
-            :return: instanceid
+            returns
+            -------
+            string
             '''
 
             node = self.connector.glob.actual.get_fdu_instance_node(
@@ -757,21 +1071,24 @@ class FIMAPI(object):
             res = self.connector.glob.desired.add_node_fdu(self.sysid, self.tenantid, node, fduid, instanceid, record.to_json())
             if wait:
                 self.__wait_node_fdu_state_change(instanceid,  'RUN')
-            return res
+            return instanceid
 
         def migrate(self, instanceid, destination_node_uuid, wait=True):
             '''
+            Migrates the given instance
 
-            Live migrate an instance between two nodes
+            paremeters
+            ----------
+            instanceid : string
+                UUID of instance
+            destination_node_uuid : string
+                UUID of destination node
+            wait : bool
+                optional, call will block until FDU is migrated
 
-            The migration is issued when this command is sended,
-             there is a little overhead for the copy of the base image and the disk image
-
-
-            :param instanceid: fdu you want to migrate
-            :param destination_node_uuid: destination node
-            :param wait: optional wait before returning
-            :return: instanceid
+            returns
+            -------
+            string
             '''
 
             node = self.connector.glob.actual.get_fdu_instance_node(
@@ -806,24 +1123,49 @@ class FIMAPI(object):
 
         def instantiate(self, fduid, nodeid, wait=True):
             '''
-            Instantiate (define, configure, start) an fdu in a node
+            Instantiates the given fdu in the given node
 
-            :param fduid: id of the fdu to instantiate
-            :param nodeid: node where instantiate
-            :return instance uuid
+            This functions calls: define, configure, start
+
+            Instance UUID is system-wide unique
+
+            parameters
+            ----------
+            fduid : string
+                UUID of the FDU
+            node_uuid : string
+                UUID of the node
+            wait : bool
+                optional, call will block until FDU is defined
+            :param fduid: id of the fdu you want to instantiate
+
+            returns
+            -------
+            InfraFDU
             '''
             instance_info = self.define(fduid, nodeid)
+            time.sleep(0.5)
             instance_id = instance_info.get_uuid()
             self.configure(instance_id)
+            time.sleep(0.5)
             self.start(instance_id)
             return instance_info
 
         def terminate(self, instanceid, wait=True):
             '''
-            Terminate (stop, clean, undefine) an instance
+            Terminates the given instance
 
-            :param instanceid: instance you want to terminate
-            :return instance uuid
+            This function calls: stop, clean, undefine
+
+            paremeters
+            ----------
+            instanceid : string
+                UUID of instance
+
+
+            returns
+            -------
+            string
             '''
 
             self.stop(instanceid)
@@ -832,65 +1174,106 @@ class FIMAPI(object):
 
 
         def search(self, search_dict, node_uuid=None):
-            pass
+            '''
+            Searches for flavors that satisfies the parameter
+
+            parameters
+            ----------
+            search_dict : dictionary
+                search parameters
+            node_uuid : string
+                optional node UUID where search
+
+            returns
+            -------
+            string list
+            '''
+            raise NotImplementedError("Not yet...")
 
         def info(self, fdu_uuid):
-            # uri = '{}/*/runtime/*/entity/{}/instance/**'.format(self.store.aroot, entity_uuid)
-            # info = self.store.actual.getAll(uri)
-            # if info is None or len(info) == 0:
-            #     return {}
-            # i = {}
-            # for e in info:
-            #     k = e[0]
-            #     v = e[1]
-            #     i_uuid = k.split('/')[-1]
-            #     i.update({i_uuid: v})
-            # return {entity_uuid: i}
-            return self.connector.glob.actual.get_catalog_fdu_info(self.sysid, self.tenantid, fdu_uuid)
+            '''
+            Gets information about the given FDU from the catalog
+
+            parameters
+            ----------
+            fdu_uuid : string
+                UUID of the FDU
+
+            returns
+            -------
+            FDU
+            '''
+            data = self.connector.glob.actual.get_catalog_fdu_info(self.sysid, self.tenantid, fdu_uuid)
+            fdu = FDU(data)
+            return fdu
 
         def instance_info(self, instanceid):
             '''
-            Information about an instance
+            Gets information about the given instance
 
-            :param instanceid: instance id
+            parameters
+            ----------
+            instanceid : string
+                UUID of the instance
 
-            :return dict containing the fdu record and hypervisor informations
-
+            returns
+            -------
+            InfraFDU
             '''
-            data = self.connector.glob.actual.get_node_fdu_instance(self.sysid, self.tenantid, "*", instanceid)
+
+            data = self.connector.glob.actual.get_node_fdu_instance(self.sysid, self.tenantid, '*', instanceid)
             fdu = InfraFDU(data)
             return fdu
 
         def get_nodes(self, fdu_uuid):
             '''
+            Gets all the node in which the given FDU is running
 
-                List of nodes where the fdu is running
-                :param fdu_uuid fdu you want to find the nodes
-                :return: node_uuid list
+            parameters
+            ----------
+            fdu_uuid : string
+                UUID of the FDU
+
+            returns
+            -------
+            string list
 
             '''
             return self.connector.glob.actual.get_fdu_nodes(self.sysid, self.tenantid, fdu_uuid)
 
         def list_node(self, node_uuid):
             '''
+            Gets all the FDUs running in the given node
 
-                List of fdu in the node
-                :param node_uuid node you want to list the fdus
-                :return: fdu_uuid list
+            parameters
+            ---------
+            node_uuid : string
+                UUID of the node
 
+            returns
+            -------
+            string list
             '''
             return self.connector.glob.actual.get_node_fdus(self.sysid, self.tenantid, node_uuid)
 
 
         def instance_list(self, fduid):
             '''
-                List of instances for an FDU
+            Gets all the instances of a given FDU
 
-                :param fduid
-                :return dictionary of {node_id: [instances list]}
+            parameters
+            ----------
+            fduid : string
+                UUID of the FDU
+
+            returns
+            -------
+            dictionary
+                {node_id: [instances list]}
             '''
+
             infos = self.connector.glob.actual.get_node_fdu_instances(
-                self.sysid, self.tenantid, "*", fduid)
+                self.sysid, self.tenantid, '*', fduid)
             nodes = list(dict.fromkeys(list(map( lambda x: x[0], infos))))
             res = {}
             for n in nodes:
@@ -902,24 +1285,22 @@ class FIMAPI(object):
             return res
 
 
-        def list(self, node_uuid='*'):
+        def list(self):
             '''
+            Gets all the FDUs registered in the catalog
 
-            List all entity element available in the system/teneant
-             or in a specified node
-
-            :param node_uuid: optional node uuid
-            :return: dictionary {node uuid: {entity uuid: instance list} list}
+            returns
+            -------
+            string list
             '''
             return self.connector.glob.actual.get_catalog_all_fdus(self.sysid, self.tenantid)
 
 
+
     class Image(object):
         '''
-
-        This class encapsulates the action on images
-
-
+        Class: Image
+        This class encapsulates API for Images
         '''
 
         def __init__(self, connector=None, sysid=Constants.default_system_id,
@@ -931,154 +1312,94 @@ class FIMAPI(object):
             self.sysid = sysid
             self.tenantid = tenantid
 
-        def __search_plugin_by_name(self, name, node_uuid):
-            # uri = '{}/{}/plugins'.format(self.store.aroot, node_uuid)
-            # all_plugins = self.store.actual.resolve(uri)
-            # if all_plugins is None or all_plugins == '':
-            #     print('Cannot get plugin')
-            #     return None
-            # all_plugins = json.loads(all_plugins).get('plugins')
-            # search = [x for x in all_plugins if name.upper() in x.get('name').upper()]
-            # if len(search) == 0:
-            #     return None
-            # else:
-            #     return search[0]
-            pass
-
-        def __get_entity_handler_by_uuid(self, node_uuid, entity_uuid):
-            # uri = '{}/{}/runtime/*/entity/{}'.format(self.store.aroot, node_uuid, entity_uuid)
-            # all = self.store.actual.resolveAll(uri)
-            # for i in all:
-            #     k = i[0]
-            #     if fnmatch.fnmatch(k, uri):
-            #         # print('MATCH {0}'.format(k))
-            #         # print('Extracting uuid...')
-            #         regex = uri.replace('/', '\/')
-            #         regex = regex.replace('*', '(.*)')
-            #         reobj = re.compile(regex)
-            #         mobj = reobj.match(k)
-            #         uuid = mobj.group(1)
-            #         # print('UUID {0}'.format(uuid))
-
-            #         return uuid
-            pass
-
-        def __get_entity_handler_by_type(self, node_uuid, t):
-            # handler = None
-            # handler = self.__search_plugin_by_name(t, node_uuid)
-            # if handler is None:
-            #     print('type not yet supported')
-            # return handler
-            pass
 
         def add(self, descriptor):
             '''
+            Registers an image in the system catalog
+            Needs at least one not in the system
 
-            Adding an image to a node or to all nodes
+            parameters
+            ----------
+            descriptor : dictionary
+                image descriptor
 
-            :param manifest: dictionary representing the manifest for the image
-            :param node_uuid: optional node in which add the image
-            :return: boolean
+            returns
+            -------
+            string
             '''
-            # manifest.update({'status': 'add'})
-            # json_data = json.dumps(manifest)
-            # if node_uuid is None:
-            #     uri = '{}/*/runtime/*/image/{}'.format(
-            #         self.store.droot, manifest.get('uuid'))
-            # else:
-            #     handler = None
-            #     t = manifest.get('type')
-            #     if t in ['kvm', 'xen']:
-            #         handler = self.__search_plugin_by_name(t, node_uuid)
-            #     elif t in ['container', 'lxd', 'docker']:
-            #         handler = self.__search_plugin_by_name(t, node_uuid)
-            #     else:
-            #         print('type not recognized')
-            #     if handler is None or handler == 'None':
-            #         print('Handler not found!! (Is none)')
-            #         return False
-            #     if handler.get('uuid') is None:
-            #         print('Handler not found!! (Cannot get handler uuid)')
-            #         return False
-            #     uri = '{}/{}/runtime/{}/image/{}'.format(
-            #         self.store.droot, node_uuid, handler.get('uuid'), manifest.get('uuid'))
-            # res = self.store.desired.put(uri, json_data)
-            # if res:
-            #     return True
-            # else:
-            #     return False
+
             img_id = descriptor.get('uuid')
             res = self.connector.glob.desired.add_image(self.sysid,
              self.tenantid,img_id, descriptor)
             return img_id
 
         def get(self, image_uuid):
+            '''
+            Gets the information about the given image
+
+            parameters
+            ----------
+            image_uuid : string
+                UUID of image
+
+            returns
+            -------
+            dictionary
+            '''
             return self.connector.glob.desired.get_image(self.sysid,
              self.tenantid,image_uuid)
 
         def remove(self, image_uuid):
             '''
+            Removes the given image from the system catalog
+            Needs at least one not in the system
 
-            Remove an image for a node or all nodes
+            parameters
+            ----------
+            image_uuid : string
 
-            :param image_uuid: image you want to remove
-            :param node_uuid: optional node from which remove the image
-            :return: boolean
+            returns
+            -------
+            string
             '''
 
-            # if node_uuid is None:
-            #     uri = '{}/*/runtime/*/image/{}#status=undefine'.format(
-            #         self.store.droot, image_uuid)
-            # else:
-            #     uri = '{}/{}/runtime/*/image/{}#status=undefine'.format(
-            #         self.store.droot, node_uuid, image_uuid)
-            # res = self.store.desired.dput(uri)
-            # if res:
-            #     return True
-            # else:
-            #     return False
             ret = self.connector.glob.desired.remove_image(self.sysid,
              self.tenantid, image_uuid)
             return image_uuid
 
         def search(self, search_dict, node_uuid=None):
-            pass
+            '''
+            Searches for images that satisfies the parameter
+
+            parameters
+            ----------
+            search_dict : dictionary
+                search parameters
+            node_uuid : string
+                optional node UUID where search
+
+            returns
+            -------
+            string list
+            '''
+            raise NotImplementedError("Not yet...")
 
         def list(self):
             '''
+            Gets all the images registered in the system catalog
 
-            List available entity images
-
-            :param node_uuid: optional node id
-            :return: dictionaty {nodeid: {runtimeid: [images list]}}
+            returns
+            -------
+            string list
             '''
 
-            # uri = '{}/*/runtime/*/image/**'.format(self.store.aroot)
-            # if node_uuid:
-            #     uri = '{}/{}/runtime/*/image/**'.format(
-            #         self.store.aroot, node_uuid)
-            # data = self.store.actual.getAll(uri)
-            # images = {}
-            # for i in data:
-            #     nodeid = i[0].split('/')[3]
-            #     pluginid = i[0].split('/')[5]
-            #     img_data = json.loads(i[1])
-            #     imgs = images.get(nodeid, None)
-            #     if imgs is None:
-            #         images.update({nodeid: {pluginid: [img_data]}})
-            #     else:
-            #         if pluginid not in imgs.keys():
-            #             images.update({nodeid: {pluginid: [img_data]}})
-            #         else:
-            #             images.get(nodeid).get(pluginid).append(img_data)
-            # return images
             return self.connector.glob.actual.get_all_images(self.sysid,
              self.tenantid)
 
     class Flavor(object):
         '''
-          This class encapsulates the action on flavors
-
+        Class: Flavor
+        This class encapsulates API for Flavors
         '''
 
         def __init__(self, connector=None, sysid=Constants.default_system_id,
@@ -1092,27 +1413,19 @@ class FIMAPI(object):
 
         def add(self, descriptor):
             '''
+            Registers a flavor in the system catalog
+            Needs at least one node in the system
 
-            Add a computing flavor to a node or all nodes
+            parameters
+            ----------
+            descriptor : dictionary
+                flavor descriptor
 
-            :param manifest: dictionary representing the manifest
-             for the flavor
-            :param node_uuid: optional node in which add the flavor
-            :return: boolean
+            returns
+            -------
+            string
             '''
-            # manifest.update({'status': 'add'})
-            # json_data = json.dumps(manifest)
-            # if node_uuid is None:
-            #     uri = '{}/*/runtime/*/flavor/{}'.format(
-            #         self.store.droot, manifest.get('uuid'))
-            # else:
-            #     uri = '{}/{}/runtime/*/flavor/{}'.format(
-            #         self.store.droot, node_uuid, manifest.get('uuid'))
-            # res = self.store.desired.put(uri, json_data)
-            # if res:
-            #     return True
-            # else:
-            #     return False
+
             flv_id = descriptor.get('uuid')
             res = self.connector.glob.desired.add_flavor(self.sysid,
              self.tenantid,flv_id, descriptor)
@@ -1120,83 +1433,67 @@ class FIMAPI(object):
 
         def get(self, flavor_uuid):
             '''
+            Gets information about the given flavor
 
-            Add a computing flavor to a node or all nodes
+            parameters
+            ----------
+            flavor_uuid : string
+                UUID of flavor
 
-            :param manifest: dictionary representing the manifest
-             for the flavor
-            :param node_uuid: optional node in which add the flavor
-            :return: boolean
+            returns
+            -------
+            dictionary
+
             '''
-            # manifest.update({'status': 'add'})
-            # json_data = json.dumps(manifest)
-            # if node_uuid is None:
-            #     uri = '{}/*/runtime/*/flavor/{}'.format(
-            #         self.store.droot, manifest.get('uuid'))
-            # else:
-            #     uri = '{}/{}/runtime/*/flavor/{}'.format(
-            #         self.store.droot, node_uuid, manifest.get('uuid'))
-            # res = self.store.desired.put(uri, json_data)
-            # if res:
-            #     return True
-            # else:
-            #     return False
+
             return self.connector.glob.desired.get_flavor(self.sysid,
              self.tenantid,flavor_uuid)
 
         def remove(self, flavor_uuid):
             '''
+            Removes the given flavor from the system catalog
+            Needs at least one node in the system
 
-            Remove a flavor from all nodes or a specified node
+            parameters
+            ----------
 
-            :param flavor_uuid: flavor to remove
-            :param node_uuid: optional node from which remove the flavor
-            :return: boolean
+            flavor_uuid : string
+                UUID of flavor
+
+            returns
+            -------
+            string
             '''
-            # if node_uuid is None:
-            #     uri = '{}/*/runtime/*/flavor/{}#status=undefine'.format(
-            #         self.store.droot, flavor_uuid)
-            # else:
-            #     uri = '{}/{}/runtime/*/flavor/{}#status=undefine'.format(
-            #         self.store.droot, node_uuid, flavor_uuid)
-            # res = self.store.desired.dput(uri)
-            # if res:
-            #     return True
-            # else:
-            #     return False
+
             ret = self.connector.glob.desired.remove_flavor(self.sysid,
              self.tenantid, flavor_uuid)
             return flavor_uuid
 
         def list(self):
             '''
+            Gets all the flavors registered in the system catalog
 
-            List available entity flavors
-
-            :param node_uuid: optional node id
-            :return: dictionaty {nodeid: {runtimeid: [flavor list]}}
+            returns
+            -------
+            string list
             '''
-            # uri = '{}/*/runtime/*/flavor/**'.format(self.store.aroot)
-            # if node_uuid:
-            #     uri = '{}/{}/runtime/*/flavor/**'.format(
-            #         self.store.aroot, node_uuid)
-            # data = self.store.actual.getAll(uri)
-            # flavors = {}
-            # for i in data:
-            #     nodeid = i[0].split('/')[3]
-            #     pluginid = i[0].split('/')[5]
-            #     flv_data = json.loads(i[1])
-            #     flvs = flavors.get(nodeid, None)
-            #     if flvs is None:
-            #         flavors.update({nodeid: {pluginid: [flv_data]}})
-            #     else:
-            #         if pluginid not in flvs.keys():
-            #             flavors.update({nodeid: {pluginid: [flv_data]}})
-            #         else:
-            #             flavors.get(nodeid).get(pluginid).append(flv_data)
-            # return flavors
+
             return self.connector.glob.actual.get_all_flavors(self.sysid,
              self.tenantid)
 
         def search(self, search_dict, node_uuid=None):
-            pass
+            '''
+            Searches for flavors that satisfies the parameter
+
+            parameters
+            ----------
+            search_dict : dictionary
+                search parameters
+            node_uuid : string
+                optional node UUID where search
+
+            returns
+            -------
+            string list
+            '''
+            raise NotImplementedError("Not yet...")
