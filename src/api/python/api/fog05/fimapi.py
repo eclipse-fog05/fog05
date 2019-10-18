@@ -37,15 +37,89 @@ class FIMAPI(object):
         self.connector = Yaks_Connector(locator)
         self.sysid = sysid
         self.tenantid = tenantid
-        self.descriptor = self.Descriptor()
-        self.node = self.Node(self.connector, self.sysid, self.tenantid)
-        self.plugin = self.Plugin(self.connector, self.sysid, self.tenantid)
-        self.network = self.Network(self.connector, self.sysid, self.tenantid)
-        self.fdu = self.FDUAPI(self.connector, self.sysid, self.tenantid)
-        self.image = self.Image(self.connector, self.sysid, self.tenantid)
-        self.flavor = self.Flavor(self.connector, self.sysid, self.tenantid)
+        self.descriptor_o = self.Descriptor()
+        self.node_o = self.Node(self.connector, self.sysid, self.tenantid)
+        self.plugin_o = self.Plugin(self.connector, self.sysid, self.tenantid)
+        self.network_o = self.Network(self.connector, self.sysid, self.tenantid)
+        self.fdu_o = self.FDUAPI(self.connector, self.sysid, self.tenantid)
+        self.image_o = self.Image(self.connector, self.sysid, self.tenantid)
+        self.flavor_o = self.Flavor(self.connector, self.sysid, self.tenantid)
+
+
+    def descriptor(self):
+        '''
+        Gives access to the descriptor API
+
+        returns
+        -------
+        Descriptor
+        '''
+        return self.descriptor_o
+
+    def node(self):
+        '''
+        Gives access to the node API
+
+        returns
+        -------
+        Node
+        '''
+        return self.node_o
+
+    def plugin(self):
+        '''
+        Gives access to the plugin API
+
+        returns
+        -------
+        Plugin
+        '''
+        return self.plugin_o
+
+    def network(self):
+        '''
+        Gives access to the network API
+
+        returns
+        -------
+        Network
+        '''
+        return self.descriptor_o
+
+    def fdu(self):
+        '''
+        Gives access to the FDU API
+
+        returns
+        -------
+        FDUAPI
+        '''
+        return self.fdu_o
+    def image(self):
+        '''
+        Gives access to the image API
+
+        returns
+        -------
+        Image
+        '''
+        return self.descriptor_o
+
+    def flavor(self):
+        '''
+        Gives access to the flavor API
+
+        returns
+        -------
+        Flavor
+        '''
+        return self.descriptor_o
+
 
     def close(self):
+        '''
+        Closes the FIMAPI
+        '''
         self.connector.close()
 
     class Descriptor(object):
