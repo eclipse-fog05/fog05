@@ -111,6 +111,11 @@ class LXD(RuntimePluginFDU):
         self.manifest.update({'status': 'running'})
         self.connector.loc.actual.add_node_plugin(self.node, self.uuid, self.manifest)
 
+
+        # cmd = 'sudo ip link set eth0.1399 master fosbr0'
+        # os.system(cmd)
+
+
         self.logger.info('start_runtime()', ' LXD Plugin - Started...')
 
         r = self.var.get()
