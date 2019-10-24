@@ -32,6 +32,9 @@ let check s =
 (* Entity Commands *)
 
 let add_entity_descriptor_to_catalog api (descriptor:string option) =
+(** [add_entity_descriptor_to_catalog a d] registers the descriptor [d] in the system catalog.
+    Returns Lwt.unit
+  *)
   match descriptor with
   | Some dp ->
     let d = read_file dp in
@@ -41,6 +44,9 @@ let add_entity_descriptor_to_catalog api (descriptor:string option) =
   | None -> Lwt_io.printf "Manifest parameter missing!!\n"
 
 let remove_entity_descriptor_from_catalog api eid =
+(** [remove_entity_descriptor_from_catalog a id] removed the descriptor intified by [id] from the system catalog.
+    Returns Lwt.unit
+  *)
   match eid with
   | Some id ->
     Entity.offload id api  >>= fun res ->
@@ -49,6 +55,9 @@ let remove_entity_descriptor_from_catalog api eid =
 
 
 let entity_instantiate api eid =
+(** [entity_instantiate a id] instatiate the Entity identified by [id] in the system.
+    Returns Lwt.unit
+  *)
   (match eid with
    | Some eid ->
      Entity.instantiate eid api >>= fun res ->
@@ -56,6 +65,9 @@ let entity_instantiate api eid =
    | None  -> Lwt_io.printf "Entity UUID parameter missing!!\n")
 
 let entity_terminate api instanceid =
+(** [entity_terminate a id] termiates the Entity instace identified by [id].
+    Returns Lwt.unit
+  *)
   match instanceid with
   | Some iid ->
     Entity.terminate iid api >>= fun res ->
@@ -63,6 +75,9 @@ let entity_terminate api instanceid =
   | None -> Lwt_io.printf "Entity Instance UUID parameter missing!!\n"
 
 let entity_info api aeid =
+(** [entity_info a id] gets informatio about the entity identified by [id].
+    Returns Lwt.unit
+  *)
   match aeid with
   | Some iid ->
     Entity.get_entity_descriptor iid api >>= fun res ->
@@ -71,6 +86,9 @@ let entity_info api aeid =
 
 
 let entity_record api instanceid =
+(** [entity_record a id] gets informatio about the entity instance identified by [id].
+    Returns Lwt.unit
+  *)
   match instanceid with
   | Some iid ->
     Entity.get_entity_instance_info iid api >>= fun res ->
@@ -78,10 +96,16 @@ let entity_record api instanceid =
   | None -> Lwt_io.printf "Entity Instance UUID parameter missing!!\n"
 
 let entity_list api =
+(** [entity_record a id] gets all the entities registered in the system catalog.
+    Returns Lwt.unit
+  *)
   let%lwt elist = Entity.list api in
   Lwt_list.iter_p (fun e -> Lwt_io.printf "%s\n" e) elist
 
 let entity_instance_list api eid =
+(** [entity_record a id] gets all the entities instaces running the system catalog.
+    Returns Lwt.unit
+  *)
   match eid with
   | Some eid ->
     let%lwt elist = Entity.instance_list eid api in
@@ -90,7 +114,7 @@ let entity_instance_list api eid =
   | None -> Lwt_io.printf "Entity UUID parameter missing!!\n"
 
 (* Atomic Entity Commands *)
-let add_ae_descriptor_to_catalog api (descriptor:string option) =
+(* let add_ae_descriptor_to_catalog api (descriptor:string option) =
   match descriptor with
   | Some dp ->
     let d = read_file dp in
@@ -147,10 +171,13 @@ let atomic_entity_instance_list api aeid =
     let%lwt elist = AtomicEntity.instance_list aeid api in
     let%lwt _ = Lwt_io.printf "Atomic Entity: %s instances\n" aeid in
     Lwt_list.iter_p (fun e -> Lwt_io.printf "%s\n" e) elist
-  | None  -> Lwt_io.printf "Atomic Entity UUID parameter missing!!\n"
+  | None  -> Lwt_io.printf "Atomic Entity UUID parameter missing!!\n" *)
 (* Plugin command *)
 
 let plugin_list nodeid yconnector =
+(** [plugin_list nodeid connector] gets all plugins of [nodeid] need a yaks connector [connector].
+    Returns Lwt.unit
+  *)
   match nodeid with
   | Some node_uuid ->
     Cli_helper.get_all_node_plugin node_uuid yconnector >>=
@@ -158,6 +185,9 @@ let plugin_list nodeid yconnector =
   | None -> Lwt_io.printf "Node uuid parameter missing!!\n"
 
 let plugin_add nodeid descriptor _ =
+(** [plugin_add nodeid descriptor] add the plguin describer by [descriptor] in [nodeid].
+    Returns Lwt.unit
+  *)
   match nodeid with
   | Some _ ->
     (match descriptor with
@@ -178,6 +208,9 @@ let plugin_add nodeid descriptor _ =
 
 
 let plugin_cmd action nodeid _ descriptor =
+(** [plugin_cmd action nodeid () descriptor] plugin command function for the CLI.
+    Returns Lwt.unit
+  *)
   match action with
   | "list" -> (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= plugin_list nodeid
   | "add" -> (Yaks_connector.get_connector_of_locator Cli_helper.yaksserver) >>= plugin_add nodeid descriptor
@@ -187,6 +220,9 @@ let plugin_cmd action nodeid _ descriptor =
 
 (* Node commands *)
 let node_cmd api action nodeid =
+(** [node_cmd api action nodeid] node command function for the CLI.
+    Returns Lwt.unit
+  *)
   match action with
   | "list" ->
     let print_node (n:FTypes.node_info) =
@@ -224,6 +260,9 @@ let node_cmd api action nodeid =
 (* Network commands *)
 
 let network_add api descriptor =
+(** [network_add api descriptor] adds the network represented by [descriptor] in the system catalog.
+    Returns Lwt.unit
+  *)
   match descriptor with
   | Some path ->
     let cont = read_file path in
@@ -237,6 +276,9 @@ let network_add api descriptor =
 
 
 let network_remove api netid =
+(** [network_remove api netid] removes the network idenfified by [netid] in from system catalog.
+    Returns Lwt.unit
+  *)
   match netid with
   | Some netid ->
     Network.remove_network netid api
@@ -244,10 +286,16 @@ let network_remove api netid =
   | None -> Lwt_io.printf "Network uuid parameter missing!!\n"
 
 let network_list api =
+(** [network_list api] gets all the network registered in the system catalog.
+    Returns Lwt.unit
+  *)
   Network.list_networks api >>= Cli_printing.print_networks
 
 
 let network_cmd api action descriptor netid =
+(** [network_cmd api action descriptor netid] network command function for the CLI.
+    Returns Lwt.unit
+  *)
   match action with
   | "add" -> network_add api descriptor
   | "list" -> network_list api
@@ -258,6 +306,9 @@ let network_cmd api action descriptor netid =
 (* Image commands *)
 
 let image_add api descriptor =
+(** [image_add api descriptor] adds the image represented by [descriptor] in the system catalog.
+    Returns Lwt.unit
+  *)
   match descriptor with
   | Some path ->
     let cont = read_file path in
@@ -270,6 +321,9 @@ let image_add api descriptor =
 
 
 let image_remove api imgid =
+(** [image_remove api imgid] removes the image idenfitied by [imgid] from the system catalog.
+    Returns Lwt.unit
+  *)
   match imgid with
   | Some imgid ->
     Image.remove imgid api
@@ -277,10 +331,16 @@ let image_remove api imgid =
   | None -> Lwt_io.printf "Image uuid parameter missing!!\n"
 
 let image_list api =
+(** [image_list api] gets all the images registered in the system catalog.
+    Returns Lwt.unit
+  *)
   Image.list api >>= Cli_printing.print_images
 
 
 let image_cmd api action descriptor imgid =
+(** [image_cmd api action descriptor imgid] image command function for the CLI.
+    Returns Lwt.unit
+  *)
   match action with
   | "add" -> image_add api descriptor
   | "list" -> image_list api
@@ -291,6 +351,9 @@ let image_cmd api action descriptor imgid =
 (* Manifest commands *)
 
 let descriptor_image descriptor =
+(** [descriptor_image descriptor] Checks the image [descriptor].
+    Returns Lwt.unit
+  *)
   match descriptor with
   | Some path ->
     let%lwt _ = Lwt_io.printf "Check descriptor %s\n" path in
@@ -302,6 +365,9 @@ let descriptor_image descriptor =
   | None -> Lwt_io.printf "Manifest parameter is missing!!\n"
 
 let descriptor_flavor descriptor =
+(** [descriptor_flavor descriptor] Checks the flavor [descriptor].
+    Returns Lwt.unit
+  *)
   match descriptor with
   | Some path ->
     let%lwt _ = Lwt_io.printf "Check descriptor %s\n" path in
@@ -313,6 +379,9 @@ let descriptor_flavor descriptor =
   | None -> Lwt_io.printf "Manifest parameter is missing!!\n"
 
 let descriptor_fdu descriptor =
+(** [descriptor_fdu descriptor] Checks the FDU [descriptor].
+    Returns Lwt.unit
+  *)
   match descriptor with
   | Some path ->
     let%lwt _ = Lwt_io.printf "Check descriptor %s\n" path in
@@ -324,6 +393,9 @@ let descriptor_fdu descriptor =
   | None -> Lwt_io.printf "Manifest parameter is missing!!\n"
 
 let descriptor_network descriptor =
+(** [descriptor_network descriptor] Checks the network [descriptor].
+    Returns Lwt.unit
+  *)
   match descriptor with
   | Some path ->
     let%lwt _ = Lwt_io.printf "Check descriptor %s\n" path in
@@ -334,17 +406,23 @@ let descriptor_network descriptor =
      | Error e -> Lwt_io.printf "Manifest has errors: %s\n" (Printexc.to_string e))
   | None -> Lwt_io.printf "Manifest parameter is missing!!\n"
 
-let descriptor_cmd action descriptor =
-  match action with
+let descriptor_cmd kind descriptor =
+(** [descriptor_cmd kind descriptor] descriptor command function for the CLI.
+    Returns Lwt.unit
+  *)
+  match kind with
   | "fdu" -> descriptor_fdu descriptor
   | "network" -> descriptor_network descriptor
   | "flavor" -> descriptor_flavor descriptor
   | "image" -> descriptor_image descriptor
-  | _ -> Lwt_io.printf "%s is not a valid type of descriptor\n" action
+  | _ -> Lwt_io.printf "%s is not a valid type of descriptor\n" kind
 
 (* FDU COMMANDS *)
 
 let add_fdu_descriptor_to_catalog api (descriptor:string option) =
+(** [add_fdu_descriptor_to_catalog api descriptor] Adds the fdu represented by [descriptor] in the system catalog
+    Returns Lwt.unit
+  *)
   match descriptor with
   | Some dp ->
     let d = read_file dp in
@@ -354,6 +432,9 @@ let add_fdu_descriptor_to_catalog api (descriptor:string option) =
   | None -> Lwt_io.printf "Manifest parameter missing!!\n"
 
 let remove_fdu_descriptor_from_catalog api fduid =
+(** [remove_fdu_descriptor_from_catalog api fduid] Removes the fdu identified by [fduid] from the system catalog
+    Returns Lwt.unit
+  *)
   match fduid with
   | Some id ->
     FDU.offload id api  >>= fun res ->
@@ -361,6 +442,9 @@ let remove_fdu_descriptor_from_catalog api fduid =
   | None -> Lwt_io.printf "Entity uuid parameter missing!!\n"
 
 let fdu_define api fduid nodeid =
+(** [fdu_define api fduid nodeid] Defines an fdu instance for the fdu [fduid] in the node [nodeid].
+    Returns Lwt.unit
+  *)
   match nodeid with
   | Some nid ->
     (match fduid with
@@ -371,6 +455,9 @@ let fdu_define api fduid nodeid =
   | None ->  Lwt_io.printf "Node UUID parameter missing!!\n"
 
 let fdu_undefine api instanceid =
+(** [fdu_define api instanceid] Undefines the fdu instance idenfitied by [instanceid].
+    Returns Lwt.unit
+  *)
   match instanceid with
   | Some iid ->
     FDU.undefine iid api >>= fun res ->
@@ -379,6 +466,9 @@ let fdu_undefine api instanceid =
 
 
 let fdu_instantiate api fduid nodeid =
+(** [fdu_instantiate api fduid nodeid] Instantiates an fdu instance for the fdu [fduid] in the node [nodeid].
+    Returns Lwt.unit
+  *)
   match nodeid with
   | Some nid ->
     (match fduid with
@@ -389,6 +479,9 @@ let fdu_instantiate api fduid nodeid =
   | None ->  Lwt_io.printf "Node UUID parameter missing!!\n"
 
 let fdu_terminate api instanceid =
+(** [fdu_terminate api instanceid] Terminates the fdu instance idenfitied by [instanceid].
+    Returns Lwt.unit
+  *)
   match instanceid with
   | Some iid ->
     FDU.terminate iid api >>= fun res ->
@@ -397,6 +490,9 @@ let fdu_terminate api instanceid =
 
 
 let fdu_instances api fduid nodeid =
+(** [fdu_instances api fduid nodeid] Gets all the instances of [fduid] running in [nodeid].
+    Returns Lwt.unit
+  *)
   match fduid with
   | Some fduid ->
     (match nodeid with
@@ -406,7 +502,10 @@ let fdu_instances api fduid nodeid =
     Cli_printing.print_fdu_instances
   | None -> Lwt_io.printf "FDU UUID parameter missing!!\n"
 
-let fdu_state_change api instanceid state  =
+let fdu_state_change api instanceid state =
+(** [fdu_state_change api instanceid state] Updates the state for the instance identified by [instanceid] to [state].
+    Returns Lwt.unit
+  *)
   match instanceid with
   | Some iid ->
     (
@@ -425,6 +524,9 @@ let fdu_state_change api instanceid state  =
   | None -> Lwt_io.printf "FDU Instance UUID parameter missing!!\n"
 
 let fdu_migrate instanceid destinationid  =
+(** [fdu_migrate api instanceid destinationid] Migrates the instance identified by [instanceid] to [destinationid].
+    Returns Lwt.unit
+  *)
   match instanceid with
   | Some _ ->
     (match destinationid with
@@ -437,6 +539,9 @@ let fdu_migrate instanceid destinationid  =
 
 
 let fdu_list api =
+(** [fdu_list api] Gets all the FDU registered in the system catalog
+    Returns Lwt.unit
+  *)
   let print_fdu (f:User.Descriptors.FDU.descriptor) =
     Lwt_io.printf "FDU ID: %s Descriptor %s\n" f.id (User.Descriptors.FDU.string_of_descriptor f)
   in
@@ -445,6 +550,9 @@ let fdu_list api =
   >>= fun _ -> Lwt.return_unit
 
 let fdu_cmd api action nodeid fduid instanceid destid descriptor =
+(** [fdu_cmd api action nodeid fduid instanceid destid descriptor] fdu command function for the CLI.
+    Returns Lwt.unit
+  *)
   match action with
   | "list" ->
     fdu_list api
@@ -483,7 +591,7 @@ let fdu_cmd api action nodeid fduid instanceid destid descriptor =
     in Lwt.return_unit
 
 
-let atomic_entity_cmd faemapi action instanceid aeid descriptor =
+(* let atomic_entity_cmd faemapi action instanceid aeid descriptor =
   (match action with
    | "onboard" ->
      add_ae_descriptor_to_catalog faemapi descriptor
@@ -501,10 +609,13 @@ let atomic_entity_cmd faemapi action instanceid aeid descriptor =
      atomic_entity_list faemapi
    | "instance_list" ->
      atomic_entity_instance_list faemapi aeid
-   | _  ->  Lwt_io.printf "%s Is not a command\n" action)
+   | _  ->  Lwt_io.printf "%s Is not a command\n" action) *)
 
 
 let entity_cmd feoapi action instanceid eid descriptor =
+(** [entity_cmd feoapi action instanceid eid descriptor] entity command function for the CLI.
+    Returns Lwt.unit
+  *)
   (match action with
    | "onboard" ->
      add_entity_descriptor_to_catalog feoapi descriptor
@@ -526,6 +637,9 @@ let entity_cmd feoapi action instanceid eid descriptor =
 
 
 let parser component cmd action netid imgid nodeid fduid instanceid destid descriptor aeid eid =
+(** [parser component cmd action netid imgid nodeid fduid instanceid destid descriptor aeid eid] parserfunction for the CLI, calls the right function depending on the parameters
+    Returns Lwt.unit
+  *)
   match String.lowercase_ascii component with
   | "fim" ->
     (match cmd with
@@ -548,12 +662,12 @@ let parser component cmd action netid imgid nodeid fduid instanceid destid descr
        let%lwt fimapi = Cli_helper.yapi () in
        node_cmd fimapi action nodeid
      | _ -> Lwt_io.printf "%s Is not a command\n" cmd)
-  | "faem" ->
+  (* | "faem" ->
     (match cmd with
      | "atomic_entity" ->
        let%lwt faemapi = Cli_helper.faemapy () in
        atomic_entity_cmd faemapi action instanceid aeid descriptor
-     | _  ->  Lwt_io.printf "%s Is not a recognized, maybe atomic_entity\n" cmd)
+     | _  ->  Lwt_io.printf "%s Is not a recognized, maybe atomic_entity\n" cmd) *)
   | "feo" ->
     (match cmd with
      | "entity" ->
@@ -565,6 +679,9 @@ let parser component cmd action netid imgid nodeid fduid instanceid destid descr
 
 
 let p1 component cmd action netid imgid nodeid fduid instanceid destid descriptor aeid eid =
+(** [p1 component cmd action netid imgid nodeid fduid instanceid destid descriptor aeid eid] Calls parser inside Lwt
+    Returns Lwt.unit
+  *)
   Lwt_main.run @@ parser component cmd action netid imgid nodeid fduid instanceid destid descriptor aeid eid
 
 let usage = "usage: " ^ Sys.argv.(0) ^ " [fim|faem|feo] "
