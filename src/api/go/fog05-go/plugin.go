@@ -302,7 +302,7 @@ func (os *OS) SetInterfaceAvailable(facename string) (bool, error) {
 	}
 }
 
-// Checksum computes the checksum (SHA1SUM) for the given file
+// Checksum computes the checksum (SHA256) for the given file
 func (os *OS) Checksum(filepath string) (string, error) {
 	r, err := os.CallOSPluginFunction("checksum", map[string]interface{}{"file_path": filepath})
 	if err != nil {

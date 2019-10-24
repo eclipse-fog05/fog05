@@ -28,9 +28,15 @@ class FDU(object):
         '''
 
         Constructor for the FDU Descriptor
-        :param data dictionary containing the FDU descriptor
 
-        :return the FDU object
+        Parameters
+        ----------
+        data : dictionary
+            optional dictionart containing the FDU descriptor
+
+        returns
+        -------
+        FDU
 
         '''
 
@@ -93,6 +99,13 @@ class FDU(object):
             raise ValueError('FDU.Migration_Kind cannot be empty')
 
     def to_json(self):
+        '''
+        Converts the FDU into a dictionary
+
+        returns
+        -------
+        dictionary
+        '''
         data = {
             'uuid': self.uuid,
             'id': self.id,

@@ -22,7 +22,7 @@ class NetworkPlugin(Plugin):
     Class: NetworkPlugin
 
     This class is an interface for plugins that control the network resouces,
-    and provide an abstraction layer
+    and provides an abstraction layer
     for networking managment functions
     '''
 
@@ -30,6 +30,9 @@ class NetworkPlugin(Plugin):
         super(NetworkPlugin, self).__init__(version, plugin_uuid)
 
     def wait_dependencies(self):
+        '''
+        Waits for the Agent and the OS plugin to be ready
+        '''
         self.get_agent()
         os = None
         while os is None:
@@ -39,13 +42,21 @@ class NetworkPlugin(Plugin):
                 time.sleep(1)
         return
 
-    def create_virtual_interface(self, name, uuid):
+    def create_virtual_interface(self, intf_id, descriptor):
         '''
         This should create a virtual network interface
 
-        :name: String
-        :return: tuple (interface_name,interface_uuid) or
-        None in case of failure
+        paramters
+        ---------
+        intf_id : string
+            UUID of the virtual interface
+        descriptor : dictionary
+            descriptor of the virtual interface
+
+        returns
+        ---------
+        dictionary
+            in the form of {'result':interface_info}
 
         '''
         raise NotImplementedError('This is and interface!')
@@ -54,19 +65,38 @@ class NetworkPlugin(Plugin):
         '''
         This should create a virtual bridge
 
-        :name: String
-        :return: tuple (bridge_name,bridge_uuid) or None in case of failure
+        parameters
+        -----------
+        name : string
+            name of the virtual bridge to be created
+
+
+        returns
+        -------
+        dictionary
+
+            in the form of {'result':{'uuid': bridge uuid, 'name':bridge name}}
         '''
         raise NotImplementedError('This is and interface!')
 
     def allocate_bandwidth(self, intf_uuid, bandwidth):
         '''
-        This should allocate bandwidth to a certaint virtual interface,
+        This should allocate bandwidth to a given virtual interface,
         if the interface not exists throw an exception
 
-        :intf_uuid: String
-        :bandwidth: tuple (up,down)
-        :return: bool
+        parameters
+        ----------
+        intf_uuid : string
+
+            UUID of the virtual interface
+
+        bandwidth : int
+
+            bandwidth to be allocated in Mbps
+
+        returns
+        -------
+        bool
 
         '''
         raise NotImplementedError('This is and interface!')
@@ -76,51 +106,65 @@ class NetworkPlugin(Plugin):
         '''
         This should create a virtual network, with given caratteristics
 
-        range should specified as CIRD subnet
-        eg. 192.168.0.0/24 which means from 192.168.0.1 to 192.168.0.254
-        if gateway address is none the entities connected to that network
-         cannot reach internet
-        if dhcp is true the easiest way to have a dhcp server is using dnsmasq
-        eg. sudo dnsmasq -d  --interface=<bridge_associated_to_this_network>
-                 --bind-interfaces  --dhcp-range=<start_ip>,<end_ip>
-        using -d you can parse dnsmasq output to listen to events like dhcp ack
 
-        :network_name: String
-        :ip_range: String
-        :has_dhcp: bool
-        :gateway: String
-        :return: tuple (net_name,net_uuid) or None in case of failure
+        parameters
+        ----------
 
 
-        #TODO on fog05 -> support dhcp as used on OSM
+        network_name : string
+
+            name of the virtual network to be created
+
+        uuid : string
+
+            UUID of the virtual network to be created
+
+        ip_range : string
+
+            range should specified as CIRD subnet
+            eg. 192.168.0.0/24 which means from 192.168.0.1 to 192.168.0.254
+
+        has_dhcp : bool
+
+            if the virtual network will have a DHCP server
+
+        gateway : string
+
+            IP address of the default gateway,if  None the FDUS connected to the
+            network cannot reach internet
+
+        manifest : dictionary
+
+            the virtual network descriptor
+
+
+        returns
+        -------
+
+        (string, string)
+
+            in the form of (net_name,net_uuid)
 
         '''
 
         raise NotImplementedError('This is and interface!')
 
-    def assign_interface_to_network(self, network_uuid, intf_uuid):
+    def delete_virtual_interface(self, intf_id):
         '''
-        This should assign the interface identified by intf_uuid to the network
-         identified by network_uuid,
-        if the interface not exists throw an exception
+        Deletes the given virtual interface
 
-        :network_uuid: String
-        :intf_uuid: String
-        :return: bool
 
-        '''
+        parameters
+        ---------
 
-        raise NotImplementedError('This is and interface!')
+        intf_id : string
 
-    def delete_virtual_interface(self, intf_uuid):
-        '''
-        This should delete a virtual interface identified by intf_uuid, if the
-         interface is assigned to a network
-        maybe can also call removeInterfaceFromNetwork() to avoid any problem,
-        if the interface not exists throw an exception
 
-        :intf_uuid: String
-        :return: bool
+        returns
+        -------
+        dictionary
+
+            {'result':interface info}
 
         '''
 
@@ -128,23 +172,22 @@ class NetworkPlugin(Plugin):
 
     def delete_virtual_bridge(self, br_uuid):
         '''
-        Delete a virtual bride, if the bridge is one assigned to a network
+        Deletes a virtual bride, if the bridge is one assigned to a network
          should throw an exception, if the bridge not exists throw an exception
 
-        :br_uuid: String
-        :return: bool
-        '''
+        parameters
+        ----------
 
-        raise NotImplementedError('This is and interface!')
+        br_uuid : string
 
-    def remove_interface_from_network(self, network_uuid, intf_uuid):
-        '''
-        Remove the interface intf_uuid from network network_uuid,
-         if interface not present throw an exception
+            bridge UUID
 
-        :network_uuid: String
-        :intf_uuid: String
-        :return: bool
+        returns
+        -------
+
+        dictionary
+
+            {'result': bridge UUID}
 
         '''
 
@@ -157,72 +200,301 @@ class NetworkPlugin(Plugin):
         for dhcp and remove the bridge, if there are interface associate
          to this network should throw an exception
 
-        :network_uuid: String
-        :return: bool
+
+        parameters
+        ----------
+
+
+        network_uuid : string
+
+            Network UUID
+
+        returns
+        -------
+        bool
 
         '''
 
         raise NotImplementedError('This is and interface!')
 
-    def create_virtual_link(self, vl_uuid, connection_points):
-        '''
-        Create a virtual link between 2 connection points
-
-        eg if is a linux bridge
-
-        sudo ip link add vl_name type bridge
-        sudo ip link set cp_1 master bridge_name
-        sudo ip link set cp_2 master bridge_name
-
-
-        :param vl_uuid: string uuid of the new virtual link
-        :param connection_points: list of 2 connection point uuid
-        :return: the virtual name
-        (vl is a linux bridge or a openvswitch with only 2 ports)
-        '''
-
-    def create_connection_point(self, cp_uuid):
-        '''
-        Create a connection point with the given uuid
-
-        ip tuntap add dev tun0 mode tun
-
-        ip tuntap add dev tap0-1 mode tap
-
-        attach one to the atomic entity and the other will be the
-         connection point
-
-
-        DEVICE TYPE FOR IP2ROUTE
-          TYPE := { vlan | veth | vcan | dummy | ifb | macvlan | macvtap |
-          bridge | bond | ipoib | ip6tnl | ipip | sit | vxlan |
-          gre | gretap | ip6gre | ip6gretap | vti | nlmon |
-          bond_slave | ipvlan | geneve | bridge_slave | vrf }
-
-        :param cp_uuid:
-        :return: the name of the connection point
-         (the connection point is a virtual interface like a vtap interface)
-        '''
-
     def get_virtual_bridges_in_node(self):
         '''
         Gets a list with the names of the current virtual bridges running in the node
 
-        :return: a list of virtual bridges names
+        returns
+        ------
+        string list
+
         '''
 
     def stop_network(self):
+        '''
+        Stops the networking plugin
+        '''
         raise NotImplementedError
 
     def get_network_info(self, network_uuid):
+        '''
+        Gives information on a given virtual network
+
+
+        parameters
+        ---------
+
+        network_uuid : string
+
+            network UUID
+
+        returns
+        -------
+
+        dictionary
+
+        '''
         raise NotImplementedError
 
     def create_bridges_if_not_exist(self, expected_bridges):
         '''
         Creates the bridges missing after checking the manifest file
-        :param expected_bridges: a list of bridges names
-        :return:
+
+        parameters
+        ----------
+
+        expected_bridges : string list
+
+            names of expected bridges
+
+        returns
+        -------
+        dictionary
+
+            in the form {'result': string list}
+
         '''
+        raise NotImplementedError
+
+    def connect_interface_to_connection_point(self, intf_id, cp_id):
+        '''
+        Connects the given interace to the given connection point
+
+        parameters
+        ----------
+        intf_id : string
+            ID of the virtual interface
+        cp_id : string
+            UUID of the connection point
+
+        returns
+        -------
+        dictionary
+            {'result':{'int':string, 'ext':string}}
+        '''
+        raise NotImplementedError
+
+    def disconnect_interface(self, intf_id):
+        '''
+        Disconnects the given interface
+
+        parameters
+        ----------
+        intf_id : string
+            ID of the virtual interace
+
+        returns
+        -------
+        dictionary
+            {'result':{'int':string, 'ext':string}}
+        '''
+        raise NotImplementedError
+
+    def connect_cp_to_vnetwork(self, cp_id, vnet_id):
+        '''
+        Connects the given connection point to the given network
+
+        parameters
+        ----------
+        cp_id : string
+            UUID of the connection point
+        vnet_id : string
+            UUID of the virtual network
+
+        returns
+        -------
+        dictionary
+            {'result':{'int':string, 'ext':string}}
+
+        '''
+        raise NotImplementedError
+
+    def disconnect_cp(self, cp_id):
+        '''
+        Disconnects the given connection point
+
+        parameters
+        ----------
+        cp_id : string
+            UUID of connection point
+
+        returns
+        -------
+        dictionary
+            {'result':{'int':string, 'ext':string}}
+        '''
+        raise NotImplementedError
+
+    def delete_port(self, cp_id):
+        '''
+        Deletes the given connection point
+
+        parameters
+        ----------
+        cp_id : string
+            UUID of the connection point
+
+        returns
+        -------
+        dictionary
+            {'result':dictionary}
+        '''
+        raise NotImplementedError
+
+    def get_address(self, mac_address):
+        '''
+        Gets the IP address associated to the interface with the given MAC address
+
+        parameters
+        ----------
+        mac_address : string
+            the MAC address of the interface
+
+        returns
+        -------
+        dictionary
+            {'result':string}
+        '''
+        raise NotImplementedError
+
+    def add_port_to_router(self, router_id, port_type, vnet_id=None, ip_address=None):
+        '''
+        Adds a port to the given virtual router
+
+        parameters
+        ----------
+        router_id : string
+            UUID of the virtual router
+        port_type : string
+            kind of the port to be added (INTERNAL, EXTERNAL)
+        vnet_id : string
+            eventual network to be connected
+        ip_address : string
+            eventual address for the new router port
+
+        returns
+        -------
+        dictionary
+        '''
+        raise NotImplementedError
+
+    def remove_port_from_router(self, router_id, vnet_id):
+        '''
+        Removes a port from the given router
+
+        parameters
+        ----------
+        router_id : string
+            UUID of the virtual router
+        vnet_id : string
+            network to be disconnected
+
+        returns
+        -------
+        dictionary
+            {'result':dictionary}
+        '''
+        raise NotImplementedError
+
+    def create_floating_ip(self):
+        '''
+        Creates a floating IP
+
+        returns
+        -------
+        dictionary
+            {'result':dictionary}
+        '''
+        raise NotImplementedError
+
+    def delete_floating_ip(self, ip_id):
+        '''
+        Deletes the given floating IP
+
+        parameters
+        ----------
+        ip_id : string
+            UUID of the floating IP
+
+        returns
+        -------
+        dictionary
+            {'result':dictionary}
+        '''
+        raise NotImplementedError
+
+    def assign_floating_ip(self, ip_id, cp_id):
+        '''
+        Assigns the given floating IP to the given conncetion point
+
+        parameters
+        ----------
+        ip_id : string
+            UUID of the floating IP
+        cp_id : string
+            UUID of the connection point
+
+        returns
+        -------
+        dictionary
+            {'result':dictionary}
+        '''
+        raise NotImplementedError
+
+    def remove_floating_ip(self, ip_id, cp_id):
+        '''
+        Retains the given floating IP to the given conncetion point
+
+        parameters
+        ----------
+        ip_id : string
+            UUID of the floating IP
+        cp_id : string
+            UUID of the connection point
+
+        returns
+        -------
+        dictionary
+            {'result':dictionary}
+        '''
+        raise NotImplementedError
+
+    def get_overlay_face(self):
+        '''
+        Gets the configured interface for overlay networks
+
+        returns
+        -------
+        string
+        '''
+        raise NotImplementedError
+
+    def get_vlan_face(self):
+        '''
+        Gets the configured interface for VLAN networks
+
+        returns
+        -------
+        string
+        '''
+        raise NotImplementedError
 
 
 class BridgeAssociatedToNetworkException(Exception):

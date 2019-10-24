@@ -19,9 +19,11 @@ import uuid
 
 class OSPlugin(Plugin):
     '''
-    Interfaces for plugins that allow interaction with underlying operating
-     systemprovide an abstraction layer for some management
-      and monitoring functions
+    Class: OSPlugin
+
+    This class is an interface for plugins that allow interaction with underlying operating
+    system provides an abstraction layer for some management
+    and monitoring functions
 
     '''
 
@@ -34,22 +36,25 @@ class OSPlugin(Plugin):
 
     def execute_command(self, command, blocking, external):
         '''
-        Execute a command to cli of underlying os,
-         IDK should return bool or the command output?
+        Executes a command on underlying os,
 
-        :command: String
-        :return: String or bool?
-        '''
+        parameters
+        ---------
 
-        raise NotImplementedError('This is and interface!')
+        command : string
+            command to be executed
 
-    def install_package(self, packages):
-        '''
-        Install all packages passed within the parameter, return a bool
-        to know the retult of operation
+        blocking : bool
+            true if the call has to block until the end of the command
 
-        :packages: tuple
-        :return: bool
+        external : bool
+            true if the command has to be executed in an external os shell
+
+        returns
+        ------
+        dictionary
+
+            {'result': string}
 
         '''
 
@@ -57,34 +62,142 @@ class OSPlugin(Plugin):
 
     def store_file(self, content, file_path, filename):
         '''
-        Store a file in local disk, maybe can convert
+        Stores a file in local disk, maybe can convert
          from windows dir separator to unix dir separator
 
-        :content: byte
-        :file_path: string
-        :filename: string
-        :return: bool
+        parameters
+        ----------
 
+        content : string
+            base64 encoded and hexified bytes of the file content
+
+        file_path : string
+            path where the content will stored
+
+        filename : string
+            name of the file
+
+        returns
+        -------
+        dictionary
+            {'result':bool}
         '''
 
         raise NotImplementedError('This is and interface!')
 
+    def checksum(self, file_path):
+        '''
+        Calculates the SHA256 checksum for the given file
+
+        parameters
+        -----------
+        file_path : string
+            path to file
+
+        returns
+        -------
+        dictionary
+            {'result':string}
+        '''
+        raise NotImplementedError('This is and interface!')
     def file_exists(self, file_path):
+        '''
+        Checks if the given file exists
+
+        parameters
+        ----------
+        file_path : string
+            path to the file
+
+        returns
+        -------
+        dictionary
+            {'result':bool}
+        '''
         raise NotImplementedError
 
-    def dir_exists(self, path):
+    def dir_exists(self, dir_path):
+        '''
+        Checks if the given directory exists
+
+        parameters
+        ----------
+        dir_path : string
+            path to the directory
+
+        returns
+        -------
+        dictionary
+            {'result':bool}
+
+
+        '''
         raise NotImplementedError
 
-    def create_dir(self, path):
+    def create_dir(self, dir_path):
+        '''
+        Creates the given new directory
+
+        parameters
+        ----------
+        dir_path : string
+            path to the directory
+
+        returns
+        -------
+        dictionary
+            {'result':bool}
+
+        '''
         raise NotImplementedError
 
-    def create_file(self, path):
+    def create_file(self, file_path):
+        '''
+        Creates the given new empty file
+
+        parameters
+        ----------
+        file_path : string
+            path to the file
+
+        returns
+        -------
+        dictionary
+            {'result':bool}
+        '''
         raise NotImplementedError
 
-    def remove_dir(self, path):
+    def remove_dir(self, dir_path):
+        '''
+        Removes the given directory
+
+        parameters
+        ----------
+        dir_path : string
+            dir_path to the directory
+
+        returns
+        -------
+        dictionary
+            {'result':bool}
+
+        '''
         raise NotImplementedError
 
-    def remove_file(self, path):
+    def remove_file(self, file_path):
+        '''
+        Removes the given file
+
+        parameters
+        ----------
+        file_path : string
+            path to the directory
+
+        returns
+        -------
+        dictionary
+            {'result':bool}
+        '''
         raise NotImplementedError
 
     def read_file(self, file_path, root=False):
@@ -94,167 +207,486 @@ class OSPlugin(Plugin):
         return the file content
         throw an exception if file not exits
 
-        :file_path: String
-        :return: byte
+        parameters
+        ----------
+
+        file_path : string
+            path to file
+
+        root : bool
+            if true it will use sudo cat to read the file
+
+        returns
+        --------
+        dictionary
+            {'result':bytes}
+
 
         '''
 
         raise NotImplementedError('This is and interface!')
 
     def get_neighbors(self):
+        '''
+        Gets LLDP neighbors
+
+        retutns
+        ------
+        list of dictionaries
+
+        '''
         raise NotImplementedError('This is and interface!')
 
     def read_binary_file(self, file_path):
+        '''
+        Reads binary file
+
+        parameters
+        ----------
+        file_path : string
+            path to file
+
+        returns
+        -------
+        bytes
+
+        '''
         raise NotImplementedError
 
     def download_file(self, url, file_path):
+        '''
+        Downloads the given file in the given path
+
+        parameters
+        ----------
+        url : string
+            url for the source file
+        file_path : string
+            path to destination file
+
+        returns
+        ------
+        dictionary
+            {'result':bool}
+        '''
         raise NotImplementedError
-
-    def get_CPUID(self):
-        '''
-        Return the underlying hw cpuid
-        :return: String
-        '''
-
-        raise NotImplementedError('This is and interface!')
 
     def get_CPU_level(self):
         '''
-        Return the current cpu usage level
-        :return: float
+        Gets the current CPU usage
+
+        returns
+        -------
+        float
         '''
 
         raise NotImplementedError('This is and interface!')
 
     def get_memory_level(self):
         '''
-        Return the current memory usage level
-        :return: float
+        Gets the current RAM usage
+
+        returns
+        -------
+        float
         '''
         raise NotImplementedError('This is and interface!')
 
     def get_storage_level(self):
         '''
-        Return the current local storage usage level
-        :return: float
+        Get the current root disk usage
+
+        returns
+        -------
+        float
         '''
         raise NotImplementedError('This is and interface!')
 
     def get_network_level(self):
         '''
-        Return the current network usage level
-        :return: float
+        Gets the current network usage statistics
+
+        returns
+        -------
+        list of dictionaries
         '''
+        raise NotImplementedError('This is and interface!')
+
+    def install_package(self, packages):
+        '''
+        Installs all packages passed within the parameter, return a bool
+        to know the retult of operation
+
+        parameters
+        ----------
+
+        packages : string list
+
+            name of the packages to be installed
+
+        returns
+        -------
+        list (string, bool)
+
+            name of package, bool
+        '''
+
         raise NotImplementedError('This is and interface!')
 
     def remove_package(self, packages):
         '''
-        Remove all packages passed within the parameter, return a bool
-        to know the retult of operation
+        Removes the given packages
 
-        :packages: tuple
-        :return: bool
+        parameters
+        ---------
+        packages : list of string
+            packages to be removed
 
+        returns
+        -------
+        list (string, bool)
+            name of package, bool
         '''
 
         raise NotImplementedError('This is and interface!')
 
     def check_if_pid_exists(self, pid):
+        '''
+        Checks if a  given PID exists
+
+        parameters
+        ----------
+        pid : int
+            PID to be verified
+
+        returns
+        -------
+        dictionary
+            {'result':bool}
+        '''
         raise NotImplementedError('This is and interface!')
 
     def send_signal(self, signal, pid):
         '''
-        Send a signal to the process identified by pid
-        throw an exception if pid not exits
+        Sends a signal to the given pid
 
-        :signal: int
-        :pid: int
-        :return: bool
+        parametes
+        ---------
+        signal : int
+            signal to be sent
+        pid : int
+            PID to be signaled
+
+        returns
+        -------
+        dictionary
+            {'result':bool}
 
         '''
 
-        raise NotImplementedError('This is and interface!')
-
-    def get_pid(self, process):
-        '''
-        Try to get the the pid from the process name
-        :process: string
-        :return: int
-        '''
         raise NotImplementedError('This is and interface!')
 
     def send_sig_int(self, pid):
         '''
-        Send a SigKill (Ctrl+C) to the process identified by pid
-        throw an exception if pid not exits
-        :pid: int
-        :return: bool
+        Sends a SigKill (Ctrl+C) to the given PID
+
+        parameters
+        ----------
+        pid : int
+            pid to be signaled
+
+        returns
+        -------
+        dictionary
+            {'result':bool}
         '''
 
         raise NotImplementedError('This is and interface!')
 
     def send_sig_kill(self, pid):
         '''
-        Send a SigKill (kill the process) to the process identified by pid
+        Sends a SigKill (kill the process) to the given pid
         throw an exception if pid not exits
-        :pid: int
-        :return: bool
+
+        parameters
+        ----------
+        pid : int
+            pid to be signaled
+
+        returns
+        -------
+        dictionary
+            {'result':bool}
         '''
 
         raise NotImplementedError('This is and interface!')
 
     def get_uuid(self):
-        return uuid.uuid4()
+        '''
+        Gets the node UUID
+
+        returns
+        -------
+        string
+        '''
+        raise NotImplementedError('This is and interface!')
 
     def get_processor_information(self):
+        '''
+        Gets information on the node CPU
+
+        returns
+        -------
+        list of dictionaries
+            {'model':string, 'frequency':float, 'arch':string}
+        '''
         raise NotImplementedError
 
     def get_memory_information(self):
+        '''
+        Gets information on the node RAM
+
+        returns
+        -------
+        dictionary
+            {'size':float}
+
+        '''
         raise NotImplementedError
 
     def get_disks_information(self):
+        '''
+        Gets information on the node disks usage
+
+        returns
+        -------
+        list of dictionaries
+            {'local_address':string, 'dimension':float, 'mount_point':string, 'filesystem':string}
+        '''
         raise NotImplementedError
 
     def get_io_informations(self):
+        '''
+        Gets information about node IO ports
+
+        returns
+        -------
+        list of dictionaries
+            {'name':string, 'io_type':string, 'io_file':string, 'available':bool}
+        '''
         raise NotImplementedError
 
     def get_accelerators_informations(self):
+        '''
+        Gets information about node hardware accelerators
+
+        returns
+        -------
+        list of dictionaries
+            {'hw_address':string, 'name':string, 'supported_library' string list, 'available':bool}
+
+        '''
         raise NotImplementedError
 
     def get_network_informations(self):
+        '''
+        Gets information about node network interfaces
+
+        returns
+        -------
+        list of dictionaties
+            {
+                'intf_name':string,
+                'intf_mac_address':string,
+                'intf_speed': int,
+                'type':string,
+                'available':bool,
+                'default_gw':bool,
+                'intf_configuration':
+                {
+                    'ipv4_address':string,
+                    'ipv4_netmask':string,
+                    'ipv4_gateway':string.
+                    'ipv6_address':string,
+                    'ipv6_netmask':string,
+                    'ipv6_gateway':string.
+                    'bus_address':string
+                }
+            }
+
+        '''
         raise NotImplementedError
 
     def get_position_information(self):
+        '''
+        Gets information about mode position
+
+        returns
+        -------
+        dictionary
+            {'lat':float, 'lon':float}
+        '''
         raise NotImplementedError
 
     def add_know_host(self, hostname, ip):
+        '''
+        Adds the given host in node ssh configuration
+
+        parameters
+        ----------
+        hostname : string
+            host to be added
+        ip : string
+            IP address of the host
+
+        returns
+        -------
+        dictionary
+            {'result':bool}
+        '''
         raise NotImplementedError
 
     def remove_know_host(self, hostname):
+        '''
+        Removes the given host from node ssh configuration
+
+        parameters
+        ----------
+        hostname : string
+            host to be removed
+
+        returns
+        -------
+        dictionary
+            {'result':bool}
+        '''
         raise NotImplementedError
 
     def get_intf_type(self, name):
+        '''
+        Gets the inteface type for the given interface
+
+        parameters
+        ----------
+        name : string
+            name of the interface
+
+        returns
+        -------
+        dictionary
+            {'result':string}
+        '''
         raise NotImplementedError
 
     def set_io_unaviable(self, io_name):
+        '''
+        Sets a given IO device as unavailable
+
+        paramters
+        ---------
+        io_name : string
+            name of the IO device
+
+        returns
+        -------
+        bool
+        '''
         raise NotImplementedError
 
     def set_io_available(self, io_name):
+        '''
+        Sets a given IO device as available
+
+        paramters
+        ---------
+        io_name : string
+            name of the IO device
+
+        returns
+        -------
+        bool
+        '''
         raise NotImplementedError
 
     def set_accelerator_unaviable(self, acc_name):
+        '''
+        Sets a given accelerator device as unavailable
+
+        paramters
+        ---------
+        acc_name : string
+            name of the accelerator device
+
+        returns
+        -------
+        bool
+        '''
         raise NotImplementedError
 
     def set_accelerator_available(self, acc_name):
+        '''
+        Sets a given accelerator device as available
+
+        paramters
+        ---------
+        acc_name : string
+            name of the accelerator device
+
+        returns
+        -------
+        bool
+        '''
         raise NotImplementedError
 
     def set_interface_unaviable(self, intf_name):
+        '''
+        Sets a given network device as unavailable
+
+        paramters
+        ---------
+        intf_name : string
+            name of the network device
+
+        returns
+        -------
+        bool
+        '''
         raise NotImplementedError
 
     def set_interface_available(self, intf_name):
+        '''
+        Sets a given network device as available
+
+        paramters
+        ---------
+        intf_name : string
+            name of the network device
+
+        returns
+        -------
+        bool
+        '''
         raise NotImplementedError
 
     def get_hostname(self):
+        '''
+        Gets node hostname
+
+        returns
+        -------
+        string
+        '''
+        raise NotImplementedError
+
+    def local_mgmt_address(self):
+        '''
+        Gets node management IP address
+
+        returns
+        -------
+        dictionary
+            {'result':string}
+        '''
         raise NotImplementedError
 
 
