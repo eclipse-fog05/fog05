@@ -622,9 +622,6 @@ class Linux(OSPlugin):
     def remove_package(self, packages):
         self.pm.removePackage(packages)
 
-    def get_pid(self, process):
-        raise NotImplementedError
-
     def get_processor_information(self):
         cpu = []
         num_cpu = psutil.cpu_count()
@@ -817,7 +814,7 @@ class Linux(OSPlugin):
                 inft_conf = {'ipv4_address': ipv4, 'ipv4_netmask': ipv4mask, 'ipv4_gateway': ipv4gateway, 'ipv6_address':
                              ipv6, 'ipv6_netmask': ipv6mask}
 
-                iface_info = {'intf_name': k, 'inft_configuration': inft_conf, 'intf_mac_address': mac, 'intf_speed':
+                iface_info = {'intf_name': k, 'intf_configuration': inft_conf, 'intf_mac_address': mac, 'intf_speed':
                               speed, 'type': self.get_intf_type(k).get('result'), 'available': True, 'default_gw': False}
                 if k == default_gw:
                     iface_info.update({'available': False})

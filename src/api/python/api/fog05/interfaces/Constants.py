@@ -22,9 +22,9 @@ default_tenant_id = '0'
 
 class FDUState(Enum):
 
-    """
+    '''
     States of FDUs
-    """
+    '''
     DEFINE = 'DEFINE'
     CONFIGURE = 'CONFIGURE'
     CLEAN = 'CLEAN'

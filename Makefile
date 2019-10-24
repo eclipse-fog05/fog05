@@ -115,3 +115,7 @@ clean:
 	sudo rm -rf src/pyhton/fog05.egg-info
 	sudo rm -rf src/pyhton/build
 	sudo rm -rf src/pyhton/dist
+
+
+apidoc:
+	make -C src/api/python/api doc

@@ -27,9 +27,15 @@ class InfraFDU(object):
         '''
 
         Constructor for the FDU Record
-        :param data dictionary containing the FDU Record
 
-        :return the FDU object
+        Parameters
+        ----------
+        data : dictionary
+            optional dictionart containing the FDU record
+
+        returns
+        -------
+        InfraFDU
 
         '''
         self.fdu = infra_fdu.infra_fdu()
@@ -111,6 +117,12 @@ class InfraFDU(object):
 
 
     def to_json(self):
+        '''
+        Converts the InfraFDU into a dictionary
+        returns
+        -------
+        dictionary
+        '''
         data = {
             'uuid': self.uuid,
             'fdu_id': self.fdu_id,
