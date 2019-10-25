@@ -860,7 +860,7 @@ class LXD(RuntimePluginFDU):
 
         template_vintf = '{"name":"%s","type":"nic","parent":"%s","nictype":"physical","hwaddr":"%s"}'
         template_value_phy_mac = '{"name":"%s","type":"nic","parent":"%s","nictype":"physical","hwaddr":"%s"}'
-        template_value_macvlan_mac = '{"name":"%s","type":"nic","parent":"%s","nictype":"macvlan",,"hwaddr":"%s"}'
+        template_value_macvlan_mac = '{"name":"%s","type":"nic","parent":"%s","nictype":"macvlan","hwaddr":"%s"}'
         template_value_bridge_mac = '{"name":"%s","type":"nic","parent":"%s","nictype":"bridged","hwaddr":"%s"}'
         '''
         # Create tenant's storage pool
@@ -883,7 +883,7 @@ class LXD(RuntimePluginFDU):
 
             #always connect all interfaces to fosbr0
             real_intf_name = 'fosbr0'
-            nw_v = json.loads(str(template_value_bridge_mac % (intf_name, real_intf_name, mac)))
+            nw_v = json.loads(str(template_value_macvlan_mac % (intf_name, real_intf_name, mac)))
             devices.update({intf_name: nw_v})
             i += 1
 
