@@ -94,3 +94,46 @@ func (rt *FOSRuntimePluginFDU) GetLocalInstances(fduid string) ([]string, error)
 	return rt.Connector.Local.Actual.GetNodeFDUInstances(rt.Node, fduid)
 
 }
+
+// RuntimePluginFDUInterface is the interface to be implenter for a Runtime Plugin
+type RuntimePluginFDUInterface interface {
+
+	//StartRuntime starts the plugin
+	StartRuntime() error
+
+	//StopRuntime stops the plugin
+	StopRuntime() error
+
+	//GetFDUs gets all FDU and instances information
+	GetFDUs() map[string]FDURecord
+
+	//DefineFDU defines an FDU instance from the given record
+	DefineFDU(FDURecord) error
+
+	//UndefineFDU undefines the given FDU instance
+	UndefineFDU(string) error
+
+	//ConfigureFDU configures the given FDU instance
+	ConfigureFDU(string) error
+
+	//CleanFDU cleans the given FDU instance
+	CleanFDU(string) error
+
+	//RunFDU starts the given FDU instance
+	RunFDU(string) error
+
+	//StopFDU stops the given FDU instance
+	StopFDU(string) error
+
+	//MigrateFDU migrates the given FDU instance
+	MigrateFDU(string) error
+
+	//ScaleFDU scales the given FDU instance
+	ScaleFDU(string) error
+
+	//PauseFDU pauses the given FDU instance
+	PauseFDU(string) error
+
+	//ResumeFDU resumes the given FDU instance
+	ResumeFDU(string) error
+}
