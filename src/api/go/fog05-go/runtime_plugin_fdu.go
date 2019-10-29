@@ -2,6 +2,7 @@ package fog05
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -57,9 +58,8 @@ type FOSRuntimePluginAbstract struct {
 	Name          string
 	Connector     *YaksConnector
 	Node          string
-	Configuration map[string]string
-	// Plugin        *FOSPlugin
-	Logger *log.Logger
+	Configuration map[string]interface{}
+	Logger        *log.Logger
 	FOSRuntimePluginInterface
 	FOSPlugin
 }
@@ -80,7 +80,7 @@ func NewFOSRuntimePluginAbstract(name string, version int, pluginid string, mani
 	pl.connector = con
 	pl.node = conf["nodeid"].(string)
 
-	return &FOSRuntimePluginAbstract{Pid: -1, Name: name, Connector: con, Node: conf["nodeid"].(string), FOSPlugin: *pl, Logger: log.New()}, nil
+	return &FOSRuntimePluginAbstract{Pid: os.Getpid(), Name: name, Connector: con, Node: conf["nodeid"].(string), FOSPlugin: *pl, Logger: log.New(), Configuration: conf}, nil
 }
 
 // Start starts the Plugin and calls StartRuntime of FOSRuntimePluginInterface
