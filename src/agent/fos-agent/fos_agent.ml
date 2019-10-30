@@ -1825,7 +1825,7 @@ let agent verbose_flag debug_flag configuration custom_uuid =
     | true ->
       (match uuid with
        | Some plid -> MVar.read self >>= fun self ->
-         Yaks_connector.Global.Actual.remove_node_plugin  sys_id Yaks_connector.default_tenant_id (Apero.Option.get self.configuration.agent.uuid) plid self.yaks >>= Lwt.return
+         Yaks_connector.Local.Actual.remove_node_plugin (Apero.Option.get self.configuration.agent.uuid) plid self.yaks >>= Lwt.return
        | None -> Lwt.return_unit)
 
   in
