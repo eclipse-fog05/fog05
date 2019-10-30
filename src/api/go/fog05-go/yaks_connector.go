@@ -2386,12 +2386,6 @@ func (lad *LAD) AddNodePlugin(nodeid string, pluginid string, info Plugin) error
 	return err
 }
 
-// RemoveNodePlugin ...
-func (lad *LAD) RemoveNodePlugin(nodeid string, pluginid string) error {
-	s := lad.GetNodePlguinInfoPath(nodeid, pluginid)
-	return lad.ws.Remove(s)
-}
-
 // GetAllPlugins ...
 func (lad *LAD) GetAllPlugins(nodeid string) ([]string, error) {
 	s := lad.GetNodePlguinsSelector(nodeid)
