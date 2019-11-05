@@ -145,6 +145,18 @@ Update your descriptor following: https://github.com/atolab/fog05_demo/blob/mast
 Example of start.py script https://github.com/atolab/fog05_demo/blob/master/fim_api/yaks/start.py
 
 
+## Verify the binaries
+
+The installation script or the manual installation gets binaries from a cloud storage, it may happen that those binaries are not up to date,
+you can verify if they are up to date by a checksum verification using `md5sum`
+
+Checksums:
+- agent (x86_64) `3f627bb68cbea21c75e512e783231b29`
+- agent (armv7l)
+- agent (aarch64) 
+
+
+
 
 # Start Eclipse fog05
 
