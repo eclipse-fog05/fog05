@@ -59,12 +59,12 @@ update the nodeid parameter with the content of `/etc/machine-id`
 this is used to identify the node and to make the plugin connect the right agent.
 
 
-## Manual Installation 
+## Manual Installation
 
 Remove everything:
 
 ```
-pip3 uninstall -y fog05 yaks papero 
+pip3 uninstall -y fog05 yaks papero
 
 ```
 
@@ -96,7 +96,7 @@ sudo make install
 Clone fog05
 
 ```
-git clone https://github.com/eclipse/fog05 
+git clone https://github.com/eclipse/fog05
 cd fog05
 ```
 
@@ -143,6 +143,18 @@ sudo cp /tmp/yaksd /etc/fos/yaksd
 Update your descriptor following: https://github.com/atolab/fog05_demo/blob/master/fim_api/fdu_lxd_net.json
 
 Example of start.py script https://github.com/atolab/fog05_demo/blob/master/fim_api/yaks/start.py
+
+
+## Verify the binaries
+
+The installation script or the manual installation gets binaries from a cloud storage, it may happen that those binaries are not up to date,
+you can verify if they are up to date by a checksum verification using `md5sum`
+
+Checksums:
+- /etc/fos/agent (x86_64) `3f627bb68cbea21c75e512e783231b29`
+- /etc/fos/agent (armv7l) `4d83e0b115d0f8bad8bed79d70cab2a8`
+- /etc/fos/agent (aarch64) `0d1e144d5acbad1518390781e6e1cc68`
+
 
 
 
