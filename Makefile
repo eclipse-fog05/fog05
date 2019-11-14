@@ -6,8 +6,8 @@ WD := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))));
 ETC_FOS_DIR = /etc/fos/
 VAR_FOS_DIR = /var/fos/
 FOS_CONF_FILE = /etc/fos/agent.json
-LINUX_PLUGIN_DIR = /etc/fos/plugins/linux
-LINUX_PLUGIN_CONFFILE = /etc/fos/plugins/linux/linux_plugin.json
+LINUX_PLUGIN_DIR = /etc/fos/plugins/plugin-os-linux
+LINUX_PLUGIN_CONFFILE = /etc/fos/plugins/plugin-os-linux/linux_plugin.json
 
 
 
@@ -82,13 +82,6 @@ else
 	sudo cp plugins/plugin-os-linux/linux_plugin /etc/fos/plugins/plugin-os-linux/
 	sudo cp plugins/plugin-os-linux/README.md /etc/fos/plugins/plugin-os-linux/
 endif
-
-
-ifeq "$(wildcard $(FOS_CONF_FILE))" ""
-	sudo cp etc/agent.json /etc/fos/agent.json
-endif
-	sudo cp etc/fos_agent.service /lib/systemd/system/
-	sudo cp etc/fos_agent.target /lib/systemd/system/
 	sudo cp etc/yaks.service /lib/systemd/system/
 	sudo cp etc/yaks.target /lib/systemd/system/
 	sudo cp /etc/fos/plugins/plugin-os-linux/fos_linux.service /lib/systemd/system/
