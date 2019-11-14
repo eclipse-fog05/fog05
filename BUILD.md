@@ -21,7 +21,7 @@ Once `opam` is installed you need to install the following some packages verify 
 
 
 ```
-sudo apt install libev-dev libssl-dev python3 python3-dev python3-pip m4 pkg-config rsync -y
+sudo apt install libev-dev libssl-dev python3 python3-dev python3-pip m4 pkg-config rsync unzip bubblewrap -y
 sudo pip3 install pyangbind
 $ opam switch
 #  switch    compiler                       description
@@ -31,7 +31,7 @@ $ opam switch create fos ocaml-base-compiler.4.07.1
 
 ```
 
-Then you node to install some required libraries from opam
+Then you need to install some required libraries from opam
 
 ```
 opam install atdgen ocp-ocamlres conf-libev
