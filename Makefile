@@ -1,5 +1,6 @@
 # -*-Makefile-*-
 
+
 WD := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))));
 
 ETC_FOS_DIR = /etc/fos/
@@ -8,6 +9,9 @@ FOS_CONF_FILE = /etc/fos/agent.json
 LINUX_PLUGIN_DIR = /etc/fos/plugins/linux
 LINUX_PLUGIN_CONFFILE = /etc/fos/plugins/linux/linux_plugin.json
 
+
+
+all: ocaml-sdk ocaml-api agent
 
 submodules:
 	git submodule update --init --recursive
@@ -42,15 +46,7 @@ api-python:
 agent:
 	make -C src/agent
 
-all:
-
-	ocaml-sdk
-	ocaml-api
-	agent
-
-
 install:
-
 	sdk-python
 	api-python
 	make -C src/agent install
