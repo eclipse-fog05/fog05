@@ -122,7 +122,7 @@ uninstall:
 	sudo rm -rf /usr/bin/fos_linux
 	sudo userdel fos
 	sudo pip3 uninstall fog05-sdk fog05 -y
-	opam uninstall fog05-sdk
+	opam uninstall fos-sdk
 
 clean:
 	make -C src/agent clean
