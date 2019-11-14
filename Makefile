@@ -38,7 +38,6 @@ sdk-python:
 	make -C sdk/sdk-python install
 
 api-python:
-	make -C api/api-python
 	make -C api/api-python install
 
 
@@ -46,11 +45,14 @@ agent:
 	make -C src/agent
 
 install: sdk-python api-python
-	make -C src/agent install
+
 
 ifeq "$(wildcard $(ETC_FOS_DIR))" ""
 	sudo mkdir -p /etc/fos/plugins
 endif
+
+	make -C src/agent install
+
 	sudo id -u fos  >/dev/null 2>&1 ||  sudo useradd -r -s /bin/false fos
 	sudo usermod -aG sudo fos
 ifeq ($(shell uname -m), x86_64)
