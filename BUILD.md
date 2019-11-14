@@ -21,7 +21,7 @@ Once `opam` is installed you need to install the following some packages verify 
 
 
 ```
-sudo apt install libev-dev libssl-dev python3 python3-dev python3-pip m4 pkg-config rsync unzip bubblewrap -y
+sudo apt install libev-dev libssl-dev python3 python3-dev python3-pip m4 pkg-config rsync unzip bubblewrap cmake -y
 sudo pip3 install pyangbind
 $ opam switch
 #  switch    compiler                       description
@@ -81,6 +81,22 @@ $ git clone https://github.com/atolab/yaks-ocaml
 $ cd yaks-ocaml
 $ git checkout d076645
 $ opam install . --working-dir -y
+$ cd ..
+$ git clone http://github.com/atolab/zenoh-c
+$ cd zenoh-c
+$ git checkout 1e20bb6
+$ make
+$ sudo make install
+$ cd ..
+$ git clone http://github.com/atolab/zenoh-python
+$ cd zenoh-python
+$ git checkout 1ced877
+$ sudo python3 setup.py install
+$ cd ..
+$ git clone http://github.com/atolab/yaks-python
+$ cd yaks-python
+$ git checkout 50c9fc7
+$ sudo make install
 ```
 
 ### Eclipse fog05 Agent

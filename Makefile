@@ -34,7 +34,6 @@ api-go:
 
 sdk-python:
 	pip3 install pyangbind pyang
-	sudo curl -L -o /usr/local/lib/libzenohc.so https://www.dropbox.com/s/c6l18wbtk4eggpt/libzenohc.so
 	make -C sdk/sdk-python
 	make -C sdk/sdk-python install
 
