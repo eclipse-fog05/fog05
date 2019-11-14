@@ -1,4 +1,6 @@
 [![Gitter](https://badges.gitter.im/atolab/fog05.svg)](https://gitter.im/atolab/fog05?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![License](https://img.shields.io/badge/License-EPL%202.0-blue)](https://choosealicense.com/licenses/epl-2.0/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 # fog05
 
@@ -6,13 +8,15 @@ Unifies compute/networking fabric end-to-end
 
 Thanks to its plugin architecture can manage near everything
 
-See inside [Wiki](https://github.com/eclipse/fog05/wiki) for more detailed information
+Check the website [fog05.io](https://fog05.io) for more detailed information
 
 See also [Introduction](https://github.com/eclipse/fog05/blob/master/Introduction.md) for more information
 
 Inside [plugins](./plugins) there are some plugins for entity
 
 See [INSTALL](INSTALL.md) for installation instructions
+
+See [BUILD](BUILD.md) for build instructions
 
 ### Interact with the nodes
 
