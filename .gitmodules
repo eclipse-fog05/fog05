@@ -34,3 +34,6 @@
 [submodule "src/agent"]
 	path = src/agent
 	url = https://github.com/eclipse-fog05/agent
+[submodule "api/api-ocaml"]
+	path = api/api-ocaml
+	url = https://github.com/eclipse-fog05/api-ocaml
