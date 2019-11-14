@@ -46,9 +46,7 @@ api-python:
 agent:
 	make -C src/agent
 
-install:
-	sdk-python
-	api-python
+install: sdk-python api-python
 	make -C src/agent install
 
 ifeq "$(wildcard $(ETC_FOS_DIR))" ""
