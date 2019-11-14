@@ -31,3 +31,6 @@
 [submodule "api/api-python"]
 	path = api/api-python
 	url = https://github.com/eclipse-fog05/api-python
+[submodule "src/agent"]
+	path = src/agent
+	url = https://github.com/eclipse-fog05/agent

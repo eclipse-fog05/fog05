@@ -1,0 +1,10 @@
+
+
+server {
+	listen ip:8071;
+	#server_name mm1.meao.mec;
+	location / {
+
+		proxy_pass http://127.0.0.1:8071;
+	}
+}

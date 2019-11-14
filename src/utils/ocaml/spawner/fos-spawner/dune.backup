@@ -1,0 +1,7 @@
+(executable
+   (name spawner)
+   (public_name spawner)
+   (package fos-spawner)
+   (libraries cmdliner fos-core apero-core logs-syslog.unix apero-net yaks-common yaks-ocaml lwt logs logs.fmt logs.cli fmt fmt.cli fmt.tty)  
+   (preprocess (pps lwt_ppx ppx_cstruct ))
+)
