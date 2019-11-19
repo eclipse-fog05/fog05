@@ -1,19 +1,23 @@
+
+![fog05 banner](./logo_h.png)
+
 [![Gitter](https://badges.gitter.im/atolab/fog05.svg)](https://gitter.im/atolab/fog05?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 [![License](https://img.shields.io/badge/License-EPL%202.0-blue)](https://choosealicense.com/licenses/epl-2.0/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Documentation Status](https://readthedocs.org/projects/eclipse-fog05-python3-client-api/badge/?version=latest)](https://eclipse-fog05-python3-client-api.readthedocs.io/en/latest/?badge=latest)
+[![GoDoc](https://godoc.org/github.com/eclipse-fog05/api-go/fog05?status.svg)](https://godoc.org/github.com/eclipse-fog05/api-go/fog05)
 
-# fog05
+# Eclipse fog05
+The End-to-End Compute, Storage and Networking Virtualisation solution.
 
-Unifies compute/networking fabric end-to-end
-
-Thanks to its plugin architecture can manage near everything
+Eclipse fog05 is an open source project that aims at providing a decentralised infrastructure for provisioning and managing compute, storage, communication and I/O resources available anywhere across the network. Eclipse fog05 addresses highly heterogeneous systems even those with extremely resource-constrained nodes.
 
 Check the website [fog05.io](https://fog05.io) for more detailed information
 
+##
+
 See also [Introduction](https://github.com/eclipse/fog05/blob/master/Introduction.md) for more information
 
-Inside [plugins](./plugins) there are some plugins for entity
 
 See [INSTALL](INSTALL.md) for installation instructions
 
