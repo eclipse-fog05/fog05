@@ -21,7 +21,7 @@ Once `opam` is installed you need to install the following some packages verify 
 
 
 ```
-sudo apt install libev-dev libssl-dev python3 python3-dev python3-pip m4 pkg-config rsync unzip bubblewrap cmake -y
+sudo apt install jq libev-dev libssl-dev python3 python3-dev python3-pip m4 pkg-config rsync unzip bubblewrap cmake -y
 sudo pip3 install pyangbind
 $ opam switch
 #  switch    compiler                       description
@@ -105,6 +105,7 @@ Then you can use the Eclipse fog05 makefile to build the agent
 
 ```
 $ cd fog05
+$ make submodules
 $ make
 ....
 dune build
