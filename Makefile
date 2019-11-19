@@ -8,6 +8,7 @@ VAR_FOS_DIR = /var/fos/
 FOS_CONF_FILE = /etc/fos/agent.json
 LINUX_PLUGIN_DIR = /etc/fos/plugins/plugin-os-linux
 LINUX_PLUGIN_CONFFILE = /etc/fos/plugins/plugin-os-linux/linux_plugin.json
+UUID = $(shell ./etc/to_uuid.sh)
 
 
 
@@ -82,7 +83,7 @@ else
 	sudo cp plugins/plugin-os-linux/linux_plugin /etc/fos/plugins/plugin-os-linux/
 	sudo cp plugins/plugin-os-linux/README.md /etc/fos/plugins/plugin-os-linux/
 endif
-	UUID = $(shell ./etc/to_uuid.sh)
+
 	sudo sh -c "echo $(UUID) | xargs -i  jq  '.configuration.nodeid = \"{}\"' /etc/fos/plugins/plugin-os-linux/linux_plugin.json > /tmp/linux_plugin.tmp && mv /tmp/linux_plugin.tmp /etc/fos/plugins/plugin-os-linux/linux_plugin.json"
 	sudo cp etc/yaks.service /lib/systemd/system/
 	sudo cp etc/yaks.target /lib/systemd/system/
