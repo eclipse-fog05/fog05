@@ -1,7 +1,0 @@
-(library
-  (name            fos_faem_api)
-  (public_name     fos-faem-api)
-  (wrapped     false)
-  (libraries       fos-core fos-im yaks-common yaks-ocaml apero-core logs-syslog.unix apero-net yojson atdgen lwt logs logs.fmt logs.cli fmt fmt.cli fmt.tty)
-  (preprocess
-    (pps ppx_deriving.show ppx_deriving.ord lwt_ppx ppx_cstruct)))

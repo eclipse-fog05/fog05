@@ -1,38 +1,60 @@
 # -*-Makefile-*-
 
+
 WD := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))));
 
 ETC_FOS_DIR = /etc/fos/
 VAR_FOS_DIR = /var/fos/
 FOS_CONF_FILE = /etc/fos/agent.json
-LINUX_PLUGIN_DIR = /etc/fos/plugins/linux
-LINUX_PLUGIN_CONFFILE = /etc/fos/plugins/linux/linux_plugin.json
+LINUX_PLUGIN_DIR = /etc/fos/plugins/plugin-os-linux
+LINUX_PLUGIN_CONFFILE = /etc/fos/plugins/plugin-os-linux/linux_plugin.json
+UUID = $(shell ./etc/to_uuid.sh)
 
-all:
 
-	make -C src/im/python
-	make -C src/im/ocaml install
-	make -C src/core/ocaml install
-	make -C src/api/ocaml/fimapi install
-	make -C src/api/ocaml/faemapi install
-	make -C src/api/ocaml/feoapi install
-	make -C src/agent/
 
-install:
+all: ocaml-sdk ocaml-api agent
+
+submodules:
+	git submodule update --init --recursive
+	git submodule foreach git pull origin master
+
+
+ocaml-sdk:
+	make -C sdk/sdk-ocaml install
+
+ocaml-api:
+	make -C api/api-ocaml install
+
+sdk-go:
+	ln -s sdk/sdk-go/fog05sdk ${GOPATH}/src
+	go install fog05sdk
+
+
+api-go:
+	ln -s api/api-go/fog05 ${GOPATH}/src
+	go install fog05
+
+sdk-python:
 	pip3 install pyangbind pyang
-	curl -L -o /usr/local/lib/libzenohc.so https://www.dropbox.com/s/c6l18wbtk4eggpt/libzenohc.so
-	git clone https://github.com/atolab/zenoh-python
-	cd zenoh-python && git checkout 1ced877917816acea13e58c151e02cf950ad8009 && python3 setup.py install
-	git clone https://github.com/atolab/yaks-python
-	cd yaks-python && git checkout 50c9fc7d022636433709340f220e7b58cd74cefc
-	make -C yaks-python install
-	make -C src/im/python install
-	make -C src/api/python/api install
+	make -C sdk/sdk-python
+	make -C sdk/sdk-python install
+
+api-python:
+	make -C api/api-python install
+
+
+agent:
+	make -C src/agent
+
+install: sdk-python api-python
 
 
 ifeq "$(wildcard $(ETC_FOS_DIR))" ""
 	sudo mkdir -p /etc/fos/plugins
 endif
+
+	make -C src/agent install
+
 	sudo id -u fos  >/dev/null 2>&1 ||  sudo useradd -r -s /bin/false fos
 	sudo usermod -aG sudo fos
 ifeq ($(shell uname -m), x86_64)
@@ -51,29 +73,23 @@ ifeq "$(wildcard $(VAR_FOS_DIR))" ""
 endif
 
 	echo "fos      ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers > /dev/null
-	sudo cp src/agent/_build/default/fos-agent/fos_agent.exe /etc/fos/agent
+	# sudo cp src/agent/_build/default/fos-agent/fos_agent.exe /etc/fos/agent
 
 ifeq "$(wildcard $(LINUX_PLUGIN_DIR))" ""
-	sudo cp -r fos-plugins/linux /etc/fos/plugins/
+	sudo cp -r plugins/plugin-os-linux /etc/fos/plugins/
 else
-	sudo cp -r fos-plugins/linux/scripts /etc/fos/plugins/linux/
-	sudo cp fos-plugins/linux/__init__.py /etc/fos/plugins/linux/
-	sudo cp fos-plugins/linux/linux_plugin /etc/fos/plugins/linux/
-	sudo cp fos-plugins/linux/README.md /etc/fos/plugins/linux/
+	sudo cp -r plugins/plugin-os-linux/scripts /etc/fos/plugins/plugin-os-linux/
+	sudo cp plugins/plugin-os-linux/__init__.py /etc/fos/plugins/plugin-os-linux/
+	sudo cp plugins/plugin-os-linux/linux_plugin /etc/fos/plugins/plugin-os-linux/
+	sudo cp plugins/plugin-os-linux/README.md /etc/fos/plugins/plugin-os-linux/
 endif
 
-
-ifeq "$(wildcard $(FOS_CONF_FILE))" ""
-	sudo cp etc/agent.json /etc/fos/agent.json
-endif
-	sudo cp etc/fos_agent.service /lib/systemd/system/
-	sudo cp etc/fos_agent.target /lib/systemd/system/
+	sudo sh -c "echo $(UUID) | xargs -i  jq  '.configuration.nodeid = \"{}\"' /etc/fos/plugins/plugin-os-linux/linux_plugin.json > /tmp/linux_plugin.tmp && mv /tmp/linux_plugin.tmp /etc/fos/plugins/plugin-os-linux/linux_plugin.json"
 	sudo cp etc/yaks.service /lib/systemd/system/
 	sudo cp etc/yaks.target /lib/systemd/system/
-	sudo cp /etc/fos/plugins/linux/fos_linux.service /lib/systemd/system/
+	sudo cp /etc/fos/plugins/plugin-os-linux/fos_linux.service /lib/systemd/system/
 	sudo ln -sf /etc/fos/yaksd /usr/bin/yaksd
 	sudo ln -sf /etc/fos/agent /usr/bin/fagent
-	sudo ln -sf /etc/fos/plugins/linux/linux_plugin /usr/bin/fos_linux
 
 lldp:
 	sudo mkdir -p /etc/fos/lldpd
@@ -101,21 +117,8 @@ uninstall:
 	sudo rm -rf /etc/fos/agent
 	sudo rm -rf /usr/bin/fos_linux
 	sudo userdel fos
-	sudo pip3 uninstall fog05_im fog05 -y
+	sudo pip3 uninstall fog05-sdk fog05 -y
+	opam uninstall fos-sdk
 
 clean:
-	opam remove fos-im -y
-	make -C src/im/ocaml clean
-	make -C src/im/python clean
-	make -C src/core/ocaml clean
 	make -C src/agent clean
-	make -C src/api/ocaml/fimapi clean
-	make -C src/api/ocaml/faemapi clean
-	sudo rm -rf lldpd
-	sudo rm -rf src/pyhton/fog05.egg-info
-	sudo rm -rf src/pyhton/build
-	sudo rm -rf src/pyhton/dist
-
-
-apidoc:
-	make -C src/api/python/api doc

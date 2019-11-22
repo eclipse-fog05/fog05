@@ -1,7 +1,0 @@
-(executable
-   (name fos_agent)
-   (public_name fos_agent)
-   (package fos-agent)
-   (libraries cmdliner fos-core fos-fim-api fos-faem-api apero-core apero-net yaks-common yaks-ocaml lwt logs logs.fmt logs.cli fmt fmt.cli fmt.tty)
-   (preprocess (pps lwt_ppx ppx_cstruct ))
-)
