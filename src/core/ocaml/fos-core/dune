@@ -1,7 +1,0 @@
-(library
-  (name            fos_core)
-  (public_name     fos-core)
-  (wrapped     false)
-  (libraries       fos-im yaks-common yaks-ocaml cmdliner apero-core logs-syslog.unix apero-net yojson atdgen lwt logs logs.fmt logs.cli fmt fmt.cli fmt.tty)
-  (preprocess
-    (pps ppx_deriving.show ppx_deriving.ord lwt_ppx ppx_cstruct)))
