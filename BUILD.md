@@ -55,7 +55,6 @@ $ git clone https://github.com/atolab/apero-core
 $ cd apero-core
 $ git checkout c36dee5
 $ opam install . --working-dir -y
-....
 $ cd ..
 $ git clone  https://github.com/atolab/apero-net
 $ cd apero-net
