@@ -1,0 +1,3 @@
+language: c
+script:
+  - echo "Nothing to do"
