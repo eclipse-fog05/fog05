@@ -74,20 +74,10 @@ endif
 
 	echo "fos      ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers > /dev/null
 	# sudo cp src/agent/_build/default/fos-agent/fos_agent.exe /etc/fos/agent
+	make -C plugins/plugin-os-linux install
 
-ifeq "$(wildcard $(LINUX_PLUGIN_DIR))" ""
-	sudo cp -r plugins/plugin-os-linux /etc/fos/plugins/
-else
-	sudo cp -r plugins/plugin-os-linux/scripts /etc/fos/plugins/plugin-os-linux/
-	sudo cp plugins/plugin-os-linux/__init__.py /etc/fos/plugins/plugin-os-linux/
-	sudo cp plugins/plugin-os-linux/linux_plugin /etc/fos/plugins/plugin-os-linux/
-	sudo cp plugins/plugin-os-linux/README.md /etc/fos/plugins/plugin-os-linux/
-endif
-
-	sudo sh -c "echo $(UUID) | xargs -i  jq  '.configuration.nodeid = \"{}\"' /etc/fos/plugins/plugin-os-linux/linux_plugin.json > /tmp/linux_plugin.tmp && mv /tmp/linux_plugin.tmp /etc/fos/plugins/plugin-os-linux/linux_plugin.json"
 	sudo cp etc/yaks.service /lib/systemd/system/
 	sudo cp etc/yaks.target /lib/systemd/system/
-	sudo cp /etc/fos/plugins/plugin-os-linux/fos_linux.service /lib/systemd/system/
 	sudo ln -sf /etc/fos/yaksd /usr/bin/yaksd
 	sudo ln -sf /etc/fos/agent /usr/bin/fagent
 
