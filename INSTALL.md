@@ -12,8 +12,24 @@ $ sudo make install
 ```
 
 
-Copy all the plugins needed plugins in the /etc/fos/plugins directory
-You need to copy all the files except for the configuration ones for each plugins
+### Plugins
+
+Eclipse fog05 relies on plugins for the interaction with operating system, network provisioning and management of the FDUs (Fog Deployment Units).
+
+The minimal installation requires:
+- plugin-os-linux (installed at `make install`)
+- plugin-net-linuxbridge (https://github.com/eclipse-fog05/plugin-net-linuxbridge)
+- plugin-fdu-xxx
+
+The FDU plugin can be one of:
+
+- plugin-fdu-native (https://github.com/eclipse-fog05/plugin-fdu-native) for binary applications
+- plugin-fdu-lxd (https://github.com/eclipse-fog05/plugin-fdu-lxd) for LXD containers [recommended]
+- plugin-fdu-kvm (https://github.com/eclipse-fog05/plugin-fdu-kvm) for KVM virtual machine
+- plugin-fdu-containerd (https://github.com/eclipse-fog05/plugin-fdu-containerd) for docker (OCI) containers [experimental]
+
+Each plugin comes with his own make file, installation can be done following the plugin README file.
+After the installation for each plugin you need to update the `nodeid` to match the one provided by the [to_uuid.sh](to_uuid.sh)
 
 
 If your YAKS server is running on a separate machine, update `ylocator` in the configuration file of agent `/etc/fos/agent.json` and for the plugins `/etc/fos/plugins/<name>/<name>_plugin.json`.
@@ -88,7 +104,7 @@ Examples are available in the [examples repository](https://github.com/eclipse-f
 
 REST API for FIM are under development...
 
-
+<!--
 ## Basic CLI Interface
 
 It is also possible to install a CLI interface, just execute
@@ -101,4 +117,4 @@ and verify the list of the nodes available
 
     export FOS_YAKS_ENDPOINT="tcp/<address of yaks server>:7447"
     fos fim node list
-
+ -->
