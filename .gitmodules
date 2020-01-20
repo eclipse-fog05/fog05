@@ -1,9 +1,6 @@
 [submodule "plugins/plugin-os-linux"]
 	path = plugins/plugin-os-linux
 	url = https://github.com/eclipse-fog05/plugin-os-linux
-[submodule "plugins/plugin-os-windows"]
-	path = plugins/plugin-os-windows
-	url = https://github.com/eclipse-fog05/plugin-os-windows
 [submodule "plugins/plugin-net-linuxbridge"]
 	path = plugins/plugin-net-linuxbridge
 	url = https://github.com/eclipse-fog05/plugin-net-linuxbridge
