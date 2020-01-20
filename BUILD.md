@@ -53,17 +53,17 @@ $ mkdir fos_build
 $ cd fos_build
 $ git clone https://github.com/atolab/apero-core
 $ cd apero-core
-$ git checkout c36dee5
+$ git checkout 0.4.5
 $ opam install . --working-dir -y
 $ cd ..
 $ git clone  https://github.com/atolab/apero-net
 $ cd apero-net
-$ git checkout 824c954
+$ git checkout 0.4.5
 $ opam install . --working-dir -y
 $ cd ..
 $ git clone https://github.com/atolab/apero-time
 $ cd apero-time
-$ git checkout b0446b7
+$ git checkout 0.4.5
 $ opam install . --working-dir -y
 $ cd ..
 $ git clone https://github.com/atolab/zenoh
