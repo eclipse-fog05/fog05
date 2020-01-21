@@ -1,64 +1,6 @@
 # Eclipse fog05 FIM installation.
 
 
-## Script Installation
----
-
-In order to run install Eclipse fog05 as FIM (Fog Infrastrucutre Manager)
-you have to execute the following commands
-
-
-    ./fos_install.sh
-
-Then you have to edit the agent and linux plugin configuration file
-
-
-Agent configuration file: `/etc/fos/agent.json`
-
-update the mgmt_interface parameter with the name of the interface used for managment
-update the autoload parameter to false
-
-
-
-Linux Plugin configuration file: `/etc/fos/plugins/linux/linux_plugin.json`
-
-update the nodeid parameter with the content of `/etc/machine-id`
-this is used to identify the node and to make the plugin connect the right agent.
-
-
-If you want to run contanerized applications on the node, you have to install and configure LXD
-
-sudo apt remove --purge lxd
-sudo snap install lxd
-sudo lxd init
-
-add current user to lxd and verify that it is operational (eg. launch a container `lxc launch images:alpine/edge test` and remove it `lxc delete --force test`)
-then execute the following commands:
-
-
-    cd fog05/fos-plugins/linuxbridge/
-    sudo make install
-
-
-and then edit the Linux Bridge plugin configuration file:  `/etc/fos/plugins/linuxbridge/linuxbridge_plugin.json`
-
-update the nodeid parameter with the content of `/etc/machine-id`
-this is used to identify the node and to make the plugin connect the right agent.
-update the dataplane_interface parameter with the name of the interface used for dataplane (VxLANs will be created over that interface)
-
-
-then you have to install the LXD plugin
-
-    cd fog05/fos-plugins/LXD
-    sudo make install
-
-
-and then edit the LXD plugin configuration file:  `/etc/fos/plugins/LXD/LXD_plugin.json`
-
-update the nodeid parameter with the content of `/etc/machine-id`
-this is used to identify the node and to make the plugin connect the right agent.
-
-
 ## Manual Installation
 
 
@@ -70,25 +12,27 @@ $ sudo make install
 ```
 
 
-Copy all the plugins needed plugins in the /etc/fos/plugins directory
-You need to copy all the files except for the configuration ones for each plugins
+### Plugins
 
-Update the configuration files of agent `/etc/fos/agent.json` and the one of the plugins `/etc/fos/plugins/<name>/<name>_plugin.json` by replacing the `uuid` with the UUID of the current node from `/etc/machine-id` converted to UUID4 and the IP address of the eventual yaks server in `ylocator`
+Eclipse fog05 relies on plugins for the interaction with operating system, network provisioning and management of the FDUs (Fog Deployment Units).
+
+The minimal installation requires:
+- plugin-os-linux (installed at `make install`)
+- plugin-net-linuxbridge (https://github.com/eclipse-fog05/plugin-net-linuxbridge)
+- plugin-fdu-xxx
+
+The FDU plugin can be one of:
+
+- plugin-fdu-native (https://github.com/eclipse-fog05/plugin-fdu-native) for binary applications
+- plugin-fdu-lxd (https://github.com/eclipse-fog05/plugin-fdu-lxd) for LXD containers [recommended]
+- plugin-fdu-kvm (https://github.com/eclipse-fog05/plugin-fdu-kvm) for KVM virtual machine
+- plugin-fdu-containerd (https://github.com/eclipse-fog05/plugin-fdu-containerd) for docker (OCI) containers [experimental]
+
+Each plugin comes with his own make file, installation can be done following the plugin README file.
+After the installation for each plugin you need to update the `nodeid` to match the one provided by the [to_uuid.sh](to_uuid.sh)
 
 
-Update your descriptor following: https://github.com/eclipse-fog05/examples/blob/master/fim_api/descriptors/fdu_lxd_net.json
-
-## Verify the binaries
-
-The installation script or the manual installation gets binaries from a cloud storage, it may happen that those binaries are not up to date,
-you can verify if they are up to date by a checksum verification using `md5sum`
-
-Checksums:
-- /etc/fos/agent (x86_64) `3f627bb68cbea21c75e512e783231b29`
-- /etc/fos/agent (armv7l) `4d83e0b115d0f8bad8bed79d70cab2a8`
-- /etc/fos/agent (aarch64) `0d1e144d5acbad1518390781e6e1cc68`
-
-
+If your YAKS server is running on a separate machine, update `ylocator` in the configuration file of agent `/etc/fos/agent.json` and for the plugins `/etc/fos/plugins/<name>/<name>_plugin.json`.
 
 
 # Start Eclipse fog05
@@ -160,7 +104,7 @@ Examples are available in the [examples repository](https://github.com/eclipse-f
 
 REST API for FIM are under development...
 
-
+<!--
 ## Basic CLI Interface
 
 It is also possible to install a CLI interface, just execute
@@ -173,4 +117,4 @@ and verify the list of the nodes available
 
     export FOS_YAKS_ENDPOINT="tcp/<address of yaks server>:7447"
     fos fim node list
-
+ -->
