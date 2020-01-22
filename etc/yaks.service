@@ -6,7 +6,7 @@ After=network.target
 [Service]
 Type=simple
 PIDFile=/var/fos/yaksd.pid
-ExecStart = /etc/fos/yaksd
+ExecStart = /etc/fos/zenohd -P "/etc/fos/yaks-plugin.cmxs" -vv
 KillMode=process
 Restart=on-failure
 [Install]
