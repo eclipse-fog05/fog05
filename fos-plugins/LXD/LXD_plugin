@@ -835,8 +835,8 @@ class LXD(RuntimePluginFDU):
                 #    self.logger.info('__monitor_instance()','[ INFO ] LXD Plugin - Stopping monitoring of Container uuid {}'.format(fdu_uuid))
                 #     return
             except Exception as e:
-                self.logger.error('__monitor_instance()', '[ ERROR ] LXD Plugin - Stopping monitoring of Container uuid {} Error {}'.format(instance_id, e))
-                return
+                self.logger.error('__monitor_instance()', '[ ERROR ] LXD Plugin - Monitoring of Container uuid {} Error {}'.format(instance_id, e))
+                #return
 
     def __generate_custom_profile_userdata_configuration(self, userdata):
         userdata = {'user.user-data': userdata}
