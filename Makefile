@@ -16,7 +16,7 @@ all: ocaml-sdk ocaml-api agent
 
 submodules:
 	git submodule update --init --recursive
-	git submodule foreach git pull origin master
+	# git submodule foreach git pull origin master
 
 
 ocaml-sdk:
