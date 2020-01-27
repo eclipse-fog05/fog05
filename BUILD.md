@@ -48,54 +48,54 @@ And other requirements not present in opam:
 
 To install these you can execute the following commands:
 
-```
-$ mkdir fos_build
-$ cd fos_build
-$ git clone https://github.com/atolab/apero-core
-$ cd apero-core
-$ git checkout 0.4.5
-$ opam install . --working-dir -y
-$ cd ..
-$ git clone  https://github.com/atolab/apero-net
-$ cd apero-net
-$ git checkout 0.4.5
-$ opam install . --working-dir -y
-$ cd ..
-$ git clone https://github.com/atolab/apero-time
-$ cd apero-time
-$ git checkout 0.4.5
-$ opam install . --working-dir -y
-$ cd ..
-$ git clone https://github.com/atolab/zenoh
-$ cd zenoh
-$ git checkout 46d4378
-$ opam install . --working-dir -y
-$ cd ..
-$ git clone https://github.com/atolab/yaks-common
-$ cd yaks-common
-$ git checkout 5d2e70d
-$ opam install . --working-dir -y
-$ cd ..
-$ git clone https://github.com/atolab/yaks-ocaml
-$ cd yaks-ocaml
-$ git checkout d076645
-$ opam install . --working-dir -y
-$ cd ..
-$ git clone http://github.com/atolab/zenoh-c
-$ cd zenoh-c
-$ git checkout 1e20bb6
-$ make
-$ sudo make install
-$ cd ..
-$ git clone http://github.com/atolab/zenoh-python
-$ cd zenoh-python
-$ git checkout 1ced877
-$ sudo python3 setup.py install
-$ cd ..
-$ git clone http://github.com/atolab/yaks-python
-$ cd yaks-python
-$ git checkout 50c9fc7
-$ sudo make install
+```bash
+mkdir fos_build
+cd fos_build
+git clone https://github.com/atolab/apero-core
+cd apero-core
+git checkout 0.4.5
+opam install . --working-dir -y
+cd ..
+git clone  https://github.com/atolab/apero-net
+cd apero-net
+git checkout 0.4.5
+opam install . --working-dir -y
+cd ..
+git clone https://github.com/atolab/apero-time
+cd apero-time
+git checkout 0.4.5
+opam install . --working-dir -y
+cd ..
+git clone https://github.com/atolab/zenoh
+cd zenoh
+git checkout 0.3.0
+opam install . --working-dir -y
+cd ..
+git clone https://github.com/atolab/yaks-common
+cd yaks-common
+git checkout 0.3.0
+opam install . --working-dir -y
+cd ..
+git clone https://github.com/atolab/yaks-ocaml
+cd yaks-ocaml
+git checkout 0.3.0
+opam install . --working-dir -y
+cd ..
+git clone http://github.com/atolab/zenoh-c
+cd zenoh-c
+git checkout 0.3.0
+make
+sudo make install
+cd ..
+git clone http://github.com/atolab/zenoh-python
+cd zenoh-python
+git checkout 1ced877
+sudo python3 setup.py install
+cd ..
+git clone http://github.com/atolab/yaks-python
+cd yaks-python
+git checkout 50c9fc7
+sudo make install
 ```
 
 ### Eclipse fog05 Agent
