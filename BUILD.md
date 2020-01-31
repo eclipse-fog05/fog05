@@ -89,12 +89,12 @@ sudo make install
 cd ..
 git clone http://github.com/atolab/zenoh-python
 cd zenoh-python
-git checkout 1ced877
+git checkout 0.3.0
 sudo python3 setup.py install
 cd ..
 git clone http://github.com/atolab/yaks-python
 cd yaks-python
-git checkout 50c9fc7
+git checkout 0.3.0
 sudo make install
 ```
 
@@ -104,7 +104,7 @@ Then you can use the Eclipse fog05 makefile to build the agent
 
 ```
 $ cd fog05
-$ make submodules
+$ git submodule update --init --recursive
 $ make
 ....
 dune build
