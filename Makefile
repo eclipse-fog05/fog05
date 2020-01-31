@@ -58,7 +58,7 @@ endif
 	sudo id -u fos  >/dev/null 2>&1 ||  sudo useradd -r -s /bin/false fos
 	sudo usermod -aG sudo fos
 ifeq ($(shell uname -m), x86_64)
-	curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/omlj6chql19g74s/yaks.tar.gz
+	curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/hx6w8qs9i4cx5r1/yaks.0.3.0.tar.gz
 else ifeq ($(shell uname -m), armv7l)
 	curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/wi65knmjcj74pgg/yaks.tar.gz
 else ifeq ($(shell uname -m), aarch64)
