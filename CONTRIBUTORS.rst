@@ -12,5 +12,6 @@ These are the contributors to fog05 according to the Github repository.
  Davide-DD        Davide Di Donato
  kydos            Angelo Corsaro (ADLINK)
  mallets          Luca Cominardi (ADLINK)
+ gabrielepmattia  Gabriele Proietti Mattia
  ===============  ==================================
 
