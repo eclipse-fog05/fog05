@@ -17,7 +17,7 @@ The Eclipse fog05 SDK is written in OCaml, it support version 4.07.1, we recomen
 it using `opam`, please follow this link for installation instructions [opam installation](https://opam.ocaml.org/doc/Install.html).
 
 
-Once `opam` is installed you need to install the following some packages verify the OCaml version, and if needed downgrade to 4.07.1
+Once `opam` is installed you need to install the following some packages verify the OCaml version, it should be 4.09.0
 
 
 ```
@@ -26,7 +26,6 @@ sudo pip3 install pyangbind
 $ opam switch
 #  switch    compiler                       description
 →  defaut    ocaml-base-compiler.4.09.0     defaut
-$ opam switch create fos ocaml-base-compiler.4.07.1
 ....
 
 ```
@@ -53,17 +52,17 @@ mkdir fos_build
 cd fos_build
 git clone https://github.com/atolab/apero-core
 cd apero-core
-git checkout 0.4.5
+git checkout 0.4.6
 opam install . --working-dir -y
 cd ..
 git clone  https://github.com/atolab/apero-net
 cd apero-net
-git checkout 0.4.5
+git checkout 0.4.6
 opam install . --working-dir -y
 cd ..
 git clone https://github.com/atolab/apero-time
 cd apero-time
-git checkout 0.4.5
+git checkout 0.4.6
 opam install . --working-dir -y
 cd ..
 git clone https://github.com/atolab/zenoh
