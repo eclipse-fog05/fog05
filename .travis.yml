@@ -13,8 +13,8 @@ before_install:
   - docker exec build wget -O opam https://github.com/ocaml/opam/releases/download/2.0.6/opam-2.0.6-x86_64-linux
   - docker exec build install ./opam /usr/local/bin/opam
   - docker exec build opam init --disable-sandboxing
-  - docker exec build test -r /root/.opam/opam-init/init.sh && . /root/.opam/opam-init/init.sh > /dev/null 2> /dev/null || true
-  - docker exec build eval $(opam env)
+  - docker exec build bash -c "test -r /root/.opam/opam-init/init.sh && . /root/.opam/opam-init/init.sh > /dev/null 2> /dev/null || true"
+  - docker exec build bash -c "opam env > .opamenv && source .opamenv"
   ## install other opam dependencies
   - docker exec build opam install dune.1.11.4 atdgen.2.0.0 conf-libev ocp-ocamlres -y
   # clone repo at specific ref
