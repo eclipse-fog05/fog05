@@ -30,13 +30,7 @@ $ opam switch
 
 ```
 
-Then you need to install some required libraries from opam
-
-```
-opam install atdgen ocp-ocamlres conf-libev
-```
-
-And other requirements not present in opam:
+Then you need to install some required libraries from opam and others that need to be built locally:
 
 - apero-core (https://github.com/atolab/apero-core)
 - apero-net (https://github.com/atolab/apero-net)
@@ -45,56 +39,10 @@ And other requirements not present in opam:
 - yaks-common (https://github.com/atolab/zenoh)
 - yaks-ocaml (https://github.com/atolab/yaks-ocaml)
 
-To install these you can execute the following commands:
+To install all of these you have to execute the [build.sh](build.sh) script:
 
-```bash
-mkdir fos_build
-cd fos_build
-git clone https://github.com/atolab/apero-core
-cd apero-core
-git checkout 0.4.6
-opam install . --working-dir -y
-cd ..
-git clone  https://github.com/atolab/apero-net
-cd apero-net
-git checkout 0.4.6
-opam install . --working-dir -y
-cd ..
-git clone https://github.com/atolab/apero-time
-cd apero-time
-git checkout 0.4.6
-opam install . --working-dir -y
-cd ..
-git clone https://github.com/atolab/zenoh
-cd zenoh
-git checkout 0.3.0
-opam install . --working-dir -y
-cd ..
-git clone https://github.com/atolab/yaks-common
-cd yaks-common
-git checkout 0.3.0
-opam install . --working-dir -y
-cd ..
-git clone https://github.com/atolab/yaks-ocaml
-cd yaks-ocaml
-git checkout 0.3.0
-opam install . --working-dir -y
-cd ..
-git clone http://github.com/atolab/zenoh-c
-cd zenoh-c
-git checkout 0.3.0
-make
-sudo make install
-cd ..
-git clone http://github.com/atolab/zenoh-python
-cd zenoh-python
-git checkout 0.3.0
-sudo python3 setup.py install
-cd ..
-git clone http://github.com/atolab/yaks-python
-cd yaks-python
-git checkout 0.3.0
-sudo make install
+```
+$ ./build.sh
 ```
 
 ### Eclipse fog05 Agent
