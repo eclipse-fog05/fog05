@@ -4,7 +4,10 @@ VER_APERO="0.4.6"
 VER_ZENOH="0.3.0"
 VER_YAKS="0.3.0"
 
-echo "[BUILD] Installing dependencies"
+echo "[BUILD] Installing opam dependencies"
+opam install dune.1.11.4 atdgen.2.0.0 conf-libev ocp-ocamlres -y
+
+echo "[BUILD] Building and installing dependencies"
 # install dependencies
 mkdir fos_build
 cd fos_build
