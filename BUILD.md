@@ -39,7 +39,7 @@ Then you need to install some required libraries from opam and others that need 
 - yaks-common (https://github.com/atolab/zenoh)
 - yaks-ocaml (https://github.com/atolab/yaks-ocaml)
 
-To install all of these you need to execute the [build.sh](build.sh) script:
+To install all of these you have to execute the [build.sh](build.sh) script:
 
 ```
 $ ./build.sh
