@@ -41,6 +41,12 @@ cd yaks-ocaml
 git checkout $VER_YAKS
 opam install . --working-dir -y
 cd ..
+git clone http://github.com/atolab/yaks
+cd yaks
+git checkout $VER_YAKS
+rm -rf src/yaks-be/yaks-be-influxdb/ src/yaks-be/yaks-be-sql/
+make
+cd ..
 git clone http://github.com/atolab/zenoh-c
 cd zenoh-c
 git checkout $VER_ZENOH

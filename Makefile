@@ -57,15 +57,17 @@ endif
 
 	sudo id -u fos  >/dev/null 2>&1 ||  sudo useradd -r -s /bin/false fos
 	sudo usermod -aG sudo fos
-ifeq ($(shell uname -m), x86_64)
-	curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/hx6w8qs9i4cx5r1/yaks.0.3.0.tar.gz
-else ifeq ($(shell uname -m), armv7l)
-	curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/wi65knmjcj74pgg/yaks.tar.gz
-else ifeq ($(shell uname -m), aarch64)
-	curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/oj4z80c1jwofv2a/yaks.tar.gz
-endif
-	tar -xzvf /tmp/yaks.tar.gz -C /etc/fos
-	rm -rf /tmp/yaks.tar.gz
+	cp ./fos_build/zenohd/_build/default/zenoh-router-daemon/zenohd.exe /etc/fos/zenohd
+	cp ./fos_build/yaks/_build/default/src/yaks/yaks-plugin.cmxs /etc/fos/zenohd/yaks-plugin.cmxs
+# ifeq ($(shell uname -m), x86_64)
+# 	curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/hx6w8qs9i4cx5r1/yaks.0.3.0.tar.gz
+# else ifeq ($(shell uname -m), armv7l)
+# 	curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/wi65knmjcj74pgg/yaks.tar.gz
+# else ifeq ($(shell uname -m), aarch64)
+# 	curl -L -o /tmp/yaks.tar.gz https://www.dropbox.com/s/oj4z80c1jwofv2a/yaks.tar.gz
+# endif
+# 	tar -xzvf /tmp/yaks.tar.gz -C /etc/fos
+# 	rm -rf /tmp/yaks.tar.gz
 
 ifeq "$(wildcard $(VAR_FOS_DIR))" ""
 	sudo mkdir -p /var/fos
