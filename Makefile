@@ -58,7 +58,7 @@ endif
 	sudo id -u fos  >/dev/null 2>&1 ||  sudo useradd -r -s /bin/false fos
 	sudo usermod -aG sudo fos
 	cp ./fos_build/zenohd/_build/default/zenoh-router-daemon/zenohd.exe /etc/fos/zenohd
-	cp ./fos_build/yaks/_build/default/src/yaks/yaks-plugin.cmxs /etc/fos/zenohd/yaks-plugin.cmxs
+	cp ./fos_build/yaks/_build/default/src/yaks/yaks-plugin.cmxs /etc/fos/yaks-plugin.cmxs
 
 ifeq "$(wildcard $(VAR_FOS_DIR))" ""
 	sudo mkdir -p /var/fos
