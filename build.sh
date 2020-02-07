@@ -51,17 +51,17 @@ git clone http://github.com/atolab/zenoh-c
 cd zenoh-c
 git checkout $VER_ZENOH
 make
-make install
+sudo make install
 cd ..
 git clone http://github.com/atolab/zenoh-python
 cd zenoh-python
 git checkout $VER_ZENOH
-python3 setup.py install
+sudo python3 setup.py install
 cd ..
 git clone http://github.com/atolab/yaks-python
 cd yaks-python
 git checkout $VER_YAKS
-make install
+sudo  make install
 cd ..
 mkdir zenohd
 cp zenoh/Makefile zenohd/
