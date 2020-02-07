@@ -56,9 +56,20 @@ git clone http://github.com/atolab/yaks-python
 cd yaks-python
 git checkout $VER_YAKS
 make install
+cd ..
+mkdir zenohd
+cp zenoh/Makefile zenohd/
+cp zenoh/zenoh-router-daemon.opam zenohd/
+cp -r zenoh/src/zenoh-router-daemon zenohd/
+echo -e "(lang dune 1.11.1)\n(name zenohd)" > zenohd/dune-project
+sed -i 's/zenoh_proto/zenoh-proto/g' zenohd/zenoh-router-daemon/dune
+sed -i 's/zenoh_tx_inet/zenoh-tx-inet/g' zenohd/zenoh-router-daemon/dune
+sed -i 's/zenoh_router/zenoh-router/g' zenohd/zenoh-router-daemon/dune
+cd zenohd
+make
+cd ../..
 
 echo "[BUILD] Building Fog05"
 # build fog05
-cd ../..
 git submodule update --init --recursive
 make
