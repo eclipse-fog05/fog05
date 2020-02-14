@@ -20,4 +20,4 @@ script:
   - docker exec build bash -c "mkdir /root/build && cd /root && mv fog05 build/fog05-0.1 && cd build && tar -czvf fog05-0.1.tar.gz fog05-0.1"
   # building a debian package
   - docker exec build bash -c "export DEBEMAIL="info@adlink-labs.tech" && export DEBFULLNAME="ATO Labs" && cd /root/build/fog05-0.1 && dh-make -f ../fog05-0.1.tar.gz -s -y && debuild -us -uc --preserve-envvar PATH && ls -l"
-  - docker exec build bash -c "cd /root/build/ && dpkg -I fog05_0.1_amd64.deb "
+  - docker exec build bash -c "cd /root/build/ && dpkg -I fog05_0.1-1_amd64.deb "
