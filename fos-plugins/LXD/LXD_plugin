@@ -60,7 +60,12 @@ class LXD(RuntimePluginFDU):
         self.conn = None
         self.images = {}
         self.flavors = {}
-        self.mon_th = {}
+
+
+        self.mon_th = None
+        self.mon_run = False
+        self.mon_instances = []
+
         self.nm = self.get_nm_plugin().get('uuid')
         signal.signal(signal.SIGINT, self.__catch_signal)
         signal.signal(signal.SIGTERM, self.__catch_signal)
@@ -115,6 +120,13 @@ class LXD(RuntimePluginFDU):
         # cmd = 'sudo ip link set eth0.1399 master fosbr0'
         # os.system(cmd)
 
+        self.mon_run = True
+
+        mt = threading.Thread(target=self.__monitor_instance,daemon=True)
+        mt.start()
+
+        self.mon_th = mt
+
 
         self.logger.info('start_runtime()', ' LXD Plugin - Started...')
 
@@ -125,8 +137,7 @@ class LXD(RuntimePluginFDU):
 
 
     def stop_runtime(self):
-        self.logger.info(
-            'stop_runtime()', 'LXD Plugin - Destroying {} running FDUs'.format(len(self.current_fdus)))
+        self.logger.info('stop_runtime()', 'LXD Plugin - Destroying {} running FDUs'.format(len(self.current_fdus)))
         for k in list(self.current_fdus.keys()):
             try:
                 fdu = self.current_fdus.get(k)
@@ -137,6 +148,7 @@ class LXD(RuntimePluginFDU):
 
             # if fdu.get_state() == State.DEFINED:
             #     self.undefine_fdu(k)
+
         keys = list(self.images.keys())
         for k in keys:
             self.logger.info(
@@ -148,6 +160,7 @@ class LXD(RuntimePluginFDU):
                 self.logger.error('stop_runtime()', 'Error {}'.format(e))
                 pass
 
+        self.mon_run = False
         self.conn = None
         self.logger.info('stop_runtime()', '[ DONE ] LXD Plugin - Bye Bye')
 
@@ -386,9 +399,10 @@ class LXD(RuntimePluginFDU):
 
             # TODO: monitoring TBA
             # this monitoring uses pylxd to get container information
-            mt = threading.Thread(target=self.__monitor_instance, args=(fdu_uuid, instance_uuid, fdu.name),daemon=True)
-            mt.start()
-            self.mon_th.update({instance_uuid:mt})
+            # mt = threading.Thread(target=self.__monitor_instance, args=(fdu_uuid, instance_uuid, fdu.name),daemon=True)
+            # mt.start()
+            # self.mon_th.update({instance_uuid:mt})
+            self.mon_instances.append((fdu_uuid, instance_uuid, fdu.name))
             self.logger.info('run_fdu()', '[ DONE ] LXD Plugin - Starting a Monitoring of {}'.format(instance_uuid))
 
     def clean_fdu(self, instance_uuid):
@@ -515,6 +529,7 @@ class LXD(RuntimePluginFDU):
             fdu_uuid = fdu.fdu_uuid
             self.logger.info('undefine_fdu()', '[ INFO ] LXD Plugin - Container Name {}'.format(instance_uuid))
             c = self.conn.containers.get(fdu.name)
+            self.mon_instances.remove((fdu_uuid, instance_uuid, fdu.name))
             # self.mon_th.pop(fdu_uuid)
             try:
                 c.stop(force=True, wait=True)
@@ -808,35 +823,33 @@ class LXD(RuntimePluginFDU):
     def after_migrate_entity_actions(self, fdu_uuid, dst=False):
         pass
 
-    def __monitor_instance(self, fdu_uuid, instance_id, instance_name):
-        self.logger.info('__monitor_fdu()','[ INFO ] LXD Plugin - Staring monitoring of Container uuid {}'.format(instance_id))
-        while True:
+    def __monitor_instance(self):
+        self.logger.info('__monitor_instance()','[ INFO ] LXD Plugin - Staring monitoring of FDUs')
+        while self.mon_run:
             time.sleep(self.update_interval)
-            try:
-                record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_uuid, instance_id)
-                if record.get('status') not in ['LAND', 'TAKE_OFF','MIGRATE']:
-                    self.logger.info('__monitor_fdu()','[ INFO ] LXD Plugin - Updating status of {}'.format(fdu_uuid))
-                    c = self.conn.containers.get(instance_name)
-                    cs = c.state()
-                    detailed_state = {}
-                    c_net = cs.network
-                    if c_net is None:
-                        c_net = []
-                    detailed_state.update({'network': c_net})
-                    detailed_state.update({'cpu': cs.cpu})
-                    detailed_state.update({'memory': cs.memory})
-                    detailed_state.update({'disk': cs.disk})
-                    detailed_state.update({'processes': cs.processes})
-                    detailed_state.update({'pid': cs.pid})
-                    record.update({'hypervisor_info': detailed_state})
-                    self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_uuid, instance_id, record)
+            for fdu_id, iid, name in self.mon_instances:
+                try:
+                    record = self.connector.loc.actual.get_node_fdu(self.node, self.uuid, fdu_id, iid)
+                    if record.get('status') not in ['LAND', 'TAKE_OFF','MIGRATE']:
+                        self.logger.info('__monitor_fdu()','[ INFO ] LXD Plugin - Updating status of {}'.format(fdu_id))
+                        c = self.conn.containers.get(name)
+                        cs = c.state()
+                        detailed_state = {}
+                        c_net = cs.network
+                        if c_net is None:
+                            c_net = []
+                        detailed_state.update({'network': c_net})
+                        detailed_state.update({'cpu': cs.cpu})
+                        detailed_state.update({'memory': cs.memory})
+                        detailed_state.update({'disk': cs.disk})
+                        detailed_state.update({'processes': cs.processes})
+                        detailed_state.update({'pid': cs.pid})
+                        record.update({'hypervisor_info': detailed_state})
+                        self.connector.loc.actual.add_node_fdu(self.node, self.uuid, fdu_id, iid, record)
 
-                # if c.status == 'Stopped':
-                #    self.logger.info('__monitor_instance()','[ INFO ] LXD Plugin - Stopping monitoring of Container uuid {}'.format(fdu_uuid))
-                #     return
-            except Exception as e:
-                self.logger.error('__monitor_instance()', '[ ERROR ] LXD Plugin - Monitoring of Container uuid {} Error {}'.format(instance_id, e))
-                #return
+                except Exception as e:
+                    self.logger.error('__monitor_instance()', '[ ERROR ] LXD Plugin - Monitoring of Container uuid {} Error {}'.format(iid, e))
+                    pass
 
     def __generate_custom_profile_userdata_configuration(self, userdata):
         userdata = {'user.user-data': userdata}
