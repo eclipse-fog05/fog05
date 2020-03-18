@@ -495,10 +495,10 @@ class LXD(RuntimePluginFDU):
                     c.sync()
                 except Exception as e:
                     self.logger.info('run_fdu()', '[ ERR ] LXD Plugin - {}'.format(e))
-                    fdu.status = 'ERROR'
-                    self.current_fdus.update({instance_uuid: fdu})
-                    self.write_fdu_error(fdu_uuid, instance_uuid, 4, e)
-                    return
+                    # fdu.status = 'ERROR'
+                    # self.current_fdus.update({instance_uuid: fdu})
+                    # self.write_fdu_error(fdu_uuid, instance_uuid, 4, e)
+                    # return
 
             fm = c.FilesManager(self.conn, c)
             envs = 'export FOSUUID={} \n' \
