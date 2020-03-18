@@ -491,6 +491,7 @@ class LXD(RuntimePluginFDU):
             c.start()
             while c.status != 'Running':
                 try:
+                    time.sleep(0.1)
                     c.sync()
                 except Exception as e:
                     self.logger.info('run_fdu()', '[ ERR ] LXD Plugin - {}'.format(e))
@@ -536,6 +537,7 @@ class LXD(RuntimePluginFDU):
                 c.sync()
 
                 while c.status != 'Stopped':
+                    time.sleep(0.1)
                     c.sync()
             except Exception as e:
                     tries = 1000
