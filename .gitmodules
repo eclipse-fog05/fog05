@@ -34,3 +34,6 @@
 [submodule "api/api-ocaml"]
 	path = api/api-ocaml
 	url = https://github.com/eclipse-fog05/api-ocaml
+[submodule "plugins/plugin-fdu-containerd"]
+	path = plugins/plugin-fdu-containerd
+	url = https://github.com/eclipse-fog05/plugin-fdu-containerd
