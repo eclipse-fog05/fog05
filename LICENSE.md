@@ -1,5 +1,4 @@
-apache-2.0
-epl-2.0
+EPL-2.0 OR Apache-2.0
 
 
                                  Apache License
