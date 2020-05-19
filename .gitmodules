@@ -37,3 +37,7 @@
 [submodule "plugins/plugin-fdu-containerd"]
 	path = plugins/plugin-fdu-containerd
 	url = https://github.com/eclipse-fog05/plugin-fdu-containerd
+
+[submodule "plugins/plugin-fdu-ros2"]
+	path = plugins/plugin-fdu-ros2
+	url = https://github.com/eclipse-fog05/plugin-fdu-ros2
