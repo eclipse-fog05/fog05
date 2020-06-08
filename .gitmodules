@@ -1,39 +1,43 @@
+
+[submodule "src/agent"]
+	path = src/agent
+	url = https://github.com/eclipse-fog05/agent
+[submodule "sdk/sdk-ocaml"]
+	path = sdk/sdk-ocaml
+	url = https://github.com/eclipse-fog05/sdk-ocaml
+[submodule "sdk/sdk-go"]
+	path = sdk/sdk-go
+	url = https://github.com/eclipse-fog05/sdk-go
+[submodule "sdk/sdk-python"]
+	path = sdk/sdk-python
+	url = https://github.com/eclipse-fog05/sdk-python
+[submodule "api/api-ocaml"]
+	path = api/api-ocaml
+	url = https://github.com/eclipse-fog05/api-ocaml
+[submodule "api/api-python"]
+	path = api/api-python
+	url = https://github.com/eclipse-fog05/api-python
+[submodule "api/api-go"]
+	path = api/api-go
+	url = https://github.com/eclipse-fog05/api-go
 [submodule "plugins/plugin-os-linux"]
 	path = plugins/plugin-os-linux
 	url = https://github.com/eclipse-fog05/plugin-os-linux
 [submodule "plugins/plugin-net-linuxbridge"]
 	path = plugins/plugin-net-linuxbridge
 	url = https://github.com/eclipse-fog05/plugin-net-linuxbridge
-[submodule "plugins/plugin-fdu-kvm"]
-	path = plugins/plugin-fdu-kvm
-	url = https://github.com/eclipse-fog05/plugin-fdu-kvm
 [submodule "plugins/plugin-fdu-native"]
 	path = plugins/plugin-fdu-native
 	url = https://github.com/eclipse-fog05/plugin-fdu-native
 [submodule "plugins/plugin-fdu-lxd"]
 	path = plugins/plugin-fdu-lxd
 	url = https://github.com/eclipse-fog05/plugin-fdu-lxd
-[submodule "sdk/sdk-go"]
-	path = sdk/sdk-go
-	url = https://github.com/eclipse-fog05/sdk-go
-[submodule "sdk/sdk-ocaml"]
-	path = sdk/sdk-ocaml
-	url = https://github.com/eclipse-fog05/sdk-ocaml
-[submodule "sdk/sdk-python"]
-	path = sdk/sdk-python
-	url = https://github.com/eclipse-fog05/sdk-python
-[submodule "api/api-go"]
-	path = api/api-go
-	url = https://github.com/eclipse-fog05/api-go
-[submodule "api/api-python"]
-	path = api/api-python
-	url = https://github.com/eclipse-fog05/api-python
-[submodule "src/agent"]
-	path = src/agent
-	url = https://github.com/eclipse-fog05/agent
-[submodule "api/api-ocaml"]
-	path = api/api-ocaml
-	url = https://github.com/eclipse-fog05/api-ocaml
+[submodule "plugins/plugin-fdu-kvm"]
+	path = plugins/plugin-fdu-kvm
+	url = https://github.com/eclipse-fog05/plugin-fdu-kvm
+[submodule "plugins/plugin-fdu-ros2"]
+	path = plugins/plugin-fdu-ros2
+	url = https://github.com/eclipse-fog05/plugin-fdu-ros2
 [submodule "plugins/plugin-fdu-containerd"]
 	path = plugins/plugin-fdu-containerd
 	url = https://github.com/eclipse-fog05/plugin-fdu-containerd
