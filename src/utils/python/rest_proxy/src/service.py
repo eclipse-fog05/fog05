@@ -318,7 +318,7 @@ def flavor(flv_id):
         return res
     elif method == 'DELETE':
         try:
-            res = json.dumps(fos_api.fdu.flavor(flv_id))
+            res = json.dumps(fos_api.fdu.remove(flv_id))
         except Exception as e:
             return json.dumps({'error':'{}'.format(e)})
         return res
