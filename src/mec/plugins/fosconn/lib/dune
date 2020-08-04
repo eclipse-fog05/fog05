@@ -1,6 +1,0 @@
-(library
- (name fosconn)
- (public_name fosconn)
- (libraries base lwt apero-core yojson fos-im fos-meao-plugins fos-fim-api dynlink)
- (preprocess (pps lwt_ppx ))
- )

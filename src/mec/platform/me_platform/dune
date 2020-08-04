@@ -1,7 +1,0 @@
-(executable
- (name me_platform)
- (public_name mecp)
- (package me_platform)
- (libraries lwt apero-core lwt.unix re yaks-common yaks-ocaml httpaf httpaf-lwt-unix faraday str cmdliner uuidm yojson fos-im fos-dns)
- (preprocess (pps lwt_ppx ppx_cstruct ))
- )

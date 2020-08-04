@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+message CPUSpecProto {
+    string model = 1;
+    double frequency = 2;
+    string arch = 3;
+}
+
+
+message ComponentAdvertisement {
+    string uuid = 1;
+    string name = 2;
+    string routerid = 3;
+}
+
+enum ComponentStatus {
+    HALTED = 0;
+    CONNECTED = 1;
+    BUILDING = 2;
+    REGISTERED = 3;
+    ANNOUNCED = 4;
+    WORK = 5;
+    UNWORK = 6;
+    UNANNOUNCED = 7;
+    UNREGISTERED = 8;
+    DISCONNECTED = 9;
+}
+
+message ComponentInformation {
+    string uuid = 1;
+    string name = 2;
+    string routerid = 3;
+    ComponentStatus status = 4;
+}
+
+message ComponentState {
+    bytes status = 1;
+}
