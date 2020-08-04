@@ -49,8 +49,7 @@ async fn main() {
         Err(why) => panic!("Error when connecting component {:?}", why),
         Ok(_) => {
             println!("Component is connected to Zenoh");
-            let mystat = myself.status.lock().unwrap();
-            println!("Connected to Zenoh Router: {} Component Status: {:?}",  mystat.routerid, mystat.status);
+            println!("Connected to Zenoh Router: {} Component Status: {:?}",  myself.get_routerid(), myself.get_status());
         },
 
     }
