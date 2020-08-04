@@ -2,18 +2,12 @@
 [submodule "src/agent"]
 	path = src/agent
 	url = https://github.com/eclipse-fog05/agent
-[submodule "sdk/sdk-ocaml"]
-	path = sdk/sdk-ocaml
-	url = https://github.com/eclipse-fog05/sdk-ocaml
 [submodule "sdk/sdk-go"]
 	path = sdk/sdk-go
 	url = https://github.com/eclipse-fog05/sdk-go
 [submodule "sdk/sdk-python"]
 	path = sdk/sdk-python
 	url = https://github.com/eclipse-fog05/sdk-python
-[submodule "api/api-ocaml"]
-	path = api/api-ocaml
-	url = https://github.com/eclipse-fog05/api-ocaml
 [submodule "api/api-python"]
 	path = api/api-python
 	url = https://github.com/eclipse-fog05/api-python
