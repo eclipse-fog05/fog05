@@ -66,6 +66,8 @@ impl Component {
     }
 
     pub async fn connect(&mut self, locator : &String) -> ZCResult<()> {
+        let mut component = &mut *(self.component.lock().unwrap());
+
         let zconfig = net::Config::client().add_peer(&locator);
         let z = Zenoh::new(zconfig, None).await;
         match z {
@@ -84,12 +86,11 @@ impl Component {
                             {
                                 let zinfo = zsession.info().await;
                                 let rid = hex::encode(&(zinfo.iter().find(|x| x.0 == 2 ).unwrap().1));
-                                self.zenoh = Some(zclient);
+                                component.zenoh = Some(zclient);
                                 let arc_ws = Arc::new(zworkspace);
-                                self.zworkspace = Some(arc_ws.clone());
-                                let mut s = self.status.lock().unwrap();
-                                s.routerid = rid;
-                                s.status = ComponentStatus::CONNECTED;
+                                component.zworkspace = Some(arc_ws.clone());
+                                component.status.routerid = rid;
+                                component.status.status = ComponentStatus::CONNECTED;
 
 
 
@@ -99,7 +100,7 @@ impl Component {
 
                                 // let info_path = Path::try_from(format!(INFO_PATH_TEMPLATE!(),&self.uuid)).unwrap();
 
-                                Component::write_status_on_zenoh(&s, &arc_ws).await?;
+                                Component::write_status_on_zenoh(&component, &arc_ws).await?;
                                 Ok(())
                             },
                     }
@@ -108,12 +109,12 @@ impl Component {
     }
 
     pub async fn authenticate(&mut self) -> ZCResult<()> {
-        let mut s = self.status.lock().unwrap();
-        match s.status {
+        let mut component = &mut *(self.component.lock().unwrap());
+        match component.status.status {
             ComponentStatus::CONNECTED =>
                 {
-                    let selector = zenoh::Selector::try_from(format!(STATE_PATH_TEMPLATE!(),&self.uuid)).unwrap();
-                    let arc_ws = self.zworkspace.as_ref().unwrap();
+                    let selector = zenoh::Selector::try_from(format!(STATE_PATH_TEMPLATE!(),&component.uuid)).unwrap();
+                    let arc_ws = component.zworkspace.as_ref().unwrap();
                     match arc_ws.get(&selector).await {
                         Err(_) =>
                             //Should log the ZError
@@ -129,8 +130,8 @@ impl Component {
                                     // we can populate with this component instance state
                                     // Doing nothing from the time being...
                                     {
-                                        s.status = ComponentStatus::BUILDING;
-                                        Component::write_status_on_zenoh(&s, &arc_ws).await?;
+                                        component.status.status = ComponentStatus::BUILDING;
+                                        Component::write_status_on_zenoh(&component, &arc_ws).await?;
                                         Ok(())
                                     },
                                 1 =>
@@ -138,10 +139,10 @@ impl Component {
                                     // store it in self
                                     {
                                         let state_data = Component::extract_state(&data[0].value)?;
-                                        self.state = Some(Mutex::new(state_data));
-                                        s.status = ComponentStatus::BUILDING;
+                                        let _ = std::mem::replace(&mut component.state, state_data);
+                                        component.status.status = ComponentStatus::BUILDING;
 
-                                        Component::write_status_on_zenoh(&s, &arc_ws).await?;
+                                        Component::write_status_on_zenoh(&component, &arc_ws).await?;
                                         Ok(())
                                     },
                                 _ =>
@@ -163,14 +164,14 @@ impl Component {
 
 
     pub async fn register(&mut self) -> ZCResult<()> {
-        let mut s = self.status.lock().unwrap();
-        match s.status {
+        let mut component = &mut *(self.component.lock().unwrap());
+        match component.status.status {
             ComponentStatus::BUILDING =>
                 {
-                    let arc_ws = self.zworkspace.as_ref().unwrap();
-                    s.status = ComponentStatus::REGISTERED;
+                    let arc_ws = component.zworkspace.as_ref().unwrap();
+                    component.status.status = ComponentStatus::REGISTERED;
 
-                    Component::write_status_on_zenoh(&s, &arc_ws).await?;
+                    Component::write_status_on_zenoh(&component, &arc_ws).await?;
                     Ok(())
                 },
             _ =>
@@ -180,15 +181,15 @@ impl Component {
     }
 
     pub async fn announce(&mut self) -> ZCResult<()> {
-        let mut s = self.status.lock().unwrap();
-        match s.status {
+        let mut component = &mut *(self.component.lock().unwrap());
+        match component.status.status {
             ComponentStatus::REGISTERED =>
                 {
-                    let arc_ws = self.zworkspace.as_ref().unwrap();
-                    s.status = ComponentStatus::ANNOUNCED;
+                    let arc_ws = component.zworkspace.as_ref().unwrap();
+                    component.status.status = ComponentStatus::ANNOUNCED;
 
-                    Component::write_status_on_zenoh(&s, &arc_ws).await?;
-                    Component::write_announce_on_zenoh(&self.uuid, arc_ws).await?;
+                    Component::write_status_on_zenoh(&component, &arc_ws).await?;
+                    Component::write_announce_on_zenoh(&component.uuid, arc_ws).await?;
                     Ok(())
                 },
             _ =>
@@ -198,14 +199,14 @@ impl Component {
     }
 
     pub async fn work(&mut self) -> ZCResult<()> {
-        let mut s = self.status.lock().unwrap();
-        match s.status {
+        let mut component = &mut *(self.component.lock().unwrap());
+        match component.status.status {
             ComponentStatus::ANNOUNCED =>
                 {
-                    let arc_ws = self.zworkspace.as_ref().unwrap();
-                    s.status = ComponentStatus::WORK;
+                    let arc_ws = component.zworkspace.as_ref().unwrap();
+                    component.status.status = ComponentStatus::WORK;
 
-                    Component::write_status_on_zenoh(&s, &arc_ws).await?;
+                    Component::write_status_on_zenoh(&component, &arc_ws).await?;
                     Ok(())
                 },
             _ =>
@@ -225,8 +226,8 @@ impl Component {
     }
 
 
-    async fn write_status_on_zenoh(status : &ComponentInformation, ws : &Workspace) -> ZCResult<()> {
-        let buf = net::RBuf::from(status.write_to_bytes().unwrap());
+    async fn write_status_on_zenoh(status : &InternalComponent, ws : &Workspace) -> ZCResult<()> {
+        let buf = net::RBuf::from(status.status.write_to_bytes().unwrap());
         let size = buf.len();
         let value = Value::Raw(size.try_into().unwrap(), buf);
 
@@ -253,40 +254,38 @@ impl Component {
         }
     }
 
-    async fn write_state_zenoh(state : &Vec<u8>, uuid : &String, ws : &Workspace) -> ZCResult<()> {
-        let state_path = Path::try_from(format!(STATE_PATH_TEMPLATE!(),&uuid)).unwrap();
-        let buf = net::RBuf::from(*state);
-        let size = buf.len();
-        let value = Value::Raw(size.try_into().unwrap(), buf);
-        match ws.put(&state_path, value).await {
-            Err(_) =>
-                //Should log the ZError
-                Err(ZCError::ZConnectorError),
-            Ok(_) => Ok(()),
-        }
+    // async fn write_state_zenoh(state : &Vec<u8>, uuid : &String, ws : &Workspace) -> ZCResult<()> {
+    //     let state_path = Path::try_from(format!(STATE_PATH_TEMPLATE!(),&uuid)).unwrap();
+    //     let buf = net::RBuf::from(*state);
+    //     let size = buf.len();
+    //     let value = Value::Raw(size.try_into().unwrap(), buf);
+    //     match ws.put(&state_path, value).await {
+    //         Err(_) =>
+    //             //Should log the ZError
+    //             Err(ZCError::ZConnectorError),
+    //         Ok(_) => Ok(()),
+    //     }
 
 
-    }
+    // }
 
     pub async fn put_state<T: ?Sized>(&mut self, state : Box<T> ) -> ZCResult<()>
     where
         T : serde::Serialize
     {
+        let mut component = &mut *(self.component.lock().unwrap());
         let s = bincode::serialize(state.as_ref()).unwrap();
-        match self.state.as_ref() {
-            Some(old_state) =>
-                {
-                    let mut old = old_state.lock().unwrap();
-                    let _ = std::mem::replace(&mut *old, s);
-                    Ok(())
-                },
-            None =>
-                {
-                    self.state = Some(Mutex::new(s));
-                    Ok(())
-                },
-        }
+        let _ = std::mem::replace(&mut component.state, s);
+        Ok(())
 
+    }
+
+    pub fn get_routerid(&mut self) -> String {
+        String::from(&self.component.lock().unwrap().status.routerid)
+    }
+
+    pub fn get_status(&mut self) -> ComponentStatus {
+        self.component.lock().unwrap().status.status
     }
 }
 
