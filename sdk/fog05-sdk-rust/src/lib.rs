@@ -21,6 +21,9 @@ use futures::prelude::*;
 use thiserror::Error;
 use std::fmt;
 
+use serde::Serialize;
+use serde::de::DeserializeOwned;
+
 extern crate hex;
 extern crate bincode;
 extern crate serde;
@@ -36,9 +39,9 @@ pub enum ZCError {
 impl fmt::Display for ZCError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ZConnectorError => write!(f, "Connection Error"),
-            TransitionNotAllowed => write!(f, "Transition Not allowed"),
-            UnknownError => write!(f, "Error {}", self)
+            ZCError::ZConnectorError => write!(f, "Connection Error"),
+            ZCError::TransitionNotAllowed => write!(f, "Transition Not allowed"),
+            ZCError::UnknownError(err) => write!(f, "Error {}", err)
         }
      }
 }
@@ -50,38 +53,66 @@ pub type ZCResult<T> = Result<T, ZCError>;
 
 //create a struct with a generic T that implements Serialize, Deserialize, Clone
 pub struct InternalComponent<T> {
+    pub state : T,
+    pub raw_state : Vec<u8>,
+}
+
+impl<T> InternalComponent<T>
+    where
+    T : Serialize+DeserializeOwned+Clone {
+
+    pub async fn new(raw_state : Vec<u8>, state : T ) -> InternalComponent<T> {
+        InternalComponent {
+            state : state,
+            raw_state : raw_state
+        }
+    }
+
+    pub async fn from_raw(raw_state : Vec<u8>) -> InternalComponent<T> {
+        let state = bincode::deserialize::<T>(&raw_state).unwrap();
+
+        InternalComponent {
+            state : state,
+            raw_state : raw_state
+        }
+    }
+
+    pub async fn from_state(state : T) -> InternalComponent<T> {
+        let raw_state = bincode::serialize(&state).unwrap();
+        InternalComponent {
+            state : state,
+            raw_state : raw_state
+        }
+    }
+
+}
+
+pub struct Component<T> {
     zenoh : Option<Zenoh>,
     zworkspace : Option<Arc<Workspace>>,
     uuid : String,
     pub status :ComponentInformation,
-    pub state : Option<T>,
-    raw_state : Vec<u8>,
+    component : Option<InternalComponent<T>>,
 }
 
-// pub struct Component<T> {
-//     component : Mutex<InternalComponent<T>>,
-// }
 
 
-impl<T> InternalComponent<T>
+impl<T> Component<T>
     where
-    T : serde::Serialize+serde::de::DeserializeOwned+Clone {
-    pub async fn new(uuid : String, name: String) -> ZCResult<InternalComponent<T>> {
+    T : Serialize+DeserializeOwned+Clone {
+    pub async fn new(uuid : String, name: String) -> Component<T> {
         let mut status = ComponentInformation::new();
         status.uuid = String::from(&uuid);
         status.name = name;
         status.routerid = String::from("");
         status.status = ComponentStatus::HALTED;
-
-        let mut int = InternalComponent {
+        Component {
             zenoh : None,
             zworkspace : None,
             uuid : String::from(&uuid),
             status : status,
-            state : None,
-            raw_state : Vec::new(),
-        };
-        Ok(int)
+            component : None,
+        }
     }
 
     pub async fn connect(&mut self, locator : &String) -> ZCResult<()> {
@@ -107,7 +138,7 @@ impl<T> InternalComponent<T>
                         self.zworkspace = Some(arc_ws.clone());
                         self.status.routerid = rid;
                         self.status.status = ComponentStatus::CONNECTED;
-                        InternalComponent::write_status_on_zenoh(self).await?;
+                        Component::write_status_on_zenoh(self).await?;
                         Ok(())
                     },
                 }
@@ -119,7 +150,7 @@ impl<T> InternalComponent<T>
         match self.status.status {
             ComponentStatus::CONNECTED => {
                 self.status.status = ComponentStatus::BUILDING;
-                InternalComponent::write_status_on_zenoh(self).await?;
+                Component::write_status_on_zenoh(self).await?;
                 Ok(())
             },
             _ =>
@@ -148,7 +179,10 @@ impl<T> InternalComponent<T>
                     1 => {
                         // We should get the available state from Zenoh and
                         // return it to the user
-                        self.raw_state = InternalComponent::<T>::extract_state(&data[0].value)?;
+                        let rs = Component::<T>::extract_state(&data[0].value)?;
+                        let ic = InternalComponent::from_raw(rs).await;
+                        self.component = Some(ic);
+
                         Ok(())
                     },
                     _ =>
@@ -165,8 +199,8 @@ impl<T> InternalComponent<T>
         match self.status.status {
             ComponentStatus::BUILDING => {
                 self.status.status = ComponentStatus::REGISTERED;
-                InternalComponent::write_status_on_zenoh(self).await?;
-                InternalComponent::write_state_zenoh(self).await?;
+                Component::write_status_on_zenoh(self).await?;
+                Component::write_state_zenoh(self).await?;
                 Ok(())
             },
             _ =>
@@ -180,8 +214,8 @@ impl<T> InternalComponent<T>
             ComponentStatus::REGISTERED => {
                 let arc_ws = self.zworkspace.as_ref().unwrap();
                 self.status.status = ComponentStatus::ANNOUNCED;
-                InternalComponent::write_status_on_zenoh(self).await?;
-                InternalComponent::<T>::write_announce_on_zenoh(&self.uuid, arc_ws).await?;
+                Component::write_status_on_zenoh(self).await?;
+                Component::<T>::write_announce_on_zenoh(&self.uuid, arc_ws).await?;
                 Ok(())
             },
             _ =>
@@ -194,7 +228,7 @@ impl<T> InternalComponent<T>
         match self.status.status {
             ComponentStatus::ANNOUNCED => {
                 self.status.status = ComponentStatus::WORK;
-                InternalComponent::write_status_on_zenoh(self).await?;
+                Component::write_status_on_zenoh(self).await?;
                 Ok(())
             },
             _ =>
@@ -239,42 +273,36 @@ impl<T> InternalComponent<T>
     }
 
     async fn write_state_zenoh(&mut self) -> ZCResult<()> {
-        let state_path = Path::try_from(format!(STATE_PATH_TEMPLATE!(),&self.uuid)).unwrap();
-        let buf = net::RBuf::from(self.raw_state.clone());
-        let size = buf.len();
-        let value = Value::Raw(size.try_into().unwrap(), buf);
-        let arc_ws = self.zworkspace.as_ref().unwrap();
-        match arc_ws.put(&state_path, value).await {
-            Err(_) =>
-                //Should log the ZError
-                Err(ZCError::ZConnectorError),
-            Ok(_) => Ok(()),
+        match &self.component {
+            None => Err(ZCError::ZConnectorError),
+            Some(ic) => {
+                let state_path = Path::try_from(format!(STATE_PATH_TEMPLATE!(),&self.uuid)).unwrap();
+                let buf = net::RBuf::from(ic.raw_state.clone());
+                let size = buf.len();
+                let value = Value::Raw(size.try_into().unwrap(), buf);
+                let arc_ws = self.zworkspace.as_ref().unwrap();
+                match arc_ws.put(&state_path, value).await {
+                    Err(_) =>
+                        //Should log the ZError
+                        Err(ZCError::ZConnectorError),
+                    Ok(_) => Ok(()),
+                }
+            }
         }
     }
 
     pub async fn put_state(&mut self, state : T) -> ZCResult<()> {
-        self.state = Some(state);
-        self.raw_state = bincode::serialize(&self.state).unwrap();
-        println!("W: raw_state: {:?}", self.raw_state);
-        // Let it crash...
-        bincode::deserialize::<T>(&self.raw_state).unwrap();
-        //
+        self.component = Some(InternalComponent::from_state(state).await);
         Ok(())
     }
 
-    pub async fn get_state(&mut self) -> ZCResult<Option<T>> {
-        println!("R: raw_state: {:?}", &self.raw_state);
-        match self.raw_state.len() {
-            0 => Ok(self.state.clone()),
-            _ => {
-                let res = bincode::deserialize(&self.raw_state);
-                match res {
-                    Err(why) => Err(ZCError::UnknownError(format!("Err {:?}", why))),
-                    Ok(s) => {
-                        self.state = Some(s);
-                        InternalComponent::write_status_on_zenoh(self).await?;
-                        Ok(self.state.clone())
-                    },
+    pub async fn get_state(&mut self) -> Option<T> {
+        match &self.component {
+            None => None,
+            Some(ic) => {
+                match ic.raw_state.len() {
+                    0 => None,
+                    _ => Some(ic.state.clone()),
                 }
             },
         }
