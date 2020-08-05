@@ -35,7 +35,7 @@ matrix:
   allow_failures:
     - rust: nightly
 before_install:
-  - apt-get install protobuf-compiler
+  - sudo apt-get install protobuf-compiler
 script:
   - cargo install protobuf-codegen
   - cd sdk/fog05-sdk-rust && make
