@@ -1,17 +1,17 @@
 #![feature(async_closure)]
 pub mod im;
 
-use zenoh::net::Config;
-use zenoh::*;
-use futures::prelude::*;
-use std::convert::TryInto;
-use std::convert::TryFrom;
-use im::data::*;
+// use zenoh::net::Config;
+// use zenoh::*;
+// use futures::prelude::*;
+// use std::convert::TryInto;
+// use std::convert::TryFrom;
+// use im::data::*;
 use std::env;
 
 
-use protobuf::parse_from_bytes;
-use protobuf::Message;
+// use protobuf::parse_from_bytes;
+// use protobuf::Message;
 
 extern crate serde;
 extern crate hex;
@@ -41,7 +41,7 @@ async fn main() {
     let name = String::from(&args[3]);
 
     //creating the decentralized component
-    let mut myself = fos::InternalComponent::<MyState>::new(id, name).await.unwrap();
+    let mut myself = fos::Component::<MyState>::new(id, name).await;
 
 
     //connecting to zenoh
@@ -66,20 +66,23 @@ async fn main() {
     //reading state from zenoh
     myself.read().await.unwrap();
 
-    match myself.get_state().await.unwrap() {
+    match myself.get_state().await {
         None => {
             println!("No state found in Zenoh, starting from new state");
             let m_state = MyState {
                 one : String::from("This is a string"),
-                two : 123_000_000_456,
+                two : 0,
                 three : 123.456
             };
 
             myself.put_state(m_state.clone()).await.unwrap();
         },
-        Some(current_state) =>
-            println!("State found in Zenoh {:?}", current_state,
-        ),
+        Some(mut current_state) => {
+            println!("State found in Zenoh!!");
+            // Updating the state just for testing
+            current_state.two += 1;
+            myself.put_state(current_state.clone()).await.unwrap();
+        }
     }
 
 
