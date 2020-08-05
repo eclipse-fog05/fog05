@@ -1,6 +1,6 @@
 [package]
 name = "fos"
-version = "0.1.0"
+version = "0.3.0"
 authors = ["gabrik <gabriele.baldoni@gmail.com>"]
 edition = "2018"
 
@@ -14,8 +14,9 @@ zenoh = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "rust-mas
 async-trait = "0.1.36"
 futures = "0.3.5"
 hex = "0.4.2"
+# for errors
+thiserror = "1.0"
 # for serialization
-#protobuf = {git = "https://github.com/stepancheg/rust-protobuf", branch = "master"}
 serde_derive = "1.0.55"
 serde = { version = "1.0.55", features = ["derive"] }
 serde_yaml = "0.8.13"

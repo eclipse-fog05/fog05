@@ -28,9 +28,11 @@
 
 language: rust
 rust:
-  - stable
-  - beta
+  # - stable
+  # - beta
   - nightly
 matrix:
   allow_failures:
     - rust: nightly
+script:
+  - cd sdk/fog05-sdk-rust && cargo build --verbose && cargo test --verbose
