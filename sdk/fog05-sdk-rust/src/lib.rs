@@ -125,10 +125,7 @@ impl<T> InternalComponent<T>
             _ =>
                 //Transition is allowed only between connected and building
                 Err(ZCError::TransitionNotAllowed),
-
         }
-
-
     }
 
     pub async fn read(&mut self) -> ZCResult<()> {
@@ -253,8 +250,6 @@ impl<T> InternalComponent<T>
                 Err(ZCError::ZConnectorError),
             Ok(_) => Ok(()),
         }
-
-
     }
 
     pub async fn put_state(&mut self, state : T) -> ZCResult<()> {
@@ -265,7 +260,6 @@ impl<T> InternalComponent<T>
         bincode::deserialize::<T>(&self.raw_state).unwrap();
         //
         Ok(())
-
     }
 
     pub async fn get_state(&mut self) -> ZCResult<Option<T>> {
