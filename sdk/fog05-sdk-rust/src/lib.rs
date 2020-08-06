@@ -237,6 +237,74 @@ impl<T> Component<T>
         }
     }
 
+    pub async fn unwork(&mut self) -> ZCResult<()> {
+        match self.status.status {
+            ComponentStatus::WORK => {
+                self.status.status = ComponentStatus::UNWORK;
+                Component::write_status_on_zenoh(self).await?;
+                Ok(())
+            },
+            _ =>
+                Err(ZCError::TransitionNotAllowed),
+        }
+    }
+
+    pub async fn unannounce(&mut self) -> ZCResult<()> {
+        match self.status.status {
+            ComponentStatus::UNWORK => {
+                self.status.status = ComponentStatus::UNANNOUNCED;
+                Component::write_status_on_zenoh(self).await?;
+                Component::<T>::remove_announce_from_zenoh(&self.uuid, self.zworkspace.as_ref().unwrap()).await?;
+                Ok(())
+            },
+            _ =>
+                Err(ZCError::TransitionNotAllowed),
+        }
+    }
+
+    pub async fn unregister(&mut self) -> ZCResult<()> {
+        match self.status.status {
+            ComponentStatus::UNANNOUNCED => {
+                self.status.status = ComponentStatus::UNREGISTERED;
+                Component::write_status_on_zenoh(self).await?;
+                Ok(())
+            },
+            _ =>
+                Err(ZCError::TransitionNotAllowed),
+        }
+    }
+
+    pub async fn disconnect(&mut self) -> ZCResult<()> {
+        match self.status.status {
+            ComponentStatus::UNREGISTERED => {
+                self.status.status = ComponentStatus::DISCONNECTED;
+                Component::write_status_on_zenoh(self).await?;
+                Component::remove_status_from_zenoh(self).await?;
+                Ok(())
+            },
+            _ =>
+                //Transition is allowed only between announced and working
+                Err(ZCError::TransitionNotAllowed),
+        }
+    }
+
+    pub async fn stop(&mut self) -> ZCResult<()> {
+        match self.status.status {
+            ComponentStatus::DISCONNECTED => {
+                self.status.status = ComponentStatus::HALTED;
+                self.zenoh.as_ref().unwrap().close().await.unwrap();
+                self.zworkspace = None;
+                self.zenoh = None;
+                self.status.routerid = String::from("");
+
+                Ok(())
+            },
+            _ =>
+                //Transition is allowed only between announced and working
+                Err(ZCError::TransitionNotAllowed),
+        }
+    }
+
     fn extract_state(value : &Value) -> Result<Vec<u8>, ZCError> {
         match value {
             Value::Raw(_, buf) => Ok(buf.to_vec()),
@@ -254,6 +322,27 @@ impl<T> Component<T>
         let value = Value::Raw(size.try_into().unwrap(), buf);
         let info_path = Path::try_from(format!(INFO_PATH_TEMPLATE!(),&self.status.uuid)).unwrap();
         match arc_ws.put(&info_path, value).await {
+            Err(_) =>
+                //Should log the ZError
+                Err(ZCError::ZConnectorError),
+            Ok(_) => Ok(()),
+        }
+    }
+
+    async fn remove_status_from_zenoh(&self) -> ZCResult<()> {
+        let arc_ws = self.zworkspace.as_ref().unwrap();
+        let info_path = Path::try_from(format!(INFO_PATH_TEMPLATE!(),&self.status.uuid)).unwrap();
+        match arc_ws.delete(&info_path).await {
+            Err(_) =>
+                //Should log the ZError
+                Err(ZCError::ZConnectorError),
+            Ok(_) => Ok(()),
+        }
+    }
+
+    async fn remove_announce_from_zenoh(uuid : &String, ws : &Workspace) -> ZCResult<()> {
+        let info_path = Path::try_from(format!(ADV_PATH!(),&uuid)).unwrap();
+        match ws.delete(&info_path).await {
             Err(_) =>
                 //Should log the ZError
                 Err(ZCError::ZConnectorError),
@@ -289,6 +378,10 @@ impl<T> Component<T>
                 }
             }
         }
+    }
+
+    pub async fn sync_state(&mut self) -> ZCResult<()> {
+        self.write_state_zenoh().await
     }
 
     pub async fn put_state(&mut self, state : T) -> ZCResult<()> {
