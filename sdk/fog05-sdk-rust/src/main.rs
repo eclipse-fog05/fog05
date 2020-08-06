@@ -9,6 +9,8 @@ pub mod im;
 // use im::data::*;
 use std::env;
 
+use std::time::Duration;
+use async_std::task;
 
 // use protobuf::parse_from_bytes;
 // use protobuf::Message;
@@ -79,9 +81,9 @@ async fn main() {
         },
         Some(mut current_state) => {
             println!("State found in Zenoh!!");
-            // Updating the state just for testing
-            current_state.two += 1;
-            myself.put_state(current_state.clone()).await.unwrap();
+            // // Updating the state just for testing
+            // current_state.two += 1;
+            // myself.put_state(current_state.clone()).await.unwrap();
         }
     }
 
@@ -97,9 +99,39 @@ async fn main() {
     }
 
 
+    myself.announce().await.unwrap();
+    println!("Component is announced to Zenoh");
+
+    myself.work().await.unwrap();
+    println!("Component is Working");
+
+
+    for _ in 0..10 {
+        let mut s = myself.get_state().await.unwrap();
+        s.two += 1;
+        myself.put_state(s.clone()).await.unwrap();
+        myself.sync_state().await.unwrap();
+        task::sleep(Duration::from_millis(250)).await;
+    }
 
 
 
+    myself.unwork().await.unwrap();
+    println!("Component is Unworking");
+
+    myself.unannounce().await.unwrap();
+    println!("Component is Unannounced on Zenoh");
+
+    myself.unregister().await.unwrap();
+    println!("Component is Unregistered on Zenoh");
+
+
+
+    myself.disconnect().await.unwrap();
+    println!("Component is disconnected from Zenoh");
+
+    myself.stop().await.unwrap();
+    println!("Component is Stopped");
 
 
 }
