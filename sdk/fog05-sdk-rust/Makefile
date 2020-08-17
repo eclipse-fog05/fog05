@@ -4,3 +4,4 @@ all:
 
 clean:
 	cargo clean
+	rm src/im/data.rs

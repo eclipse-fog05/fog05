@@ -12,7 +12,6 @@
 *********************************************************************************/
 
 #![feature(async_closure)]
-pub mod im;
 
 // use zenoh::net::Config;
 // use zenoh::*;
@@ -64,7 +63,7 @@ async fn main() {
         Err(why) => panic!("Error when connecting component {:?}", why),
         Ok(_) => {
             println!("Component is connected to Zenoh");
-            println!("Connected to Zenoh Router: {} Component Status: {:?}",  myself.get_routerid().await, myself.get_status().await);
+            println!("Connected to Zenoh Router: {} Zenoh PeerId: {} Component Status: {:?}",  myself.get_routerid().await, myself.get_peerid().await, myself.get_status().await);
         },
 
     }

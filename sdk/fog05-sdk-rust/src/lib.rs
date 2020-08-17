@@ -118,6 +118,7 @@ impl<T> Component<T>
         status.uuid = String::from(&uuid);
         status.name = name;
         status.routerid = String::from("");
+        status.peerid = String::from("");
         status.status = ComponentStatus::HALTED;
         Component {
             zenoh : None,
@@ -145,11 +146,13 @@ impl<T> Component<T>
                         Err(ZCError::ZConnectorError),
                     Ok(zworkspace) => {
                         let zinfo = zsession.info().await;
-                        let rid = hex::encode(&(zinfo.iter().find(|x| x.0 == 2 ).unwrap().1));
+                        let rid = hex::encode(&(zinfo.iter().find(|x| x.0 == zenoh::net::properties::ZN_INFO_ROUTER_PID_KEY ).unwrap().1));
+                        let pid = hex::encode(&(zinfo.iter().find(|x| x.0 == zenoh::net::properties::ZN_INFO_PID_KEY).unwrap().1));
                         self.zenoh = Some(zclient);
                         let arc_ws = Arc::new(zworkspace);
                         self.zworkspace = Some(arc_ws.clone());
                         self.status.routerid = rid;
+                        self.status.peerid = pid;
                         self.status.status = ComponentStatus::CONNECTED;
                         Component::write_status_on_zenoh(self).await?;
                         Ok(())
@@ -416,6 +419,10 @@ impl<T> Component<T>
 
     pub async fn get_routerid(&self) -> String {
         String::from(&self.status.routerid)
+    }
+
+    pub async fn get_peerid(&self) -> String {
+        String::from(&self.status.peerid)
     }
 
     pub async fn get_status(&self) -> ComponentStatus {

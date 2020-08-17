@@ -18,6 +18,7 @@ message ComponentAdvertisement {
     string uuid = 1;
     string name = 2;
     string routerid = 3;
+    string peerid = 4;
 }
 
 enum ComponentStatus {
@@ -37,7 +38,8 @@ message ComponentInformation {
     string uuid = 1;
     string name = 2;
     string routerid = 3;
-    ComponentStatus status = 4;
+    string peerid = 4;
+    ComponentStatus status = 5;
 }
 
 message ComponentState {
