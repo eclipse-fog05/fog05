@@ -75,7 +75,14 @@ cd zenohd
 make
 cd ../..
 
-echo "[BUILD] Building Fog05"
+echo "[BUILD] Building fog05"
 # build fog05
 git submodule update --init --recursive
 make
+
+
+echo "[BUILD] fog05 FOrcE"
+make force
+
+echo "[BUILD] fog05 fosctl"
+make fosctl
