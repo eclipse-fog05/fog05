@@ -46,6 +46,12 @@ api-python:
 agent:
 	make -C src/agent
 
+force:
+	make -C src/force
+
+fosctl:
+	make -C src/utils/fosctl
+
 install: sdk-python api-python
 
 
@@ -102,3 +108,5 @@ uninstall:
 
 clean:
 	make -C src/agent clean
+	make -C src/force clean
+	make -C src/utils/fosctl clean
