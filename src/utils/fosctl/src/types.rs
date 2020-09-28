@@ -21,7 +21,7 @@ fn default_zero() -> u8 {
 pub struct Job {
     pub job_id: String,
     pub original_sender: String,
-    pub job_kind: String,
+    pub kind: String,
     pub body: String,
     pub status: String,
 }
@@ -268,7 +268,8 @@ pub struct FDUDescriptor {
 	pub connection_points : Vec<ConnectionPointDescriptor>,
     pub configuration : Option<Configuration>,
 	pub migration_kind : MigrationKind,
-	pub scaling_policies : Option<Vec<ScalingPolicy>>,
+	pub replicas : Option<u8>,
+	//pub scaling_policies : Option<Vec<ScalingPolicy>>,
 	pub depends_on : Vec<String>
 }
 

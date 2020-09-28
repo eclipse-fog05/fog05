@@ -38,27 +38,32 @@ arg_enum! {
 #[derive(StructOpt,Debug)]
 enum AddKind {
     Entity {
-        #[structopt(parse(from_os_str)) ]
+        #[structopt(parse(from_os_str),name = "Entity descriptor path")]
         descriptor_path: std::path::PathBuf,
     },
     FIM {
+        #[structopt(name = "FIM UUID (v4)")]
         fim_id: Uuid,
+        #[structopt(name = "Zenoh Locator for the FIM")]
         locator: String,
     },
     Cloud {
+        #[structopt(name = "K8s UUID (v4)")]
         cloud_id: Uuid,
-        #[structopt(parse(from_os_str)) ]
+        #[structopt(parse(from_os_str), name = "K8s configuration path")]
         cloud_conf_path: std::path::PathBuf,
-        #[structopt(parse(from_os_str)) ]
+        #[structopt(parse(from_os_str), name = "CA file Path")]
         cloud_ca: std::path::PathBuf,
-        #[structopt(parse(from_os_str)) ]
+        #[structopt(parse(from_os_str), name = "Certificate file Path") ]
         cloud_cert: std::path::PathBuf,
-        #[structopt(parse(from_os_str)) ]
+        #[structopt(parse(from_os_str), name = "Key file Path")]
         cloud_key: std::path::PathBuf,
     },
     Instance {
         entity_id: Uuid,
+        #[structopt(short = "f", long = "fim-id", name = "FIM UUID")]
         fim_id: Option<Uuid>,
+        #[structopt(short = "c", long = "cloud-id", name = "Cloud UUID")]
         cloud_id: Option<Uuid>,
     },
 }

@@ -944,13 +944,10 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 
 					instances := []string{}
 					minReplicas := uint8(1)
-					if fdu.ScalingPolicies != nil {
-						for _, sp := range *fdu.ScalingPolicies {
-							if sp.MinReplicas > minReplicas {
-								minReplicas = sp.MinReplicas
-							}
-						}
+					if fdu.Replicas != nil {
+						minReplicas = *fdu.Replicas
 					}
+
 					f.logger.Info(fmt.Sprintf("JobID: %s EntityID: %s FDU: %s Needed Replicas: %d", qJob.Job.JobID, info.UUID, *fdu.UUID, minReplicas))
 
 					for i := uint8(0); i < minReplicas; i++ {
@@ -1346,13 +1343,16 @@ func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
 						return
 					}
 					minReplicas := uint8(1)
-					if fdu.ScalingPolicies != nil {
-						for _, sp := range *fdu.ScalingPolicies {
-							if sp.MinReplicas > minReplicas {
-								minReplicas = sp.MinReplicas
-							}
-						}
+					if fdu.Replicas != nil {
+						minReplicas = *fdu.Replicas
 					}
+					// if fdu.ScalingPolicies != nil {
+					// 	for _, sp := range *fdu.ScalingPolicies {
+					// 		if sp.MinReplicas > minReplicas {
+					// 			minReplicas = sp.MinReplicas
+					// 		}
+					// 	}
+					// }
 
 					instances := []string{}
 					apiInstances, err := fimapi.FDU.InstanceList(*fdu.UUID, nil)
