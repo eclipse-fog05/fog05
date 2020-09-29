@@ -11,6 +11,7 @@ use exitfailure::ExitFailure;
 use std::time::Duration;
 use uuid::Uuid;
 use prettytable::{Table, Row, Cell};
+use std::io::{Error, ErrorKind};
 
 mod types;
 
@@ -195,11 +196,24 @@ fn main() -> Result<(), ExitFailure> {
                     let res = client.post(url.as_str()).body(js_body).send().with_context(|_| format!("cold not contact `{:?}`", url))?;
                     let resp = serde_json::from_str::<types::ReplyNewJobMessage>(&res.text().unwrap()).with_context(|_| format!("Unable to parse server reply"))?;
 
-                    let url = format!("http://{}:9191/system/00000000-0000-0000-0000-000000000000/tenant/00000000-0000-0000-0000-000000000000/job/{}", force_host, resp.job_id);
-                    let res = client.get(url.as_str()).send().with_context(|_| format!("cold not contact `{:?}`", url))?;
-                    let resp = serde_json::from_str::<types::Job>(&res.text().unwrap()).with_context(|_| format!("Unable to parse server reply"))?;
-                    let record = serde_json::from_str::<types::EntityRecord>(&resp.body).with_context(|_| format!("Unable to parse server reply"))?;
-                    println!("{}",record.uuid);
+
+                    let mut flag = false;
+                    while !flag {
+                        let url = format!("http://{}:9191/system/00000000-0000-0000-0000-000000000000/tenant/00000000-0000-0000-0000-000000000000/job/{}", force_host, resp.job_id);
+                        let res = client.get(url.as_str()).send().with_context(|_| format!("cold not contact `{:?}`", url))?;
+                        let resp = serde_json::from_str::<types::Job>(&res.text().unwrap()).with_context(|_| format!("Unable to parse server reply"))?;
+                        if resp.status == "failed" {
+
+                           return Err(ExitFailure::from(Error::new(ErrorKind::InvalidData, "Add Instance failed")));
+                        }
+                        if let Ok(record) = serde_json::from_str::<types::EntityRecord>(&resp.body) {
+                            flag = true;
+                            println!("{}",record.uuid);
+                        }
+                    }
+
+                    //let record = serde_json::from_str::<types::EntityRecord>(&resp.body).with_context(|_| format!("Unable to parse server reply"))?;
+
                     Ok(())
                 },
             }
@@ -254,25 +268,51 @@ fn main() -> Result<(), ExitFailure> {
                     }
                 },
                 GetKind::FIM{id} => {
+                    let mut table = Table::new();
                     match id {
                         Some(fim_id) => {
-                            println!("FIM Get not implemented");
+                            let url = format!("http://{}:9191/system/00000000-0000-0000-0000-000000000000/tenant/00000000-0000-0000-0000-000000000000/fim/{}",force_host, fim_id);
+                            let res = client.get(url.as_str()).send().with_context(|_| format!("cold not contact `{:?}`", url))?;
+                            let resp = serde_json::from_str::<types::GetFIMResponse>(&res.text().unwrap()).with_context(|_| format!("Unable to parse server reply"))?;
+                            table.add_row(row!["UUID","Locator"]);
+                            table.add_row(row![resp.fim.uuid, resp.fim.locator]);
+                            table.printstd();
                             Ok(())
                         },
                         None => {
-                            println!("FIM Get not implemented");
+                            let url = format!("http://{}:9191/system/00000000-0000-0000-0000-000000000000/tenant/00000000-0000-0000-0000-000000000000/fim",force_host);
+                            let res = client.get(url.as_str()).send().with_context(|_| format!("cold not contact `{:?}`", url))?;
+                            let resp = serde_json::from_str::<types::GetFIMsResponse>(&res.text().unwrap()).with_context(|_| format!("Unable to parse server reply"))?;
+                            table.add_row(row!["UUID"]);
+                            for f in resp.fims {
+                                table.add_row(row![f]);
+                            }
+                            table.printstd();
                             Ok(())
                         }
                     }
                 },
                 GetKind::Cloud{id} => {
+                    let mut table = Table::new();
                     match id {
                         Some(cloud_id) => {
-                            println!("Cloud Get not implemented");
+                            let url = format!("http://{}:9191/system/00000000-0000-0000-0000-000000000000/tenant/00000000-0000-0000-0000-000000000000/cloud/{}",force_host, cloud_id);
+                            let res = client.get(url.as_str()).send().with_context(|_| format!("cold not contact `{:?}`", url))?;
+                            let resp = serde_json::from_str::<types::GetCloudResponse>(&res.text().unwrap()).with_context(|_| format!("Unable to parse server reply"))?;
+                            table.add_row(row!["UUID","Config"]);
+                            table.add_row(row![resp.cloud.uuid, resp.cloud.config]);
+                            table.printstd();
                             Ok(())
                         },
                         None => {
-                            println!("Cloud Get not implemented");
+                            let url = format!("http://{}:9191/system/00000000-0000-0000-0000-000000000000/tenant/00000000-0000-0000-0000-000000000000/cloud",force_host);
+                            let res = client.get(url.as_str()).send().with_context(|_| format!("cold not contact `{:?}`", url))?;
+                            let resp = serde_json::from_str::<types::GetCloudsResponse>(&res.text().unwrap()).with_context(|_| format!("Unable to parse server reply"))?;
+                            table.add_row(row!["UUID"]);
+                            for s in resp.clouds {
+                                table.add_row(row![s]);
+                            }
+                            table.printstd();
                             Ok(())
                         }
                     }
@@ -285,8 +325,18 @@ fn main() -> Result<(), ExitFailure> {
                             let resp = serde_json::from_str::<types::GetInstanceResponse>(&res.text().unwrap()).with_context(|_| format!("Unable to parse server reply"))?;
                             let desc = resp.instance;
                             let mut table = Table::new();
-                            table.add_row(row!["UUID","ID", "Status"]);
-                            table.add_row(row![desc.uuid.to_string(), desc.id.to_string(), desc.status]);
+                            table.add_row(row!["UUID","ID", "Status", "FIM", "Cloud"]);
+
+                            let fim_id = match desc.fim_id {
+                                Some(id) => format!("{}",id),
+                                None => String::from(""),
+                            };
+                            let cloud_id = match desc.cloud_id {
+                                Some(id) => format!("{}",id),
+                                None => String::from(""),
+                            };
+
+                            table.add_row(row![desc.uuid.to_string(), desc.id.to_string(), desc.status, fim_id, cloud_id]);
                             table.printstd();
                             Ok(())
                         },
@@ -340,9 +390,15 @@ fn main() -> Result<(), ExitFailure> {
                     Ok(())
                 },
                 DeleteKind::FIM{id} => {
+                    let url = format!("http://{}:9191/system/00000000-0000-0000-0000-000000000000/tenant/00000000-0000-0000-0000-000000000000/fim/{}", force_host, id);
+                    let res = client.delete(url.as_str()).send().with_context(|_| format!("cold not contact `{:?}`", url))?;
+                    println!("{}",id);
                     Ok(())
                 },
                 DeleteKind::Cloud{id} => {
+                    let url = format!("http://{}:9191/system/00000000-0000-0000-0000-000000000000/tenant/00000000-0000-0000-0000-000000000000/cloud/{}", force_host, id);
+                    let res = client.delete(url.as_str()).send().with_context(|_| format!("cold not contact `{:?}`", url))?;
+                    println!("{}",id);
                     Ok(())
                 },
                 DeleteKind::Instance{id} => {

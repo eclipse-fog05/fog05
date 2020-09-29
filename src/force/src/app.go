@@ -45,6 +45,10 @@ func NewApp(conf Configuration) (*App, error) {
 }
 
 func (a *App) Initialize() {
+	err := a.force.Init()
+	if a.check(err) {
+		panic(err)
+	}
 	a.initializeRoutes()
 	a.force.Start()
 }
@@ -77,10 +81,12 @@ func (a *App) initializeRoutes() {
 	a.router.HandleFunc("/system/{sys-id:"+UUIDREGEX+"}/tenant/{tenant-id:"+UUIDREGEX+"}/fim", a.addFIM).Methods("POST")
 	a.router.HandleFunc("/system/{sys-id:"+UUIDREGEX+"}/tenant/{tenant-id:"+UUIDREGEX+"}/fim", a.getFIMs).Methods("GET")
 	a.router.HandleFunc("/system/{sys-id:"+UUIDREGEX+"}/tenant/{tenant-id:"+UUIDREGEX+"}/fim/{id:"+UUIDREGEX+"}", a.deleteFIM).Methods("DELETE")
+	a.router.HandleFunc("/system/{sys-id:"+UUIDREGEX+"}/tenant/{tenant-id:"+UUIDREGEX+"}/fim/{id:"+UUIDREGEX+"}", a.getFIM).Methods("GET")
 
 	a.router.HandleFunc("/system/{sys-id:"+UUIDREGEX+"}/tenant/{tenant-id:"+UUIDREGEX+"}/cloud", a.addCloud).Methods("POST")
 	a.router.HandleFunc("/system/{sys-id:"+UUIDREGEX+"}/tenant/{tenant-id:"+UUIDREGEX+"}/cloud", a.getClouds).Methods("GET")
 	a.router.HandleFunc("/system/{sys-id:"+UUIDREGEX+"}/tenant/{tenant-id:"+UUIDREGEX+"}/cloud/{id:"+UUIDREGEX+"}", a.deleteCloud).Methods("DELETE")
+	a.router.HandleFunc("/system/{sys-id:"+UUIDREGEX+"}/tenant/{tenant-id:"+UUIDREGEX+"}/cloud/{id:"+UUIDREGEX+"}", a.getCloud).Methods("GET")
 }
 
 func (a *App) addSystem(w http.ResponseWriter, r *http.Request) {
@@ -202,6 +208,37 @@ func (a *App) addFIM(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func (a *App) getFIM(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	a.logger.Info(fmt.Sprintf("Called getFIM with  %+v", vars))
+	if sysid, exists := vars["sys-id"]; exists {
+		if tenantid, exists := vars["tenant-id"]; exists {
+			if fimid, exists := vars["id"]; exists {
+				fim, err := a.force.GetFIM(sysid, tenantid, fimid)
+				if a.check(err) {
+					respondWithError(w, http.StatusBadRequest, err.Error())
+					return
+				}
+				resp := map[string]interface{}{
+					"system": sysid,
+					"tenant": tenantid,
+					"fim":    fim,
+				}
+				respondWithJSON(w, http.StatusOK, resp)
+				return
+				respondWithOk(w, http.StatusOK)
+				return
+			}
+			respondWithError(w, http.StatusBadRequest, "missing id parameter")
+			return
+		}
+		respondWithError(w, http.StatusBadRequest, "missing tenant-id parameter")
+		return
+	}
+	respondWithError(w, http.StatusBadRequest, "missing sys-id parameter")
+	return
+}
+
 func (a *App) getFIMs(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	a.logger.Info("Called getFIMs")
@@ -310,6 +347,35 @@ func (a *App) getClouds(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondWithError(w, http.StatusBadRequest, "missing parameter")
+	return
+}
+
+func (a *App) getCloud(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	a.logger.Info(fmt.Sprintf("Called getCloud with  %+v", vars))
+	if sysid, exists := vars["sys-id"]; exists {
+		if tenantid, exists := vars["tenant-id"]; exists {
+			if fimid, exists := vars["id"]; exists {
+				cloud, err := a.force.GetCloud(sysid, tenantid, fimid)
+				if a.check(err) {
+					respondWithError(w, http.StatusBadRequest, err.Error())
+					return
+				}
+				resp := map[string]interface{}{
+					"system": sysid,
+					"tenant": tenantid,
+					"cloud":  cloud,
+				}
+				respondWithJSON(w, http.StatusOK, resp)
+				return
+			}
+			respondWithError(w, http.StatusBadRequest, "missing id parameter")
+			return
+		}
+		respondWithError(w, http.StatusBadRequest, "missing tenant-id parameter")
+		return
+	}
+	respondWithError(w, http.StatusBadRequest, "missing sys-id parameter")
 	return
 }
 

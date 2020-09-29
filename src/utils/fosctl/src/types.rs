@@ -94,16 +94,43 @@ pub struct GetFIMsResponse {
 	pub fims : Vec<Uuid>,
 }
 
+#[derive(Serialize,Deserialize,Debug, Clone)]
+pub struct GetFIMResponse {
+	pub system: Uuid,
+    pub tenant : Uuid,
+	pub fim: FIMInfo,
+}
+
+#[derive(Serialize,Deserialize,Debug, Clone)]
+pub struct GetCloudResponse {
+	pub system: Uuid,
+    pub tenant : Uuid,
+	pub cloud: CloudInfo,
+}
+
+#[derive(Serialize,Deserialize,Debug, Clone)]
+pub struct FIMInfo {
+	pub uuid : Uuid,
+	pub locator : String,
+}
+
+
+#[derive(Serialize,Deserialize,Debug, Clone)]
+pub struct CloudInfo {
+	pub uuid : Uuid,
+	pub config : String, //the config is base64
+}
+
 // Descriptors
 #[derive(Serialize,Deserialize,Debug, Clone)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "UPPERCASE")]
 pub enum MigrationKind {
 	LIVE,
 	COLD,
 }
 
 #[derive(Serialize,Deserialize,Debug, Clone)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "UPPERCASE")]
 pub enum ConfigurationKind {
 	SCRIPT,
 	ENV,
@@ -111,7 +138,7 @@ pub enum ConfigurationKind {
 }
 
 #[derive(Serialize,Deserialize,Debug, Clone)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "UPPERCASE")]
 pub enum InterfaceKind {
 	VIRTUAL,
 	WLAN,
@@ -119,7 +146,7 @@ pub enum InterfaceKind {
 }
 
 #[derive(Serialize,Deserialize,Debug, Clone, Display)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "UPPERCASE")]
 pub enum VirtualInterfaceKind {
 	PARAVIRT,
 	PCI_PASSTHROUGH,
@@ -133,7 +160,7 @@ pub enum VirtualInterfaceKind {
 }
 
 #[derive(Serialize,Deserialize,Debug, Clone, Display)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "UPPERCASE")]
 pub enum StorageKind {
 	BLOCK, //virtual disk
 	//FILE, //NFS kind of, can be Zenoh+file backend
@@ -141,7 +168,7 @@ pub enum StorageKind {
 }
 
 #[derive(Serialize,Deserialize,Debug, Clone)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "UPPERCASE")]
 pub enum ScalingMetric {
 	CPU,
 	DISK,
@@ -352,5 +379,7 @@ pub struct EntityRecord {
 	pub id : String, //ref a EntityDescriptor.UUID
 	pub status : EntityStatus,
 	pub fdus : Vec<Uuid>,
-	pub virtual_links : Vec<Uuid>
+	pub virtual_links : Vec<Uuid>,
+	pub fim_id : Option<Uuid>,
+	pub cloud_id : Option<Uuid>
 }

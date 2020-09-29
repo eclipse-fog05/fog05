@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"runtime"
+	"sync"
 	"time"
 
 	fog05 "github.com/eclipse-fog05/sdk-go/fog05sdk"
@@ -31,6 +32,20 @@ import (
 )
 
 const DEFAULTUUID string = "00000000-0000-0000-0000-000000000000"
+
+const (
+	ONBOARDING string = "ONBOARDING"
+	ONBOARDED  string = "ONBOARDED"
+	STARTING   string = "STARTING"
+	RUNNING    string = "RUNNING"
+	STOPPING   string = "STOPPING"
+	STOPPED    string = "STOPPED"
+	OFFLOADING string = "OFFLOADING"
+	OFFLOADED  string = "OFFLOADED"
+	INVALID    string = "INVALID"
+	ERROR      string = "ERROR"
+	RECOVERING string = "RECOVERING"
+)
 
 func getFrame(skipFrames int) runtime.Frame {
 	// We need the frame at index skipFrames+2, since we never want runtime.Callers and getFrame
@@ -73,28 +88,38 @@ type EntityActionBody struct {
 	CloudID *string `json:"cloud_id"`
 }
 
-type FOrcE struct {
+type OrchestratorState struct {
 	connectors map[string]map[string]*fog05.FOrcEZConnector
-	sigs       chan os.Signal
-	done       chan bool
-	jobQueue   chan EnqueuedJob
-	zlocator   string
-	logger     *log.Logger
 	fims       map[string]map[string]map[string]*fim.FIMAPI
 	clouds     map[string]map[string]map[string]*kubernetes.Clientset
+	rwLock     sync.RWMutex
+}
+
+type FOrcE struct {
+	sigs     chan os.Signal
+	done     chan bool
+	state    *OrchestratorState
+	jobQueue chan EnqueuedJob
+	zlocator string
+	logger   *log.Logger
 }
 
 //NewFOrcE ...
 func NewFOrcE(locator string) (*FOrcE, error) {
-	f := &FOrcE{
+
+	state := &OrchestratorState{
 		connectors: map[string]map[string]*fog05.FOrcEZConnector{},
 		fims:       map[string]map[string]map[string]*fim.FIMAPI{},
 		clouds:     map[string]map[string]map[string]*kubernetes.Clientset{},
-		sigs:       make(chan os.Signal, 1),
-		done:       make(chan bool, 1),
-		jobQueue:   make(chan EnqueuedJob, 1024),
-		zlocator:   locator,
-		logger:     log.New(),
+	}
+
+	f := &FOrcE{
+		state:    state,
+		sigs:     make(chan os.Signal, 1),
+		done:     make(chan bool, 1),
+		jobQueue: make(chan EnqueuedJob, 1024),
+		zlocator: locator,
+		logger:   log.New(),
 	}
 	//adding by default SysID 0 Tenant 0
 	err := f.AddSystem(DEFAULTUUID)
@@ -103,6 +128,81 @@ func NewFOrcE(locator string) (*FOrcE, error) {
 	}
 
 	return f, nil
+}
+
+//Init Initializes the FOrcE orchestartor using information stored in Zenoh
+func (f *FOrcE) Init() error {
+	f.logger.Info("Initializing Orchestartor from Zenoh")
+	//f.state.rwLock.Lock()
+	//defer f.state.rwLock.Unlock()
+	c, _ := f.state.connectors[DEFAULTUUID][DEFAULTUUID]
+	zFIMs, _ := c.Orchestrator.GetAllFIMsInfo()
+	// if f.check(err) {
+	// 	return err
+	// }
+	for _, fimInfo := range zFIMs {
+		f.logger.Info(fmt.Sprintf("Initializing Adding FIM: %s", fimInfo.UUID))
+		err := f.AddFIM(DEFAULTUUID, DEFAULTUUID, fimInfo.UUID, fimInfo.Locator)
+		if f.check(err) {
+			return err
+		}
+	}
+	zClouds, _ := c.Orchestrator.GetAllCloudsInfo()
+	// if f.check(err) {
+	// 	return err
+	// }
+	for _, cloudInfo := range zClouds {
+		f.logger.Info(fmt.Sprintf("Initializing Adding Cloud: %s", cloudInfo.UUID))
+		kubeConfig := &rest.Config{}
+		err := json.Unmarshal([]byte(cloudInfo.Config), kubeConfig)
+
+		err = f.AddCloud(DEFAULTUUID, DEFAULTUUID, cloudInfo.UUID, cloudInfo.Config, kubeConfig.CAData, kubeConfig.KeyData, kubeConfig.CertData)
+		if f.check(err) {
+			return err
+		}
+	}
+
+	instances, _ := c.Orchestrator.GetAllEntityRecordsInfo("*")
+	// if f.check(err) {
+	// 	return err
+	// }
+	for _, instance := range instances {
+		f.logger.Info(fmt.Sprintf("Initializing Adding Monitoring goroutine for: %s", instance.UUID))
+		go f.monitoringJobsSpawner(c, DEFAULTUUID, DEFAULTUUID, instance.UUID, instance.FIMID, instance.CloudID)
+	}
+
+	jobs, _ := c.Orchestrator.GetAllJobsInfo()
+	// if f.check(err) {
+	// 	return err
+	// }
+	for _, job := range jobs {
+
+		switch job.Status {
+		case "queued":
+			f.logger.Info(fmt.Sprintf("Initializing Adding Job: %s", job.JobID))
+			qJob := EnqueuedJob{
+				Job:      job,
+				systemid: DEFAULTUUID,
+				tenantid: DEFAULTUUID,
+			}
+			f.jobQueue <- qJob
+		// case RUNNING:
+		// 	job.Status = "queued"
+		// 	f.logger.Info(fmt.Sprintf("Initializing Adding Job: %s that was running...", job.JobID))
+		// 	qJob := EnqueuedJob{
+		// 		Job:      job,
+		// 		systemid: DEFAULTUUID,
+		// 		tenantid: DEFAULTUUID,
+		// 	}
+		// 	f.jobQueue <- qJob
+		default:
+			f.logger.Info(fmt.Sprintf("Initializing not adding Job: %s because status is %s", job.JobID, job.Status))
+		}
+	}
+
+	f.logger.Info("Initialization done! Orchestrator is ready")
+	return nil
+
 }
 
 // Start starts the FOrcE orchestrator
@@ -121,7 +221,11 @@ func (f *FOrcE) check(err error) bool {
 
 //AddSystem adds a system with the default tenant 0
 func (f *FOrcE) AddSystem(sysid string) error {
-	if _, exists := f.connectors[sysid]; exists {
+
+	f.state.rwLock.Lock()
+	defer f.state.rwLock.Unlock()
+
+	if _, exists := f.state.connectors[sysid]; exists {
 		return fmt.Errorf("System %s exists", sysid)
 	}
 
@@ -129,13 +233,13 @@ func (f *FOrcE) AddSystem(sysid string) error {
 	if f.check(err) {
 		return err
 	}
-	f.connectors[sysid] = map[string]*fog05.FOrcEZConnector{
+	f.state.connectors[sysid] = map[string]*fog05.FOrcEZConnector{
 		DEFAULTUUID: c,
 	}
-	f.fims[sysid] = map[string]map[string]*fim.FIMAPI{
+	f.state.fims[sysid] = map[string]map[string]*fim.FIMAPI{
 		DEFAULTUUID: map[string]*fim.FIMAPI{},
 	}
-	f.clouds[sysid] = map[string]map[string]*kubernetes.Clientset{
+	f.state.clouds[sysid] = map[string]map[string]*kubernetes.Clientset{
 		DEFAULTUUID: map[string]*kubernetes.Clientset{},
 	}
 	return nil
@@ -143,8 +247,10 @@ func (f *FOrcE) AddSystem(sysid string) error {
 
 //GetSystems get all the available systems
 func (f *FOrcE) GetSystems() []string {
+	f.state.rwLock.RLock()
+	defer f.state.rwLock.RUnlock()
 	systems := []string{}
-	for k := range f.connectors {
+	for k := range f.state.connectors {
 		systems = append(systems, k)
 	}
 	return systems
@@ -152,14 +258,16 @@ func (f *FOrcE) GetSystems() []string {
 
 //RemoveSystem removes a system and all its tenants
 func (f *FOrcE) RemoveSystem(sysid string) error {
-	if s, exists := f.connectors[sysid]; exists {
+	f.state.rwLock.Lock()
+	defer f.state.rwLock.Unlock()
+	if s, exists := f.state.connectors[sysid]; exists {
 		for _, c := range s {
 			err := c.Close()
 			if f.check(err) {
 				return err
 			}
 		}
-		delete(f.connectors, sysid)
+		delete(f.state.connectors, sysid)
 		return nil
 	}
 
@@ -169,7 +277,10 @@ func (f *FOrcE) RemoveSystem(sysid string) error {
 
 //AddTenant adds tenant to an existing system
 func (f *FOrcE) AddTenant(sysid string, tenantid string) error {
-	if s, exists := f.connectors[sysid]; exists {
+	f.state.rwLock.Lock()
+	defer f.state.rwLock.Unlock()
+
+	if s, exists := f.state.connectors[sysid]; exists {
 		if _, exists = s[tenantid]; exists {
 			return fmt.Errorf("Tenant %s exists", tenantid)
 		}
@@ -178,10 +289,10 @@ func (f *FOrcE) AddTenant(sysid string, tenantid string) error {
 			return err
 		}
 		s[tenantid] = c
-		f.fims[sysid] = map[string]map[string]*fim.FIMAPI{
+		f.state.fims[sysid] = map[string]map[string]*fim.FIMAPI{
 			tenantid: map[string]*fim.FIMAPI{},
 		}
-		f.clouds[sysid] = map[string]map[string]*kubernetes.Clientset{
+		f.state.clouds[sysid] = map[string]map[string]*kubernetes.Clientset{
 			tenantid: map[string]*kubernetes.Clientset{},
 		}
 		return nil
@@ -191,8 +302,10 @@ func (f *FOrcE) AddTenant(sysid string, tenantid string) error {
 
 //GetTenants get all the available tenants in the system
 func (f *FOrcE) GetTenants(sysid string) ([]string, error) {
+	f.state.rwLock.RLock()
+	defer f.state.rwLock.RUnlock()
 
-	if s, exists := f.connectors[sysid]; exists {
+	if s, exists := f.state.connectors[sysid]; exists {
 		tenants := []string{}
 		for k := range s {
 			tenants = append(tenants, k)
@@ -204,7 +317,10 @@ func (f *FOrcE) GetTenants(sysid string) ([]string, error) {
 
 //RemoveTenant removes a tenant from an existing system
 func (f *FOrcE) RemoveTenant(sysid string, tenantid string) error {
-	if s, exists := f.connectors[sysid]; exists {
+	f.state.rwLock.Lock()
+	defer f.state.rwLock.Unlock()
+
+	if s, exists := f.state.connectors[sysid]; exists {
 		if c, exists := s[tenantid]; exists {
 			err := c.Close()
 			if f.check(err) {
@@ -220,16 +336,19 @@ func (f *FOrcE) RemoveTenant(sysid string, tenantid string) error {
 
 //AddFIM adds a FIM to this Orchestrator
 func (f *FOrcE) AddFIM(sysid string, tenantid string, fimid string, locator string) error {
-	if s, exists := f.connectors[sysid]; exists {
+	f.state.rwLock.Lock()
+	defer f.state.rwLock.Unlock()
+
+	if s, exists := f.state.connectors[sysid]; exists {
 		if c, exists := s[tenantid]; exists {
-			if _, exists := f.fims[sysid][tenantid][fimid]; exists {
+			if _, exists := f.state.fims[sysid][tenantid][fimid]; exists {
 				return fmt.Errorf("FIM %s exists", fimid)
 			}
 			fimapi, err := fim.NewFIMAPI(locator, nil, nil)
 			if f.check(err) {
 				return err
 			}
-			f.fims[sysid][tenantid][fimid] = fimapi
+			f.state.fims[sysid][tenantid][fimid] = fimapi
 			fimInfo := fog05.FIMInfo{
 				UUID:    fimid,
 				Locator: locator,
@@ -245,11 +364,14 @@ func (f *FOrcE) AddFIM(sysid string, tenantid string, fimid string, locator stri
 
 //GetFIMs get all the available FIMs
 func (f *FOrcE) GetFIMs(sysid string, tenantid string) ([]string, error) {
+	f.state.rwLock.RLock()
+	defer f.state.rwLock.RUnlock()
+
 	fims := []string{}
-	if s, exists := f.connectors[sysid]; exists {
+	if s, exists := f.state.connectors[sysid]; exists {
 		if c, exists := s[tenantid]; exists {
 
-			for k := range f.fims[sysid][tenantid] {
+			for k := range f.state.fims[sysid][tenantid] {
 				// 	fims = append(fims, k)
 				fi, err := c.Orchestrator.GetFIMInfo(k)
 				if f.check(err) {
@@ -265,13 +387,35 @@ func (f *FOrcE) GetFIMs(sysid string, tenantid string) ([]string, error) {
 
 }
 
+//GetFIM get the given FIM
+func (f *FOrcE) GetFIM(sysid string, tenantid string, fimid string) (*fog05.FIMInfo, error) {
+	f.state.rwLock.RLock()
+	defer f.state.rwLock.RUnlock()
+
+	if s, exists := f.state.connectors[sysid]; exists {
+		if c, exists := s[tenantid]; exists {
+			fi, err := c.Orchestrator.GetFIMInfo(fimid)
+			if f.check(err) {
+				return nil, err
+			}
+			return fi, nil
+		}
+		return nil, fmt.Errorf("Tenant %s does not exists", tenantid)
+	}
+	return nil, fmt.Errorf("System %s does not exists", sysid)
+
+}
+
 //RemoveFIM removes a FIM
 func (f *FOrcE) RemoveFIM(sysid string, tenantid string, fimid string) error {
-	if s, exists := f.connectors[sysid]; exists {
+	f.state.rwLock.Lock()
+	defer f.state.rwLock.Unlock()
+
+	if s, exists := f.state.connectors[sysid]; exists {
 		if c, exists := s[tenantid]; exists {
-			if fimapi, exists := f.fims[sysid][tenantid][fimid]; exists {
+			if fimapi, exists := f.state.fims[sysid][tenantid][fimid]; exists {
 				fimapi.Close()
-				delete(f.fims[sysid][tenantid], fimid)
+				delete(f.state.fims[sysid][tenantid], fimid)
 				f.check(c.Orchestrator.RemoveFIMInfo(fimid))
 				return nil
 			}
@@ -285,9 +429,12 @@ func (f *FOrcE) RemoveFIM(sysid string, tenantid string, fimid string) error {
 
 //AddCloud adds a K8s client to this orchestrator
 func (f *FOrcE) AddCloud(sysid string, tenantid string, cloudid string, kubeconfig string, caData []byte, certData []byte, keyData []byte) error {
-	if s, exists := f.connectors[sysid]; exists {
+	f.state.rwLock.Lock()
+	defer f.state.rwLock.Unlock()
+
+	if s, exists := f.state.connectors[sysid]; exists {
 		if c, exists := s[tenantid]; exists {
-			if _, exists := f.clouds[sysid][tenantid][cloudid]; exists {
+			if _, exists := f.state.clouds[sysid][tenantid][cloudid]; exists {
 				return fmt.Errorf("Cloud %s exists", cloudid)
 			}
 			k8sConfig := &rest.Config{}
@@ -306,10 +453,15 @@ func (f *FOrcE) AddCloud(sysid string, tenantid string, cloudid string, kubeconf
 			if f.check(err) {
 				return err
 			}
-			f.clouds[sysid][tenantid][cloudid] = k8sClientset
+
+			d, err := json.Marshal(&k8sConfig)
+			if f.check(err) {
+				return err
+			}
+			f.state.clouds[sysid][tenantid][cloudid] = k8sClientset
 			cloudInfo := fog05.CloudInfo{
 				UUID:   cloudid,
-				Config: kubeconfig,
+				Config: string(d),
 			}
 			f.check(c.Orchestrator.AddCloudInfo(cloudInfo))
 
@@ -322,10 +474,13 @@ func (f *FOrcE) AddCloud(sysid string, tenantid string, cloudid string, kubeconf
 
 //GetClouds get all the available K8s clients
 func (f *FOrcE) GetClouds(sysid string, tenantid string) ([]string, error) {
+	f.state.rwLock.RLock()
+	defer f.state.rwLock.RUnlock()
+
 	clouds := []string{}
-	if s, exists := f.connectors[sysid]; exists {
+	if s, exists := f.state.connectors[sysid]; exists {
 		if c, exists := s[tenantid]; exists {
-			for k := range f.clouds[sysid][tenantid] {
+			for k := range f.state.clouds[sysid][tenantid] {
 				ci, err := c.Orchestrator.GetCloudInfo(k)
 				if f.check(err) {
 					return clouds, err
@@ -337,16 +492,37 @@ func (f *FOrcE) GetClouds(sysid string, tenantid string) ([]string, error) {
 		return clouds, fmt.Errorf("Tenant %s does not exists", tenantid)
 	}
 	return clouds, fmt.Errorf("System %s does not exists", sysid)
+}
+
+//GetCloud get the given K8s cloud
+func (f *FOrcE) GetCloud(sysid string, tenantid string, cloudid string) (*fog05.CloudInfo, error) {
+	f.state.rwLock.RLock()
+	defer f.state.rwLock.RUnlock()
+	if s, exists := f.state.connectors[sysid]; exists {
+		if c, exists := s[tenantid]; exists {
+
+			ci, err := c.Orchestrator.GetCloudInfo(cloudid)
+			if f.check(err) {
+				return nil, err
+			}
+			return ci, nil
+		}
+		return nil, fmt.Errorf("Tenant %s does not exists", tenantid)
+	}
+	return nil, fmt.Errorf("System %s does not exists", sysid)
 
 }
 
 //RemoveCloud removes a K8s client
 func (f *FOrcE) RemoveCloud(sysid string, tenantid string, cloudid string) error {
-	if s, exists := f.connectors[sysid]; exists {
+	f.state.rwLock.Lock()
+	defer f.state.rwLock.Unlock()
+
+	if s, exists := f.state.connectors[sysid]; exists {
 		if c, exists := s[tenantid]; exists {
-			if _, exists := f.clouds[sysid][tenantid][cloudid]; exists {
+			if _, exists := f.state.clouds[sysid][tenantid][cloudid]; exists {
 				// k8sClient.Close()
-				delete(f.clouds[sysid][tenantid], cloudid)
+				delete(f.state.clouds[sysid][tenantid], cloudid)
 				f.check(c.Orchestrator.RemoveCloudInfo(cloudid))
 				return nil
 			}
@@ -362,8 +538,13 @@ func (f *FOrcE) RemoveCloud(sysid string, tenantid string, cloudid string) error
 
 //InsertNewJob inserts a new job in the job queue if there is space
 func (f *FOrcE) InsertNewJob(sysid string, tenantid string, jobRequest fog05.RequestNewJobMessage) (*fog05.ReplyNewJobMessage, error) {
-	if s, exists := f.connectors[sysid]; exists {
+	//f.mux.Lock()
+	//defer f.mux.Unlock()
+	f.state.rwLock.RLock()
+	if s, exists := f.state.connectors[sysid]; exists {
 		if c, exists := s[tenantid]; exists {
+
+			f.state.rwLock.RUnlock()
 
 			jid := uuid.New().String()
 			job := fog05.Job{
@@ -400,15 +581,19 @@ func (f *FOrcE) InsertNewJob(sysid string, tenantid string, jobRequest fog05.Req
 				return &reply, nil
 			}
 		}
+		f.state.rwLock.RUnlock()
 		return nil, fmt.Errorf("Tenant %s does not exists", tenantid)
 	}
+	f.state.rwLock.RUnlock()
 	return nil, fmt.Errorf("System %s does not exists", sysid)
 }
 
 //GetJob gets information about the given entity from the catalog
 func (f *FOrcE) GetJob(sysid string, tenantid string, jid string) (*fog05.Job, error) {
-	if s, exists := f.connectors[sysid]; exists {
+	f.state.rwLock.RLock()
+	if s, exists := f.state.connectors[sysid]; exists {
 		if c, exists := s[tenantid]; exists {
+			f.state.rwLock.RUnlock()
 			info, err := c.Orchestrator.GetJobInfo(jid)
 			if f.check(err) {
 				return nil, err
@@ -416,8 +601,10 @@ func (f *FOrcE) GetJob(sysid string, tenantid string, jid string) (*fog05.Job, e
 			return info, nil
 
 		}
+		f.state.rwLock.RUnlock()
 		return nil, fmt.Errorf("Tenant %s does not exists", tenantid)
 	}
+	f.state.rwLock.RUnlock()
 	return nil, fmt.Errorf("System %s does not exists", sysid)
 }
 
@@ -464,11 +651,13 @@ func (f *FOrcE) JobScheduler() {
 // Worker functions...
 
 func (f *FOrcE) testWorker(qJob EnqueuedJob) {
+
 	f.logger.Info(fmt.Sprintf("Running a \"test\" Job, it sleeps 45s JobID: %s", qJob.Job.JobID))
 	job := qJob.Job
-	if s, exists := f.connectors[qJob.systemid]; exists {
+	f.state.rwLock.RLock()
+	if s, exists := f.state.connectors[qJob.systemid]; exists {
 		if c, exists := s[qJob.tenantid]; exists {
-			job.Status = "running"
+			job.Status = RUNNING
 			f.logger.Info(fmt.Sprintf("Test Job: %+v", job))
 			err := c.Orchestrator.AddJobInfo(job)
 			f.check(err)
@@ -488,30 +677,36 @@ func (f *FOrcE) testWorker(qJob EnqueuedJob) {
 }
 
 func (f *FOrcE) errorWorker(qJob EnqueuedJob) {
+
 	f.logger.Error(fmt.Sprintf("Running error Job: %+v", qJob.Job))
 	job := qJob.Job
-	if s, exists := f.connectors[qJob.systemid]; exists {
+	if s, exists := f.state.connectors[qJob.systemid]; exists {
 		if c, exists := s[qJob.tenantid]; exists {
+			f.state.rwLock.RUnlock()
 			job.Status = "failed"
 			err := c.Orchestrator.AddJobInfo(job)
 			f.check(err)
 			return
 		}
+		f.state.rwLock.RUnlock()
 		f.logger.Error(fmt.Sprintf("Job %s scheduled on tenant %s that does not exists!", qJob.Job.JobID, qJob.tenantid))
 		return
 	}
+	f.state.rwLock.RUnlock()
 	f.logger.Error(fmt.Sprintf("Job %s scheduled on system %s that does not exists!", qJob.Job.JobID, qJob.systemid))
 	return
 
 }
 
 func (f *FOrcE) onboardWorker(qJob EnqueuedJob) {
+	f.state.rwLock.Lock()
+	defer f.state.rwLock.Unlock()
 	f.logger.Info(fmt.Sprintf("Running Onboarding Job, JobID: %s", qJob.Job.JobID))
-	if s, exists := f.connectors[qJob.systemid]; exists {
+	if s, exists := f.state.connectors[qJob.systemid]; exists {
 		if c, exists := s[qJob.tenantid]; exists {
 			job := qJob.Job
 
-			job.Status = "running"
+			job.Status = RUNNING
 			err := c.Orchestrator.AddJobInfo(job)
 			f.check(err)
 
@@ -581,12 +776,15 @@ func (f *FOrcE) onboardWorker(qJob EnqueuedJob) {
 }
 
 func (f *FOrcE) offloadWorker(qJob EnqueuedJob) {
+	f.state.rwLock.Lock()
+	defer f.state.rwLock.Unlock()
+
 	f.logger.Info(fmt.Sprintf("Running Offloading Job, JobID: %s", qJob.Job.JobID))
-	if s, exists := f.connectors[qJob.systemid]; exists {
+	if s, exists := f.state.connectors[qJob.systemid]; exists {
 		if c, exists := s[qJob.tenantid]; exists {
 			job := qJob.Job
 
-			job.Status = "running"
+			job.Status = RUNNING
 			err := c.Orchestrator.AddJobInfo(job)
 			f.check(err)
 
@@ -643,12 +841,15 @@ func (f *FOrcE) offloadWorker(qJob EnqueuedJob) {
 }
 
 func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
+
+	f.state.rwLock.RLock()
 	f.logger.Info(fmt.Sprintf("Running Instantiation Job, JobID: %s", qJob.Job.JobID))
-	if s, exists := f.connectors[qJob.systemid]; exists {
+	if s, exists := f.state.connectors[qJob.systemid]; exists {
+		f.state.rwLock.RUnlock()
 		if c, exists := s[qJob.tenantid]; exists {
 			job := qJob.Job
 
-			job.Status = "running"
+			job.Status = RUNNING
 			err := c.Orchestrator.AddJobInfo(job)
 			f.check(err)
 
@@ -675,10 +876,23 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 			entityRecord := fog05.EntityRecord{
 				ID:           *entityDescriptor.UUID,
 				UUID:         entityInstanceUUID,
-				Status:       "onboarding",
+				Status:       ONBOARDING,
 				FDUs:         []string{},
 				VirtualLinks: []string{},
+				CloudID:      info.CloudID,
+				FIMID:        info.FIMID,
 			}
+
+			v, err := json.Marshal(entityRecord)
+			if f.check(err) {
+				job.Status = "failed"
+				err := c.Orchestrator.AddJobInfo(job)
+				f.check(err)
+				return
+			}
+			job.Body = string(v)
+			err = c.Orchestrator.AddJobInfo(job)
+			f.check(err)
 
 			//Storing initial record on Zenoh
 			err = c.Orchestrator.AddEntityRecord(entityRecord)
@@ -698,7 +912,7 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 					return
 				}
 
-				fimapi, exists := f.fims[qJob.systemid][qJob.tenantid][*info.FIMID]
+				fimapi, exists := f.state.fims[qJob.systemid][qJob.tenantid][*info.FIMID]
 				if !exists {
 					f.logger.Info(fmt.Sprintf("JobID: %s FIM %s not exists", qJob.Job.JobID, *info.FIMID))
 					job.Status = "failed"
@@ -731,7 +945,7 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 					job.Status = "failed"
 					err := c.Orchestrator.AddJobInfo(job)
 					f.check(err)
-					entityRecord.Status = "error"
+					entityRecord.Status = ERROR
 					f.check(c.Orchestrator.AddEntityRecord(entityRecord))
 					return
 				}
@@ -753,20 +967,20 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 						job.Status = "failed"
 						err := c.Orchestrator.AddJobInfo(job)
 						f.check(err)
-						entityRecord.Status = "error"
+						entityRecord.Status = ERROR
 						f.check(c.Orchestrator.AddEntityRecord(entityRecord))
 						return
 					}
 
 					f.logger.Info(fmt.Sprintf("JobID: %s EntityID: %s FDU: %s is Cloud FDU", qJob.Job.JobID, info.UUID, *fdu.UUID))
 
-					clientset, exists := f.clouds[qJob.systemid][qJob.tenantid][*info.CloudID]
+					clientset, exists := f.state.clouds[qJob.systemid][qJob.tenantid][*info.CloudID]
 					if !exists {
 						f.logger.Info(fmt.Sprintf("JobID: %s Cloud %s not exists", qJob.Job.JobID, *info.CloudID))
 						job.Status = "failed"
 						err := c.Orchestrator.AddJobInfo(job)
 						f.check(err)
-						entityRecord.Status = "error"
+						entityRecord.Status = ERROR
 						f.check(c.Orchestrator.AddEntityRecord(entityRecord))
 						return
 					}
@@ -800,7 +1014,7 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 						job.Status = "failed"
 						err := c.Orchestrator.AddJobInfo(job)
 						f.check(err)
-						entityRecord.Status = "error"
+						entityRecord.Status = ERROR
 						f.check(c.Orchestrator.AddEntityRecord(entityRecord))
 						return
 					}
@@ -810,7 +1024,7 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 					fduRecord := fog05.FOrcEFDURecord{
 						UUID:   deployment.ObjectMeta.Name,
 						ID:     *fdu.UUID,
-						Status: "starting",
+						Status: STARTING,
 					}
 					f.check(c.Orchestrator.AddFDURecord(fduRecord))
 
@@ -819,17 +1033,17 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 						job.Status = "failed"
 						err := c.Orchestrator.AddJobInfo(job)
 						f.check(err)
-						entityRecord.Status = "error"
+						entityRecord.Status = ERROR
 						f.check(c.Orchestrator.AddEntityRecord(entityRecord))
 						return
 					}
-					fimapi, exists := f.fims[qJob.systemid][qJob.tenantid][*info.FIMID]
+					fimapi, exists := f.state.fims[qJob.systemid][qJob.tenantid][*info.FIMID]
 					if !exists {
 						f.logger.Info(fmt.Sprintf("JobID: %s FIM %s not exists", qJob.Job.JobID, *info.FIMID))
 						job.Status = "failed"
 						err := c.Orchestrator.AddJobInfo(job)
 						f.check(err)
-						entityRecord.Status = "error"
+						entityRecord.Status = ERROR
 						f.check(c.Orchestrator.AddEntityRecord(entityRecord))
 						return
 					}
@@ -880,7 +1094,7 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 							job.Status = "failed"
 							err := c.Orchestrator.AddJobInfo(job)
 							f.check(err)
-							entityRecord.Status = "error"
+							entityRecord.Status = ERROR
 							f.check(c.Orchestrator.AddEntityRecord(entityRecord))
 							return
 						}
@@ -890,7 +1104,7 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 							job.Status = "failed"
 							err := c.Orchestrator.AddJobInfo(job)
 							f.check(err)
-							entityRecord.Status = "error"
+							entityRecord.Status = ERROR
 							f.check(c.Orchestrator.AddEntityRecord(entityRecord))
 							return
 						}
@@ -920,7 +1134,7 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 							StorageSizeGB:   float64(fdu.ComputationRequirements.StorageSizeMB) / 1024,
 						},
 						Storage:          []fog05.FDUStorageDescriptor{},
-						MigrationKind:    fdu.MigrationKind,
+						MigrationKind:    "COLD",
 						DependsOn:        fdu.DependsOn,
 						IOPorts:          []fog05.FDUIOPort{},
 						Interfaces:       fduFIMInterfaces,
@@ -934,12 +1148,12 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 						job.Status = "failed"
 						err := c.Orchestrator.AddJobInfo(job)
 						f.check(err)
-						entityRecord.Status = "error"
+						entityRecord.Status = ERROR
 						f.check(c.Orchestrator.AddEntityRecord(entityRecord))
 						return
 					}
 
-					entityRecord.Status = "starting"
+					entityRecord.Status = STARTING
 					f.check(c.Orchestrator.AddEntityRecord(entityRecord))
 
 					instances := []string{}
@@ -957,7 +1171,7 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 							job.Status = "failed"
 							err := c.Orchestrator.AddJobInfo(job)
 							f.check(err)
-							entityRecord.Status = "error"
+							entityRecord.Status = ERROR
 							f.check(c.Orchestrator.AddEntityRecord(entityRecord))
 							return
 						}
@@ -967,7 +1181,7 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 							job.Status = "failed"
 							err := c.Orchestrator.AddJobInfo(job)
 							f.check(err)
-							entityRecord.Status = "error"
+							entityRecord.Status = ERROR
 							f.check(c.Orchestrator.AddEntityRecord(entityRecord))
 							return
 						}
@@ -979,7 +1193,7 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 							job.Status = "failed"
 							err := c.Orchestrator.AddJobInfo(job)
 							f.check(err)
-							entityRecord.Status = "error"
+							entityRecord.Status = ERROR
 							f.check(c.Orchestrator.AddEntityRecord(entityRecord))
 							return
 						}
@@ -988,7 +1202,7 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 							job.Status = "failed"
 							err := c.Orchestrator.AddJobInfo(job)
 							f.check(err)
-							entityRecord.Status = "error"
+							entityRecord.Status = ERROR
 							f.check(c.Orchestrator.AddEntityRecord(entityRecord))
 							return
 						}
@@ -997,7 +1211,7 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 							job.Status = "failed"
 							err := c.Orchestrator.AddJobInfo(job)
 							f.check(err)
-							entityRecord.Status = "error"
+							entityRecord.Status = ERROR
 							f.check(c.Orchestrator.AddEntityRecord(entityRecord))
 							return
 						}
@@ -1016,10 +1230,10 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 			}
 
 			//Storing record in Orchestrator catalog
-			entityRecord.Status = "starting"
+			entityRecord.Status = STARTING
 			f.check(c.Orchestrator.AddEntityRecord(entityRecord))
 
-			v, err := json.Marshal(entityRecord)
+			v, err = json.Marshal(entityRecord)
 			if f.check(err) {
 				job.Status = "failed"
 				err := c.Orchestrator.AddJobInfo(job)
@@ -1037,22 +1251,27 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 
 			return
 		}
+		f.state.rwLock.RUnlock()
 		f.logger.Error(fmt.Sprintf("Job %s scheduled on tenant %s that does not exists!", qJob.Job.JobID, qJob.tenantid))
 		return
 	}
+	f.state.rwLock.RUnlock()
 	f.logger.Error(fmt.Sprintf("Job %s scheduled on system %s that does not exists!", qJob.Job.JobID, qJob.systemid))
 	return
 
 }
 
 func (f *FOrcE) teardownWorker(qJob EnqueuedJob) {
+	f.state.rwLock.Lock()
+	defer f.state.rwLock.Unlock()
+
 	f.logger.Info(fmt.Sprintf("Running Teardown Job, JobID: %s", qJob.Job.JobID))
-	if s, exists := f.connectors[qJob.systemid]; exists {
+	if s, exists := f.state.connectors[qJob.systemid]; exists {
 		if c, exists := s[qJob.tenantid]; exists {
 
 			job := qJob.Job
 
-			job.Status = "running"
+			job.Status = RUNNING
 			err := c.Orchestrator.AddJobInfo(job)
 			f.check(err)
 
@@ -1074,7 +1293,7 @@ func (f *FOrcE) teardownWorker(qJob EnqueuedJob) {
 				return
 			}
 
-			entityRecord.Status = "stopping"
+			entityRecord.Status = STOPPING
 			f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
 
 			entityID := entityRecord.ID
@@ -1097,13 +1316,13 @@ func (f *FOrcE) teardownWorker(qJob EnqueuedJob) {
 				}
 
 				if fduDesc.Hypervisor == "cloud" {
-					clientset, exists := f.clouds[qJob.systemid][qJob.tenantid][*info.CloudID]
+					clientset, exists := f.state.clouds[qJob.systemid][qJob.tenantid][*entityRecord.CloudID]
 					if !exists {
-						f.logger.Info(fmt.Sprintf("JobID: %s Cloud %s not exists", qJob.Job.JobID, *info.CloudID))
+						f.logger.Info(fmt.Sprintf("JobID: %s Cloud %s not exists", qJob.Job.JobID, *entityRecord.CloudID))
 						job.Status = "failed"
 						err := c.Orchestrator.AddJobInfo(job)
 						f.check(err)
-						entityRecord.Status = "error"
+						entityRecord.Status = ERROR
 						f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
 						return
 					}
@@ -1122,9 +1341,9 @@ func (f *FOrcE) teardownWorker(qJob EnqueuedJob) {
 					c.Orchestrator.RemoveFDURecord(*fduDesc.UUID, fdu)
 
 				} else {
-					fimapi, exists := f.fims[qJob.systemid][qJob.tenantid][*info.FIMID]
+					fimapi, exists := f.state.fims[qJob.systemid][qJob.tenantid][*entityRecord.FIMID]
 					if !exists {
-						f.logger.Info(fmt.Sprintf("JobID: %s FIM %s not exists", qJob.Job.JobID, *info.FIMID))
+						f.logger.Info(fmt.Sprintf("JobID: %s FIM %s not exists", qJob.Job.JobID, *entityRecord.FIMID))
 						job.Status = "failed"
 						err := c.Orchestrator.AddJobInfo(job)
 						f.check(err)
@@ -1141,15 +1360,15 @@ func (f *FOrcE) teardownWorker(qJob EnqueuedJob) {
 
 			}
 
-			entityRecord.Status = "offloading"
+			entityRecord.Status = OFFLOADING
 			f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
 
 			for _, fdu := range entityDescriptor.FDUs {
 
 				if fdu.Hypervisor != "cloud" {
-					fimapi, exists := f.fims[qJob.systemid][qJob.tenantid][*info.FIMID]
+					fimapi, exists := f.state.fims[qJob.systemid][qJob.tenantid][*entityRecord.FIMID]
 					if !exists {
-						f.logger.Info(fmt.Sprintf("JobID: %s FIM %s not exists", qJob.Job.JobID, *info.FIMID))
+						f.logger.Info(fmt.Sprintf("JobID: %s FIM %s not exists", qJob.Job.JobID, *entityRecord.FIMID))
 						job.Status = "failed"
 						err := c.Orchestrator.AddJobInfo(job)
 						f.check(err)
@@ -1162,9 +1381,9 @@ func (f *FOrcE) teardownWorker(qJob EnqueuedJob) {
 			}
 
 			for _, net := range entityRecord.VirtualLinks {
-				fimapi, exists := f.fims[qJob.systemid][qJob.tenantid][*info.FIMID]
+				fimapi, exists := f.state.fims[qJob.systemid][qJob.tenantid][*entityRecord.FIMID]
 				if !exists {
-					f.logger.Info(fmt.Sprintf("JobID: %s FIM %s not exists", qJob.Job.JobID, *info.FIMID))
+					f.logger.Info(fmt.Sprintf("JobID: %s FIM %s not exists", qJob.Job.JobID, *entityRecord.FIMID))
 					job.Status = "failed"
 					err := c.Orchestrator.AddJobInfo(job)
 					f.check(err)
@@ -1179,7 +1398,7 @@ func (f *FOrcE) teardownWorker(qJob EnqueuedJob) {
 
 			}
 
-			entityRecord.Status = "offloaded"
+			entityRecord.Status = OFFLOADED
 			f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
 
 			v, err := json.Marshal(entityRecord)
@@ -1205,19 +1424,278 @@ func (f *FOrcE) teardownWorker(qJob EnqueuedJob) {
 	return
 }
 
+func (f *FOrcE) recoverWorker(entityRecord *fog05.EntityRecord, fimapi *fim.FIMAPI, cloud *kubernetes.Clientset, c *fog05.FOrcEZConnector) {
+
+	entityRecord.Status = RECOVERING
+	f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+
+	entityID := entityRecord.ID
+	entityDescriptor, err := c.Orchestrator.GetEntityInfo(entityID)
+	if f.check(err) {
+		entityRecord.Status = ERROR
+		f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+		return
+	}
+
+	//Should first verify virtual networks
+	for _, net := range entityDescriptor.VirtualLinks {
+		if fimapi == nil {
+			f.logger.Error("FIMAPI is nil with Virtual Links!!")
+			entityRecord.Status = ERROR
+			f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+			return
+		}
+		apiNets, err := f.getFIMNetworkIDs(net.ID, fimapi)
+		if f.check(err) {
+			entityRecord.Status = ERROR
+			f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+			return
+		}
+
+		entityVLs := []string{}
+		intersection := intersect.Hash(apiNets, entityRecord.VirtualLinks).([]interface{})
+		for _, v := range intersection {
+			entityVLs = append(entityVLs, fmt.Sprint(v))
+		}
+
+		for len(entityDescriptor.VirtualLinks) > len(entityVLs) {
+			f.logger.Info(fmt.Sprintf("Recovering Instance %s Adding Virtual Link %+v", entityRecord.UUID, net))
+			vlAddrInfo := fog05.AddressInformation{
+				IPVersion:  net.IPVersion,
+				Subnet:     *net.IPConfiguration.Subnet,
+				Gateway:    net.IPConfiguration.Gateway,
+				DHCPEnable: true,
+				DHCPRange:  net.IPConfiguration.DHCPRange,
+				DNS:        net.IPConfiguration.DNS,
+			}
+			vlFIM := fog05.VirtualNetwork{
+				UUID:            uuid.New().String(),
+				Name:            *net.UUID,
+				NetworkType:     "ELAN",
+				IPConfiguration: &vlAddrInfo,
+			}
+
+			err = fimapi.Network.AddNetwork(vlFIM)
+			if f.check(err) {
+				entityRecord.Status = ERROR
+				f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+				return
+			}
+
+			entityRecord.VirtualLinks = append(entityRecord.VirtualLinks, vlFIM.UUID)
+			entityVLs = append(entityVLs, vlFIM.UUID)
+			f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+			time.Sleep(1 * time.Second)
+		}
+
+	}
+
+	for _, fdu := range entityDescriptor.FDUs {
+		if fdu.Hypervisor == "cloud" {
+			// Should recover a cloud FDU
+			// only if it was never instantiated to K8s
+			// because for replicas the K8s self-healing is always in place
+		} else {
+			if fimapi == nil {
+				f.logger.Error("FIMAPI is nil with FDU of Kind FIM!!")
+				entityRecord.Status = ERROR
+				f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+				return
+			}
+
+			minReplicas := uint8(1)
+			if fdu.Replicas != nil {
+				minReplicas = *fdu.Replicas
+			}
+
+			instances := []string{}
+			apiInstances, err := fimapi.FDU.InstanceList(*fdu.UUID, nil)
+			if f.check(err) {
+				entityRecord.Status = ERROR
+				f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+				return
+			}
+			for _, v := range apiInstances {
+				instances = append(instances, v...)
+			}
+
+			entityFDUInstances := []string{}
+			intersection := intersect.Hash(instances, entityRecord.FDUs).([]interface{})
+			for _, v := range intersection {
+				entityFDUInstances = append(entityFDUInstances, fmt.Sprint(v))
+			}
+
+			f.logger.Info(fmt.Sprintf("Entity %s Instance %s FDU %s has %d/%d replicas", entityRecord.ID, entityRecord.UUID, *fdu.UUID, uint8(len(entityFDUInstances)), minReplicas))
+			for minReplicas > uint8(len(entityFDUInstances)) {
+				if uint8(len(entityFDUInstances)) == uint8(0) {
+					//In this case we add first the descriptor
+					fduFIMInterfaces := []fog05.FDUInterfaceDescriptor{}
+					fduFIMConnectionPoints := []fog05.ConnectionPointDescriptor{}
+
+					for _, intf := range fdu.Interfaces {
+						vpci := ""
+						if intf.VirtualInterface.Parent != nil {
+							vpci = *intf.VirtualInterface.Parent
+						}
+						bw := 100
+						if intf.VirtualInterface.Bandwidth != nil {
+							bw = int(*intf.VirtualInterface.Bandwidth)
+						}
+
+						fimIntf := fog05.FDUInterfaceDescriptor{
+							Name:          intf.Name,
+							InterfaceType: fog05.INTERNAL,
+							IsMGMT:        false,
+							MACAddress:    intf.MACAddress,
+							CPID:          intf.CPID,
+							VirtualInterface: fog05.FDUVirtualInterface{
+								InterfaceType: intf.VirtualInterface.InterfaceKind,
+								VPCI:          vpci,
+								Bandwidth:     bw,
+							},
+						}
+						fduFIMInterfaces = append(fduFIMInterfaces, fimIntf)
+					}
+
+					for _, cp := range fdu.ConnectionPoints {
+
+						vldID := ""
+						for _, vl := range entityDescriptor.VirtualLinks {
+							if vl.ID == cp.VLDRef {
+								vldID = *vl.UUID
+							}
+						}
+						if vldID == "" {
+							f.logger.Info(fmt.Sprintf("EntityID: %s Virtual Link Reference %s is broken for FDU %s", entityRecord.ID, cp.VLDRef, *fdu.UUID))
+							entityRecord.Status = ERROR
+							f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+							return
+						}
+
+						fimVLDRef, err := f.getFIMNetworkID(vldID, fimapi)
+						if f.check(err) {
+							entityRecord.Status = ERROR
+							f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+							return
+						}
+
+						fimCP := fog05.ConnectionPointDescriptor{
+							UUID:   cp.UUID,
+							ID:     cp.ID,
+							Name:   cp.Name,
+							VLDRef: &fimVLDRef,
+						}
+
+						fduFIMConnectionPoints = append(fduFIMConnectionPoints, fimCP)
+					}
+
+					fimFDU := fog05.FDU{
+						ID:          fdu.ID,
+						UUID:        fdu.UUID,
+						Name:        fdu.Name,
+						Description: fdu.Description,
+						Image:       fdu.Image,
+						Hypervisor:  fdu.Hypervisor,
+						ComputationRequirements: fog05.FDUComputationalRequirements{
+							CPUArch:         fdu.ComputationRequirements.CPUArch,
+							CPUMinFrequency: fdu.ComputationRequirements.CPUMinFrequency,
+							CPUMinCount:     fdu.ComputationRequirements.CPUMinCount,
+							RAMSizeMB:       float64(fdu.ComputationRequirements.RAMSizeMB),
+							StorageSizeGB:   float64(fdu.ComputationRequirements.StorageSizeMB) / 1024,
+						},
+						Storage:          []fog05.FDUStorageDescriptor{},
+						MigrationKind:    "COLD",
+						DependsOn:        fdu.DependsOn,
+						IOPorts:          []fog05.FDUIOPort{},
+						Interfaces:       fduFIMInterfaces,
+						ConnectionPoints: fduFIMConnectionPoints,
+					}
+
+					f.logger.Info(fmt.Sprintf("EntityID: %s FDU: %s Storing in FIM %+v", entityRecord.ID, *fdu.UUID, fimFDU))
+					_, err = fimapi.FDU.Onboard(fimFDU)
+					if f.check(err) {
+						entityRecord.Status = ERROR
+						f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+						return
+					}
+				}
+
+				fimFDU, err := fimapi.FDU.Info(*fdu.UUID)
+				if err != nil {
+					entityRecord.Status = ERROR
+					f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+					return
+				}
+
+				//Finds a node for the FDU
+				nodeid, err := f.findFIMNode(fimFDU, fimapi)
+				if f.check(err) {
+					entityRecord.Status = ERROR
+					f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+					return
+				}
+
+				fimInstance, err := fimapi.FDU.Define(nodeid, *fimFDU.UUID)
+				if f.check(err) {
+					entityRecord.Status = ERROR
+					f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+					return
+				}
+
+				instances = append(instances, fimInstance.UUID)
+
+				_, err = fimapi.FDU.Configure(fimInstance.UUID)
+				if f.check(err) {
+					entityRecord.Status = ERROR
+					f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+					return
+				}
+				_, err = fimapi.FDU.Start(fimInstance.UUID, nil)
+				if f.check(err) {
+					entityRecord.Status = ERROR
+					f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+					return
+				}
+				fimInstance, err = fimapi.FDU.InstanceInfo(fimInstance.UUID)
+				if f.check(err) {
+					entityRecord.Status = ERROR
+					f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+					return
+				}
+				fduRecord := fog05.FOrcEFDURecord{
+					UUID:   fimInstance.UUID,
+					ID:     fimInstance.FDUID,
+					Status: fimInstance.Status,
+				}
+				f.check(c.Orchestrator.AddFDURecord(fduRecord))
+				entityFDUInstances = append(entityFDUInstances, fimInstance.UUID)
+				entityRecord.FDUs = append(entityRecord.FDUs, fimInstance.UUID)
+				f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+			}
+
+			entityRecord.Status = STARTING
+			f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+
+		}
+	}
+}
+
 func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
 	/*
 	* This worker gets monitor information from one Entity Instance
 	* It is added to the job queue periodically based on the instances
 	* that are present in the system
 	 */
+	f.state.rwLock.Lock()
+	defer f.state.rwLock.Unlock()
+
 	f.logger.Info(fmt.Sprintf("Running Monitoring Job, JobID: %s", qJob.Job.JobID))
-	if s, exists := f.connectors[qJob.systemid]; exists {
+	if s, exists := f.state.connectors[qJob.systemid]; exists {
 		if c, exists := s[qJob.tenantid]; exists {
 
 			job := qJob.Job
 
-			job.Status = "running"
+			job.Status = RUNNING
 			err := c.Orchestrator.AddJobInfo(job)
 			f.check(err)
 
@@ -1250,16 +1728,34 @@ func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
 
 			ready := true
 
+			if entityRecord.Status == RECOVERING {
+				f.logger.Info(fmt.Sprintf("JobID: %s Instance %s is recovering ", qJob.Job.JobID, entityRecord.UUID))
+				job.Status = "completed"
+				err = c.Orchestrator.AddJobInfo(job)
+				f.check(err)
+				f.logger.Info(fmt.Sprintf("Monitoring Job: %s done", qJob.Job.JobID))
+				return
+			}
+
+			// if entityRecord.Status == ERROR {
+			// 	f.logger.Info(fmt.Sprintf("JobID: %s Instance %s is error!! Will not recover!!", qJob.Job.JobID, entityRecord.UUID))
+			// 	job.Status = "completed"
+			// 	err = c.Orchestrator.AddJobInfo(job)
+			// 	f.check(err)
+			// 	f.logger.Info(fmt.Sprintf("Monitoring Job: %s done", qJob.Job.JobID))
+			// 	return
+			// }
+
 			for _, fdu := range entityDescriptor.FDUs {
 
 				if fdu.Hypervisor == "cloud" {
-					clientset, exists := f.clouds[qJob.systemid][qJob.tenantid][*info.CloudID]
+					clientset, exists := f.state.clouds[qJob.systemid][qJob.tenantid][*entityRecord.CloudID]
 					if !exists {
-						f.logger.Info(fmt.Sprintf("JobID: %s Cloud %s not exists", qJob.Job.JobID, *info.CloudID))
+						f.logger.Info(fmt.Sprintf("JobID: %s Cloud %s not exists", qJob.Job.JobID, *entityRecord.CloudID))
 						job.Status = "failed"
 						err := c.Orchestrator.AddJobInfo(job)
 						f.check(err)
-						entityRecord.Status = "error"
+						entityRecord.Status = ERROR
 						f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
 						return
 					}
@@ -1272,7 +1768,7 @@ func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
 						job.Status = "failed"
 						err := c.Orchestrator.AddJobInfo(job)
 						f.check(err)
-						entityRecord.Status = "error"
+						entityRecord.Status = ERROR
 						f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
 						return
 					}
@@ -1282,7 +1778,7 @@ func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
 						job.Status = "failed"
 						err := c.Orchestrator.AddJobInfo(job)
 						f.check(err)
-						entityRecord.Status = "error"
+						entityRecord.Status = ERROR
 						f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
 						return
 					}
@@ -1293,7 +1789,7 @@ func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
 						job.Status = "failed"
 						err := c.Orchestrator.AddJobInfo(job)
 						f.check(err)
-						entityRecord.Status = "error"
+						entityRecord.Status = ERROR
 						f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
 						return
 					}
@@ -1315,7 +1811,7 @@ func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
 							job.Status = "failed"
 							err := c.Orchestrator.AddJobInfo(job)
 							f.check(err)
-							entityRecord.Status = "error"
+							entityRecord.Status = ERROR
 							f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
 							return
 						}
@@ -1327,6 +1823,7 @@ func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
 								Status: "run",
 							}
 							f.check(c.Orchestrator.AddFDURecord(fduRecord))
+							// from Cloud not recovering is needed, K8s uses its own self-healing for PODs
 						} else {
 							ready = false
 						}
@@ -1334,9 +1831,10 @@ func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
 					}
 
 				} else {
-					fimapi, exists := f.fims[qJob.systemid][qJob.tenantid][*info.FIMID]
+
+					fimapi, exists := f.state.fims[qJob.systemid][qJob.tenantid][*entityRecord.FIMID]
 					if !exists {
-						f.logger.Info(fmt.Sprintf("JobID: %s FIM %s not exists", qJob.Job.JobID, *info.FIMID))
+						f.logger.Info(fmt.Sprintf("JobID: %s FIM %s not exists", qJob.Job.JobID, *entityRecord.FIMID))
 						job.Status = "failed"
 						err := c.Orchestrator.AddJobInfo(job)
 						f.check(err)
@@ -1373,10 +1871,19 @@ func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
 					}
 
 					if minReplicas > uint8(len(entityFDUInstances)) {
-						f.logger.Info(fmt.Sprintf("JobID: %s Instance: %s Entity: %s FDU: %s has less replicas that needed", qJob.Job.JobID, entityRecord.UUID, entityRecord.ID, *fdu.UUID))
-						entityRecord.Status = "error"
+						f.logger.Info(fmt.Sprintf("JobID: %s Instance: %s Entity: %s FDU: %s has less replicas than needed", qJob.Job.JobID, entityRecord.UUID, entityRecord.ID, *fdu.UUID))
+						entityRecord.Status = ERROR
 						f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
 						ready = false
+						// we should trigger here the new replicas
+						//Getting also cloud API if present
+						if entityRecord.CloudID != nil {
+							cloud, _ := f.state.clouds[qJob.systemid][qJob.tenantid][*entityRecord.CloudID]
+							go f.recoverWorker(entityRecord, fimapi, cloud, c)
+						} else {
+							go f.recoverWorker(entityRecord, fimapi, nil, c)
+						}
+
 					}
 
 					for _, instanceID := range entityFDUInstances {
@@ -1410,7 +1917,7 @@ func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
 
 			if ready {
 				//Storing record in Orchestrator catalog
-				entityRecord.Status = "running"
+				entityRecord.Status = RUNNING
 
 			}
 
@@ -1444,7 +1951,7 @@ func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
 //GetEntities gets all the available entities in the given system+tenant (catalog)
 func (f *FOrcE) GetEntities(sysid string, tenantid string) ([]string, error) {
 	entities := []string{}
-	if s, exists := f.connectors[sysid]; exists {
+	if s, exists := f.state.connectors[sysid]; exists {
 		if c, exists := s[tenantid]; exists {
 			rawEntities, err := c.Orchestrator.GetAllEntitiesInfo()
 			if f.check(err) {
@@ -1463,7 +1970,7 @@ func (f *FOrcE) GetEntities(sysid string, tenantid string) ([]string, error) {
 
 //GetEntity gets information about the given entity from the catalog
 func (f *FOrcE) GetEntity(sysid string, tenantid string, entityid string) (*fog05.EntityDescriptor, error) {
-	if s, exists := f.connectors[sysid]; exists {
+	if s, exists := f.state.connectors[sysid]; exists {
 		if c, exists := s[tenantid]; exists {
 			info, err := c.Orchestrator.GetEntityInfo(entityid)
 			if f.check(err) {
@@ -1479,7 +1986,7 @@ func (f *FOrcE) GetEntity(sysid string, tenantid string, entityid string) (*fog0
 
 //AddEntity adds the given entity to the given system+tenant catalog
 func (f *FOrcE) AddEntity(sysid string, tenantid string, data fog05.EntityDescriptor) error {
-	if s, exists := f.connectors[sysid]; exists {
+	if s, exists := f.state.connectors[sysid]; exists {
 		if c, exists := s[tenantid]; exists {
 
 			for _, fdu := range data.FDUs {
@@ -1512,7 +2019,8 @@ func (f *FOrcE) AddEntity(sysid string, tenantid string, data fog05.EntityDescri
 
 //RemoveEntity removes the given entity to the given system+tenant catalog
 func (f *FOrcE) RemoveEntity(sysid string, tenantid string, entityid string) error {
-	if s, exists := f.connectors[sysid]; exists {
+
+	if s, exists := f.state.connectors[sysid]; exists {
 		if c, exists := s[tenantid]; exists {
 			err := c.Orchestrator.RemoveEntityInfo(entityid)
 			if f.check(err) {
@@ -1530,8 +2038,9 @@ func (f *FOrcE) RemoveEntity(sysid string, tenantid string, entityid string) err
 
 //GetEntityInstances gets all the available entities instances in the given system+tenant (catalog)
 func (f *FOrcE) GetEntityInstances(sysid string, tenantid string, entityid string) ([]string, error) {
+
 	instances := []string{}
-	if s, exists := f.connectors[sysid]; exists {
+	if s, exists := f.state.connectors[sysid]; exists {
 		if c, exists := s[tenantid]; exists {
 			rawInstances, err := c.Orchestrator.GetAllEntityRecordsInfo(entityid)
 			if f.check(err) {
@@ -1550,7 +2059,8 @@ func (f *FOrcE) GetEntityInstances(sysid string, tenantid string, entityid strin
 
 //GetEntityInstance gets information about the given entity instance from the catalog
 func (f *FOrcE) GetEntityInstance(sysid string, tenantid string, entityid string, instanceid string) (*fog05.EntityRecord, error) {
-	if s, exists := f.connectors[sysid]; exists {
+
+	if s, exists := f.state.connectors[sysid]; exists {
 		if c, exists := s[tenantid]; exists {
 			info, err := c.Orchestrator.GetEntityInstanceInfo(entityid, instanceid)
 			if f.check(err) {
@@ -1566,7 +2076,8 @@ func (f *FOrcE) GetEntityInstance(sysid string, tenantid string, entityid string
 
 //FindEntityInstance gets information about the given entity instance from the catalog
 func (f *FOrcE) FindEntityInstance(sysid string, tenantid string, instanceid string) (*fog05.EntityRecord, error) {
-	if s, exists := f.connectors[sysid]; exists {
+
+	if s, exists := f.state.connectors[sysid]; exists {
 		if c, exists := s[tenantid]; exists {
 			info, err := c.Orchestrator.FindEntityInstanceInfo(instanceid)
 			if f.check(err) {
@@ -1582,8 +2093,9 @@ func (f *FOrcE) FindEntityInstance(sysid string, tenantid string, instanceid str
 
 //GetInstances gets information about the instances running in the system
 func (f *FOrcE) GetInstances(sysid string, tenantid string) ([]string, error) {
+
 	instances := []string{}
-	if s, exists := f.connectors[sysid]; exists {
+	if s, exists := f.state.connectors[sysid]; exists {
 		if c, exists := s[tenantid]; exists {
 			infos, err := c.Orchestrator.GetAllEntityRecordsInfo("*")
 			if f.check(err) {
@@ -1602,7 +2114,8 @@ func (f *FOrcE) GetInstances(sysid string, tenantid string) ([]string, error) {
 
 //AddEntityInstance adds the given entity instance to the given system+tenant catalog
 func (f *FOrcE) AddEntityInstance(sysid string, tenantid string, data fog05.EntityRecord) error {
-	if s, exists := f.connectors[sysid]; exists {
+
+	if s, exists := f.state.connectors[sysid]; exists {
 		if c, exists := s[tenantid]; exists {
 			err := c.Orchestrator.AddEntityRecord(data)
 			if f.check(err) {
@@ -1618,7 +2131,8 @@ func (f *FOrcE) AddEntityInstance(sysid string, tenantid string, data fog05.Enti
 
 //RemoveEntityInstance removes the given entity instance to the given system+tenant catalog
 func (f *FOrcE) RemoveEntityInstance(sysid string, tenantid string, entityid string, instanceid string) error {
-	if s, exists := f.connectors[sysid]; exists {
+
+	if s, exists := f.state.connectors[sysid]; exists {
 		if c, exists := s[tenantid]; exists {
 			err := c.Orchestrator.RemoveEntityRecord(entityid, instanceid)
 			if f.check(err) {
@@ -1642,7 +2156,7 @@ func (f *FOrcE) monitoringJobsSpawner(c *fog05.FOrcEZConnector, sysid string, te
 			f.logger.Info(fmt.Sprintf("Ending monitoring spawner for %s", id))
 			return
 		}
-		if eRecord.Status == "offloaded" {
+		if eRecord.Status == OFFLOADED {
 			f.logger.Info(fmt.Sprintf("Ending monitoring spawner for %s", id))
 			return
 		}
@@ -1771,4 +2285,26 @@ func (f *FOrcE) getFIMNetworkID(id string, fimapi *fim.FIMAPI) (string, error) {
 	}
 
 	return "", fmt.Errorf("Virtual Network %s does not exists", id)
+}
+
+func (f *FOrcE) getFIMNetworkIDs(id string, fimapi *fim.FIMAPI) ([]string, error) {
+	fimNets := []string{}
+
+	nets, err := fimapi.Network.List()
+	if f.check(err) {
+		return fimNets, err
+	}
+	// f.logger.Info(fmt.Sprintf("FIM Networks %+v", nets))
+	for _, nid := range nets {
+		netInfo, err := fimapi.Network.GetNetwork(nid)
+		if f.check(err) {
+			return fimNets, err
+		}
+		// f.logger.Info(fmt.Sprintf("Checking %+v; %s == %s ? %t", netInfo, netInfo.Name, id, netInfo.Name == id))
+		if netInfo.Name == id {
+			fimNets = append(fimNets, netInfo.UUID)
+		}
+	}
+
+	return fimNets, nil
 }
