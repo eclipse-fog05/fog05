@@ -1,14 +1,14 @@
 {
     "id": "example-entity",
     "name": "example simple entity",
-    "version": "0.2",
+    "version": "0.2.1",
     "entity_version": "0.0.1",
     "description": "this is an example entity",
     "fdus": [
         {
             "id": "nginx-docker-fdu",
             "name": "nginx component",
-            "version": "0.2",
+            "version": "0.2.1",
             "fdu_version": "0.0.1",
             "description": "alpine nginx image",
             "image": { "uri": "lxd://alpine/edge", "checksum": "", "format": "" },
