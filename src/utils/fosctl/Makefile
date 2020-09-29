@@ -1,5 +1,6 @@
 all:
-	cargo build --all-targets --release
+	cargo build --all-targets
+	cp ./target/debug/fosctl ./fosctl
 
 clean:
 	cargo clean

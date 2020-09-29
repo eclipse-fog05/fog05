@@ -14,11 +14,12 @@
             "image": { "uri": "lxd://alpine/edge", "checksum": "", "format": "" },
             "hypervisor": "LXD",
             "computation_requirements": { "cpu_arch": "x86_64", "cpu_min_freq": 0, "cpu_min_count": 1, "ram_size_mb": 128, "storage_size_mb": 64 },
-            "interfaces": [{ "name": "eth0", "kind": "virtual", "virtual_interface": { "vif_kind": "virtio" }, "cp_id": "nginx-cp1" }],
+            "interfaces": [{ "name": "eth0", "kind": "VIRTUAL", "virtual_interface": { "vif_kind": "VIRTIO" }, "cp_id": "nginx-cp1" }],
             "connection_points": [{ "id": "nginx-cp1", "name": "nginx connection point", "vld_ref": "vld-1" }],
-            "migration_kind": "cold",
+            "migration_kind": "COLD",
             "depends_on": [],
-            "storage": []
+            "storage": [],
+            "replicas":2
         }
     ],
     "virtual_links": [
