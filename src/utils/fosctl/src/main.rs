@@ -17,14 +17,6 @@ use uuid::Uuid;
 
 mod types;
 
-// arg_enum! {
-//     #[derive(Debug)]
-//     enum Cmd {
-//         Add,
-//         Get,
-//         Delete
-//     }
-// }
 
 arg_enum! {
     #[derive(Debug)]

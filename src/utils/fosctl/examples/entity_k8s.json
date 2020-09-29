@@ -1,14 +1,14 @@
 {
     "id": "example-entity-k8s",
     "name": "example k8s entity",
-    "version": "0.2",
+    "version": "0.2.1",
     "entity_version": "0.0.1",
     "description": "this is an example entity",
     "fdus": [
         {
             "id": "nginx-k8s-fdu",
             "name": "nginx component",
-            "version": "0.2",
+            "version": "0.2.1",
             "fdu_version": "0.0.1",
             "description": "alpine nginx k8s",
             "hypervisor": "cloud",

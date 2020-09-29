@@ -9,9 +9,14 @@ extern crate serde_yaml;
 use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use semver::Version;
 
 fn default_zero() -> u8 {
     0
+}
+
+fn default_one() -> u8 {
+    1
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -216,7 +221,8 @@ pub struct Image {
 pub struct ComputationalRequirements {
     pub cpu_arch: String,
     #[serde(default = "default_zero")]
-    pub cpu_min_freq: u8, //default 0
+	pub cpu_min_freq: u8, //default 0
+	#[serde(default = "default_one")]
     pub cpu_min_count: u8, //default 1
     #[serde(default = "default_zero")]
     pub gpu_min_count: u8, //default 0
@@ -275,8 +281,8 @@ pub struct FDUDescriptor {
     pub uuid: Option<Uuid>,
     pub id: String,
     pub name: String,
-    pub version: String,     //semantic version of the descriptor
-    pub fdu_version: String, //semantic version of the fdu
+    pub version: Version,     //semantic version of the descriptor
+    pub fdu_version: Version, //semantic version of the fdu
     pub description: Option<String>,
     pub hypervisor: String, //eg. KVM, LXD, DOCKER, ROS2, BARE, K8s, AWS...
     pub image: Option<Image>,
@@ -336,10 +342,10 @@ pub struct VirtualLinkDescriptor {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct EntityDescriptor {
-    pub uuid: Option<Uuid>, //verify if there is a UUID crate compatible with Serialize,Deserilize if not present is generated at onboarding in the catalog
+    pub uuid: Option<Uuid>, //verify if there is a UUID crate compatible with Serialize, Deserialize if not present is generated at onboarding in the catalog
     pub id: String,         // eg. foo.bar.my.entity
-    pub version: String,    // semantic versioning of the descriptor
-    pub entity_version: String, //semantinc versioning of the entity
+    pub version: Version,    // semantic versioning of the descriptor
+    pub entity_version: Version, //semantic versioning of the entity
     pub name: String,
     pub description: Option<String>,
     pub fdus: Vec<FDUDescriptor>,
@@ -366,7 +372,7 @@ pub enum EntityStatus {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct EntityRecord {
     pub uuid: Uuid,
-    pub id: String, //ref a EntityDescriptor.UUID
+    pub id: String, //ref to EntityDescriptor.UUID
     pub status: EntityStatus,
     pub fdus: Vec<Uuid>,
     pub virtual_links: Vec<Uuid>,
