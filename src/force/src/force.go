@@ -1304,7 +1304,7 @@ func (f *FOrcE) teardownWorker(qJob EnqueuedJob) {
 				f.check(err)
 				return
 			}
-
+			f.logger.Info(fmt.Sprintf("JobID: %s Instance: %s FDUs %+v", qJob.Job.JobID, entityRecord.UUID, entityRecord.FDUs))
 			for _, fdu := range entityRecord.FDUs {
 
 				fduDesc, err := f.findFDUForInstance(c, fdu)
@@ -1852,25 +1852,88 @@ func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
 					// 	}
 					// }
 
-					instances := []string{}
-					apiInstances, err := fimapi.FDU.InstanceList(*fdu.UUID, nil)
-					if f.check(err) {
-						job.Status = "failed"
-						err := c.Orchestrator.AddJobInfo(job)
-						f.check(err)
-						return
-					}
-					for _, v := range apiInstances {
-						instances = append(instances, v...)
-					}
+					// instances := []string{}
+					// apiInstances, err := fimapi.FDU.InstanceList(*fdu.UUID, nil)
+					// if f.check(err) {
+					// 	job.Status = "failed"
+					// 	err := c.Orchestrator.AddJobInfo(job)
+					// 	f.check(err)
+					// 	return
+					// }
+					// for _, v := range apiInstances {
+					// 	instances = append(instances, v...)
+					// }
 
-					entityFDUInstances := []string{}
-					intersection := intersect.Hash(instances, entityRecord.FDUs).([]interface{})
-					for _, v := range intersection {
-						entityFDUInstances = append(entityFDUInstances, fmt.Sprint(v))
-					}
+					// entityFDUInstances := []string{}
+					// intersection := intersect.Hash(instances, entityRecord.FDUs).([]interface{})
+					// for _, v := range intersection {
+					// 	entityFDUInstances = append(entityFDUInstances, fmt.Sprint(v))
+					// }
 
-					if minReplicas > uint8(len(entityFDUInstances)) {
+					// if minReplicas > uint8(len(entityFDUInstances)) {
+					// 	f.logger.Info(fmt.Sprintf("JobID: %s Instance: %s Entity: %s FDU: %s has less replicas than needed", qJob.Job.JobID, entityRecord.UUID, entityRecord.ID, *fdu.UUID))
+					// 	entityRecord.Status = ERROR
+					// 	f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+					// 	ready = false
+					// 	// we should trigger here the new replicas
+					// 	//Getting also cloud API if present
+					// 	if entityRecord.CloudID != nil {
+					// 		cloud, _ := f.state.clouds[qJob.systemid][qJob.tenantid][*entityRecord.CloudID]
+					// 		go f.recoverWorker(entityRecord, fimapi, cloud, c)
+					// 	} else {
+					// 		go f.recoverWorker(entityRecord, fimapi, nil, c)
+					// 	}
+
+					// }
+
+					notWorkingInstances := []string{}
+
+					for _, instanceID := range entityRecord.FDUs {
+						fduInstanceInfo, err := fimapi.FDU.InstanceInfo(instanceID)
+						if f.check(err) {
+							f.logger.Error(fmt.Sprintf("JobID: %s Instance: %s Entity: %s FDU: %s FDU Instance: %s is not there...", qJob.Job.JobID, entityRecord.UUID, entityRecord.ID, *fdu.UUID, instanceID))
+							ready = false
+							entityRecord.Status = ERROR
+							notWorkingInstances = append(notWorkingInstances, instanceID)
+						} else {
+							f.logger.Info(fmt.Sprintf("JobID: %s Instance: %s Entity: %s FDU: %s FDU Instance: %s Status: %s", qJob.Job.JobID, entityRecord.UUID, entityRecord.ID, *fdu.UUID, instanceID, fduInstanceInfo.Status))
+							switch fduInstanceInfo.Status {
+							case "RUN":
+								ready = ready && true
+							case "STARTING", "CONFIGURE", "DEFINE":
+								ready = false
+							case "ERROR", "PAUSE":
+								ready = false
+								entityRecord.Status = ERROR
+								notWorkingInstances = append(notWorkingInstances, instanceID)
+							default:
+								ready = false
+							}
+
+							fduRecord := fog05.FOrcEFDURecord{
+								UUID:   fduInstanceInfo.UUID,
+								ID:     fduInstanceInfo.FDUID,
+								Status: fduInstanceInfo.Status,
+							}
+							f.check(c.Orchestrator.AddFDURecord(fduRecord))
+						}
+
+					}
+					f.logger.Info(fmt.Sprintf("JobID: %s Instance: %s Removing %+v from %+v", qJob.Job.JobID, entityRecord.UUID, notWorkingInstances, entityRecord.FDUs))
+					for i := 0; i < len(entityRecord.FDUs); i++ {
+						id := entityRecord.FDUs[i]
+						for _, rem := range notWorkingInstances {
+							if id == rem {
+								entityRecord.FDUs = append(entityRecord.FDUs[:i], entityRecord.FDUs[i+1:]...)
+								i--
+								break
+							}
+						}
+					}
+					f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+
+					f.logger.Info(fmt.Sprintf("JobID: %s Instance: %s FDUs %+v", qJob.Job.JobID, entityRecord.UUID, entityRecord.FDUs))
+					if minReplicas > uint8(len(entityRecord.FDUs)) {
 						f.logger.Info(fmt.Sprintf("JobID: %s Instance: %s Entity: %s FDU: %s has less replicas than needed", qJob.Job.JobID, entityRecord.UUID, entityRecord.ID, *fdu.UUID))
 						entityRecord.Status = ERROR
 						f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
@@ -1884,31 +1947,20 @@ func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
 							go f.recoverWorker(entityRecord, fimapi, nil, c)
 						}
 
-					}
-
-					for _, instanceID := range entityFDUInstances {
-						fduInstanceInfo, err := fimapi.FDU.InstanceInfo(instanceID)
+						v, err := json.Marshal(entityRecord)
 						if f.check(err) {
 							job.Status = "failed"
 							err := c.Orchestrator.AddJobInfo(job)
 							f.check(err)
 							return
 						}
-						f.logger.Info(fmt.Sprintf("JobID: %s Instance: %s Entity: %s FDU: %s FDU Instance: %s Status: %s", qJob.Job.JobID, entityRecord.UUID, entityRecord.ID, *fdu.UUID, instanceID, fduInstanceInfo.Status))
-						switch fduInstanceInfo.Status {
-						case "RUN":
-							ready = ready && true
-						default:
-							ready = false
+						job.Status = "completed"
+						job.Body = string(v)
+						err = c.Orchestrator.AddJobInfo(job)
+						f.check(err)
 
-						}
-
-						fduRecord := fog05.FOrcEFDURecord{
-							UUID:   fduInstanceInfo.UUID,
-							ID:     fduInstanceInfo.FDUID,
-							Status: fduInstanceInfo.Status,
-						}
-						f.check(c.Orchestrator.AddFDURecord(fduRecord))
+						f.logger.Info(fmt.Sprintf("Monitoring Job: %s done", qJob.Job.JobID))
+						return
 
 					}
 				}
