@@ -18,7 +18,7 @@ before_install:
   # copying repo inside container
   - docker cp ../fog05 build:/root/
 script:
-  - docker exec build bash -c "eval \$(opam env) && source $HOME/.cargo/env && cd /root/fog05 && ./build.sh"
+  - docker exec build bash -c "eval \$(opam env) && source ${HOME}/.cargo/env && cd /root/fog05 && ./build.sh"
     # building a debian package
   # - docker exec build bash -c "mkdir /root/build && cd /root && mv fog05 build/fog05-0.1 && cd build && tar -czvf fog05-0.1.tar.gz fog05-0.1"
   # - docker exec build bash -c "eval \$(opam env) && cd /root/build/fog05-0.1 && make clean && make -C api/api-python clean && make -C sdk/sdk-python clean"
