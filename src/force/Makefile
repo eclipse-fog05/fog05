@@ -1,3 +1,5 @@
+.PHONY: all clean image push-image
+
 
 REGISTRY?=fog05/force
 TAG?=$(shell git describe --tags --dirty)
@@ -10,5 +12,8 @@ clean:
 	rm -rf force
 
 
-# image:
-# 	docker build -f Dockerfile.$(ARCH) -t $(REGISTRY):$(TAG)-$(ARCH) .
+image:
+	docker build -f Dockerfile.$(ARCH) -t $(REGISTRY):$(TAG)-$(ARCH) .
+
+push-image:
+	docker push $(REGISTRY):$(TAG)-$(ARCH)

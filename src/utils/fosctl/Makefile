@@ -1,3 +1,5 @@
+.PHONY: all debug clean deb rpm
+
 all:
 	cargo build --all-targets --release
 
