@@ -17,14 +17,29 @@ func main() {
 	args := os.Args[1:]
 	fmt.Println(args)
 
-	data, err := ioutil.ReadFile(args[0])
-	check(err)
-	conf := Configuration{}
-	json.Unmarshal(data, &conf)
+	if len(args) < 2 {
+		zenoh_addr, exists := os.LookupEnv("ZENOH")
+		if !exists {
+			panic(fmt.Errorf("ZENOH environment variable is not set!!"))
+		}
 
-	app, err := NewApp(conf)
-	check(err)
-	app.Initialize()
-	app.Run()
+		zenoh := fmt.Sprintf("tcp/%s:7447", zenoh_addr)
+
+		app, err := NewAppFromParams("9191", "0.0.0.0", zenoh)
+		check(err)
+		app.Initialize()
+		app.Run()
+
+	} else {
+		data, err := ioutil.ReadFile(args[0])
+		check(err)
+		conf := Configuration{}
+		json.Unmarshal(data, &conf)
+
+		app, err := NewApp(conf)
+		check(err)
+		app.Initialize()
+		app.Run()
+	}
 
 }
