@@ -44,6 +44,29 @@ func NewApp(conf Configuration) (*App, error) {
 
 }
 
+func NewAppFromParams(port string, addr string, zenoh string) (*App, error) {
+
+	conf := Configuration{
+		Address: addr,
+		Port:    port,
+		Zenoh:   zenoh,
+	}
+
+	f, err := NewFOrcE(conf.Zenoh)
+	if err != nil {
+		return nil, err
+	}
+	r := mux.NewRouter()
+	a := App{
+		force:  f,
+		router: r,
+		conf:   conf,
+		logger: log.New(),
+	}
+	return &a, nil
+
+}
+
 func (a *App) Initialize() {
 	err := a.force.Init()
 	if a.check(err) {
