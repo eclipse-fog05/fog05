@@ -139,6 +139,10 @@ github.com/gabrik/sdk-go v0.0.0-20200929064358-2ddea14f3a2d h1:TkdMGLVNTAfq9zzuw
 github.com/gabrik/sdk-go v0.0.0-20200929064358-2ddea14f3a2d/go.mod h1:ZKGOJ5VzMjQRL3NexJG6x/vz8i0YxyM07LB+jKHoLUI=
 github.com/gabrik/sdk-go v0.0.0-20200929101437-526a3b428cc2 h1:4g0PYJzY0B4DA6bnaTboZtNgJ5qP6OcqFmXsjgP+t24=
 github.com/gabrik/sdk-go v0.0.0-20200929101437-526a3b428cc2/go.mod h1:ZKGOJ5VzMjQRL3NexJG6x/vz8i0YxyM07LB+jKHoLUI=
+github.com/gabrik/sdk-go v0.0.0-20200930135107-764ec583b011 h1:swCepnL1w8kJzeDaVgcNz+gOXwYWLSjNJLNK8U9XrEg=
+github.com/gabrik/sdk-go v0.0.0-20200930135107-764ec583b011/go.mod h1:ZKGOJ5VzMjQRL3NexJG6x/vz8i0YxyM07LB+jKHoLUI=
+github.com/gabrik/sdk-go v0.0.0-20201001071416-bc25cc65f250 h1:cPbccIR65o++xZnnIlOaISLr+4yiQEvo0m3rPdNCc74=
+github.com/gabrik/sdk-go v0.0.0-20201001071416-bc25cc65f250/go.mod h1:ZKGOJ5VzMjQRL3NexJG6x/vz8i0YxyM07LB+jKHoLUI=
 github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/go-errors/errors v1.1.1 h1:ljK/pL5ltg3qoN+OtN6yCv9HWSfMwxSx90GJCZQxYNg=
 github.com/go-errors/errors v1.1.1/go.mod h1:psDX2osz5VnTOnFWbDeWwS7yejl+uV3FEWEp4lssFEs=

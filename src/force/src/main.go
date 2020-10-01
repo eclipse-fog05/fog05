@@ -17,7 +17,7 @@ func main() {
 	args := os.Args[1:]
 	fmt.Println(args)
 
-	if len(args) < 2 {
+	if len(args) < 1 {
 		zenoh_addr, exists := os.LookupEnv("ZENOH")
 		if !exists {
 			panic(fmt.Errorf("ZENOH environment variable is not set!!"))

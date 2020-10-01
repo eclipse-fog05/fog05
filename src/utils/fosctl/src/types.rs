@@ -117,7 +117,11 @@ pub struct FIMInfo {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CloudInfo {
     pub uuid: Uuid,
-    pub config: String, //the config is base64
+    pub config: String, //K8s client config
+    pub ca : String, //base64 of CA data
+    pub cert : String, //base64 of Client Certificate
+    pub key : String, //base64 of Client Key
+
 }
 
 // Descriptors

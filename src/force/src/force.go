@@ -153,10 +153,21 @@ func (f *FOrcE) Init() error {
 	// }
 	for _, cloudInfo := range zClouds {
 		f.logger.Info(fmt.Sprintf("Initializing Adding Cloud: %s", cloudInfo.UUID))
-		kubeConfig := &rest.Config{}
-		err := json.Unmarshal([]byte(cloudInfo.Config), kubeConfig)
 
-		err = f.AddCloud(DEFAULTUUID, DEFAULTUUID, cloudInfo.UUID, cloudInfo.Config, kubeConfig.CAData, kubeConfig.KeyData, kubeConfig.CertData)
+		ca, err := base64.StdEncoding.DecodeString(cloudInfo.CA)
+		if f.check(err) {
+			return err
+		}
+		cert, err := base64.StdEncoding.DecodeString(cloudInfo.Cert)
+		if f.check(err) {
+			return err
+		}
+		key, err := base64.StdEncoding.DecodeString(cloudInfo.Key)
+		if f.check(err) {
+			return err
+		}
+
+		err = f.AddCloud(DEFAULTUUID, DEFAULTUUID, cloudInfo.UUID, cloudInfo.Config, ca, cert, key)
 		if f.check(err) {
 			return err
 		}
@@ -167,8 +178,11 @@ func (f *FOrcE) Init() error {
 	// 	return err
 	// }
 	for _, instance := range instances {
-		f.logger.Info(fmt.Sprintf("Initializing Adding Monitoring goroutine for: %s", instance.UUID))
-		go f.monitoringJobsSpawner(c, DEFAULTUUID, DEFAULTUUID, instance.UUID, instance.FIMID, instance.CloudID)
+		if instance.Status != STOPPED && instance.Status != STOPPING && instance.Status != OFFLOADING && instance.Status != OFFLOADED {
+			f.logger.Info(fmt.Sprintf("Initializing Adding Monitoring goroutine for: %s", instance.UUID))
+			go f.monitoringJobsSpawner(c, DEFAULTUUID, DEFAULTUUID, instance.UUID, instance.FIMID, instance.CloudID)
+		}
+
 	}
 
 	jobs, _ := c.Orchestrator.GetAllJobsInfo()
@@ -454,14 +468,18 @@ func (f *FOrcE) AddCloud(sysid string, tenantid string, cloudid string, kubeconf
 				return err
 			}
 
-			d, err := json.Marshal(&k8sConfig)
-			if f.check(err) {
-				return err
-			}
 			f.state.clouds[sysid][tenantid][cloudid] = k8sClientset
+
+			ca64 := base64.StdEncoding.EncodeToString(caData)
+			cert64 := base64.StdEncoding.EncodeToString(certData)
+			key64 := base64.StdEncoding.EncodeToString(keyData)
+
 			cloudInfo := fog05.CloudInfo{
 				UUID:   cloudid,
-				Config: string(d),
+				Config: kubeconfig,
+				CA:     ca64,
+				Cert:   cert64,
+				Key:    key64,
 			}
 			f.check(c.Orchestrator.AddCloudInfo(cloudInfo))
 
@@ -988,45 +1006,55 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 					deploymentsClient := clientset.AppsV1().Deployments(apiv1.NamespaceDefault)
 					// f.logger.Info(fmt.Sprintf("JobID: %s Deployment Client %%", qJob.Job.JobID, spew.Sdump(deploymentsClient)))
 					deployment := &appsv1.Deployment{}
-					depDesc, err := base64.StdEncoding.DecodeString(*fdu.HypervisorSpecific)
-					if f.check(err) {
-						job.Status = "failed"
-						err := c.Orchestrator.AddJobInfo(job)
-						f.check(err)
-						entityRecord.Status = "invalid"
-						f.check(c.Orchestrator.AddEntityRecord(entityRecord))
-						return
-					}
-					dec := yaml.NewYAMLOrJSONDecoder(bytes.NewReader(depDesc), 65535)
-					err = dec.Decode(&deployment)
-					if f.check(err) {
-						job.Status = "failed"
-						err := c.Orchestrator.AddJobInfo(job)
-						f.check(err)
-						entityRecord.Status = "invalid"
-						f.check(c.Orchestrator.AddEntityRecord(entityRecord))
-						return
-					}
-					deployment.ObjectMeta.Name = uuid.New().String()
-					f.logger.Info(fmt.Sprintf("JobID: %s EntityID: %s FDU: %s K8s deployment: %+v", qJob.Job.JobID, info.UUID, *fdu.UUID, deployment))
-					res, err := deploymentsClient.Create(context.TODO(), deployment, metav1.CreateOptions{})
-					if f.check(err) {
-						job.Status = "failed"
-						err := c.Orchestrator.AddJobInfo(job)
-						f.check(err)
-						entityRecord.Status = ERROR
-						f.check(c.Orchestrator.AddEntityRecord(entityRecord))
-						return
-					}
-					f.logger.Info(fmt.Sprintf("JobID: %s EntityID: %s FDU: %s K8s deployment: %+v", qJob.Job.JobID, info.UUID, *fdu.UUID, res))
-					entityRecord.FDUs = append(entityRecord.FDUs, deployment.ObjectMeta.Name)
 
-					fduRecord := fog05.FOrcEFDURecord{
-						UUID:   deployment.ObjectMeta.Name,
-						ID:     *fdu.UUID,
-						Status: STARTING,
+					minReplicas := uint8(1)
+					if fdu.Replicas != nil {
+						minReplicas = *fdu.Replicas
 					}
-					f.check(c.Orchestrator.AddFDURecord(fduRecord))
+					f.logger.Info(fmt.Sprintf("JobID: %s EntityID: %s FDU: %s Needed Replicas: %d", qJob.Job.JobID, info.UUID, *fdu.UUID, minReplicas))
+
+					for i := uint8(0); i < minReplicas; i++ {
+
+						depDesc, err := base64.StdEncoding.DecodeString(*fdu.HypervisorSpecific)
+						if f.check(err) {
+							job.Status = "failed"
+							err := c.Orchestrator.AddJobInfo(job)
+							f.check(err)
+							entityRecord.Status = "invalid"
+							f.check(c.Orchestrator.AddEntityRecord(entityRecord))
+							return
+						}
+						dec := yaml.NewYAMLOrJSONDecoder(bytes.NewReader(depDesc), 65535)
+						err = dec.Decode(&deployment)
+						if f.check(err) {
+							job.Status = "failed"
+							err := c.Orchestrator.AddJobInfo(job)
+							f.check(err)
+							entityRecord.Status = "invalid"
+							f.check(c.Orchestrator.AddEntityRecord(entityRecord))
+							return
+						}
+						deployment.ObjectMeta.Name = uuid.New().String()
+						f.logger.Info(fmt.Sprintf("JobID: %s EntityID: %s FDU: %s K8s deployment: %+v", qJob.Job.JobID, info.UUID, *fdu.UUID, deployment))
+						res, err := deploymentsClient.Create(context.TODO(), deployment, metav1.CreateOptions{})
+						if f.check(err) {
+							job.Status = "failed"
+							err := c.Orchestrator.AddJobInfo(job)
+							f.check(err)
+							entityRecord.Status = ERROR
+							f.check(c.Orchestrator.AddEntityRecord(entityRecord))
+							return
+						}
+						f.logger.Info(fmt.Sprintf("JobID: %s EntityID: %s FDU: %s K8s deployment: %+v", qJob.Job.JobID, info.UUID, *fdu.UUID, res))
+						entityRecord.FDUs = append(entityRecord.FDUs, deployment.ObjectMeta.Name)
+
+						fduRecord := fog05.FOrcEFDURecord{
+							UUID:   deployment.ObjectMeta.Name,
+							ID:     *fdu.UUID,
+							Status: STARTING,
+						}
+						f.check(c.Orchestrator.AddFDURecord(fduRecord))
+					}
 
 				} else {
 					if info.FIMID == nil {
@@ -1051,99 +1079,11 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 					f.logger.Info(fmt.Sprintf("JobID: %s EntityID: %s FDU: %s is FIM FDU of Kind %s", qJob.Job.JobID, info.UUID, *fdu.UUID, fdu.Hypervisor))
 
 					//Converting the Orchestrator FDU to FIM FDU
-					// This will change in the future the descriptors will be alligned
-
-					fduFIMInterfaces := []fog05.FDUInterfaceDescriptor{}
-					fduFIMConnectionPoints := []fog05.ConnectionPointDescriptor{}
-
-					for _, intf := range fdu.Interfaces {
-						vpci := ""
-						if intf.VirtualInterface.Parent != nil {
-							vpci = *intf.VirtualInterface.Parent
-						}
-						bw := 100
-						if intf.VirtualInterface.Bandwidth != nil {
-							bw = int(*intf.VirtualInterface.Bandwidth)
-						}
-
-						fimIntf := fog05.FDUInterfaceDescriptor{
-							Name:          intf.Name,
-							InterfaceType: fog05.INTERNAL,
-							IsMGMT:        false,
-							MACAddress:    intf.MACAddress,
-							CPID:          intf.CPID,
-							VirtualInterface: fog05.FDUVirtualInterface{
-								InterfaceType: intf.VirtualInterface.InterfaceKind,
-								VPCI:          vpci,
-								Bandwidth:     bw,
-							},
-						}
-						fduFIMInterfaces = append(fduFIMInterfaces, fimIntf)
-					}
-
-					for _, cp := range fdu.ConnectionPoints {
-
-						vldID := ""
-						for _, vl := range entityDescriptor.VirtualLinks {
-							if vl.ID == cp.VLDRef {
-								vldID = *vl.UUID
-							}
-						}
-						if vldID == "" {
-							f.logger.Info(fmt.Sprintf("JobID: %s EntityID: %s Virtual Link Reference %s is broken for FDU %s", qJob.Job.JobID, cp.VLDRef, *fdu.UUID))
-							job.Status = "failed"
-							err := c.Orchestrator.AddJobInfo(job)
-							f.check(err)
-							entityRecord.Status = ERROR
-							f.check(c.Orchestrator.AddEntityRecord(entityRecord))
-							return
-						}
-
-						fimVLDRef, err := f.getFIMNetworkID(vldID, fimapi)
-						if f.check(err) {
-							job.Status = "failed"
-							err := c.Orchestrator.AddJobInfo(job)
-							f.check(err)
-							entityRecord.Status = ERROR
-							f.check(c.Orchestrator.AddEntityRecord(entityRecord))
-							return
-						}
-
-						fimCP := fog05.ConnectionPointDescriptor{
-							UUID:   cp.UUID,
-							ID:     cp.ID,
-							Name:   cp.Name,
-							VLDRef: &fimVLDRef,
-						}
-
-						fduFIMConnectionPoints = append(fduFIMConnectionPoints, fimCP)
-					}
-
-					fimFDU := fog05.FDU{
-						ID:          fdu.ID,
-						UUID:        fdu.UUID,
-						Name:        fdu.Name,
-						Description: fdu.Description,
-						Image:       fdu.Image,
-						Hypervisor:  fdu.Hypervisor,
-						ComputationRequirements: fog05.FDUComputationalRequirements{
-							CPUArch:         fdu.ComputationRequirements.CPUArch,
-							CPUMinFrequency: fdu.ComputationRequirements.CPUMinFrequency,
-							CPUMinCount:     fdu.ComputationRequirements.CPUMinCount,
-							RAMSizeMB:       float64(fdu.ComputationRequirements.RAMSizeMB),
-							StorageSizeGB:   float64(fdu.ComputationRequirements.StorageSizeMB) / 1024,
-						},
-						Storage:          []fog05.FDUStorageDescriptor{},
-						MigrationKind:    "COLD",
-						DependsOn:        fdu.DependsOn,
-						IOPorts:          []fog05.FDUIOPort{},
-						Interfaces:       fduFIMInterfaces,
-						ConnectionPoints: fduFIMConnectionPoints,
-					}
+					fimFDU, err := f.makeFIMFDUFromFOrcEFDU(entityDescriptor, fdu, fimapi)
 
 					//Stores the descriptor in the FIM
 					f.logger.Info(fmt.Sprintf("JobID: %s EntityID: %s FDU: %s Storing in FIM %+v", qJob.Job.JobID, info.UUID, *fdu.UUID, fimFDU))
-					_, err = fimapi.FDU.Onboard(fimFDU)
+					_, err = fimapi.FDU.Onboard(*fimFDU)
 					if f.check(err) {
 						job.Status = "failed"
 						err := c.Orchestrator.AddJobInfo(job)
@@ -1166,7 +1106,7 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 
 					for i := uint8(0); i < minReplicas; i++ {
 						//Finds a node for the FDU
-						nodeid, err := f.findFIMNode(&fimFDU, fimapi)
+						nodeid, err := f.findFIMNode(fimFDU, fimapi)
 						if f.check(err) {
 							job.Status = "failed"
 							err := c.Orchestrator.AddJobInfo(job)
@@ -1491,10 +1431,67 @@ func (f *FOrcE) recoverWorker(entityRecord *fog05.EntityRecord, fimapi *fim.FIMA
 	}
 
 	for _, fdu := range entityDescriptor.FDUs {
+
+		minReplicas := uint8(1)
+		if fdu.Replicas != nil {
+			minReplicas = *fdu.Replicas
+		}
+
 		if fdu.Hypervisor == "cloud" {
-			// Should recover a cloud FDU
-			// only if it was never instantiated to K8s
-			// because for replicas the K8s self-healing is always in place
+			if cloud == nil {
+				f.logger.Error("Cloud is nil with FDU of Kind Cloud!!")
+				entityRecord.Status = ERROR
+				f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+				return
+			}
+
+			deploymentsClient := cloud.AppsV1().Deployments(apiv1.NamespaceDefault)
+
+			instances := []string{}
+			for _, inst := range entityRecord.FDUs {
+				_, err := deploymentsClient.Get(context.TODO(), inst, metav1.GetOptions{})
+				if err == nil {
+					instances = append(instances, inst)
+				}
+			}
+
+			f.logger.Info(fmt.Sprintf("Entity %s Instance %s FDU %s has %d/%d replicas", entityRecord.ID, entityRecord.UUID, *fdu.UUID, uint8(len(instances)), minReplicas))
+			for minReplicas > uint8(len(instances)) {
+				deployment := &appsv1.Deployment{}
+				depDesc, err := base64.StdEncoding.DecodeString(*fdu.HypervisorSpecific)
+				if f.check(err) {
+					entityRecord.Status = ERROR
+					f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+					return
+				}
+				dec := yaml.NewYAMLOrJSONDecoder(bytes.NewReader(depDesc), 65535)
+				err = dec.Decode(&deployment)
+				if f.check(err) {
+					entityRecord.Status = ERROR
+					f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+					return
+				}
+				deployment.ObjectMeta.Name = uuid.New().String()
+				f.logger.Info(fmt.Sprintf("Entity %s Instance %s FDU %s K8s deployment: %+v", entityRecord.ID, entityRecord.UUID, *fdu.UUID, deployment))
+				res, err := deploymentsClient.Create(context.TODO(), deployment, metav1.CreateOptions{})
+				if f.check(err) {
+					entityRecord.Status = ERROR
+					f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+					return
+				}
+				f.logger.Info(fmt.Sprintf("Entity %s Instance %s FDU %s K8s deployment: %+v", entityRecord.ID, entityRecord.UUID, *fdu.UUID, res))
+
+				fduRecord := fog05.FOrcEFDURecord{
+					UUID:   deployment.ObjectMeta.Name,
+					ID:     *fdu.UUID,
+					Status: STARTING,
+				}
+				f.check(c.Orchestrator.AddFDURecord(fduRecord))
+				instances = append(instances, deployment.ObjectMeta.Name)
+				entityRecord.FDUs = append(entityRecord.FDUs, deployment.ObjectMeta.Name)
+				f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+			}
+
 		} else {
 			if fimapi == nil {
 				f.logger.Error("FIMAPI is nil with FDU of Kind FIM!!")
@@ -1503,121 +1500,57 @@ func (f *FOrcE) recoverWorker(entityRecord *fog05.EntityRecord, fimapi *fim.FIMA
 				return
 			}
 
-			minReplicas := uint8(1)
-			if fdu.Replicas != nil {
-				minReplicas = *fdu.Replicas
-			}
+			// instances := []string{}
+			// apiInstances, err := fimapi.FDU.InstanceList(*fdu.UUID, nil)
+			// if f.check(err) {
+			// 	entityRecord.Status = ERROR
+			// 	f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+			// 	return
+			// }
+			// for _, v := range apiInstances {
+			// 	instances = append(instances, v...)
+			// }
+
+			// entityFDUInstances := []string{}
+			// intersection := intersect.Hash(instances, entityRecord.FDUs).([]interface{})
+			// for _, v := range intersection {
+			// 	entityFDUInstances = append(entityFDUInstances, fmt.Sprint(v))
+			// }
 
 			instances := []string{}
-			apiInstances, err := fimapi.FDU.InstanceList(*fdu.UUID, nil)
-			if f.check(err) {
-				entityRecord.Status = ERROR
-				f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
-				return
-			}
-			for _, v := range apiInstances {
-				instances = append(instances, v...)
+			for _, inst := range entityRecord.FDUs {
+				_, err := c.Orchestrator.GetFDURecordInfo(*fdu.UUID, inst)
+				if err == nil {
+					instances = append(instances, inst)
+				}
 			}
 
-			entityFDUInstances := []string{}
-			intersection := intersect.Hash(instances, entityRecord.FDUs).([]interface{})
-			for _, v := range intersection {
-				entityFDUInstances = append(entityFDUInstances, fmt.Sprint(v))
-			}
+			f.logger.Info(fmt.Sprintf("Entity %s Instance %s FDU %s has %d/%d replicas", entityRecord.ID, entityRecord.UUID, *fdu.UUID, uint8(len(instances)), minReplicas))
+			for minReplicas > uint8(len(instances)) {
+				if uint8(len(instances)) == uint8(0) {
+					// In this case we first verify that the FDU descriptor is there
+					// if not we onboard it
+					_, err := fimapi.FDU.Info(*fdu.UUID)
 
-			f.logger.Info(fmt.Sprintf("Entity %s Instance %s FDU %s has %d/%d replicas", entityRecord.ID, entityRecord.UUID, *fdu.UUID, uint8(len(entityFDUInstances)), minReplicas))
-			for minReplicas > uint8(len(entityFDUInstances)) {
-				if uint8(len(entityFDUInstances)) == uint8(0) {
-					//In this case we add first the descriptor
-					fduFIMInterfaces := []fog05.FDUInterfaceDescriptor{}
-					fduFIMConnectionPoints := []fog05.ConnectionPointDescriptor{}
+					if err != nil {
 
-					for _, intf := range fdu.Interfaces {
-						vpci := ""
-						if intf.VirtualInterface.Parent != nil {
-							vpci = *intf.VirtualInterface.Parent
-						}
-						bw := 100
-						if intf.VirtualInterface.Bandwidth != nil {
-							bw = int(*intf.VirtualInterface.Bandwidth)
-						}
-
-						fimIntf := fog05.FDUInterfaceDescriptor{
-							Name:          intf.Name,
-							InterfaceType: fog05.INTERNAL,
-							IsMGMT:        false,
-							MACAddress:    intf.MACAddress,
-							CPID:          intf.CPID,
-							VirtualInterface: fog05.FDUVirtualInterface{
-								InterfaceType: intf.VirtualInterface.InterfaceKind,
-								VPCI:          vpci,
-								Bandwidth:     bw,
-							},
-						}
-						fduFIMInterfaces = append(fduFIMInterfaces, fimIntf)
-					}
-
-					for _, cp := range fdu.ConnectionPoints {
-
-						vldID := ""
-						for _, vl := range entityDescriptor.VirtualLinks {
-							if vl.ID == cp.VLDRef {
-								vldID = *vl.UUID
-							}
-						}
-						if vldID == "" {
-							f.logger.Info(fmt.Sprintf("EntityID: %s Virtual Link Reference %s is broken for FDU %s", entityRecord.ID, cp.VLDRef, *fdu.UUID))
+						fimFDU, err := f.makeFIMFDUFromFOrcEFDU(entityDescriptor, &fdu, fimapi)
+						if f.check(err) {
+							f.logger.Error(fmt.Sprintf("EntityID: %s FDU: %s Error in conversion of descriptor: %s", entityRecord.ID, *fdu.UUID, err))
 							entityRecord.Status = ERROR
 							f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
 							return
 						}
 
-						fimVLDRef, err := f.getFIMNetworkID(vldID, fimapi)
+						f.logger.Info(fmt.Sprintf("EntityID: %s FDU: %s Storing in FIM %+v", entityRecord.ID, *fdu.UUID, fimFDU))
+						_, err = fimapi.FDU.Onboard(*fimFDU)
 						if f.check(err) {
 							entityRecord.Status = ERROR
 							f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
 							return
 						}
-
-						fimCP := fog05.ConnectionPointDescriptor{
-							UUID:   cp.UUID,
-							ID:     cp.ID,
-							Name:   cp.Name,
-							VLDRef: &fimVLDRef,
-						}
-
-						fduFIMConnectionPoints = append(fduFIMConnectionPoints, fimCP)
 					}
 
-					fimFDU := fog05.FDU{
-						ID:          fdu.ID,
-						UUID:        fdu.UUID,
-						Name:        fdu.Name,
-						Description: fdu.Description,
-						Image:       fdu.Image,
-						Hypervisor:  fdu.Hypervisor,
-						ComputationRequirements: fog05.FDUComputationalRequirements{
-							CPUArch:         fdu.ComputationRequirements.CPUArch,
-							CPUMinFrequency: fdu.ComputationRequirements.CPUMinFrequency,
-							CPUMinCount:     fdu.ComputationRequirements.CPUMinCount,
-							RAMSizeMB:       float64(fdu.ComputationRequirements.RAMSizeMB),
-							StorageSizeGB:   float64(fdu.ComputationRequirements.StorageSizeMB) / 1024,
-						},
-						Storage:          []fog05.FDUStorageDescriptor{},
-						MigrationKind:    "COLD",
-						DependsOn:        fdu.DependsOn,
-						IOPorts:          []fog05.FDUIOPort{},
-						Interfaces:       fduFIMInterfaces,
-						ConnectionPoints: fduFIMConnectionPoints,
-					}
-
-					f.logger.Info(fmt.Sprintf("EntityID: %s FDU: %s Storing in FIM %+v", entityRecord.ID, *fdu.UUID, fimFDU))
-					_, err = fimapi.FDU.Onboard(fimFDU)
-					if f.check(err) {
-						entityRecord.Status = ERROR
-						f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
-						return
-					}
 				}
 
 				fimFDU, err := fimapi.FDU.Info(*fdu.UUID)
@@ -1668,16 +1601,16 @@ func (f *FOrcE) recoverWorker(entityRecord *fog05.EntityRecord, fimapi *fim.FIMA
 					Status: fimInstance.Status,
 				}
 				f.check(c.Orchestrator.AddFDURecord(fduRecord))
-				entityFDUInstances = append(entityFDUInstances, fimInstance.UUID)
+				// entityFDUInstances = append(entityFDUInstances, fimInstance.UUID)
+				instances = append(instances, fimInstance.UUID)
 				entityRecord.FDUs = append(entityRecord.FDUs, fimInstance.UUID)
 				f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
 			}
-
-			entityRecord.Status = STARTING
-			f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
-
 		}
 	}
+
+	entityRecord.Status = STARTING
+	f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
 }
 
 func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
@@ -1728,8 +1661,8 @@ func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
 
 			ready := true
 
-			if entityRecord.Status == RECOVERING {
-				f.logger.Info(fmt.Sprintf("JobID: %s Instance %s is recovering ", qJob.Job.JobID, entityRecord.UUID))
+			if entityRecord.Status == RECOVERING || entityRecord.Status == STOPPING {
+				f.logger.Info(fmt.Sprintf("JobID: %s Instance %s is recovering or stopping ", qJob.Job.JobID, entityRecord.UUID))
 				job.Status = "completed"
 				err = c.Orchestrator.AddJobInfo(job)
 				f.check(err)
@@ -1747,6 +1680,11 @@ func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
 			// }
 
 			for _, fdu := range entityDescriptor.FDUs {
+
+				minReplicas := uint8(1)
+				if fdu.Replicas != nil {
+					minReplicas = *fdu.Replicas
+				}
 
 				if fdu.Hypervisor == "cloud" {
 					clientset, exists := f.state.clouds[qJob.systemid][qJob.tenantid][*entityRecord.CloudID]
@@ -1784,49 +1722,81 @@ func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
 					}
 					f.logger.Info(fmt.Sprintf("JobID: %s Deployment %+v", qJob.Job.JobID, deployment))
 
-					orchInstances, err := c.Orchestrator.GetAllFDURecordsInfo(*fdu.UUID)
-					if f.check(err) {
-						job.Status = "failed"
-						err := c.Orchestrator.AddJobInfo(job)
-						f.check(err)
-						entityRecord.Status = ERROR
-						f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
-						return
-					}
-					allInstances := []string{}
-					entityFDUInstances := []string{}
-					for _, record := range orchInstances {
-						allInstances = append(allInstances, record.UUID)
-
-					}
-					intersection := intersect.Hash(allInstances, entityRecord.FDUs).([]interface{})
-					for _, v := range intersection {
-						entityFDUInstances = append(entityFDUInstances, fmt.Sprint(v))
+					instances := []string{}
+					for _, inst := range entityRecord.FDUs {
+						_, err := c.Orchestrator.GetFDURecordInfo(*fdu.UUID, inst)
+						if err == nil {
+							instances = append(instances, inst)
+						}
 					}
 
-					for _, inst := range entityFDUInstances {
+					notWorkingInstances := []string{}
+					runningReplicas := uint8(0)
+
+					for _, inst := range instances {
 
 						depInstance, err := deploymentsClient.Get(context.TODO(), inst, metav1.GetOptions{})
+						if f.check(err) {
+							f.logger.Error(fmt.Sprintf("JobID: %s Instance: %s Entity: %s FDU: %s FDU Instance: %s not in Cloud", qJob.Job.JobID, entityRecord.UUID, entityRecord.ID, *fdu.UUID, inst))
+							ready = false
+							entityRecord.Status = ERROR
+							notWorkingInstances = append(notWorkingInstances, inst)
+						} else {
+							runningReplicas++
+							if depInstance.Status.AvailableReplicas == *deployment.Spec.Replicas {
+								ready = ready && true
+								fduRecord := fog05.FOrcEFDURecord{
+									UUID:   inst,
+									ID:     *fdu.UUID,
+									Status: "run",
+								}
+								f.check(c.Orchestrator.AddFDURecord(fduRecord))
+							} else {
+								ready = false
+							}
+						}
+					}
+
+					for i := 0; i < len(entityRecord.FDUs); i++ {
+						id := entityRecord.FDUs[i]
+						for _, rem := range notWorkingInstances {
+							if id == rem {
+								c.Orchestrator.RemoveFDURecord(*fdu.UUID, rem)
+								entityRecord.FDUs = append(entityRecord.FDUs[:i], entityRecord.FDUs[i+1:]...)
+								i--
+								break
+							}
+						}
+					}
+					f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+
+					if minReplicas > runningReplicas {
+						f.logger.Info(fmt.Sprintf("JobID: %s Instance: %s Entity: %s FDU: %s has less replicas than needed", qJob.Job.JobID, entityRecord.UUID, entityRecord.ID, *fdu.UUID))
+						entityRecord.Status = ERROR
+						f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+						ready = false
+						//Getting also fim API if present
+						if entityRecord.FIMID != nil {
+							fimapi, _ := f.state.fims[qJob.systemid][qJob.tenantid][*entityRecord.FIMID]
+							go f.recoverWorker(entityRecord, fimapi, clientset, c)
+						} else {
+							go f.recoverWorker(entityRecord, nil, clientset, c)
+						}
+
+						v, err := json.Marshal(entityRecord)
 						if f.check(err) {
 							job.Status = "failed"
 							err := c.Orchestrator.AddJobInfo(job)
 							f.check(err)
-							entityRecord.Status = ERROR
-							f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
 							return
 						}
-						if depInstance.Status.AvailableReplicas == *deployment.Spec.Replicas {
-							ready = ready && true
-							fduRecord := fog05.FOrcEFDURecord{
-								UUID:   inst,
-								ID:     *fdu.UUID,
-								Status: "run",
-							}
-							f.check(c.Orchestrator.AddFDURecord(fduRecord))
-							// from Cloud not recovering is needed, K8s uses its own self-healing for PODs
-						} else {
-							ready = false
-						}
+						job.Status = "completed"
+						job.Body = string(v)
+						err = c.Orchestrator.AddJobInfo(job)
+						f.check(err)
+
+						f.logger.Info(fmt.Sprintf("Monitoring Job: %s done", qJob.Job.JobID))
+						return
 
 					}
 
@@ -1840,10 +1810,7 @@ func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
 						f.check(err)
 						return
 					}
-					minReplicas := uint8(1)
-					if fdu.Replicas != nil {
-						minReplicas = *fdu.Replicas
-					}
+
 					// if fdu.ScalingPolicies != nil {
 					// 	for _, sp := range *fdu.ScalingPolicies {
 					// 		if sp.MinReplicas > minReplicas {
@@ -1852,46 +1819,23 @@ func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
 					// 	}
 					// }
 
-					// instances := []string{}
-					// apiInstances, err := fimapi.FDU.InstanceList(*fdu.UUID, nil)
-					// if f.check(err) {
-					// 	job.Status = "failed"
-					// 	err := c.Orchestrator.AddJobInfo(job)
-					// 	f.check(err)
-					// 	return
-					// }
-					// for _, v := range apiInstances {
-					// 	instances = append(instances, v...)
-					// }
-
-					// entityFDUInstances := []string{}
-					// intersection := intersect.Hash(instances, entityRecord.FDUs).([]interface{})
-					// for _, v := range intersection {
-					// 	entityFDUInstances = append(entityFDUInstances, fmt.Sprint(v))
-					// }
-
-					// if minReplicas > uint8(len(entityFDUInstances)) {
-					// 	f.logger.Info(fmt.Sprintf("JobID: %s Instance: %s Entity: %s FDU: %s has less replicas than needed", qJob.Job.JobID, entityRecord.UUID, entityRecord.ID, *fdu.UUID))
-					// 	entityRecord.Status = ERROR
-					// 	f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
-					// 	ready = false
-					// 	// we should trigger here the new replicas
-					// 	//Getting also cloud API if present
-					// 	if entityRecord.CloudID != nil {
-					// 		cloud, _ := f.state.clouds[qJob.systemid][qJob.tenantid][*entityRecord.CloudID]
-					// 		go f.recoverWorker(entityRecord, fimapi, cloud, c)
-					// 	} else {
-					// 		go f.recoverWorker(entityRecord, fimapi, nil, c)
-					// 	}
-
-					// }
+					instances := []string{}
+					for _, inst := range entityRecord.FDUs {
+						_, err := c.Orchestrator.GetFDURecordInfo(*fdu.UUID, inst)
+						if err == nil {
+							instances = append(instances, inst)
+						}
+					}
 
 					notWorkingInstances := []string{}
+					runningReplicas := uint8(0)
 
-					for _, instanceID := range entityRecord.FDUs {
+					for _, instanceID := range instances {
+
 						fduInstanceInfo, err := fimapi.FDU.InstanceInfo(instanceID)
 						if f.check(err) {
-							f.logger.Error(fmt.Sprintf("JobID: %s Instance: %s Entity: %s FDU: %s FDU Instance: %s is not there...", qJob.Job.JobID, entityRecord.UUID, entityRecord.ID, *fdu.UUID, instanceID))
+							f.logger.Error(fmt.Sprintf("JobID: %s Instance: %s Entity: %s FDU: %s FDU Instance: %s not in FIM!", qJob.Job.JobID, entityRecord.UUID, entityRecord.ID, *fdu.UUID, instanceID))
+
 							ready = false
 							entityRecord.Status = ERROR
 							notWorkingInstances = append(notWorkingInstances, instanceID)
@@ -1900,14 +1844,17 @@ func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
 							switch fduInstanceInfo.Status {
 							case "RUN":
 								ready = ready && true
+								runningReplicas++
 							case "STARTING", "CONFIGURE", "DEFINE":
 								ready = false
+								runningReplicas++
 							case "ERROR", "PAUSE":
 								ready = false
 								entityRecord.Status = ERROR
 								notWorkingInstances = append(notWorkingInstances, instanceID)
 							default:
 								ready = false
+								runningReplicas++
 							}
 
 							fduRecord := fog05.FOrcEFDURecord{
@@ -1924,6 +1871,7 @@ func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
 						id := entityRecord.FDUs[i]
 						for _, rem := range notWorkingInstances {
 							if id == rem {
+								c.Orchestrator.RemoveFDURecord(*fdu.UUID, rem)
 								entityRecord.FDUs = append(entityRecord.FDUs[:i], entityRecord.FDUs[i+1:]...)
 								i--
 								break
@@ -1933,7 +1881,7 @@ func (f *FOrcE) monitoringWorker(qJob EnqueuedJob) {
 					f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
 
 					f.logger.Info(fmt.Sprintf("JobID: %s Instance: %s FDUs %+v", qJob.Job.JobID, entityRecord.UUID, entityRecord.FDUs))
-					if minReplicas > uint8(len(entityRecord.FDUs)) {
+					if minReplicas > runningReplicas {
 						f.logger.Info(fmt.Sprintf("JobID: %s Instance: %s Entity: %s FDU: %s has less replicas than needed", qJob.Job.JobID, entityRecord.UUID, entityRecord.ID, *fdu.UUID))
 						entityRecord.Status = ERROR
 						f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
@@ -2208,7 +2156,7 @@ func (f *FOrcE) monitoringJobsSpawner(c *fog05.FOrcEZConnector, sysid string, te
 			f.logger.Info(fmt.Sprintf("Ending monitoring spawner for %s", id))
 			return
 		}
-		if eRecord.Status == OFFLOADED {
+		if eRecord.Status == OFFLOADED || eRecord.Status == STOPPING {
 			f.logger.Info(fmt.Sprintf("Ending monitoring spawner for %s", id))
 			return
 		}
@@ -2359,4 +2307,86 @@ func (f *FOrcE) getFIMNetworkIDs(id string, fimapi *fim.FIMAPI) ([]string, error
 	}
 
 	return fimNets, nil
+}
+
+func (f *FOrcE) makeFIMFDUFromFOrcEFDU(entity *fog05.EntityDescriptor, fdu *fog05.FOrcEFDUDescriptor, fimapi *fim.FIMAPI) (*fog05.FDU, error) {
+	fduFIMInterfaces := []fog05.FDUInterfaceDescriptor{}
+	fduFIMConnectionPoints := []fog05.ConnectionPointDescriptor{}
+
+	for _, intf := range fdu.Interfaces {
+		vpci := ""
+		if intf.VirtualInterface.Parent != nil {
+			vpci = *intf.VirtualInterface.Parent
+		}
+		bw := 100
+		if intf.VirtualInterface.Bandwidth != nil {
+			bw = int(*intf.VirtualInterface.Bandwidth)
+		}
+
+		fimIntf := fog05.FDUInterfaceDescriptor{
+			Name:          intf.Name,
+			InterfaceType: fog05.INTERNAL,
+			IsMGMT:        false,
+			MACAddress:    intf.MACAddress,
+			CPID:          intf.CPID,
+			VirtualInterface: fog05.FDUVirtualInterface{
+				InterfaceType: intf.VirtualInterface.InterfaceKind,
+				VPCI:          vpci,
+				Bandwidth:     bw,
+			},
+		}
+		fduFIMInterfaces = append(fduFIMInterfaces, fimIntf)
+	}
+
+	for _, cp := range fdu.ConnectionPoints {
+
+		vldID := ""
+		for _, vl := range entity.VirtualLinks {
+			if vl.ID == cp.VLDRef {
+				vldID = *vl.UUID
+			}
+		}
+		if vldID == "" {
+			f.logger.Info(fmt.Sprintf("Virtual Link Reference %s is broken for FDU %s", cp.VLDRef, *fdu.UUID))
+			return nil, fmt.Errorf("Virtual Link Reference %s is broken for FDU %s", cp.VLDRef, *fdu.UUID)
+		}
+
+		fimVLDRef, err := f.getFIMNetworkID(vldID, fimapi)
+		if f.check(err) {
+			return nil, err
+		}
+
+		fimCP := fog05.ConnectionPointDescriptor{
+			UUID:   cp.UUID,
+			ID:     cp.ID,
+			Name:   cp.Name,
+			VLDRef: &fimVLDRef,
+		}
+
+		fduFIMConnectionPoints = append(fduFIMConnectionPoints, fimCP)
+	}
+
+	fimFDU := fog05.FDU{
+		ID:          fdu.ID,
+		UUID:        fdu.UUID,
+		Name:        fdu.Name,
+		Description: fdu.Description,
+		Image:       fdu.Image,
+		Hypervisor:  fdu.Hypervisor,
+		ComputationRequirements: fog05.FDUComputationalRequirements{
+			CPUArch:         fdu.ComputationRequirements.CPUArch,
+			CPUMinFrequency: fdu.ComputationRequirements.CPUMinFrequency,
+			CPUMinCount:     fdu.ComputationRequirements.CPUMinCount,
+			RAMSizeMB:       float64(fdu.ComputationRequirements.RAMSizeMB),
+			StorageSizeGB:   float64(fdu.ComputationRequirements.StorageSizeMB) / 1024,
+		},
+		Storage:          []fog05.FDUStorageDescriptor{},
+		MigrationKind:    "COLD",
+		DependsOn:        fdu.DependsOn,
+		IOPorts:          []fog05.FDUIOPort{},
+		Interfaces:       fduFIMInterfaces,
+		ConnectionPoints: fduFIMConnectionPoints,
+	}
+
+	return &fimFDU, nil
 }

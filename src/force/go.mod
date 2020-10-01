@@ -19,6 +19,6 @@ require (
 	k8s.io/utils v0.0.0-20200821003339-5e75c0163111 // indirect
 )
 
-replace github.com/eclipse-fog05/sdk-go => github.com/gabrik/sdk-go v0.0.0-20200929101437-526a3b428cc2
+replace github.com/eclipse-fog05/sdk-go => github.com/gabrik/sdk-go v0.0.0-20201001071416-bc25cc65f250
 
 replace github.com/eclipse-fog05/api-go => github.com/gabrik/api-go v0.0.0-20200929101827-a4fe1d06da88
