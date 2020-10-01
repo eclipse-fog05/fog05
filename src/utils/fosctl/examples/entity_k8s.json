@@ -16,9 +16,10 @@
             "hypervisor_specific": "eyJhcGlWZXJzaW9uIjoiYXBwcy92MSIsImtpbmQiOiJEZXBsb3ltZW50IiwibWV0YWRhdGEiOnsibmFtZSI6Im5naW54LWRlcGxveW1lbnQiLCJsYWJlbHMiOnsiYXBwIjoibmdpbngifX0sInNwZWMiOnsicmVwbGljYXMiOjMsInNlbGVjdG9yIjp7Im1hdGNoTGFiZWxzIjp7ImFwcCI6Im5naW54In19LCJ0ZW1wbGF0ZSI6eyJtZXRhZGF0YSI6eyJsYWJlbHMiOnsiYXBwIjoibmdpbngifX0sInNwZWMiOnsiY29udGFpbmVycyI6W3sibmFtZSI6Im5naW54IiwiaW1hZ2UiOiJuZ2lueDoxLjE0LjIiLCJwb3J0cyI6W3siY29udGFpbmVyUG9ydCI6ODB9XX1dfX19fQo=",
             "interfaces": [],
             "connection_points": [],
-            "migration_kind": "cold",
+            "migration_kind": "COLD",
             "depends_on": [],
-            "storage": []
+            "storage": [],
+            "replicas":2
         }
     ],
     "virtual_links": []
