@@ -1,0 +1,26 @@
+{
+    "id": "example-entity-k8s",
+    "name": "example k8s entity",
+    "version": "0.2.1",
+    "entity_version": "0.0.1",
+    "description": "this is an example entity",
+    "fdus": [
+        {
+            "id": "nginx-k8s-fdu",
+            "name": "nginx component",
+            "version": "0.2.1",
+            "fdu_version": "0.0.1",
+            "description": "alpine nginx k8s",
+            "hypervisor": "cloud",
+            "computation_requirements": { "cpu_arch": "x86_64", "cpu_min_freq": 0, "cpu_min_count": 1, "ram_size_mb": 128, "storage_size_mb": 64 },
+            "hypervisor_specific": "eyJhcGlWZXJzaW9uIjoiYXBwcy92MSIsImtpbmQiOiJEZXBsb3ltZW50IiwibWV0YWRhdGEiOnsibmFtZSI6Im5naW54LWRlcGxveW1lbnQiLCJsYWJlbHMiOnsiYXBwIjoibmdpbngifX0sInNwZWMiOnsicmVwbGljYXMiOjMsInNlbGVjdG9yIjp7Im1hdGNoTGFiZWxzIjp7ImFwcCI6Im5naW54In19LCJ0ZW1wbGF0ZSI6eyJtZXRhZGF0YSI6eyJsYWJlbHMiOnsiYXBwIjoibmdpbngifX0sInNwZWMiOnsiY29udGFpbmVycyI6W3sibmFtZSI6Im5naW54IiwiaW1hZ2UiOiJuZ2lueDoxLjE0LjIiLCJwb3J0cyI6W3siY29udGFpbmVyUG9ydCI6ODB9XX1dfX19fQo=",
+            "interfaces": [],
+            "connection_points": [],
+            "migration_kind": "COLD",
+            "depends_on": [],
+            "storage": [],
+            "replicas":2
+        }
+    ],
+    "virtual_links": []
+}
