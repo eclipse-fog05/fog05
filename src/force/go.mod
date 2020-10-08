@@ -3,8 +3,8 @@ module src
 go 1.13
 
 require (
-	github.com/eclipse-fog05/api-go v0.2.1-0.20200901154055-9254684e5201
-	github.com/eclipse-fog05/sdk-go v0.2.0
+	github.com/eclipse-fog05/api-go v0.2.2
+	github.com/eclipse-fog05/sdk-go v0.2.2
 	github.com/go-errors/errors v1.1.1 // indirect
 	github.com/googleapis/gnostic v0.5.1 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
@@ -18,7 +18,3 @@ require (
 	k8s.io/client-go v0.19.0
 	k8s.io/utils v0.0.0-20200821003339-5e75c0163111 // indirect
 )
-
-replace github.com/eclipse-fog05/sdk-go => github.com/gabrik/sdk-go v0.0.0-20201001071416-bc25cc65f250
-
-replace github.com/eclipse-fog05/api-go => github.com/gabrik/api-go v0.0.0-20200929101827-a4fe1d06da88
