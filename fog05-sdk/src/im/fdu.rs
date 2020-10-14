@@ -11,154 +11,204 @@
 *   ADLINK fog05 team, <fog05@adlink-labs.tech>
 *********************************************************************************/
 
+#![allow(non_camel_case_types)]
+
+extern crate derive_more;
 extern crate serde;
+extern crate serde_aux;
 extern crate serde_json;
 extern crate serde_yaml;
 
-use serde::{Serialize, Deserialize};
+
+use derive_more::Display;
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
+use semver::Version;
+
 
 // FDU Generic
 
-#[derive(Serialize,Deserialize,Debug, Clone)]
-pub enum FDUState {
-    DEFINE,
-    CONFIGURE,
-    CLEAN,
-    RUN,
-    STARTING,
-    STOP,
-    RESUME,
-    PAUSE,
-    SCALE,
-    TAKE_OFF,
-    LAND,
-    MIGRATE,
-    UNDEFINE,
-    ERROR
-}
 
-#[derive(Serialize,Deserialize,Debug, Clone)]
+
+// Descriptors
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "UPPERCASE")]
 pub enum MigrationKind {
     LIVE,
-    COLD
+    COLD,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum ConfigurationKind {
+    SCRIPT,
+    ENV,
+    CLOUD_INIT,
+}
 
-#[derive(Serialize,Deserialize,Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum InterfaceKind {
+    VIRTUAL,
+    WLAN,
+    BLUETOOTH,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Display)]
+#[serde(rename_all = "UPPERCASE")]
 pub enum VirtualInterfaceKind {
     PARAVIRT,
-    FOS_MGMT,
     PCI_PASSTHROUGH,
     SR_IOV,
-    VIRTIO,
+    VIRTIO, //default
     E1000,
     RTL8139,
     PCNET,
+    BRIDGED,
     PHYSICAL,
-    BRIDGED
 }
 
-
-#[derive(Serialize,Deserialize,Debug, Clone)]
-pub enum InterfaceKind {
-    INTERNAL,
-    EXTERNAL,
-    WLAN,
-    BLUETOOTH
-}
-
-
-#[derive(Serialize,Deserialize,Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Display)]
+#[serde(rename_all = "UPPERCASE")]
 pub enum StorageKind {
-    BLOCK,
-    FILE,
-    OBJECT
+    BLOCK, //virtual disk
+    //FILE, //NFS kind of, can be Zenoh+file backend
+    OBJECT, //Zenoh as object storage
 }
 
-#[derive(Serialize,Deserialize,Debug, Clone)]
-pub struct Image {
-    pub uuid : Option<String>,
-    pub name : Option<String>,
-    pub uri :  String,
-    pub checksum : String, //SHA256SUM
-    pub format : String
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum ScalingMetric {
+    CPU,
+    DISK,
+    MEMORY,
+    CUSTOM(String),
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ScalingPolicy {
+    pub metric: ScalingMetric,
+    pub scale_up_threshold: f32,
+    pub scale_down_threshold: f32,
+    pub threshold_sensibility: u8,
+    pub probe_interval: f32,
+    pub min_replicas: u8,
+    pub max_replicas: u8,
+}
 
-#[derive(Serialize,Deserialize,Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Position {
-    pub lat : String,
-    pub lon : String,
-    pub radius : f64
+    pub lat: String,
+    pub lon: String,
+    pub radius: f64,
 }
 
-
-#[derive(Serialize,Deserialize,Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+//or Affinity/Antiaffinity
 pub struct Proximity {
-    pub neighbor : String,
-    pub radius : f64
+    pub neighbour: String,
+    pub radius: f64,
 }
 
-#[derive(Serialize,Deserialize,Debug, Clone)]
-pub struct GeographicalRequirements {
-    position : Option<Position>,
-    proximity : Option<Vec<Proximity>>
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Configuration {
+    pub conf_kind: ConfigurationKind,
+    pub script: Option<String>,   //both for script and cloud_init
+    pub env: Option<Vec<String>>, //VAR=VALUE,
+    pub ssh_keys: Option<Vec<String>>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Image {
+    pub uuid: Option<Uuid>,
+    pub name: Option<String>,
+    pub uri: String,
+    pub checksum: String, //SHA256 of image file
+    pub format: String,
+}
 
-#[derive(Serialize,Deserialize,Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ComputationalRequirements {
-    pub uuid : Option<String>,
-    pub name : Option<String>,
-    pub cpu_arch : String,
-    pub cpu_min_freq : u64,
-    pub cpu_min_count : u64,
-    pub gpu_min_count : Option<u64>,
-    pub fpga_min_count : Option<u64>,
-    pub ram_size_mb : f64,
-    pub storage_size_gb : f64,
-    pub duty_cycle : Option<f64>
+    pub cpu_arch: String,
+    #[serde(default = "default_zero")]
+	pub cpu_min_freq: u8, //default 0
+	#[serde(default = "default_one")]
+    pub cpu_min_count: u8, //default 1
+    #[serde(default = "default_zero")]
+    pub gpu_min_count: u8, //default 0
+    #[serde(default = "default_zero")]
+    pub fpga_min_count: u8, //default 0
+    pub ram_size_mb: u32,
+    pub storage_size_mb: u32,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GeographicalRequirement {
+    pub position: Option<Position>,
+    pub proximity: Option<Vec<Proximity>>,
+}
 
-#[derive(Serialize,Deserialize,Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct VirtualInterface {
-    pub intf_type : VirtualInterfaceKind,
-    pub vpci : String
-    pub bandwidth : Option<u64>
+    pub vif_kind: VirtualInterfaceKind,
+    pub parent: Option<String>, //PCI address, bridge name, interface name
+    pub bandwidht: Option<u8>,
 }
 
-// User FDU - Descriptor
-
-
-
-#[derive(Serialize,Deserialize,Debug, Clone)]
-pub struct FDUDescriptorInterface {
-    pub name : String,
-    pub is_mgmt : bool,
-    pub if_type : InterfaceKind,
-    pub mac_address : Option<String>,
-    pub virtual_interface : VirtualInterface,
-    pub cp_id : Option<String>,
-    pub ext_cp_id : Option<String>
-
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ConnectionPointDescriptor {
+    pub uuid: Option<Uuid>,
+    pub name: String,
+    pub id: String,
+    pub vld_ref: Option<String>, //reference to a virtual link descriptor
 }
 
-#[derive(Serialize,Deserialize,Debug, Clone)]
-pub struct Descriptor {
-    pub id : String,
-    pub name : String,
-    pub uuid : Option<String>,
-    pub description : Option<String>,
-    pub image : Option<Image>,
-    pub compute_requirements : ComputationalRequirements,
-    pub interfaces : Vec<FDUDescriptorInterface>,
-    pub ssh_keys : Vec<String>,
-    pub hypervisor : String, //eg. Docker, KVM, LXD, ROS2, Native ...
-    pub migration_kind : MigrationKind,
-    pub geographic_requirement : Option<GeographicalRequirements>,
-    pub properties : Option<String>,
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Interface {
+    pub name: String,
+    pub kind: InterfaceKind,
+    pub mac_address: Option<String>,
+    pub virtual_interface: VirtualInterface,
+    pub cp_id: Option<String>, //internal to this descriptor
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct StorageDescriptor {
+    pub id: String,
+    pub storage_kind: StorageKind,
+    pub size: u32, //depends on the kind, MB for BLOCK, items for OBJECT
+}
+
+//example pf hypervisor for BARE (Native)
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Command {
+    pub binary: String, //can be relative, in that case it is expected to be part of the image of global path
+    pub args: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct FDUDescriptor {
+    pub uuid: Option<Uuid>,
+    pub id: String,
+    pub name: String,
+    pub version: Version,     //semantic version of the descriptor
+    pub fdu_version: Version, //semantic version of the fdu
+    pub description: Option<String>,
+    pub hypervisor: String, //eg. KVM, LXD, DOCKER, ROS2, BARE, K8s, AWS...
+    pub image: Option<Image>,
+    pub hypervisor_specific: Option<String>,
+    pub computation_requirements: ComputationalRequirements,
+    pub geographical_requirements: Option<GeographicalRequirement>,
+    pub interfaces: Vec<Interface>,
+    pub storage: Vec<StorageDescriptor>,
+    pub connection_points: Vec<ConnectionPointDescriptor>,
+    pub configuration: Option<Configuration>,
+    pub migration_kind: MigrationKind,
+    pub replicas: Option<u8>,
+    //pub scaling_policies : Option<Vec<ScalingPolicy>>,
+    pub depends_on: Vec<String>,
+}
+
 
 // FDU Record
 

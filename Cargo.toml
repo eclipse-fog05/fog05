@@ -14,7 +14,7 @@
 [workspace]
 
 members = [
-  "fog05-sdk"
+  "fog05-sdk",
   "fosctl"
 ]
 

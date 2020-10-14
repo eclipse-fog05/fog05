@@ -11,24 +11,18 @@
 *   ADLINK fog05 team, <fog05@adlink-labs.tech>
 *********************************************************************************/
 
-#![feature(async_closure)]
+extern crate serde;
+extern crate hex;
 
-// use zenoh::net::Config;
-// use zenoh::*;
-// use futures::prelude::*;
-// use std::convert::TryInto;
-// use std::convert::TryFrom;
-// use im::data::*;
+use zenoh::*;
+
+use std::str::FromStr;
 use std::env;
-
+use uuid::Uuid;
+use async_std::sync::Arc;
 use std::time::Duration;
 use async_std::task;
 
-// use protobuf::parse_from_bytes;
-// use protobuf::Message;
-
-extern crate serde;
-extern crate hex;
 use serde::{Serialize, Deserialize};
 
 
@@ -51,15 +45,19 @@ async fn main() {
     println!("{:?}", args);
 
     let router = &args[1];
-    let id = String::from(&args[2]);
+    let id = Uuid::from_str(&args[2]).unwrap();
     let name = String::from(&args[3]);
 
+    let zenoh = Zenoh::new(zenoh::config::client(Some(router.to_string()))).await.unwrap();
+    let ws = Arc::new(zenoh.workspace(None).await.unwrap());
+    let zsession = Arc::new(zenoh.session());
+
     //creating the decentralized component
-    let mut myself = fos::Component::<MyState>::new(id, name).await;
+    let mut myself = fog05_sdk::Component::<MyState>::new(id, name).await;
 
 
     //connecting to zenoh
-    match myself.connect(router).await {
+    match myself.connect(ws, zsession).await {
         Err(why) => panic!("Error when connecting component {:?}", why),
         Ok(_) => {
             println!("Component is connected to Zenoh");
@@ -127,7 +125,7 @@ async fn main() {
     }
 
 
-    let mut stdin = async_std::io::stdin();
+    let stdin = async_std::io::stdin();
     let mut line = String::new();
     stdin.read_line(&mut line).await.unwrap();
 

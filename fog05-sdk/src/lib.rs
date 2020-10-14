@@ -12,8 +12,6 @@
 *   ADLINK fog05 team, <fog05@adlink-labs.tech>
 *********************************************************************************/
 
-#![feature(let_chains)]
-
 
 macro_rules!  INFO_PATH_TEMPLATE { ($x:expr) => { format!("/components/{}/info", $x) }; }
 macro_rules!  STATE_PATH_TEMPLATE { ($x:expr) => { format!("/component/{}/state",$x) }; }
@@ -21,13 +19,15 @@ macro_rules!  ADV_SELECTOR { () => { "/advertisement/*/info" }; }
 macro_rules!  ADV_PATH { ($x:expr) => { format!("/advertisement/{}/info",$x) }; }
 macro_rules!  FN_PATH { ($id:expr, $fname:expr ) => { format!("/component/{}/functions/{}",$id, $fname) }; }
 
-
+extern crate bincode;
+extern crate hex;
+extern crate serde;
 pub mod im;
 
-use protobuf::parse_from_bytes;
+
+
 use std::convert::TryInto;
 use std::convert::TryFrom;
-use protobuf::Message;
 use im::data::*;
 use async_std::sync::{Mutex,Arc};
 use zenoh::*;
@@ -35,12 +35,10 @@ use futures::prelude::*;
 use thiserror::Error;
 use std::fmt;
 use log::{info, trace, warn, error, debug};
-use serde::Serialize;
-use serde::de::DeserializeOwned;
+use serde::{Serialize,de::DeserializeOwned};
+use uuid::Uuid;
 
-extern crate hex;
-extern crate bincode;
-extern crate serde;
+
 
 
 #[derive(Error, Debug)]
@@ -101,66 +99,41 @@ impl<T> InternalComponent<T>
 
 }
 
-pub struct Component<T> {
-    zenoh : Option<Zenoh>,
-    zworkspace : Option<Arc<Workspace>>,
-    uuid : String,
+pub struct Component<'a,T> {
+    zenoh : Option<Arc<&'a zenoh::net::Session>>,
+    zworkspace : Option<Arc<Workspace<'a>>>,
+    uuid : Uuid,
     pub status :ComponentInformation,
     component : Option<InternalComponent<T>>,
 }
 
 
 
-impl<T> Component<T>
+impl<'a,T> Component<'a,T>
     where
     T : Serialize+DeserializeOwned+Clone {
-    pub async fn new(uuid : String, name: String) -> Component<T> {
-        let mut status = ComponentInformation::new();
-        status.uuid = String::from(&uuid);
-        status.name = name;
-        status.routerid = String::from("");
-        status.peerid = String::from("");
-        status.status = ComponentStatus::HALTED;
+    pub async fn new(uuid : Uuid, name: String) -> Component<'a,T> {
+        let status = ComponentInformation{
+            uuid : uuid,
+            name : name,
+            routerid : String::from(""),
+            peerid : String::from(""),
+            status : ComponentStatus::HALTED,
+        };
+
         Component {
             zenoh : None,
             zworkspace : None,
-            uuid : String::from(&uuid),
+            uuid : uuid,
             status : status,
             component : None,
         }
     }
 
-    pub async fn connect(&mut self, locator : &String) -> ZCResult<()> {
-
-        let zconfig = net::Config::client().add_peer(&locator);
-        // let z = ;
-        match Zenoh::new(zconfig, None).await {
-            Err(_) =>
-                //Should log the ZError
-                Err(ZCError::ZConnectorError),
-            Ok(zclient) => {
-                let zsession = zclient.session();
-                let ws = zclient.workspace(None).await;
-                match ws {
-                    Err(_) =>
-                        //Should log the ZError
-                        Err(ZCError::ZConnectorError),
-                    Ok(zworkspace) => {
-                        let zinfo = zsession.info().await;
-                        let rid = hex::encode(&(zinfo.iter().find(|x| x.0 == zenoh::net::properties::ZN_INFO_ROUTER_PID_KEY ).unwrap().1));
-                        let pid = hex::encode(&(zinfo.iter().find(|x| x.0 == zenoh::net::properties::ZN_INFO_PID_KEY).unwrap().1));
-                        self.zenoh = Some(zclient);
-                        let arc_ws = Arc::new(zworkspace);
-                        self.zworkspace = Some(arc_ws.clone());
-                        self.status.routerid = rid;
-                        self.status.peerid = pid;
-                        self.status.status = ComponentStatus::CONNECTED;
-                        Component::write_status_on_zenoh(self).await?;
-                        Ok(())
-                    },
-                }
-            },
-        }
+    pub async fn connect(&mut self, ws : Arc<Workspace<'a>>, session : Arc<&'a zenoh::net::Session>) -> ZCResult<()> {
+        self.zenoh = Some(session);
+        self.zworkspace = Some(ws);
+        Ok(())
     }
 
     pub async fn authenticate(&mut self) -> ZCResult<()> {
@@ -309,9 +282,8 @@ impl<T> Component<T>
         match self.status.status {
             ComponentStatus::DISCONNECTED => {
                 self.status.status = ComponentStatus::HALTED;
-                self.zenoh.as_ref().unwrap().close().await.unwrap();
-                self.zworkspace = None;
                 self.zenoh = None;
+                self.zworkspace = None;
                 self.status.routerid = String::from("");
 
                 Ok(())
@@ -334,7 +306,7 @@ impl<T> Component<T>
 
     async fn write_status_on_zenoh(&self) -> ZCResult<()> {
         let arc_ws = self.zworkspace.as_ref().unwrap();
-        let buf = net::RBuf::from(self.status.write_to_bytes().unwrap());
+        let buf = net::RBuf::from(bincode::serialize(&self.status).unwrap());
         let size = buf.len();
         let value = Value::Raw(size.try_into().unwrap(), buf);
         let info_path = Path::try_from(INFO_PATH_TEMPLATE!(&self.status.uuid)).unwrap();
@@ -357,7 +329,7 @@ impl<T> Component<T>
         }
     }
 
-    async fn remove_announce_from_zenoh(uuid : &String, ws : &Workspace) -> ZCResult<()> {
+    async fn remove_announce_from_zenoh(uuid : &Uuid, ws : &Workspace<'_>) -> ZCResult<()> {
         let info_path = Path::try_from(ADV_PATH!(&uuid)).unwrap();
         match ws.delete(&info_path).await {
             Err(_) =>
@@ -367,8 +339,8 @@ impl<T> Component<T>
         }
     }
 
-    async fn write_announce_on_zenoh(uuid : &String, ws : &Workspace) -> ZCResult<()> {
-        let value = Value::StringUTF8(String::from(uuid));
+    async fn write_announce_on_zenoh(uuid : &Uuid, ws : &Workspace<'_>) -> ZCResult<()> {
+        let value = Value::StringUTF8(format!("{}",uuid));
         let info_path = Path::try_from(ADV_PATH!(&uuid)).unwrap();
         match ws.put(&info_path, value).await {
             Err(_) =>
@@ -429,7 +401,7 @@ impl<T> Component<T>
     }
 
     pub async fn get_status(&self) -> ComponentStatus {
-        self.status.status
+        self.status.status.clone()
     }
 }
 

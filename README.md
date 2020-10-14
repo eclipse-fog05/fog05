@@ -14,27 +14,10 @@ Eclipse fog05 is an open source project that aims at providing a decentralised i
 
 Check the website [fog05.io](https://fog05.io) for more detailed information
 
-##
-
-See also [Introduction](https://github.com/eclipse/fog05/blob/master/Introduction.md) for more information
-
-
-See [INSTALL](INSTALL.md) for installation instructions
-
-See [BUILD](BUILD.md) for build instructions
-
-### Interact with the nodes
-
-Check API docs:
-
-- Python API Doc [readthedocs](https://eclipse-fog05-python3-client-api.readthedocs.io/en/latest/)
-- Go API Doc [godoc.org](https://godoc.org/github.com/eclipse-fog05/api-go/fog05)
 
 ### Contributing
 
 If you want to contribute, please read information in [CONTRIBUTING.md](./CONTRIBUTING.md)
-
-And take a look to [TODO.md](./TODO.md)
 
 
 #### Use cases

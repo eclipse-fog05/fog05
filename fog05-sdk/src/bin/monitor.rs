@@ -11,7 +11,6 @@
 *   ADLINK fog05 team, <fog05@adlink-labs.tech>
 *********************************************************************************/
 
-#![feature(async_closure)]
 
 extern crate serde;
 extern crate serde_json;
@@ -25,8 +24,7 @@ use async_std::task;
 use async_std::sync::{Mutex,Arc};
 use log::{info, trace, warn, error, debug};
 use std::convert::TryFrom;
-use protobuf::parse_from_bytes;
-use fos::im::data::ComponentInformation;
+use fog05_sdk::im::data::ComponentInformation;
 use std::collections::HashMap;
 use futures::prelude::*;
 use futures::select;
@@ -68,23 +66,19 @@ pub struct ZRouterInfo {
 
 
 
-pub struct Monitor {
+pub struct Monitor<'a> {
     state : Arc<Mutex<MonitorInfo>>,
-    ws : Arc<Workspace>,
-    z : Arc<Zenoh>
+    ws : Arc<Workspace<'a>>,
+    z : Arc<&'a zenoh::net::Session>
 }
 
-impl Monitor {
-    pub async fn new(locator : &String) -> Monitor {
-
-        let zconfig = net::Config::client().add_peer(&locator);
-        let z = Zenoh::new(zconfig, None).await.unwrap();
-        let ws = z.workspace(None).await.unwrap();
+impl<'a> Monitor<'a> {
+    pub async fn new(ws : Arc<Workspace<'a>>, session : Arc<&'a zenoh::net::Session>) -> Monitor<'a> {
 
         Monitor{
             state : Arc::new(Mutex::new(MonitorInfo{components: HashMap::new()})),
-            z : Arc::new(z),
-            ws : Arc::new(ws)
+            z : session,
+            ws : ws,
         }
     }
 
@@ -134,9 +128,9 @@ impl Monitor {
             Some(zv) => {
                 match zv {
                     zenoh::Value::Raw(_,rbuf) => {
-                        let value = parse_from_bytes::<ComponentInformation>(&rbuf.to_vec()).unwrap();
-                        info!("Component {} Status {:?}", String::from(&value.uuid), &value);
-                        s.components.insert(String::from(&value.uuid), value);
+                        let value = bincode::deserialize::<ComponentInformation>(&rbuf.to_vec()).unwrap();
+                        info!("Component {} Status {:?}", value.uuid, &value);
+                        s.components.insert(value.uuid.to_string(), value);
                     },
                     _ => error!("Data expected to be Raw!"),
                 }
@@ -150,7 +144,7 @@ impl Monitor {
             },
         }
     }
-    pub async fn listen_all_component(&self) -> ChangeStream {
+    pub async fn listen_all_component(&self) -> ChangeStream<'_> {
         let component_selector = Selector::try_from("/components/*/info").unwrap();
         // ws.subscribe_with_callback(&component_selector, comp_cb ).await.unwrap();
 
@@ -169,7 +163,7 @@ impl Monitor {
 
             table.add_row(row!["ID", "PeerID", "Status"]);
             for (_,v) in &s.components {
-                table.add_row(row![String::from(&v.uuid), String::from(&v.peerid), format!("{:?}",&v.status)]);
+                table.add_row(row![v.uuid.to_string(), String::from(&v.peerid), format!("{:?}",&v.status)]);
             }
             table.printstd();
             task::sleep(Duration::from_millis(250)).await;
@@ -188,15 +182,19 @@ async fn main() {
 
     let router = &args[1];
 
+    let zenoh = Zenoh::new(zenoh::config::client(Some(router.to_string()))).await.unwrap();
+    let ws = Arc::new(zenoh.workspace(None).await.unwrap());
+    let zsession = Arc::new(zenoh.session());
+
     info!("Connecting to Zenoh Router {:?} ", router);
 
-    let monitor : Arc<Monitor> = Arc::new(Monitor::new(&router).await);
+    let monitor : Arc<Monitor> = Arc::new(Monitor::new(ws, zsession).await);
 
     let mut comp_stream = monitor.listen_all_component().await;
 
 
     // Subscriber/Eval dispatcher
-    task::spawn(async {
+    //let handle = task::spawn(async {
             loop {
                 select!(
                     next = comp_stream.next().fuse() => {
@@ -205,12 +203,14 @@ async fn main() {
                     },
                 );
             }
-            });
+            //});
 
 
 
 
 
-    // future::pending::<()>().await;
+    //handle.await;
 
 }
+
+
