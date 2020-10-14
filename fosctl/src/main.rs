@@ -27,6 +27,7 @@ use std::io::{Error, ErrorKind};
 use std::time::Duration;
 use structopt::StructOpt;
 use uuid::Uuid;
+use fog05_sdk::im::entity::{EntityDescriptor, EntityRecord};
 
 mod types;
 
@@ -116,7 +117,7 @@ fn main() -> Result<(), ExitFailure> {
                 AddKind::Entity { descriptor_path } => {
                     let data = std::fs::read_to_string(&descriptor_path)
                         .with_context(|_| format!("could not read file `{:?}`", descriptor_path))?;
-                    let _ = serde_json::from_str::<types::EntityDescriptor>(&data).with_context(
+                    let _ = serde_json::from_str::<EntityDescriptor>(&data).with_context(
                         |_| format!("Descriptor is not valid `{:?}`", descriptor_path),
                     )?;
                     let url = format!("http://{}:9191/system/00000000-0000-0000-0000-000000000000/tenant/00000000-0000-0000-0000-000000000000/job", force_host);
@@ -144,7 +145,7 @@ fn main() -> Result<(), ExitFailure> {
                         .with_context(|_| format!("cold not contact `{:?}`", url))?;
                     let resp = serde_json::from_str::<types::Job>(&res.text().unwrap())
                         .with_context(|_| "Unable to parse server reply".to_string())?;
-                    let descriptor = serde_json::from_str::<types::EntityDescriptor>(&resp.body)
+                    let descriptor = serde_json::from_str::<EntityDescriptor>(&resp.body)
                         .with_context(|_| "Unable to parse server reply".to_string())?;
                     println!("{}", descriptor.uuid.unwrap());
                     Ok(())
@@ -253,14 +254,14 @@ fn main() -> Result<(), ExitFailure> {
                                 "Add Instance failed",
                             )));
                         }
-                        if let Ok(record) = serde_json::from_str::<types::EntityRecord>(&resp.body)
+                        if let Ok(record) = serde_json::from_str::<EntityRecord>(&resp.body)
                         {
                             flag = true;
                             println!("{}", record.uuid);
                         }
                     }
 
-                    //let record = serde_json::from_str::<types::EntityRecord>(&resp.body).with_context(|_| "Unable to parse server reply".to_string())?;
+                    //let record = serde_json::from_str::<EntityRecord>(&resp.body).with_context(|_| "Unable to parse server reply".to_string())?;
 
                     Ok(())
                 }
@@ -503,7 +504,7 @@ fn main() -> Result<(), ExitFailure> {
                     // let url = format!("http://{}:9191/system/00000000-0000-0000-0000-000000000000/tenant/00000000-0000-0000-0000-000000000000/job/{}", force_host, resp.job_id);
                     // let res = client.get(url.as_str()).send().with_context(|_| format!("cold not contact `{:?}`", url))?;
                     // let resp = serde_json::from_str::<types::Job>(&res.text().unwrap()).with_context(|_| "Unable to parse server reply".to_string())?;
-                    // let record = serde_json::from_str::<types::EntityRecord>(&resp.body).with_context(|_| "Unable to parse server reply".to_string())?;
+                    // let record = serde_json::from_str::<EntityRecord>(&resp.body).with_context(|_| "Unable to parse server reply".to_string())?;
                     println!("{}", id);
                     Ok(())
                 }

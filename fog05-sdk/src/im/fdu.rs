@@ -26,6 +26,14 @@ use uuid::Uuid;
 use semver::Version;
 
 
+fn default_zero() -> u8 {
+    0
+}
+
+fn default_one() -> u8 {
+    1
+}
+
 // FDU Generic
 
 
@@ -213,43 +221,43 @@ pub struct FDUDescriptor {
 // FDU Record
 
 
-#[derive(Serialize,Deserialize,Debug, Clone)]
-pub struct FDURecordInterface {
-    pub is_mgmt : bool,
-    pub if_type : InterfaceKind,
-    pub mac_address : Option<String>,
-    pub virtual_interface : VirtualInterface,
-    pub cp_id : Option<String>,
-    pub ext_cp_id : Option<String>
+// #[derive(Serialize,Deserialize,Debug, Clone)]
+// pub struct FDURecordInterface {
+//     pub is_mgmt : bool,
+//     pub if_type : InterfaceKind,
+//     pub mac_address : Option<String>,
+//     pub virtual_interface : VirtualInterface,
+//     pub cp_id : Option<String>,
+//     pub ext_cp_id : Option<String>,
 
-    pub vintf_name : String,
-    pub status : String,
-    pub phy_iface : Option<String>,
-    pub veth_iface_name : Option<String>,
-    pub properties : String,
-}
+//     pub vintf_name : String,
+//     pub status : String,
+//     pub phy_iface : Option<String>,
+//     pub veth_iface_name : Option<String>,
+//     pub properties : String,
+// }
 
-#[derive(Serialize,Deserialize,Debug, Clone)]
-pub struct FDUMigrationProperties {
-    pub destination : String,
-    pub source : String
-}
+// #[derive(Serialize,Deserialize,Debug, Clone)]
+// pub struct FDUMigrationProperties {
+//     pub destination : String,
+//     pub source : String
+// }
 
-#[derive(Serialize,Deserialize,Debug, Clone)]
-pub struct Record {
-    pub uuid : String,
-    pub fdu_id : String,
-    pub status : FDUState,
-    pub image : Option<Image>,
-    pub compute_requirements : ComputationalRequirements,
-    pub interfaces : Vec<FDURecordInterface>,
-    pub ssh_keys : Vec<String>,
-    pub hypervisor : String, //eg. Docker, KVM, LXD, ROS2, Native ...
-    pub migration_kind : MigrationKind,
-    pub geographic_requirement : Option<GeographicalRequirements>,
-    pub properties : Option<String>,
-    pub error_code : Option<u64>,
-    pub error_msg : Option<String>,
-    pub migration_properties : Option<FDUMigrationProperties>,
-    pub hypervisor_info : String,
-}
+// #[derive(Serialize,Deserialize,Debug, Clone)]
+// pub struct Record {
+//     pub uuid : String,
+//     pub fdu_id : String,
+//     pub status : FDUState,
+//     pub image : Option<Image>,
+//     pub compute_requirements : ComputationalRequirements,
+//     pub interfaces : Vec<FDURecordInterface>,
+//     pub ssh_keys : Vec<String>,
+//     pub hypervisor : String, //eg. Docker, KVM, LXD, ROS2, Native ...
+//     pub migration_kind : MigrationKind,
+//     pub geographic_requirement : Option<GeographicalRequirement>,
+//     pub properties : Option<String>,
+//     pub error_code : Option<u64>,
+//     pub error_msg : Option<String>,
+//     pub migration_properties : Option<FDUMigrationProperties>,
+//     pub hypervisor_info : String,
+// }

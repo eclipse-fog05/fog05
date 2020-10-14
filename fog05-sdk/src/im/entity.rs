@@ -25,7 +25,6 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use semver::Version;
 
-use fdu::*;
 
 // Entity
 
@@ -69,8 +68,8 @@ pub struct EntityDescriptor {
     pub entity_version: Version, //semantic versioning of the entity
     pub name: String,
     pub description: Option<String>,
-    pub fdus: Vec<fdu::FDUDescriptor>,
-    pub virtual_links: Vec<fdu::VirtualLinkDescriptor>,
+    pub fdus: Vec<super::fdu::FDUDescriptor>,
+    pub virtual_links: Vec<VirtualLinkDescriptor>,
 }
 
 // Record
