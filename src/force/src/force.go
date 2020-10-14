@@ -1138,14 +1138,14 @@ func (f *FOrcE) instantiateWorker(qJob EnqueuedJob) {
 							return
 						}
 						_, err = fimapi.FDU.Start(fimInstance.UUID, nil)
-						if f.check(err) {
-							job.Status = "failed"
-							err := c.Orchestrator.AddJobInfo(job)
-							f.check(err)
-							entityRecord.Status = ERROR
-							f.check(c.Orchestrator.AddEntityRecord(entityRecord))
-							return
-						}
+						// if f.check(err) {
+						// 	job.Status = "failed"
+						// 	err := c.Orchestrator.AddJobInfo(job)
+						// 	f.check(err)
+						// 	entityRecord.Status = ERROR
+						// 	f.check(c.Orchestrator.AddEntityRecord(entityRecord))
+						// 	return
+						// }
 						fimInstance, err = fimapi.FDU.InstanceInfo(fimInstance.UUID)
 						if f.check(err) {
 							job.Status = "failed"
@@ -1584,11 +1584,11 @@ func (f *FOrcE) recoverWorker(entityRecord *fog05.EntityRecord, fimapi *fim.FIMA
 					return
 				}
 				_, err = fimapi.FDU.Start(fimInstance.UUID, nil)
-				if f.check(err) {
-					entityRecord.Status = ERROR
-					f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
-					return
-				}
+				// if f.check(err) {
+				// 	entityRecord.Status = ERROR
+				// 	f.check(c.Orchestrator.AddEntityRecord(*entityRecord))
+				// 	return
+				// }
 				fimInstance, err = fimapi.FDU.InstanceInfo(fimInstance.UUID)
 				if f.check(err) {
 					entityRecord.Status = ERROR
@@ -2366,6 +2366,14 @@ func (f *FOrcE) makeFIMFDUFromFOrcEFDU(entity *fog05.EntityDescriptor, fdu *fog0
 		fduFIMConnectionPoints = append(fduFIMConnectionPoints, fimCP)
 	}
 
+	var command *fog05.FDUCommand = nil
+	if fdu.Hypervisor == "ROS2" || fdu.Hypervisor == "BARE" {
+		err := json.Unmarshal([]byte(*fdu.HypervisorSpecific), &command)
+		if f.check(err) {
+			return nil, err
+		}
+	}
+
 	fimFDU := fog05.FDU{
 		ID:          fdu.ID,
 		UUID:        fdu.UUID,
@@ -2380,6 +2388,7 @@ func (f *FOrcE) makeFIMFDUFromFOrcEFDU(entity *fog05.EntityDescriptor, fdu *fog0
 			RAMSizeMB:       float64(fdu.ComputationRequirements.RAMSizeMB),
 			StorageSizeGB:   float64(fdu.ComputationRequirements.StorageSizeMB) / 1024,
 		},
+		Command:          command,
 		Storage:          []fog05.FDUStorageDescriptor{},
 		MigrationKind:    "COLD",
 		DependsOn:        fdu.DependsOn,
