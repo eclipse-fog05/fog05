@@ -91,7 +91,7 @@ async fn main() {
 
             myself.put_state(m_state.clone()).await.unwrap();
         },
-        Some(mut current_state) => {
+        Some(_) => {
             println!("State found in Zenoh!!");
             // // Updating the state just for testing
             // current_state.two += 1;
@@ -125,6 +125,11 @@ async fn main() {
         myself.sync_state().await.unwrap();
         task::sleep(Duration::from_millis(250)).await;
     }
+
+
+    let mut stdin = async_std::io::stdin();
+    let mut line = String::new();
+    stdin.read_line(&mut line).await.unwrap();
 
 
 

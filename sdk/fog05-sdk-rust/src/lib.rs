@@ -15,10 +15,11 @@
 #![feature(let_chains)]
 
 
-macro_rules!  INFO_PATH_TEMPLATE { () => { "/components/{}/info" }; }
-macro_rules!  STATE_PATH_TEMPLATE { () => { "/component/{}/state" }; }
+macro_rules!  INFO_PATH_TEMPLATE { ($x:expr) => { format!("/components/{}/info", $x) }; }
+macro_rules!  STATE_PATH_TEMPLATE { ($x:expr) => { format!("/component/{}/state",$x) }; }
 macro_rules!  ADV_SELECTOR { () => { "/advertisement/*/info" }; }
-macro_rules!  ADV_PATH { () => { "/advertisement/{}/info" }; }
+macro_rules!  ADV_PATH { ($x:expr) => { format!("/advertisement/{}/info",$x) }; }
+macro_rules!  FN_PATH { ($id:expr, $fname:expr ) => { format!("/component/{}/functions/{}",$id, $fname) }; }
 
 
 pub mod im;
@@ -33,7 +34,7 @@ use zenoh::*;
 use futures::prelude::*;
 use thiserror::Error;
 use std::fmt;
-
+use log::{info, trace, warn, error, debug};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
@@ -132,8 +133,8 @@ impl<T> Component<T>
     pub async fn connect(&mut self, locator : &String) -> ZCResult<()> {
 
         let zconfig = net::Config::client().add_peer(&locator);
-        let z = Zenoh::new(zconfig, None).await;
-        match z {
+        // let z = ;
+        match Zenoh::new(zconfig, None).await {
             Err(_) =>
                 //Should log the ZError
                 Err(ZCError::ZConnectorError),
@@ -176,7 +177,7 @@ impl<T> Component<T>
     }
 
     pub async fn read(&mut self) -> ZCResult<()> {
-        let selector = zenoh::Selector::try_from(format!(STATE_PATH_TEMPLATE!(),&self.uuid)).unwrap();
+        let selector = zenoh::Selector::try_from(STATE_PATH_TEMPLATE!(&self.uuid)).unwrap();
         let arc_ws = self.zworkspace.as_ref().unwrap();
         match arc_ws.get(&selector).await {
             Err(_) =>
@@ -336,7 +337,7 @@ impl<T> Component<T>
         let buf = net::RBuf::from(self.status.write_to_bytes().unwrap());
         let size = buf.len();
         let value = Value::Raw(size.try_into().unwrap(), buf);
-        let info_path = Path::try_from(format!(INFO_PATH_TEMPLATE!(),&self.status.uuid)).unwrap();
+        let info_path = Path::try_from(INFO_PATH_TEMPLATE!(&self.status.uuid)).unwrap();
         match arc_ws.put(&info_path, value).await {
             Err(_) =>
                 //Should log the ZError
@@ -347,7 +348,7 @@ impl<T> Component<T>
 
     async fn remove_status_from_zenoh(&self) -> ZCResult<()> {
         let arc_ws = self.zworkspace.as_ref().unwrap();
-        let info_path = Path::try_from(format!(INFO_PATH_TEMPLATE!(),&self.status.uuid)).unwrap();
+        let info_path = Path::try_from(INFO_PATH_TEMPLATE!(&self.status.uuid)).unwrap();
         match arc_ws.delete(&info_path).await {
             Err(_) =>
                 //Should log the ZError
@@ -357,7 +358,7 @@ impl<T> Component<T>
     }
 
     async fn remove_announce_from_zenoh(uuid : &String, ws : &Workspace) -> ZCResult<()> {
-        let info_path = Path::try_from(format!(ADV_PATH!(),&uuid)).unwrap();
+        let info_path = Path::try_from(ADV_PATH!(&uuid)).unwrap();
         match ws.delete(&info_path).await {
             Err(_) =>
                 //Should log the ZError
@@ -368,7 +369,7 @@ impl<T> Component<T>
 
     async fn write_announce_on_zenoh(uuid : &String, ws : &Workspace) -> ZCResult<()> {
         let value = Value::StringUTF8(String::from(uuid));
-        let info_path = Path::try_from(format!(ADV_PATH!(),&uuid)).unwrap();
+        let info_path = Path::try_from(ADV_PATH!(&uuid)).unwrap();
         match ws.put(&info_path, value).await {
             Err(_) =>
                 //Should log the ZError
@@ -381,15 +382,17 @@ impl<T> Component<T>
         match &self.component {
             None => Err(ZCError::ZConnectorError),
             Some(ic) => {
-                let state_path = Path::try_from(format!(STATE_PATH_TEMPLATE!(),&self.uuid)).unwrap();
+                let state_path = Path::try_from(STATE_PATH_TEMPLATE!(&self.uuid)).unwrap();
                 let buf = net::RBuf::from(ic.raw_state.clone());
                 let size = buf.len();
                 let value = Value::Raw(size.try_into().unwrap(), buf);
                 let arc_ws = self.zworkspace.as_ref().unwrap();
                 match arc_ws.put(&state_path, value).await {
-                    Err(_) =>
+                    Err(e) => {
                         //Should log the ZError
-                        Err(ZCError::ZConnectorError),
+                        warn!("Got error on Zenoh state sync {}", e);
+                        Err(ZCError::ZConnectorError)
+                    },
                     Ok(_) => Ok(()),
                 }
             }
