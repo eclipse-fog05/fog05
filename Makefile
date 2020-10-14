@@ -12,101 +12,102 @@ UUID = $(shell ./etc/to_uuid.sh)
 
 
 
-all: ocaml-sdk ocaml-api agent
+all:
+	cargo build
 
-submodules:
-	git submodule update --init --recursive
-	# git submodule foreach git pull origin master
-
-
-ocaml-sdk:
-	make -C sdk/sdk-ocaml install
-
-ocaml-api:
-	make -C api/api-ocaml install
-
-sdk-go:
-	ln -s sdk/sdk-go/fog05sdk ${GOPATH}/src
-	go install fog05sdk
+# submodules:
+# 	git submodule update --init --recursive
+# 	# git submodule foreach git pull origin master
 
 
-api-go:
-	ln -s api/api-go/fog05 ${GOPATH}/src
-	go install fog05
+# ocaml-sdk:
+# 	make -C sdk/sdk-ocaml install
 
-sdk-python:
-	pip3 install pyangbind pyang
-	make -C sdk/sdk-python
-	make -C sdk/sdk-python install
+# ocaml-api:
+# 	make -C api/api-ocaml install
 
-api-python:
-	make -C api/api-python install
+# sdk-go:
+# 	ln -s sdk/sdk-go/fog05sdk ${GOPATH}/src
+# 	go install fog05sdk
 
 
-agent:
-	make -C src/agent
+# api-go:
+# 	ln -s api/api-go/fog05 ${GOPATH}/src
+# 	go install fog05
 
-force:
-	make -C src/force
+# sdk-python:
+# 	pip3 install pyangbind pyang
+# 	make -C sdk/sdk-python
+# 	make -C sdk/sdk-python install
 
-fosctl:
-	make -C src/utils/fosctl
-
-install: sdk-python api-python
+# api-python:
+# 	make -C api/api-python install
 
 
-ifeq "$(wildcard $(ETC_FOS_DIR))" ""
-	sudo mkdir -p /etc/fos/plugins
-endif
+# agent:
+# 	make -C src/agent
 
-	make -C src/agent install
+# force:
+# 	make -C src/force
 
-	sudo id -u fos  >/dev/null 2>&1 ||  sudo useradd -r -s /bin/false fos
-	sudo usermod -aG sudo fos
-	cp ./fos_build/zenohd/_build/default/zenoh-router-daemon/zenohd.exe /etc/fos/zenohd
-	cp ./fos_build/yaks/_build/default/src/yaks/yaks-plugin.cmxs /etc/fos/yaks-plugin.cmxs
+# fosctl:
+# 	make -C src/utils/fosctl
 
-ifeq "$(wildcard $(VAR_FOS_DIR))" ""
-	sudo mkdir -p /var/fos
-	sudo chown fos:fos /var/fos
-endif
+# install: sdk-python api-python
 
-	echo "fos      ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers > /dev/null
-	make -C plugins/plugin-os-linux install
 
-	sudo cp etc/yaks.service /lib/systemd/system/
-	sudo cp etc/yaks.target /lib/systemd/system/
+# ifeq "$(wildcard $(ETC_FOS_DIR))" ""
+# 	sudo mkdir -p /etc/fos/plugins
+# endif
 
-lldp:
-	sudo mkdir -p /etc/fos/lldpd
-	sudo ./etc/lldp/build.sh
-	sudo ./etc/lldp/config.sh
-	sudo cp ./etc/lldp/run.sh /etc/fos/lldpd/run.sh
-	sudo systemctl disable lldpd
-	sudo systemctl stop lldpd
+# 	make -C src/agent install
 
-cli:
-	make -C src/utils/ocaml/cli install
+# 	sudo id -u fos  >/dev/null 2>&1 ||  sudo useradd -r -s /bin/false fos
+# 	sudo usermod -aG sudo fos
+# 	cp ./fos_build/zenohd/_build/default/zenoh-router-daemon/zenohd.exe /etc/fos/zenohd
+# 	cp ./fos_build/yaks/_build/default/src/yaks/yaks-plugin.cmxs /etc/fos/yaks-plugin.cmxs
 
-uninstall:
-	sudo systemctl stop fos_agent
-	sudo systemctl disable fos_agent
-	sudo systemctl disable fos_linux
-	sudo rm -rf /etc/fos
-	sudo rm -rf /var/fos
-	sudo rm /lib/systemd/system/fos_agent.service
-	sudo rm /lib/systemd/system/fos_agent.target
-	sudo rm /lib/systemd/system/yaks.target
-	sudo rm /lib/systemd/system/yaks.service
-	sudo rm /lib/systemd/system/fos_linux.service
-	sudo rm -rf /etc/fos/yaksd
-	sudo rm -rf /etc/fos/agent
-	sudo rm -rf /usr/bin/fos_linux
-	sudo userdel fos
-	sudo pip3 uninstall fog05-sdk fog05 -y
-	opam uninstall fos-sdk
+# ifeq "$(wildcard $(VAR_FOS_DIR))" ""
+# 	sudo mkdir -p /var/fos
+# 	sudo chown fos:fos /var/fos
+# endif
 
-clean:
-	make -C src/agent clean
-	make -C src/force clean
-	make -C src/utils/fosctl clean
+# 	echo "fos      ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers > /dev/null
+# 	make -C plugins/plugin-os-linux install
+
+# 	sudo cp etc/yaks.service /lib/systemd/system/
+# 	sudo cp etc/yaks.target /lib/systemd/system/
+
+# lldp:
+# 	sudo mkdir -p /etc/fos/lldpd
+# 	sudo ./etc/lldp/build.sh
+# 	sudo ./etc/lldp/config.sh
+# 	sudo cp ./etc/lldp/run.sh /etc/fos/lldpd/run.sh
+# 	sudo systemctl disable lldpd
+# 	sudo systemctl stop lldpd
+
+# cli:
+# 	make -C src/utils/ocaml/cli install
+
+# uninstall:
+# 	sudo systemctl stop fos_agent
+# 	sudo systemctl disable fos_agent
+# 	sudo systemctl disable fos_linux
+# 	sudo rm -rf /etc/fos
+# 	sudo rm -rf /var/fos
+# 	sudo rm /lib/systemd/system/fos_agent.service
+# 	sudo rm /lib/systemd/system/fos_agent.target
+# 	sudo rm /lib/systemd/system/yaks.target
+# 	sudo rm /lib/systemd/system/yaks.service
+# 	sudo rm /lib/systemd/system/fos_linux.service
+# 	sudo rm -rf /etc/fos/yaksd
+# 	sudo rm -rf /etc/fos/agent
+# 	sudo rm -rf /usr/bin/fos_linux
+# 	sudo userdel fos
+# 	sudo pip3 uninstall fog05-sdk fog05 -y
+# 	opam uninstall fos-sdk
+
+# clean:
+# 	make -C src/agent clean
+# 	make -C src/force clean
+# 	make -C src/utils/fosctl clean
