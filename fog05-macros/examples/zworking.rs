@@ -22,6 +22,8 @@ use std::marker::PhantomData;
 use std::str;
 use std::convert::TryFrom;
 use std::time::Duration;
+use uuid::Uuid;
+use std::str::FromStr;
 
 pub trait Hello: Clone {
 
@@ -29,6 +31,8 @@ pub trait Hello: Clone {
     fn get_server(self) -> ServeHello<Self> {
         ServeHello { service: self }
     }
+
+    fn instance_uuid(&self) -> uuid::Uuid;
 }
 
 #[derive(Clone)]
@@ -53,7 +57,7 @@ where
             // println!("Created zenoh");
             let ws2 = zenoh.workspace(None).await.unwrap();
             // println!("Created workspace");
-            let path = zenoh::Path::try_from("/this/is/generated".to_string()).unwrap();
+            let path = zenoh::Path::try_from(format!("/this/is/generated/instance/{}/eval", self.service.instance_uuid())).unwrap();
             let mut rcv = ws2.register_eval(&path.into()).await.unwrap();
             // println!("Register eval");
             loop {
@@ -106,6 +110,10 @@ impl Hello for HelloZService {
         res
     }
 
+    fn instance_uuid(&self) -> uuid::Uuid {
+        Uuid::from_str("00000000-0000-0000-0000-000000000000").unwrap()
+    }
+
 }
 
 #[allow(unused)]
@@ -119,8 +127,9 @@ pub struct HelloClient<'a, C = fog05_sdk::services::ZClientChannel<'a, HelloRequ
 impl HelloClient<'_> {
     pub fn new(
         ws : Arc<zenoh::Workspace>,
+        instance_id : Uuid,
     ) -> HelloClient {
-        let new_client = fog05_sdk::services::ZClientChannel::new(ws, "/this/is/generated".to_string());
+        let new_client = fog05_sdk::services::ZClientChannel::new(ws, format!("/this/is/generated/instance/{}/eval", instance_id));
         HelloClient{
             ch : new_client,
             phantom : PhantomData,
@@ -170,8 +179,8 @@ async fn main() {
         service.get_server().serve(locator);
     });
 
-
-    let mut client = HelloClient::new(Arc::new(ws));
+    let instance_id = Uuid::from_str("00000000-0000-0000-0000-000000000000").unwrap();
+    let mut client = HelloClient::new(Arc::new(ws), instance_id);
     task::sleep(Duration::from_secs(1)).await;
     let hello = client.hello("client".to_string()).await;
 

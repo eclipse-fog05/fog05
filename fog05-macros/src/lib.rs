@@ -28,6 +28,7 @@ use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, ToTokens};
 use uuid::Uuid;
+use std::str::FromStr;
 use darling::FromMeta;
 use syn::{
     AttributeArgs,
@@ -57,12 +58,18 @@ macro_rules! extend_errors {
 
 
 #[derive(Debug, FromMeta)]
-struct MacroArgs {
+struct ZServiceMacroArgs {
     timeout_s: u16,
     #[darling(default)]
     prefix : Option<String>
 }
 
+
+#[derive(Debug, FromMeta)]
+struct ZServerMacroArgs {
+    #[darling(default)]
+    uuid : Option<String>
+}
 
 struct ZService {
     attrs: Vec<Attribute>,
@@ -190,7 +197,7 @@ pub fn zservice(_attr : TokenStream, input : TokenStream) -> TokenStream {
 
     //parsing the attributes to the macro
     let attr_args = parse_macro_input!(_attr as AttributeArgs);
-    let macro_args = match MacroArgs::from_list(&attr_args) {
+    let macro_args = match ZServiceMacroArgs::from_list(&attr_args) {
         Ok(v) => v,
         Err(e) => { return TokenStream::from(e.write_errors()); }
     };
@@ -204,13 +211,10 @@ pub fn zservice(_attr : TokenStream, input : TokenStream) -> TokenStream {
     // Collects the pattern for the types
     let args : &[&[PatType]] = &evals.iter().map(|eval| &*eval.args).collect::<Vec<_>>();
 
-    //service uuid
-    let uuid = Uuid::new_v4();
-
     //service eval path
     let path = match macro_args.prefix {
-        Some(prefix) => format!("{}/zservice/{}/uuid/{}/serve",prefix, ident, uuid).to_string(),
-        None => format!("/zservice/{}/uuid/{}/serve", ident, uuid).to_string(),
+        Some(prefix) => format!("{}/zservice/{}/",prefix, ident).to_string(),
+        None => format!("/zservice/{}/", ident).to_string(),
     };
 
     // Generates the code
@@ -244,7 +248,6 @@ pub fn zservice(_attr : TokenStream, input : TokenStream) -> TokenStream {
             .collect::<Vec<_>>(),
         timeout : &macro_args.timeout_s,
         eval_path : &path,
-        uuid,
     }
     .into_token_stream()
     .into();
@@ -258,6 +261,13 @@ pub fn zservice(_attr : TokenStream, input : TokenStream) -> TokenStream {
 pub fn zserver(_attr: TokenStream, input: TokenStream) -> TokenStream {
     let mut item = syn::parse_macro_input!(input as ItemImpl);
     let span = item.span();
+
+
+    let attr_args = parse_macro_input!(_attr as AttributeArgs);
+    let macro_args = match ZServerMacroArgs::from_list(&attr_args) {
+        Ok(v) => v,
+        Err(e) => { return TokenStream::from(e.write_errors()); }
+    };
 
     let mut expected_non_async_types: Vec<(&ImplItemMethod, String)> = Vec::new();
     let mut found_non_async_types: Vec<&ImplItemType> = Vec::new();
@@ -284,7 +294,28 @@ pub fn zserver(_attr: TokenStream, input: TokenStream) -> TokenStream {
     {
         return TokenStream::from(e.to_compile_error());
     }
+
+    let uuid = match macro_args.uuid {
+        Some(u) => Uuid::from_str(&u).unwrap(),
+        None => Uuid::new_v4(),
+    };
+
+    let str_uuid = format!("{}", uuid);
+
+    let uuid_imp = TokenStream::from(
+        quote!{
+        fn instance_uuid(&self) -> uuid::Uuid {
+            Uuid::from_str(#str_uuid).unwrap()
+        }
+    });
+
+    let method = syn::parse_macro_input!(uuid_imp as syn::ImplItemMethod);
+
+    item.items.push(ImplItem::Method(method));
+
     TokenStream::from(quote!(#item))
+
+
 }
 
 
@@ -349,7 +380,6 @@ struct ZServiceGenerator<'a> {
     arg_pats: &'a [Vec<&'a Pat>],           // patterns for args
     timeout: &'a u16,                       //eval timeout
     eval_path : &'a String,                 //path for evals
-    uuid : Uuid,                            //uuid of this service
 }
 
 
@@ -391,6 +421,10 @@ impl<'a> ZServiceGenerator<'a> {
                 fn get_server(self) -> #server_ident<Self>{
                     #server_ident {service:self}
                 }
+
+                /// Returns the service instance uuid
+                fn instance_uuid(&self) -> uuid::Uuid;
+
             }
         }
     }
@@ -427,13 +461,14 @@ impl<'a> ZServiceGenerator<'a> {
             impl<S> fog05_sdk::services::ZServe<#request_ident> for #server_ident<S>
             where S: #service_ident + Send +'static
             {
+
                 type Resp = #response_ident;
                 fn serve(self, locator : String) {
                     async_std::task::block_on(async {
                         let zenoh = zenoh::Zenoh::new(zenoh::config::client(Some(locator))).await.unwrap();
                         let ws2 = zenoh.workspace(None).await.unwrap();
                         // path as to be generated for this server this is an initial test
-                        let path = zenoh::Path::try_from(format!("{}",#eval_path)).unwrap();
+                        let path = zenoh::Path::try_from(format!("{}/{}/eval",#eval_path, self.service.instance_uuid())).unwrap();
                         let mut rcv = ws2.register_eval(&path.into()).await.unwrap();
                         loop {
                             let get_request = rcv.next().await.unwrap();
@@ -535,9 +570,10 @@ impl<'a> ZServiceGenerator<'a> {
         quote! {
             impl #client_ident<'_> {
                 #vis fn new(
-                    ws : async_std::sync::Arc<zenoh::Workspace>
+                    ws : async_std::sync::Arc<zenoh::Workspace>,
+                    instance_id : uuid::Uuid
                 ) -> #client_ident {
-                        let new_client = fog05_sdk::services::ZClientChannel::new(ws, format!("{}",#eval_path));
+                        let new_client = fog05_sdk::services::ZClientChannel::new(ws, format!("{}/{}/eval",#eval_path, instance_id));
                         #client_ident{
                             ch : new_client,
                             phantom : std::marker::PhantomData,

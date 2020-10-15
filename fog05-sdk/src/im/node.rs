@@ -17,6 +17,15 @@ extern crate serde_yaml;
 
 use serde::{Serialize, Deserialize};
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum NodeStatusEnum {
+    UNKNOWN,
+    NOTREADY,
+    READY,
+}
+
+
 // Node Information
 
 #[derive(Serialize,Deserialize,Debug, Clone)]
@@ -149,6 +158,8 @@ pub struct HeartbeatInfo {
 #[derive(Serialize,Deserialize,Debug, Clone)]
 pub struct NodeStatus {
     pub uuid : String,
+    pub status : NodeStatusEnum,
+    pub supported_hypervisors : Vec<String>,
     pub ram : RAMStatus,
     pub disk : DiskStatus,
     pub neighbors : Vec<Neighbor>

@@ -25,6 +25,7 @@ extern crate serde;
 
 pub mod services;
 pub mod im;
+pub mod zconnector;
 
 
 

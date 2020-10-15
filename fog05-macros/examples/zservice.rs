@@ -1,4 +1,3 @@
-
 #[macro_use]
 extern crate std;
 
@@ -9,7 +8,9 @@ use futures::prelude::*;
 use fog05_sdk::services::{ZServe};
 use zenoh::*;
 use std::str;
+use std::str::FromStr;
 use std::convert::TryFrom;
+use uuid::Uuid;
 
 
 //importing the macros
@@ -24,7 +25,7 @@ pub trait Hello {
 #[derive(Clone)]
 struct HelloZService(String);
 
-#[zserver]
+#[zserver(uuid = "10000000-0000-0000-0000-000000000001")]
 impl Hello for HelloZService{
     async fn hello(self, name: String) -> String{
         format!("Hello {}!, you are connected to {}", name, self.0)
@@ -38,6 +39,8 @@ async fn main() {
     let ws = zenoh.workspace(None).await.unwrap();
     let service = HelloZService("test1".to_string());
 
+    let sid = service.instance_uuid();
+    println!("Service UUID is: {}", sid);
 
     task::spawn(async move {
         let locator = format!("tcp/127.0.0.1:7447").to_string();
@@ -45,7 +48,10 @@ async fn main() {
     });
 
 
-    let mut client = HelloClient::new(Arc::new(ws));
+
+
+    // let instance_id = Uuid::from_str("00000000-0000-0000-0000-000000000000").unwrap();
+    let mut client = HelloClient::new(Arc::new(ws), sid);
     task::sleep(Duration::from_secs(1)).await;
     let hello = client.hello("client".to_string()).await;
 
