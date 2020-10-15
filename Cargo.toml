@@ -15,7 +15,8 @@
 
 members = [
   "fog05-sdk",
-  "fosctl"
+  "fog05-macros",
+  "fosctl",
 ]
 
 exclude = []

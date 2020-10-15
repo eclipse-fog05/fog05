@@ -22,6 +22,8 @@ macro_rules!  FN_PATH { ($id:expr, $fname:expr ) => { format!("/component/{}/fun
 extern crate bincode;
 extern crate hex;
 extern crate serde;
+
+pub mod services;
 pub mod im;
 
 
