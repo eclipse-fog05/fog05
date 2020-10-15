@@ -387,8 +387,8 @@ impl<'a> ZServiceGenerator<'a> {
             #vis trait #service_ident : Clone{
                 #(#fns)*
 
-                //Serve function that returs the object that implements the actual serve function
-                fn serve(self) -> #server_ident<Self>{
+                /// Returns the server object
+                fn get_server(self) -> #server_ident<Self>{
                     #server_ident {service:self}
                 }
             }

@@ -26,7 +26,7 @@ use std::time::Duration;
 pub trait Hello: Clone {
 
     fn hello(self, name: String) -> String;
-    fn serve(self) -> ServeHello<Self> {
+    fn get_server(self) -> ServeHello<Self> {
         ServeHello { service: self }
     }
 }
@@ -162,12 +162,12 @@ async fn main() {
 
     let zenoh = Zenoh::new(zenoh::config::client(Some(format!("tcp/127.0.0.1:7447").to_string()))).await.unwrap();
     let ws = zenoh.workspace(None).await.unwrap();
-    let server = HelloZService("test1".to_string());
+    let service = HelloZService("test1".to_string());
 
 
     task::spawn(async move {
         let locator = format!("tcp/127.0.0.1:7447").to_string();
-        server.serve().serve(locator);
+        service.get_server().serve(locator);
     });
 
 

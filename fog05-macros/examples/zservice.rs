@@ -36,12 +36,12 @@ async fn main() {
 
     let zenoh = Zenoh::new(zenoh::config::client(Some(format!("tcp/127.0.0.1:7447").to_string()))).await.unwrap();
     let ws = zenoh.workspace(None).await.unwrap();
-    let server = HelloZService("test1".to_string());
+    let service = HelloZService("test1".to_string());
 
 
     task::spawn(async move {
         let locator = format!("tcp/127.0.0.1:7447").to_string();
-        server.serve().serve(locator);
+        service.get_server().serve(locator);
     });
 
 
