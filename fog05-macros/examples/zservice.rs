@@ -35,27 +35,30 @@ impl Hello for HelloZService{
 #[async_std::main]
 async fn main() {
 
-    let zenoh = Zenoh::new(zenoh::config::client(Some(format!("tcp/127.0.0.1:7447").to_string()))).await.unwrap();
-    let ws = zenoh.workspace(None).await.unwrap();
-    let service = HelloZService("test1".to_string());
+    let zenoh = Arc::new(Zenoh::new(zenoh::config::client(Some(format!("tcp/127.0.0.1:7447").to_string()))).await.unwrap());
+    let ws = Arc::new(zenoh.workspace(None).await.unwrap());
 
-    let sid = service.instance_uuid();
-    println!("Service UUID is: {}", sid);
+    let service = HelloZService("test service".to_string());
 
-    task::spawn(async move {
-        let locator = format!("tcp/127.0.0.1:7447").to_string();
-        service.get_server().serve(locator);
+
+    let z = zenoh.clone();
+    let ser_uuid = service.instance_uuid();
+    let server = service.get_server(z);
+    server.connect();
+
+    let _handle = task::spawn(async move {
+        server.serve();
     });
 
 
-
-
-    // let instance_id = Uuid::from_str("00000000-0000-0000-0000-000000000000").unwrap();
-    let mut client = HelloClient::new(Arc::new(ws), sid);
+    let mut client = HelloClient::new(ws, ser_uuid);
     task::sleep(Duration::from_secs(1)).await;
     let hello = client.hello("client".to_string()).await;
-
     println!("Res is: {:?}", hello);
+
+    let hello = client.hello("client_two".to_string()).await;
+    println!("Res is: {:?}", hello);
+
 
 }
 

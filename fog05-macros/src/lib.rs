@@ -418,8 +418,11 @@ impl<'a> ZServiceGenerator<'a> {
                 #(#fns)*
 
                 /// Returns the server object
-                fn get_server(self) -> #server_ident<Self>{
-                    #server_ident {service:self}
+                fn get_server(self, z : async_std::sync::Arc<zenoh::Zenoh>) -> #server_ident<Self>{
+                    #server_ident {
+                        server : self,
+                        z : z,
+                    }
                 }
 
                 /// Returns the service instance uuid
@@ -438,7 +441,8 @@ impl<'a> ZServiceGenerator<'a> {
         quote!{
             #[derive(Clone)]
             #vis struct #server_ident<S> {
-                service: S,
+                z : async_std::sync::Arc<zenoh::Zenoh>,
+                server: S,
             }
         }
     }
@@ -463,13 +467,44 @@ impl<'a> ZServiceGenerator<'a> {
             {
 
                 type Resp = #response_ident;
-                fn serve(self, locator : String) {
+
+
+                fn connect(&self){
+                    task::block_on(
+                        async {
+                            let ws = self.z.workspace(None).await.unwrap();
+                            let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
+                            ws.put(
+                                &path.into(),
+                                Value::Json(r#"{"state"="halted"}"#.to_string()),
+                                ).await.unwrap();
+                        }
+                    )
+                }
+
+                fn authenticate(&self){
+                    unimplemented!("Not yet..");
+                }
+
+                fn register(&self){
+                    unimplemented!("Not yet..");
+                }
+
+                fn announce(&self){
+                    unimplemented!("Not yet..");
+                }
+
+                fn work(&self){
+                    self.serve()
+                }
+
+
+                fn serve(&self) {
                     async_std::task::block_on(async {
-                        let zenoh = zenoh::Zenoh::new(zenoh::config::client(Some(locator))).await.unwrap();
-                        let ws2 = zenoh.workspace(None).await.unwrap();
+                        let ws = self.z.workspace(None).await.unwrap();
                         // path as to be generated for this server this is an initial test
-                        let path = zenoh::Path::try_from(format!("{}/{}/eval",#eval_path, self.service.instance_uuid())).unwrap();
-                        let mut rcv = ws2.register_eval(&path.into()).await.unwrap();
+                        let path = zenoh::Path::try_from(format!("{}/{}/eval",#eval_path, self.server.instance_uuid())).unwrap();
+                        let mut rcv = ws.register_eval(&path.clone().into()).await.unwrap();
                         loop {
                             let get_request = rcv.next().await.unwrap();
 
@@ -482,16 +517,32 @@ impl<'a> ZServiceGenerator<'a> {
                                 #(
                                     #request_ident::#camel_case_idents{#(#arg_pats),*} => {
                                         let resp = #response_ident::#camel_case_idents(
-                                            #service_ident::#method_idents(self.service.clone(), #(#arg_pats),*));
+                                            #service_ident::#method_idents(self.server.clone(), #(#arg_pats),*));
                                         let encoded = bincode::serialize(&resp).unwrap();
-                                        let p = zenoh::Path::try_from(get_request.selector.path_expr.as_str()).unwrap();
-                                        get_request.reply(p.into(), encoded.into()).await;
+                                        get_request.reply(path.clone().into(), encoded.into()).await;
                                     }
                                 )*
                             }
                         }
                     });
                 }
+
+                fn unwork(&self){
+                    unimplemented!("Not yet..");
+                }
+
+                fn unannounce(&self){
+                    unimplemented!("Not yet..");
+                }
+
+                fn unregister(&self){
+                    unimplemented!("Not yet..");
+                }
+
+                fn disconnect(self){
+                    unimplemented!("Not yet..");
+                }
+
             }
         }
     }

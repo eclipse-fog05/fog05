@@ -24,12 +24,16 @@ use std::convert::TryFrom;
 use std::time::Duration;
 use uuid::Uuid;
 use std::str::FromStr;
+use std::unimplemented;
 
 pub trait Hello: Clone {
 
     fn hello(self, name: String) -> String;
-    fn get_server(self) -> ServeHello<Self> {
-        ServeHello { service: self }
+    fn get_server(self, z : Arc<zenoh::Zenoh>) -> ServeHello<Self> {
+        ServeHello {
+            z : z,
+            server: self,
+        }
     }
 
     fn instance_uuid(&self) -> uuid::Uuid;
@@ -37,8 +41,11 @@ pub trait Hello: Clone {
 
 #[derive(Clone)]
 pub struct ServeHello<S> {
-    service: S,
+    z : Arc<zenoh::Zenoh>,
+    server: S,
 }
+
+
 
 
 impl<S> fog05_sdk::services::ZServe<HelloRequest> for ServeHello<S>
@@ -46,19 +53,46 @@ where
     S: Hello + Send +'static,
 {
     type Resp = HelloResponse;
+
+
+    fn connect(&self){
+        task::block_on(
+            async {
+                let ws = self.z.workspace(None).await.unwrap();
+                let path = zenoh::Path::try_from(format!("/this/is/generated/instance/{}/state", self.server.instance_uuid())).unwrap();
+                ws.put(
+                    &path.into(),
+                    Value::Json(r#"{"state"="halted"}"#.to_string()),
+                    ).await.unwrap();
+            }
+        )
+    }
+
+    fn authenticate(&self){
+        unimplemented!("Not yet..");
+    }
+
+    fn register(&self){
+        unimplemented!("Not yet..");
+    }
+
+    fn announce(&self){
+        unimplemented!("Not yet..");
+    }
+
+    fn work(&self){
+        self.serve()
+    }
+
+
     fn serve(
-        self,
-        locator : String,
-        // mut rcv: zenoh::GetRequestStream<'_>,
+        &self
      )
     {
         task::block_on(async {
-            let zenoh = Zenoh::new(zenoh::config::client(Some(locator))).await.unwrap();
-            // println!("Created zenoh");
-            let ws2 = zenoh.workspace(None).await.unwrap();
-            // println!("Created workspace");
-            let path = zenoh::Path::try_from(format!("/this/is/generated/instance/{}/eval", self.service.instance_uuid())).unwrap();
-            let mut rcv = ws2.register_eval(&path.into()).await.unwrap();
+            let ws = self.z.workspace(None).await.unwrap();
+            let path = zenoh::Path::try_from(format!("/this/is/generated/instance/{}/eval", self.server.instance_uuid())).unwrap();
+            let mut rcv = ws.register_eval(&path.clone().into()).await.unwrap();
             // println!("Register eval");
             loop {
                 let get_request = rcv.next().await.unwrap();
@@ -70,17 +104,35 @@ where
                 // println!("ZServe Request: {:?}", req);
                 match req {
                     HelloRequest::Hello { name } => {
-                        let resp = HelloResponse::Hello(Hello::hello(self.service.clone(), name));
+                        let resp = HelloResponse::Hello(Hello::hello(self.server.clone(), name));
                         let encoded = bincode::serialize(&resp).unwrap();
-                        let p = zenoh::Path::try_from(get_request.selector.path_expr.as_str()).unwrap();
+                        //let p = zenoh::Path::try_from(get_request.selector.path_expr.as_str()).unwrap();
                         // println!("ZServe Response: {:?}", encoded);
-                        get_request.reply(p.into(), encoded.into()).await;
+                        get_request.reply(path.clone().into(), encoded.into()).await;
                     }
                 }
             }
         });
     }
+
+    fn unwork(&self){
+        unimplemented!("Not yet..");
+    }
+
+    fn unannounce(&self){
+        unimplemented!("Not yet..");
+    }
+
+    fn unregister(&self){
+        unimplemented!("Not yet..");
+    }
+
+    fn disconnect(self){
+        unimplemented!("Not yet..");
+    }
 }
+
+
 /// The request sent over the wire from the client to the server.
 #[derive(Debug, Serialize, Deserialize)]
 pub enum HelloRequest {
@@ -145,7 +197,7 @@ impl HelloClient<'_>
         name: String,
     ) -> impl std::future::Future<Output = std::io::Result<String>> + '_{
         let request = HelloRequest::Hello { name };
-        // Timeout can be implemented here
+        // Timeout is implemented here
         let resp = self.ch.call_fun(request);
         async move {
             let dur = Duration::from_secs(10);
@@ -158,7 +210,7 @@ impl HelloClient<'_>
                         },
                     Err(e) => Err(e),
                 },
-                Err(e) => Err(std::io::Error::new(std::io::ErrorKind::TimedOut, format!("Error: {}", e))),
+                Err(e) => Err(std::io::Error::new(std::io::ErrorKind::TimedOut, format!("{}", e))),
             }
         }
     }
@@ -169,22 +221,31 @@ async fn main() {
     println!("HelloWorld!");
 
 
-    let zenoh = Zenoh::new(zenoh::config::client(Some(format!("tcp/127.0.0.1:7447").to_string()))).await.unwrap();
-    let ws = zenoh.workspace(None).await.unwrap();
-    let service = HelloZService("test1".to_string());
+    let zenoh = Arc::new(Zenoh::new(zenoh::config::client(Some(format!("tcp/127.0.0.1:7447").to_string()))).await.unwrap());
+    let ws = Arc::new(zenoh.workspace(None).await.unwrap());
+
+    let service = HelloZService("test service".to_string());
 
 
-    task::spawn(async move {
-        let locator = format!("tcp/127.0.0.1:7447").to_string();
-        service.get_server().serve(locator);
+    let z = zenoh.clone();
+    let server = service.get_server(z);
+    server.connect();
+
+    let handle = task::spawn(async move {
+        server.serve();
     });
 
     let instance_id = Uuid::from_str("00000000-0000-0000-0000-000000000000").unwrap();
-    let mut client = HelloClient::new(Arc::new(ws), instance_id);
+    let mut client = HelloClient::new(ws, instance_id);
     task::sleep(Duration::from_secs(1)).await;
     let hello = client.hello("client".to_string()).await;
-
     println!("Res is: {:?}", hello);
+
+    let hello = client.hello("client_two".to_string()).await;
+    println!("Res is: {:?}", hello);
+
+
+    handle.await;
 
 
 }
