@@ -14,6 +14,9 @@
 pub mod zchannel;
 pub use zchannel::ZClientChannel;
 
+pub mod types;
+pub use types::*;
+
 
 
 /// Trait to be implemented by services

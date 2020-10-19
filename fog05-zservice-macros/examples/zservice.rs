@@ -5,7 +5,7 @@ use async_std::task;
 use async_std::sync::Arc;
 use std::time::Duration;
 use futures::prelude::*;
-use fog05_sdk::services::{ZServe};
+use fog05_zservice::ZServe;
 use zenoh::*;
 use std::str;
 use std::str::FromStr;
@@ -14,7 +14,7 @@ use uuid::Uuid;
 
 
 //importing the macros
-use fog05_macros::{zservice, zserver};
+use fog05_zservice_macros::{zservice, zserver};
 
 #[zservice(timeout_s = 10, prefix = "/lfos")]
 pub trait Hello {

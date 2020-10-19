@@ -15,7 +15,7 @@ extern crate base64;
 use async_std::task;
 use async_std::sync::Arc;
 use futures::prelude::*;
-use fog05_sdk::services::{ZServe};
+use fog05_zservice::ZServe;
 use serde::{Serialize, Deserialize};
 use zenoh::*;
 use std::marker::PhantomData;
@@ -48,7 +48,7 @@ pub struct ServeHello<S> {
 
 
 
-impl<S> fog05_sdk::services::ZServe<HelloRequest> for ServeHello<S>
+impl<S> fog05_zservice::ZServe<HelloRequest> for ServeHello<S>
 where
     S: Hello + Send +'static,
 {
@@ -171,7 +171,7 @@ impl Hello for HelloZService {
 #[allow(unused)]
 /// The client stub that makes RPC calls to the server. Exposes a Future interface.
 #[derive(Clone,Debug)]
-pub struct HelloClient<'a, C = fog05_sdk::services::ZClientChannel<'a, HelloRequest, HelloResponse>>{
+pub struct HelloClient<'a, C = fog05_zservice::ZClientChannel<'a, HelloRequest, HelloResponse>>{
     ch : C,
     phantom : PhantomData<&'a ()>
 }
@@ -181,7 +181,7 @@ impl HelloClient<'_> {
         ws : Arc<zenoh::Workspace>,
         instance_id : Uuid,
     ) -> HelloClient {
-        let new_client = fog05_sdk::services::ZClientChannel::new(ws, format!("/this/is/generated/instance/{}/eval", instance_id));
+        let new_client = fog05_zservice::ZClientChannel::new(ws, format!("/this/is/generated/instance/{}/eval", instance_id));
         HelloClient{
             ch : new_client,
             phantom : PhantomData,

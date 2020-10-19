@@ -462,7 +462,7 @@ impl<'a> ZServiceGenerator<'a> {
         } = self;
 
         quote!{
-            impl<S> fog05_sdk::services::ZServe<#request_ident> for #server_ident<S>
+            impl<S> fog05_zservice::ZServe<#request_ident> for #server_ident<S>
             where S: #service_ident + Send +'static
             {
 
@@ -601,7 +601,7 @@ impl<'a> ZServiceGenerator<'a> {
     quote! {
             #[allow(unused)]
             #[derive(Clone, Debug)]
-            #vis struct #client_ident<'a, C = fog05_sdk::services::ZClientChannel<'a, #request_ident, #response_ident>>{
+            #vis struct #client_ident<'a, C = fog05_zservice::ZClientChannel<'a, #request_ident, #response_ident>>{
                 ch : C,
                 phantom : std::marker::PhantomData<&'a ()>
             }
@@ -624,7 +624,7 @@ impl<'a> ZServiceGenerator<'a> {
                     ws : async_std::sync::Arc<zenoh::Workspace>,
                     instance_id : uuid::Uuid
                 ) -> #client_ident {
-                        let new_client = fog05_sdk::services::ZClientChannel::new(ws, format!("{}/{}/eval",#eval_path, instance_id));
+                        let new_client = fog05_zservice::ZClientChannel::new(ws, format!("{}/{}/eval",#eval_path, instance_id));
                         #client_ident{
                             ch : new_client,
                             phantom : std::marker::PhantomData,

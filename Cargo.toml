@@ -15,7 +15,8 @@
 
 members = [
   "fog05-sdk",
-  "fog05-macros",
+  "fog05-zservice",
+  "fog05-zservice-macros",
   "fosctl",
 ]
 
