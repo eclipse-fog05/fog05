@@ -217,6 +217,7 @@ pub fn zservice(_attr : TokenStream, input : TokenStream) -> TokenStream {
         None => format!("/zservice/{}/", ident).to_string(),
     };
 
+    let service_name = format!("{}Service", ident);
     // Generates the code
     let ts : TokenStream = ZServiceGenerator{
         service_ident: ident,
@@ -248,6 +249,7 @@ pub fn zservice(_attr : TokenStream, input : TokenStream) -> TokenStream {
             .collect::<Vec<_>>(),
         timeout : &macro_args.timeout_s,
         eval_path : &path,
+        service_name : &service_name,
     }
     .into_token_stream()
     .into();
@@ -380,6 +382,7 @@ struct ZServiceGenerator<'a> {
     arg_pats: &'a [Vec<&'a Pat>],           // patterns for args
     timeout: &'a u16,                       //eval timeout
     eval_path : &'a String,                 //path for evals
+    service_name : &'a String,              //service name on zenoh
 }
 
 
@@ -458,6 +461,7 @@ impl<'a> ZServiceGenerator<'a> {
             arg_pats,
             method_idents,
             eval_path,
+            service_name,
             ..
         } = self;
 
@@ -472,75 +476,359 @@ impl<'a> ZServiceGenerator<'a> {
                 fn connect(&self){
                     task::block_on(
                         async {
+                            let zsession = self.z.session();
+                            let zinfo = zsession.info().await;
+                            let rid = hex::encode(&(zinfo.iter().find(|x| x.0 == zenoh::net::info::ZN_INFO_ROUTER_PID_KEY ).unwrap().1));
+                            let pid = hex::encode(&(zinfo.iter().find(|x| x.0 == zenoh::net::info::ZN_INFO_PID_KEY).unwrap().1));
                             let ws = self.z.workspace(None).await.unwrap();
+                            let component_advertisement = fog05_zservice::ComponentAdvertisement{
+                                uuid : self.server.instance_uuid(),
+                                name : format!("{}", #service_name),
+                                routerid : rid.clone(),
+                                peerid : pid.clone(),
+                            };
+                            let encoded_ca = bincode::serialize(&component_advertisement).unwrap();
+                            let path = zenoh::Path::try_from(format!("/{}/{}/info",#eval_path,self.server.instance_uuid())).unwrap();
+                            ws.put(&path.into(),encoded_ca.into()).await.unwrap();
+
+                            let component_info = fog05_zservice::ComponentInformation{
+                                uuid : self.server.instance_uuid(),
+                                name : format!("{}", #service_name),
+                                routerid : rid.clone(),
+                                peerid : pid.clone(),
+                                status : fog05_zservice::ComponentStatus::HALTED,
+                            };
+                            let encoded_ci = bincode::serialize(&component_info).unwrap();
                             let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
-                            ws.put(
-                                &path.into(),
-                                Value::Json(r#"{"state"="halted"}"#.to_string()),
-                                ).await.unwrap();
+                            ws.put(&path.into(),encoded_ci.into()).await.unwrap();
+                        }
+                    );
+                }
+
+
+                fn authenticate(&self){
+                    task::block_on(
+                        async {
+                            let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
+                            let ws = self.z.workspace(None).await.unwrap();
+                            let mut ds = ws.get(&selector).await.unwrap();
+                            let mut data = Vec::new();
+                            while let Some(d) = ds.next().await {
+                                data.push(d)
+                            }
+                            match data.len() {
+                                0 => panic!("This component state is not present in Zenoh!!"),
+                                1 => {
+                                    let kv = &data[0];
+                                    match &kv.value {
+                                        zenoh::Value::Raw(_,buf) => {
+                                            let mut ci = bincode::deserialize::<fog05_zservice::ComponentInformation>(&buf.to_vec()).unwrap();
+                                            match ci.status {
+                                                fog05_zservice::ComponentStatus::HALTED => {
+                                                    ci.status = fog05_zservice::ComponentStatus::BUILDING;
+                                                    let encoded_ci = bincode::serialize(&ci).unwrap();
+                                                    let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
+                                                    ws.put(&path.into(),encoded_ci.into()).await.unwrap();
+                                                },
+                                                _ => panic!("Cannot authenticate a component in a state different than HALTED"),
+                                            }
+                                        },
+                                        _ => panic!("Component state is expected to be RAW in Zenoh!!"),
+                                    }
+                                },
+                                _ => unreachable!(),
+                            }
+                        }
+                    );
+                }
+
+                fn register(&self){
+                    task::block_on(
+                        async {
+                            let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
+                            let ws = self.z.workspace(None).await.unwrap();
+                            let mut ds = ws.get(&selector).await.unwrap();
+                            let mut data = Vec::new();
+                            while let Some(d) = ds.next().await {
+                                data.push(d)
+                            }
+                            match data.len() {
+                                0 => panic!("This component state is not present in Zenoh!!"),
+                                1 => {
+                                    let kv = &data[0];
+                                    match &kv.value {
+                                        zenoh::Value::Raw(_,buf) => {
+                                            let mut ci = bincode::deserialize::<fog05_zservice::ComponentInformation>(&buf.to_vec()).unwrap();
+                                            match ci.status {
+                                                fog05_zservice::ComponentStatus::BUILDING => {
+                                                    ci.status = fog05_zservice::ComponentStatus::REGISTERED;
+                                                    let encoded_ci = bincode::serialize(&ci).unwrap();
+                                                    let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
+                                                    ws.put(&path.into(),encoded_ci.into()).await.unwrap();
+                                                },
+                                                _ => panic!("Cannot authenticate a component in a state different than BUILDING"),
+                                            }
+                                        },
+                                        _ => panic!("Component state is expected to be RAW in Zenoh!!"),
+                                    }
+                                },
+                                _ => unreachable!(),
+                            }
+                        }
+                    );
+                }
+
+                fn announce(&self){
+                    task::block_on(
+                        async {
+                            let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
+                            let ws = self.z.workspace(None).await.unwrap();
+                            let mut ds = ws.get(&selector).await.unwrap();
+                            let mut data = Vec::new();
+                            while let Some(d) = ds.next().await {
+                                data.push(d)
+                            }
+                            match data.len() {
+                                0 => panic!("This component state is not present in Zenoh!!"),
+                                1 => {
+                                    let kv = &data[0];
+                                    match &kv.value {
+                                        zenoh::Value::Raw(_,buf) => {
+                                            let mut ci = bincode::deserialize::<fog05_zservice::ComponentInformation>(&buf.to_vec()).unwrap();
+                                            match ci.status {
+                                                fog05_zservice::ComponentStatus::REGISTERED => {
+                                                    ci.status = fog05_zservice::ComponentStatus::ANNOUNCED;
+                                                    let encoded_ci = bincode::serialize(&ci).unwrap();
+                                                    let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
+                                                    ws.put(&path.into(),encoded_ci.into()).await.unwrap();
+                                                },
+                                                _ => panic!("Cannot authenticate a component in a state different than REGISTERED"),
+                                            }
+                                        },
+                                        _ => panic!("Component state is expected to be RAW in Zenoh!!"),
+                                    }
+                                },
+                                _ => unreachable!(),
+                            }
+                        }
+                    );
+                }
+
+                fn work(&self) ->  (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>) {
+                    task::block_on(
+                        async {
+                            let (s, r) = async_std::sync::channel::<()>(1);
+                            let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
+                            let ws = self.z.workspace(None).await.unwrap();
+                            let mut ds = ws.get(&selector).await.unwrap();
+                            let mut data = Vec::new();
+                            while let Some(d) = ds.next().await {
+                                data.push(d)
+                            }
+                            match data.len() {
+                                0 => panic!("This component state is not present in Zenoh!!"),
+                                1 => {
+                                    let kv = &data[0];
+                                    match &kv.value {
+                                        zenoh::Value::Raw(_,buf) => {
+                                            let mut ci = bincode::deserialize::<fog05_zservice::ComponentInformation>(&buf.to_vec()).unwrap();
+                                            match ci.status {
+                                                fog05_zservice::ComponentStatus::ANNOUNCED => {
+                                                    ci.status = fog05_zservice::ComponentStatus::WORK;
+                                                    let encoded_ci = bincode::serialize(&ci).unwrap();
+                                                    let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
+                                                    ws.put(&path.into(),encoded_ci.into()).await.unwrap();
+                                                    let server = self.clone();
+                                                    let h = async_std::task::spawn( async move {
+                                                        server.serve(r);
+                                                    });
+                                                    (s,h)
+                                                },
+                                                _ => panic!("Cannot authenticate a component in a state different than ANNOUNCED"),
+                                            }
+                                        },
+                                        _ => panic!("Component state is expected to be RAW in Zenoh!!"),
+                                    }
+                                },
+                                _ => unreachable!(),
+                            }
                         }
                     )
                 }
 
-                fn authenticate(&self){
-                    unimplemented!("Not yet..");
-                }
 
-                fn register(&self){
-                    unimplemented!("Not yet..");
-                }
-
-                fn announce(&self){
-                    unimplemented!("Not yet..");
-                }
-
-                fn work(&self){
-                    self.serve()
-                }
-
-
-                fn serve(&self) {
-                    async_std::task::block_on(async {
+                fn serve(&self, stop : async_std::sync::Receiver<()>) {
+                    task::block_on(async {
                         let ws = self.z.workspace(None).await.unwrap();
-                        // path as to be generated for this server this is an initial test
                         let path = zenoh::Path::try_from(format!("{}/{}/eval",#eval_path, self.server.instance_uuid())).unwrap();
                         let mut rcv = ws.register_eval(&path.clone().into()).await.unwrap();
-                        loop {
-                            let get_request = rcv.next().await.unwrap();
+                        let rcv_loop = async {
+                            loop {
+                                let get_request = rcv.next().await.unwrap();
+                                let base64_req = get_request.selector.properties.get("req").cloned().unwrap();
+                                let b64_bytes = base64::decode(base64_req).unwrap();
+                                let js_req = str::from_utf8(&b64_bytes).unwrap();
+                                let req = serde_json::from_str::<#request_ident>(&js_req).unwrap();
 
-                            let base64_req = get_request.selector.properties.get("req").cloned().unwrap();
-                            let b64_bytes = base64::decode(base64_req).unwrap();
-                            let js_req = str::from_utf8(&b64_bytes).unwrap();
-                            let req = serde_json::from_str::<#request_ident>(&js_req).unwrap();
-
-                            match req {
-                                #(
-                                    #request_ident::#camel_case_idents{#(#arg_pats),*} => {
-                                        let resp = #response_ident::#camel_case_idents(
-                                            #service_ident::#method_idents(self.server.clone(), #(#arg_pats),*));
-                                        let encoded = bincode::serialize(&resp).unwrap();
-                                        get_request.reply(path.clone().into(), encoded.into()).await;
-                                    }
-                                )*
+                                match req {
+                                    #(
+                                        #request_ident::#camel_case_idents{#(#arg_pats),*} => {
+                                            let resp = #response_ident::#camel_case_idents(
+                                                #service_ident::#method_idents(self.server.clone(), #(#arg_pats),*));
+                                            let encoded = bincode::serialize(&resp).unwrap();
+                                            get_request.reply(path.clone().into(), encoded.into()).await;
+                                        }
+                                    )*
+                                }
                             }
-                        }
+                        };
+                        rcv_loop.race(stop.recv()).await.unwrap();
                     });
                 }
 
-                fn unwork(&self){
-                    unimplemented!("Not yet..");
+                fn unwork(&self, stop : async_std::sync::Sender<()>){
+                    task::block_on(
+                        async {
+                            let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
+                            let ws = self.z.workspace(None).await.unwrap();
+                            let mut ds = ws.get(&selector).await.unwrap();
+                            let mut data = Vec::new();
+                            while let Some(d) = ds.next().await {
+                                data.push(d)
+                            }
+                            match data.len() {
+                                0 => panic!("This component state is not present in Zenoh!!"),
+                                1 => {
+                                    let kv = &data[0];
+                                    match &kv.value {
+                                        zenoh::Value::Raw(_,buf) => {
+                                            let mut ci = bincode::deserialize::<fog05_zservice::ComponentInformation>(&buf.to_vec()).unwrap();
+                                            match ci.status {
+                                                fog05_zservice::ComponentStatus::WORK => {
+                                                    ci.status = fog05_zservice::ComponentStatus::UNWORK;
+                                                    let encoded_ci = bincode::serialize(&ci).unwrap();
+                                                    let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
+                                                    ws.put(&path.into(),encoded_ci.into()).await.unwrap();
+                                                    stop.send(()).await;
+                                                },
+                                                _ => panic!("Cannot authenticate a component in a state different than WORK"),
+                                            }
+                                        },
+                                        _ => panic!("Component state is expected to be RAW in Zenoh!!"),
+                                    }
+                                },
+                                _ => unreachable!(),
+                            }
+                        }
+                    );
                 }
 
                 fn unannounce(&self){
-                    unimplemented!("Not yet..");
+                    task::block_on(
+                        async {
+                            let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
+                            let ws = self.z.workspace(None).await.unwrap();
+                            let mut ds = ws.get(&selector).await.unwrap();
+                            let mut data = Vec::new();
+                            while let Some(d) = ds.next().await {
+                                data.push(d)
+                            }
+                            match data.len() {
+                                0 => panic!("This component state is not present in Zenoh!!"),
+                                1 => {
+                                    let kv = &data[0];
+                                    match &kv.value {
+                                        zenoh::Value::Raw(_,buf) => {
+                                            let mut ci = bincode::deserialize::<fog05_zservice::ComponentInformation>(&buf.to_vec()).unwrap();
+                                            match ci.status {
+                                                fog05_zservice::ComponentStatus::UNWORK => {
+                                                    ci.status = fog05_zservice::ComponentStatus::UNANNOUNCED;
+                                                    let encoded_ci = bincode::serialize(&ci).unwrap();
+                                                    let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
+                                                    ws.put(&path.into(),encoded_ci.into()).await.unwrap();
+                                                },
+                                                _ => panic!("Cannot authenticate a component in a state different than UNWORK"),
+                                            }
+                                        },
+                                        _ => panic!("Component state is expected to be RAW in Zenoh!!"),
+                                    }
+                                },
+                                _ => unreachable!(),
+                            }
+                        }
+                    );
                 }
 
                 fn unregister(&self){
-                    unimplemented!("Not yet..");
+                    task::block_on(
+                        async {
+                            let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
+                            let ws = self.z.workspace(None).await.unwrap();
+                            let mut ds = ws.get(&selector).await.unwrap();
+                            let mut data = Vec::new();
+                            while let Some(d) = ds.next().await {
+                                data.push(d)
+                            }
+                            match data.len() {
+                                0 => panic!("This component state is not present in Zenoh!!"),
+                                1 => {
+                                    let kv = &data[0];
+                                    match &kv.value {
+                                        zenoh::Value::Raw(_,buf) => {
+                                            let mut ci = bincode::deserialize::<fog05_zservice::ComponentInformation>(&buf.to_vec()).unwrap();
+                                            match ci.status {
+                                                fog05_zservice::ComponentStatus::UNANNOUNCED => {
+                                                    ci.status = fog05_zservice::ComponentStatus::UNREGISTERED;
+                                                    let encoded_ci = bincode::serialize(&ci).unwrap();
+                                                    let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
+                                                    ws.put(&path.into(),encoded_ci.into()).await.unwrap();
+                                                },
+                                                _ => panic!("Cannot authenticate a component in a state different than UNANNOUNCED"),
+                                            }
+                                        },
+                                        _ => panic!("Component state is expected to be RAW in Zenoh!!"),
+                                    }
+                                },
+                                _ => unreachable!(),
+                            }
+                        }
+                    );
                 }
 
                 fn disconnect(self){
-                    unimplemented!("Not yet..");
+                    task::block_on(
+                        async {
+                            let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
+                            let ws = self.z.workspace(None).await.unwrap();
+                            let mut ds = ws.get(&selector).await.unwrap();
+                            let mut data = Vec::new();
+                            while let Some(d) = ds.next().await {
+                                data.push(d)
+                            }
+                            match data.len() {
+                                0 => panic!("This component state is not present in Zenoh!!"),
+                                1 => {
+                                    let kv = &data[0];
+                                    match &kv.value {
+                                        zenoh::Value::Raw(_,buf) => {
+                                            let mut ci = bincode::deserialize::<fog05_zservice::ComponentInformation>(&buf.to_vec()).unwrap();
+                                            match ci.status {
+                                                fog05_zservice::ComponentStatus::UNREGISTERED => {
+                                                    ci.status = fog05_zservice::ComponentStatus::DISCONNECTED;
+                                                    let encoded_ci = bincode::serialize(&ci).unwrap();
+                                                    let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
+                                                    ws.put(&path.into(),encoded_ci.into()).await.unwrap();
+                                                },
+                                                _ => panic!("Cannot authenticate a component in a state different than UNREGISTERED"),
+                                            }
+                                        },
+                                        _ => panic!("Component state is expected to be RAW in Zenoh!!"),
+                                    }
+                                },
+                                _ => unreachable!(),
+                            }
+                        }
+                    );
                 }
 
             }

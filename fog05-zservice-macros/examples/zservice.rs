@@ -3,6 +3,7 @@ extern crate std;
 
 use async_std::task;
 use async_std::sync::Arc;
+use async_std::prelude::FutureExt;
 use std::time::Duration;
 use futures::prelude::*;
 use fog05_zservice::ZServe;
@@ -11,8 +12,6 @@ use std::str;
 use std::str::FromStr;
 use std::convert::TryFrom;
 use uuid::Uuid;
-
-
 //importing the macros
 use fog05_zservice_macros::{zservice, zserver};
 
@@ -44,11 +43,14 @@ async fn main() {
     let z = zenoh.clone();
     let ser_uuid = service.instance_uuid();
     let server = service.get_server(z);
-    server.connect();
 
-    let _handle = task::spawn(async move {
-        server.serve();
-    });
+
+    server.connect();
+    server.authenticate();
+    server.register();
+    server.announce();
+
+    let (s, handle) = server.work();
 
 
     let mut client = HelloClient::new(ws, ser_uuid);
@@ -58,6 +60,14 @@ async fn main() {
 
     let hello = client.hello("client_two".to_string()).await;
     println!("Res is: {:?}", hello);
+
+
+    server.unwork(s);
+    server.unannounce();
+    server.unregister();
+    server.disconnect();
+
+    handle.await;
 
 
 }
