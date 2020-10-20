@@ -72,6 +72,10 @@ where
         }
     }
 
+    /// This functions calls the get on the workspace for the eval
+    /// it serialized the request on the as properties in the selector
+    /// the request is first serialized as json and then encoded in base64 and
+    /// passed as a property named req
     async fn send(&self, request: &Req) -> zenoh::DataStream{
         let req = serde_json::to_string(&request).unwrap(); //those are to be passed to the eval selector
         let selector = zenoh::Selector::try_from(format!("{}/{}/eval?(req={})",self.path, self.server_uuid.unwrap(), base64::encode(req))).unwrap();
@@ -80,7 +84,8 @@ where
 
     }
 
-
+    /// This function calls the eval on the server and deserialized the result
+    /// if the value is not deserializable or the eval returns none it returns an IOError
     pub async fn call_fun(&self,  request: Req) -> std::io::Result<Resp> {
         let mut data_stream = self.send(&request).await;
         //takes only one, eval goes to only one
@@ -99,75 +104,57 @@ where
         }
     }
 
-
+    /// This function verifies is the server is still available to reply at requests
+    /// it first verifies that it is register in Zenoh, then it verifies if the peer is still connected,
+    /// and then verifies the state, it may panic if some assumption are not satisfied
     pub async fn verify_server(&self) -> bool {
-        match self.server_uuid {
-            None => false,
-            Some(id) => {
 
-                let selector = zenoh::Selector::try_from(format!("{}/{}/info",self.path, id)).unwrap();
+        if self.server_uuid.is_none() { return false }
+
+        let selector = zenoh::Selector::try_from(format!("{}/{}/info",self.path, self.server_uuid.unwrap())).unwrap();
+        let mut ds = self.workspace.get(&selector).await.unwrap();
+        let mut idata = Vec::new();
+
+        while let Some(d) = ds.next().await { idata.push(d)}
+
+        if idata.len() == 0 { return false }
+
+        let iv = &idata[0];
+        match &iv.value {
+            zenoh::Value::Raw(_,buf) => {
+                let ca = bincode::deserialize::<super::ComponentAdvertisement>(&buf.to_vec()).unwrap();
+                let selector = zenoh::Selector::try_from(format!("/@/router/{}", String::from(&ca.routerid))).unwrap();
                 let mut ds = self.workspace.get(&selector).await.unwrap();
-                let mut idata = Vec::new();
-                while let Some(d) = ds.next().await {
-                   idata.push(d)
-                }
-                match idata.len() {
-                    0 => false,
-                    1 => {
-                        let iv = &idata[0];
-                        match &iv.value {
-                            zenoh::Value::Raw(_,buf) => {
+                let mut rdata = Vec::new();
 
-                                let ca = bincode::deserialize::<super::ComponentAdvertisement>(&buf.to_vec()).unwrap();
-                                let selector = zenoh::Selector::try_from(format!("/@/router/{}", String::from(&ca.routerid))).unwrap();
-                                let mut ds = self.workspace.get(&selector).await.unwrap();
-                                let mut rdata = Vec::new();
-                                while let Some(d) = ds.next().await {
-                                    rdata.push(d)
-                                }
-                                match rdata.len() {
-                                    1 => {
-                                        let rv = &rdata[0];
-                                        match &rv.value {
-                                            zenoh::Value::Json(sv) => {
-                                                let ri = serde_json::from_str::<super::types::ZRouterInfo>(&sv).unwrap();
-                                                let mut it = ri.sessions.iter();
-                                                let f = it.find(|&x| {
-                                                    x.peer == String::from(&ca.peerid).to_uppercase()
-                                                });
-                                                match f {
-                                                    None => false,
-                                                    Some(_) => {
-                                                        let selector = zenoh::Selector::try_from(format!("{}/{}/state",self.path, id)).unwrap();
-                                                        let mut ds = self.workspace.get(&selector).await.unwrap();
-                                                        let mut data = Vec::new();
-                                                        while let Some(d) = ds.next().await {
-                                                            data.push(d)
-                                                        }
-                                                        match data.len() {
-                                                            0 => false,
-                                                            1 => {
-                                                                let kv = &data[0];
-                                                                match &kv.value {
-                                                                    zenoh::Value::Raw(_,buf) => {
-                                                                        let ci = bincode::deserialize::<super::ComponentInformation>(&buf.to_vec()).unwrap();
-                                                                        match ci.status {
-                                                                            super::ComponentStatus::WORK => true,
-                                                                            _ => false,
-                                                                        }
-                                                                    },
-                                                                    _ => unreachable!(),
-                                                                }
-                                                            },
-                                                            _ => unreachable!(),
-                                                        }
-                                                    },
-                                                }
-                                            },
-                                            _ => unreachable!()
-                                        }
-                                    },
-                                    _ => unreachable!(),
+                while let Some(d) = ds.next().await { rdata.push(d) }
+
+                if rdata.len() != 1 { unreachable!() }
+
+                let rv = &rdata[0];
+                match &rv.value {
+                    zenoh::Value::Json(sv) => {
+                        let ri = serde_json::from_str::<super::types::ZRouterInfo>(&sv).unwrap();
+                        let mut it = ri.sessions.iter();
+                        let f = it.find(|&x| {x.peer == String::from(&ca.peerid).to_uppercase()});
+
+                        if f.is_none() { return false }
+
+                        let selector = zenoh::Selector::try_from(format!("{}/{}/state",self.path, self.server_uuid.unwrap())).unwrap();
+                        let mut ds = self.workspace.get(&selector).await.unwrap();
+                        let mut data = Vec::new();
+
+                        while let Some(d) = ds.next().await { data.push(d) }
+
+                        if data.len() == 0 { return false }
+
+                        let kv = &data[0];
+                        match &kv.value {
+                            zenoh::Value::Raw(_,buf) => {
+                                let ci = bincode::deserialize::<super::ComponentInformation>(&buf.to_vec()).unwrap();
+                                match ci.status {
+                                    super::ComponentStatus::WORK => return true,
+                                    _ => return false,
                                 }
                             },
                             _ => unreachable!(),
@@ -175,7 +162,9 @@ where
                     },
                     _ => unreachable!(),
                 }
-            }
+            },
+            _ => unreachable!(),
         }
     }
+
 }
