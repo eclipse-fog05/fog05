@@ -106,10 +106,10 @@ where
 
     /// This function verifies is the server is still available to reply at requests
     /// it first verifies that it is register in Zenoh, then it verifies if the peer is still connected,
-    /// and then verifies the state, it may panic if some assumption are not satisfied
-    pub async fn verify_server(&self) -> bool {
+    /// and then verifies the state, it returns an std::io::Result, the Err case describe the error.
+    pub async fn verify_server(&self) -> std::io::Result<bool> {
 
-        if self.server_uuid.is_none() { return false }
+        if self.server_uuid.is_none() { return Ok(false) }
 
         let selector = zenoh::Selector::try_from(format!("{}/{}/info",self.path, self.server_uuid.unwrap())).unwrap();
         let mut ds = self.workspace.get(&selector).await.unwrap();
@@ -117,7 +117,7 @@ where
 
         while let Some(d) = ds.next().await { idata.push(d)}
 
-        if idata.len() == 0 { return false }
+        if idata.len() == 0 { return Ok(false) }
 
         let iv = &idata[0];
         match &iv.value {
@@ -129,7 +129,7 @@ where
 
                 while let Some(d) = ds.next().await { rdata.push(d) }
 
-                if rdata.len() != 1 { unreachable!() }
+                if rdata.len() != 1 { return Err(std::io::Error::new(std::io::ErrorKind::NotFound, "Zenoh Router not found!".to_string())) }
 
                 let rv = &rdata[0];
                 match &rv.value {
@@ -138,7 +138,7 @@ where
                         let mut it = ri.sessions.iter();
                         let f = it.find(|&x| {x.peer == String::from(&ca.peerid).to_uppercase()});
 
-                        if f.is_none() { return false }
+                        if f.is_none() { return Ok(false) }
 
                         let selector = zenoh::Selector::try_from(format!("{}/{}/state",self.path, self.server_uuid.unwrap())).unwrap();
                         let mut ds = self.workspace.get(&selector).await.unwrap();
@@ -146,24 +146,24 @@ where
 
                         while let Some(d) = ds.next().await { data.push(d) }
 
-                        if data.len() == 0 { return false }
+                        if data.len() == 0 { return Ok(false) }
 
                         let kv = &data[0];
                         match &kv.value {
                             zenoh::Value::Raw(_,buf) => {
                                 let ci = bincode::deserialize::<super::ComponentInformation>(&buf.to_vec()).unwrap();
                                 match ci.status {
-                                    super::ComponentStatus::WORK => return true,
-                                    _ => return false,
+                                    super::ComponentStatus::WORK => return Ok(true),
+                                    _ => return Ok(false),
                                 }
                             },
-                            _ => unreachable!(),
+                            _ => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Component Information is not encoded in RAW".to_string())),
                         }
                     },
-                    _ => unreachable!(),
+                    _ => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Router information is not encoded in JSON".to_string())),
                 }
             },
-            _ => unreachable!(),
+            _ => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Component Advertisement is not encoded in RAW".to_string())),
         }
     }
 

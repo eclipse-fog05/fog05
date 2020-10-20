@@ -486,31 +486,29 @@ impl HelloClient<'_>
         let request = HelloRequest::Hello { name };
         // Timeout is implemented here
         async move {
-            match self.is_server_available().await {
-                false => Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "Server is not available".to_string())),
-                true => {
-                    let resp = self.ch.call_fun(request);
-                    let dur = Duration::from_secs(10);
-                    match async_std::future::timeout(dur, resp).await {
-                        Ok(r) => match r {
-                            Ok(zr) =>
-                                match zr {
-                                    HelloResponse::Hello(msg) => std::result::Result::Ok(msg),
-                                    _ => ::std::rt::begin_panic("internal error: entered unreachable code"),
+            match self.ch.verify_server().await {
+                Ok(b) => {
+                    match b {
+                        false => Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "Server is not available".to_string())),
+                        true => {
+                            let resp = self.ch.call_fun(request);
+                            let dur = Duration::from_secs(10);
+                            match async_std::future::timeout(dur, resp).await {
+                                Ok(r) => match r {
+                                    Ok(zr) =>
+                                        match zr {
+                                            HelloResponse::Hello(msg) => std::result::Result::Ok(msg),
+                                            _ => ::std::rt::begin_panic("internal error: entered unreachable code"),
+                                        },
+                                    Err(e) => Err(e),
                                 },
-                            Err(e) => Err(e),
-                        },
-                        Err(e) => Err(std::io::Error::new(std::io::ErrorKind::TimedOut, format!("{}", e))),
+                                Err(e) => Err(std::io::Error::new(std::io::ErrorKind::TimedOut, format!("{}", e))),
+                            }
+                        }
                     }
-                }
+                },
+                Err(e) => Err(e),
             }
-        }
-    }
-
-    #[allow(unused)]
-    pub fn is_server_available(&self) -> impl std::future::Future<Output = bool> + '_ {
-        async move {
-            self.ch.verify_server().await
         }
     }
 }
