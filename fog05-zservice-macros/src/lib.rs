@@ -898,7 +898,7 @@ impl<'a> ZServiceGenerator<'a> {
 
 
     // Generates the implentation of the client
-    fn impl_client_new(&self) -> TokenStream2 {
+    fn impl_client_new_find_servers(&self) -> TokenStream2 {
         let &Self {
             client_ident,
             vis,
@@ -919,6 +919,35 @@ impl<'a> ZServiceGenerator<'a> {
                         }
 
                     }
+
+
+                #vis fn find_local_servers(ws : async_std::sync::Arc<zenoh::Workspace>)
+                -> impl std::future::Future<Output = std::io::Result<Vec<uuid::Uuid>>> + '_
+                {
+                    async move {
+                        let zsession = ws.session();
+                        let zinfo = zsession.info().await;
+                        let rid = hex::encode(&(zinfo.iter().find(|x| x.0 == zenoh::net::info::ZN_INFO_ROUTER_PID_KEY ).unwrap().1)).to_uppercase();
+
+                        let selector = zenoh::Selector::try_from(format!("{}/*/info",#eval_path)).unwrap();
+                        let mut ds = ws.get(&selector).await.unwrap();
+                        let mut servers = Vec::new();
+
+                        while let Some(d) = ds.next().await {
+                            match d.value {
+                                zenoh::Value::Raw(_,buf) => {
+                                    let ca = bincode::deserialize::<fog05_zservice::ComponentAdvertisement>(&buf.to_vec()).unwrap();
+                                    if ca.routerid == rid {
+                                        servers.push(ca.uuid);
+                                    }
+                                },
+                                _ => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Component Advertisement is not encoded in RAW".to_string())),
+                            }
+                        }
+                        std::result::Result::Ok(servers)
+                    }
+                    }
+
                 }
             }
 
@@ -993,7 +1022,7 @@ impl<'a> ToTokens for ZServiceGenerator<'a> {
             self.enum_request(),
             self.enum_response(),
             self.struct_client(),
-            self.impl_client_new(),
+            self.impl_client_new_find_servers(),
             self.impl_client_eval_methods(),
         ])
     }

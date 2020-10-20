@@ -43,10 +43,14 @@ async fn main() {
     let z = zenoh.clone();
     let ser_uuid = service.instance_uuid();
     let server = service.get_server(z);
-    let client = HelloClient::new(ws, ser_uuid);
+    let client = HelloClient::new(ws.clone(), ser_uuid);
 
 
     server.connect();
+
+    let local_servers = HelloClient::find_local_servers(ws.clone()).await;
+    println!("Local Servers found: {:#?}", local_servers);
+
     server.authenticate();
 
     // this should return an error as the server is not ready

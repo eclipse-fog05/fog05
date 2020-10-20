@@ -67,23 +67,23 @@ where
                 let ws = self.z.workspace(None).await.unwrap();
                 let component_advertisement = fog05_zservice::ComponentAdvertisement{
                     uuid : self.server.instance_uuid(),
-                    name : "Test Component".to_string(),
+                    name : "Hello".to_string(),
                     routerid : rid.clone().to_uppercase(),
                     peerid : pid.clone().to_uppercase(),
                 };
                 let encoded_ca = bincode::serialize(&component_advertisement).unwrap();
-                let path = zenoh::Path::try_from(format!("/this/is/generated/instance/{}/info", self.server.instance_uuid())).unwrap();
+                let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/info", self.server.instance_uuid())).unwrap();
                 ws.put(&path.into(),encoded_ca.into()).await.unwrap();
 
                 let component_info = fog05_zservice::ComponentInformation{
                     uuid : self.server.instance_uuid(),
-                    name : "Test Component".to_string(),
+                    name : "Hello".to_string(),
                     routerid : rid.clone().to_uppercase(),
                     peerid : pid.clone().to_uppercase(),
                     status : fog05_zservice::ComponentStatus::HALTED,
                 };
                 let encoded_ci = bincode::serialize(&component_info).unwrap();
-                let path = zenoh::Path::try_from(format!("/this/is/generated/instance/{}/state", self.server.instance_uuid())).unwrap();
+                let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
                 ws.put(&path.into(),encoded_ci.into()).await.unwrap();
             }
         )
@@ -92,7 +92,7 @@ where
     fn authenticate(&self){
         task::block_on(
             async {
-                let selector = zenoh::Selector::try_from(format!("/this/is/generated/instance/{}/state",self.server.instance_uuid())).unwrap();
+                let selector = zenoh::Selector::try_from(format!("/this/is/generated/Hello/instance/{}/state",self.server.instance_uuid())).unwrap();
                 let ws = self.z.workspace(None).await.unwrap();
                 let mut ds = ws.get(&selector).await.unwrap();
                 let mut data = Vec::new();
@@ -110,7 +110,7 @@ where
                                     fog05_zservice::ComponentStatus::HALTED => {
                                         ci.status = fog05_zservice::ComponentStatus::BUILDING;
                                         let encoded_ci = bincode::serialize(&ci).unwrap();
-                                        let path = zenoh::Path::try_from(format!("/this/is/generated/instance/{}/state", self.server.instance_uuid())).unwrap();
+                                        let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
                                         ws.put(&path.into(),encoded_ci.into()).await.unwrap();
                                     },
                                     _ => panic!("Cannot authenticate a component in a state different than HALTED"),
@@ -128,7 +128,7 @@ where
     fn register(&self){
         task::block_on(
             async {
-                let selector = zenoh::Selector::try_from(format!("/this/is/generated/instance/{}/state",self.server.instance_uuid())).unwrap();
+                let selector = zenoh::Selector::try_from(format!("/this/is/generated/Hello/instance/{}/state",self.server.instance_uuid())).unwrap();
                 let ws = self.z.workspace(None).await.unwrap();
                 let mut ds = ws.get(&selector).await.unwrap();
                 let mut data = Vec::new();
@@ -146,7 +146,7 @@ where
                                     fog05_zservice::ComponentStatus::BUILDING => {
                                         ci.status = fog05_zservice::ComponentStatus::REGISTERED;
                                         let encoded_ci = bincode::serialize(&ci).unwrap();
-                                        let path = zenoh::Path::try_from(format!("/this/is/generated/instance/{}/state", self.server.instance_uuid())).unwrap();
+                                        let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
                                         ws.put(&path.into(),encoded_ci.into()).await.unwrap();
                                     },
                                     _ => panic!("Cannot register a component in a state different than BUILDING"),
@@ -164,7 +164,7 @@ where
     fn announce(&self){
         task::block_on(
             async {
-                let selector = zenoh::Selector::try_from(format!("/this/is/generated/instance/{}/state",self.server.instance_uuid())).unwrap();
+                let selector = zenoh::Selector::try_from(format!("/this/is/generated/Hello/instance/{}/state",self.server.instance_uuid())).unwrap();
                 let ws = self.z.workspace(None).await.unwrap();
                 let mut ds = ws.get(&selector).await.unwrap();
                 let mut data = Vec::new();
@@ -182,7 +182,7 @@ where
                                     fog05_zservice::ComponentStatus::REGISTERED => {
                                         ci.status = fog05_zservice::ComponentStatus::ANNOUNCED;
                                         let encoded_ci = bincode::serialize(&ci).unwrap();
-                                        let path = zenoh::Path::try_from(format!("/this/is/generated/instance/{}/state", self.server.instance_uuid())).unwrap();
+                                        let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
                                         ws.put(&path.into(),encoded_ci.into()).await.unwrap();
                                     },
                                     _ => panic!("Cannot announce a component in a state different than REGISTERED"),
@@ -201,7 +201,7 @@ where
         task::block_on(
             async {
                 let (s, r) = async_std::sync::channel::<()>(1);
-                let selector = zenoh::Selector::try_from(format!("/this/is/generated/instance/{}/state",self.server.instance_uuid())).unwrap();
+                let selector = zenoh::Selector::try_from(format!("/this/is/generated/Hello/instance/{}/state",self.server.instance_uuid())).unwrap();
                 let ws = self.z.workspace(None).await.unwrap();
                 let mut ds = ws.get(&selector).await.unwrap();
                 let mut data = Vec::new();
@@ -219,7 +219,7 @@ where
                                     fog05_zservice::ComponentStatus::ANNOUNCED => {
                                         ci.status = fog05_zservice::ComponentStatus::WORK;
                                         let encoded_ci = bincode::serialize(&ci).unwrap();
-                                        let path = zenoh::Path::try_from(format!("/this/is/generated/instance/{}/state", self.server.instance_uuid())).unwrap();
+                                        let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
                                         ws.put(&path.into(),encoded_ci.into()).await.unwrap();
                                         let server = self.clone();
                                         let h = async_std::task::spawn( async move {
@@ -244,7 +244,7 @@ where
     {
         task::block_on(async {
             let ws = self.z.workspace(None).await.unwrap();
-            let path = zenoh::Path::try_from(format!("/this/is/generated/instance/{}/eval", self.server.instance_uuid())).unwrap();
+            let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/eval", self.server.instance_uuid())).unwrap();
             let mut rcv = ws.register_eval(&path.clone().into()).await.unwrap();
 
             let rcv_loop = async {
@@ -272,7 +272,7 @@ where
     fn unwork(&self, stop : async_std::sync::Sender<()>){
         task::block_on(
             async {
-                let selector = zenoh::Selector::try_from(format!("/this/is/generated/instance/{}/state",self.server.instance_uuid())).unwrap();
+                let selector = zenoh::Selector::try_from(format!("/this/is/generated/Hello/instance/{}/state",self.server.instance_uuid())).unwrap();
                 let ws = self.z.workspace(None).await.unwrap();
                 let mut ds = ws.get(&selector).await.unwrap();
                 let mut data = Vec::new();
@@ -290,7 +290,7 @@ where
                                     fog05_zservice::ComponentStatus::WORK => {
                                         ci.status = fog05_zservice::ComponentStatus::UNWORK;
                                         let encoded_ci = bincode::serialize(&ci).unwrap();
-                                        let path = zenoh::Path::try_from(format!("/this/is/generated/instance/{}/state", self.server.instance_uuid())).unwrap();
+                                        let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
                                         ws.put(&path.into(),encoded_ci.into()).await.unwrap();
                                         // Here we stop the serve
                                         stop.send(()).await;
@@ -310,7 +310,7 @@ where
     fn unannounce(&self){
         task::block_on(
             async {
-                let selector = zenoh::Selector::try_from(format!("/this/is/generated/instance/{}/state",self.server.instance_uuid())).unwrap();
+                let selector = zenoh::Selector::try_from(format!("/this/is/generated/Hello/instance/{}/state",self.server.instance_uuid())).unwrap();
                 let ws = self.z.workspace(None).await.unwrap();
                 let mut ds = ws.get(&selector).await.unwrap();
                 let mut data = Vec::new();
@@ -328,7 +328,7 @@ where
                                     fog05_zservice::ComponentStatus::UNWORK => {
                                         ci.status = fog05_zservice::ComponentStatus::UNANNOUNCED;
                                         let encoded_ci = bincode::serialize(&ci).unwrap();
-                                        let path = zenoh::Path::try_from(format!("/this/is/generated/instance/{}/state", self.server.instance_uuid())).unwrap();
+                                        let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
                                         ws.put(&path.into(),encoded_ci.into()).await.unwrap();
                                         // Here we should stop the serve
                                     },
@@ -347,7 +347,7 @@ where
     fn unregister(&self){
         task::block_on(
             async {
-                let selector = zenoh::Selector::try_from(format!("/this/is/generated/instance/{}/state",self.server.instance_uuid())).unwrap();
+                let selector = zenoh::Selector::try_from(format!("/this/is/generated/Hello/instance/{}/state",self.server.instance_uuid())).unwrap();
                 let ws = self.z.workspace(None).await.unwrap();
                 let mut ds = ws.get(&selector).await.unwrap();
                 let mut data = Vec::new();
@@ -365,7 +365,7 @@ where
                                     fog05_zservice::ComponentStatus::UNANNOUNCED => {
                                         ci.status = fog05_zservice::ComponentStatus::UNREGISTERED;
                                         let encoded_ci = bincode::serialize(&ci).unwrap();
-                                        let path = zenoh::Path::try_from(format!("/this/is/generated/instance/{}/state", self.server.instance_uuid())).unwrap();
+                                        let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
                                         ws.put(&path.into(),encoded_ci.into()).await.unwrap();
                                         // Here we should stop the serve
                                     },
@@ -384,7 +384,7 @@ where
     fn disconnect(self){
         task::block_on(
             async {
-                let selector = zenoh::Selector::try_from(format!("/this/is/generated/instance/{}/state",self.server.instance_uuid())).unwrap();
+                let selector = zenoh::Selector::try_from(format!("/this/is/generated/Hello/instance/{}/state",self.server.instance_uuid())).unwrap();
                 let ws = self.z.workspace(None).await.unwrap();
                 let mut ds = ws.get(&selector).await.unwrap();
                 let mut data = Vec::new();
@@ -402,7 +402,7 @@ where
                                     fog05_zservice::ComponentStatus::UNREGISTERED => {
                                         ci.status = fog05_zservice::ComponentStatus::DISCONNECTED;
                                         let encoded_ci = bincode::serialize(&ci).unwrap();
-                                        let path = zenoh::Path::try_from(format!("/this/is/generated/instance/{}/state", self.server.instance_uuid())).unwrap();
+                                        let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
                                         ws.put(&path.into(),encoded_ci.into()).await.unwrap();
                                         // Here we should stop the serve
                                     },
@@ -468,10 +468,38 @@ impl HelloClient<'_> {
         ws : Arc<zenoh::Workspace>,
         instance_id : Uuid,
     ) -> HelloClient {
-        let new_client = fog05_zservice::ZClientChannel::new(ws, "/this/is/generated/instance".to_string(), Some(instance_id));
+        let new_client = fog05_zservice::ZClientChannel::new(ws, "/this/is/generated/Hello/instance".to_string(), Some(instance_id));
         HelloClient{
             ch : new_client,
             phantom : PhantomData,
+        }
+    }
+
+
+    pub fn find_local_servers(ws : Arc<zenoh::Workspace>)
+    -> impl std::future::Future<Output = std::io::Result<Vec<Uuid>>> + '_
+    {
+        async move {
+            let zsession = ws.session();
+            let zinfo = zsession.info().await;
+            let rid = hex::encode(&(zinfo.iter().find(|x| x.0 == zenoh::net::info::ZN_INFO_ROUTER_PID_KEY ).unwrap().1)).to_uppercase();
+
+            let selector = zenoh::Selector::try_from("/this/is/generated/Hello/instance/*/info".to_string()).unwrap();
+            let mut ds = ws.get(&selector).await.unwrap();
+            let mut servers = Vec::new();
+
+            while let Some(d) = ds.next().await {
+                match d.value {
+                    zenoh::Value::Raw(_,buf) => {
+                        let ca = bincode::deserialize::<fog05_zservice::ComponentAdvertisement>(&buf.to_vec()).unwrap();
+                        if ca.routerid == rid {
+                            servers.push(ca.uuid);
+                        }
+                    },
+                    _ => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Component Advertisement is not encoded in RAW".to_string())),
+                }
+            }
+            std::result::Result::Ok(servers)
         }
     }
 }
@@ -526,12 +554,16 @@ async fn main() {
     let z = zenoh.clone();
     let server = service.get_server(z);
 
+
     let instance_id = Uuid::from_str("00000000-0000-0000-0000-000000000000").unwrap();
-    let client = HelloClient::new(ws, instance_id);
+
 
     server.connect();
 
+    let local_servers = HelloClient::find_local_servers(ws.clone()).await;
+    println!("Local Servers found: {:#?}", local_servers);
 
+    let client = HelloClient::new(ws, instance_id);
     // this should return an error as the server is not ready
     let hello = client.hello("client".to_string()).await;
     println!("Res is: {:?}", hello);
