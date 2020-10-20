@@ -68,8 +68,8 @@ where
                 let component_advertisement = fog05_zservice::ComponentAdvertisement{
                     uuid : self.server.instance_uuid(),
                     name : "Test Component".to_string(),
-                    routerid : rid.clone(),
-                    peerid : pid.clone(),
+                    routerid : rid.clone().to_uppercase(),
+                    peerid : pid.clone().to_uppercase(),
                 };
                 let encoded_ca = bincode::serialize(&component_advertisement).unwrap();
                 let path = zenoh::Path::try_from(format!("/this/is/generated/instance/{}/info", self.server.instance_uuid())).unwrap();
@@ -78,8 +78,8 @@ where
                 let component_info = fog05_zservice::ComponentInformation{
                     uuid : self.server.instance_uuid(),
                     name : "Test Component".to_string(),
-                    routerid : rid.clone(),
-                    peerid : pid.clone(),
+                    routerid : rid.clone().to_uppercase(),
+                    peerid : pid.clone().to_uppercase(),
                     status : fog05_zservice::ComponentStatus::HALTED,
                 };
                 let encoded_ci = bincode::serialize(&component_info).unwrap();
@@ -529,7 +529,7 @@ async fn main() {
     let server = service.get_server(z);
 
     let instance_id = Uuid::from_str("00000000-0000-0000-0000-000000000000").unwrap();
-    let mut client = HelloClient::new(ws, instance_id);
+    let client = HelloClient::new(ws, instance_id);
 
     server.connect();
 

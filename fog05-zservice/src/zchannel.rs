@@ -104,25 +104,73 @@ where
         match self.server_uuid {
             None => false,
             Some(id) => {
-                let selector = zenoh::Selector::try_from(format!("{}/{}/state",self.path, id)).unwrap();
+
+                let selector = zenoh::Selector::try_from(format!("{}/{}/info",self.path, id)).unwrap();
                 let mut ds = self.workspace.get(&selector).await.unwrap();
-                let mut data = Vec::new();
+                let mut idata = Vec::new();
                 while let Some(d) = ds.next().await {
-                    data.push(d)
+                   idata.push(d)
                 }
-                match data.len() {
+                match idata.len() {
                     0 => false,
                     1 => {
-                        let kv = &data[0];
-                        match &kv.value {
+                        let iv = &idata[0];
+                        match &iv.value {
                             zenoh::Value::Raw(_,buf) => {
-                                let mut ci = bincode::deserialize::<super::ComponentInformation>(&buf.to_vec()).unwrap();
-                                match ci.status {
-                                    super::ComponentStatus::WORK => true,
-                                    _ => false,
+
+                                let ca = bincode::deserialize::<super::ComponentAdvertisement>(&buf.to_vec()).unwrap();
+                                let selector = zenoh::Selector::try_from(format!("/@/router/{}", String::from(&ca.routerid))).unwrap();
+                                let mut ds = self.workspace.get(&selector).await.unwrap();
+                                let mut rdata = Vec::new();
+                                while let Some(d) = ds.next().await {
+                                    rdata.push(d)
+                                }
+                                match rdata.len() {
+                                    1 => {
+                                        let rv = &rdata[0];
+                                        match &rv.value {
+                                            zenoh::Value::Json(sv) => {
+                                                let ri = serde_json::from_str::<super::types::ZRouterInfo>(&sv).unwrap();
+                                                let mut it = ri.sessions.iter();
+                                                let f = it.find(|&x| {
+                                                    x.peer == String::from(&ca.peerid).to_uppercase()
+                                                });
+                                                match f {
+                                                    None => false,
+                                                    Some(_) => {
+                                                        let selector = zenoh::Selector::try_from(format!("{}/{}/state",self.path, id)).unwrap();
+                                                        let mut ds = self.workspace.get(&selector).await.unwrap();
+                                                        let mut data = Vec::new();
+                                                        while let Some(d) = ds.next().await {
+                                                            data.push(d)
+                                                        }
+                                                        match data.len() {
+                                                            0 => false,
+                                                            1 => {
+                                                                let kv = &data[0];
+                                                                match &kv.value {
+                                                                    zenoh::Value::Raw(_,buf) => {
+                                                                        let ci = bincode::deserialize::<super::ComponentInformation>(&buf.to_vec()).unwrap();
+                                                                        match ci.status {
+                                                                            super::ComponentStatus::WORK => true,
+                                                                            _ => false,
+                                                                        }
+                                                                    },
+                                                                    _ => unreachable!(),
+                                                                }
+                                                            },
+                                                            _ => unreachable!(),
+                                                        }
+                                                    },
+                                                }
+                                            },
+                                            _ => unreachable!()
+                                        }
+                                    },
+                                    _ => unreachable!(),
                                 }
                             },
-                            _ => panic!("Component state is expected to be RAW in Zenoh!!"),
+                            _ => unreachable!(),
                         }
                     },
                     _ => unreachable!(),

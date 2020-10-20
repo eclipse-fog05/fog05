@@ -43,7 +43,7 @@ async fn main() {
     let z = zenoh.clone();
     let ser_uuid = service.instance_uuid();
     let server = service.get_server(z);
-    let mut client = HelloClient::new(ws, ser_uuid);
+    let client = HelloClient::new(ws, ser_uuid);
 
 
     server.connect();

@@ -37,3 +37,26 @@ pub struct ComponentInformation {
     pub status : ComponentStatus,
 }
 
+
+
+#[derive(Serialize,Deserialize,Debug, Clone)]
+pub struct ZSessionInfo {
+    pub peer : String,
+    pub links : Vec<String>,
+}
+
+#[derive(Serialize,Deserialize,Debug, Clone)]
+pub struct ZPluginInfo {
+    pub name : String,
+    pub path : String,
+}
+
+
+#[derive(Serialize,Deserialize,Debug, Clone)]
+pub struct ZRouterInfo {
+    pub pid : String,
+    pub locators : Vec<String>,
+    pub sessions : Vec<ZSessionInfo>,
+    pub plugins : Vec<ZPluginInfo>,
+    pub time : Option<String>,
+}

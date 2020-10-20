@@ -484,8 +484,8 @@ impl<'a> ZServiceGenerator<'a> {
                             let component_advertisement = fog05_zservice::ComponentAdvertisement{
                                 uuid : self.server.instance_uuid(),
                                 name : format!("{}", #service_name),
-                                routerid : rid.clone(),
-                                peerid : pid.clone(),
+                                routerid : rid.clone().to_uppercase(),
+                                peerid : pid.clone().to_uppercase(),
                             };
                             let encoded_ca = bincode::serialize(&component_advertisement).unwrap();
                             let path = zenoh::Path::try_from(format!("/{}/{}/info",#eval_path,self.server.instance_uuid())).unwrap();
@@ -494,8 +494,8 @@ impl<'a> ZServiceGenerator<'a> {
                             let component_info = fog05_zservice::ComponentInformation{
                                 uuid : self.server.instance_uuid(),
                                 name : format!("{}", #service_name),
-                                routerid : rid.clone(),
-                                peerid : pid.clone(),
+                                routerid : rid.clone().to_uppercase(),
+                                peerid : pid.clone().to_uppercase(),
                                 status : fog05_zservice::ComponentStatus::HALTED,
                             };
                             let encoded_ci = bincode::serialize(&component_info).unwrap();
