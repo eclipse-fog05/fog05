@@ -795,7 +795,7 @@ impl<'a> ZServiceGenerator<'a> {
                     );
                 }
 
-                fn disconnect(self){
+                fn disconnect(&self){
                     task::block_on(
                         async {
                             let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
@@ -827,6 +827,20 @@ impl<'a> ZServiceGenerator<'a> {
                                 },
                                 _ => unreachable!(),
                             }
+                        }
+                    );
+                }
+
+                fn stop(self){
+                    task::block_on(
+                        async {
+                            let ws = self.z.workspace(None).await.unwrap();
+                            let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
+                            ws.delete(&path).await.unwrap();
+
+                            let path = zenoh::Path::try_from(format!("/{}/{}/info",#eval_path,self.server.instance_uuid())).unwrap();
+                            ws.delete(&path).await.unwrap();
+
                         }
                     );
                 }
@@ -921,11 +935,13 @@ impl<'a> ZServiceGenerator<'a> {
                     }
 
 
-                #vis fn find_local_servers(ws : async_std::sync::Arc<zenoh::Workspace>)
-                -> impl std::future::Future<Output = std::io::Result<Vec<uuid::Uuid>>> + '_
+                #vis fn find_local_servers(
+                    z : async_std::sync::Arc<zenoh::Zenoh>
+                ) -> impl std::future::Future<Output = std::io::Result<Vec<uuid::Uuid>>> + 'static
                 {
                     async move {
-                        let zsession = ws.session();
+                        let ws = z.workspace(None).await.unwrap();
+                        let zsession = z.session();
                         let zinfo = zsession.info().await;
                         let rid = hex::encode(&(zinfo.iter().find(|x| x.0 == zenoh::net::info::ZN_INFO_ROUTER_PID_KEY ).unwrap().1)).to_uppercase();
 
@@ -948,9 +964,36 @@ impl<'a> ZServiceGenerator<'a> {
                     }
                     }
 
-                }
+
+                #vis fn find_servers(
+                    z : async_std::sync::Arc<zenoh::Zenoh>
+                ) -> impl std::future::Future<Output = std::io::Result<Vec<uuid::Uuid>>> + 'static
+                {
+                    async move {
+                        let ws = z.workspace(None).await.unwrap();
+
+                        let selector = zenoh::Selector::try_from(format!("{}/*/info",#eval_path)).unwrap();
+                        let mut ds = ws.get(&selector).await.unwrap();
+                        let mut servers = Vec::new();
+
+                        while let Some(d) = ds.next().await {
+                            match d.value {
+                                zenoh::Value::Raw(_,buf) => {
+                                    let ca = bincode::deserialize::<fog05_zservice::ComponentAdvertisement>(&buf.to_vec()).unwrap();
+                                    servers.push(ca.uuid);
+                                },
+                                _ => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Component Advertisement is not encoded in RAW".to_string())),
+                            }
+                        }
+                        std::result::Result::Ok(servers)
+                    }
+                    }
+
+
+
             }
 
+        }
     }
 
     // Generates the implementation of the client methods that maps to evals

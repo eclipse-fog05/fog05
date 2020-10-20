@@ -381,7 +381,7 @@ where
         )
     }
 
-    fn disconnect(self){
+    fn disconnect(&self){
         task::block_on(
             async {
                 let selector = zenoh::Selector::try_from(format!("/this/is/generated/Hello/instance/{}/state",self.server.instance_uuid())).unwrap();
@@ -414,6 +414,22 @@ where
                     },
                     _ => unreachable!(),
                 }
+            }
+        )
+    }
+
+    fn stop(self){
+        task::block_on(
+            async {
+
+                let ws = self.z.workspace(None).await.unwrap();
+                let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state",self.server.instance_uuid())).unwrap();
+                ws.delete(&path).await.unwrap();
+
+                let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/info",self.server.instance_uuid())).unwrap();
+                ws.delete(&path).await.unwrap();
+
+
             }
         )
     }
@@ -468,6 +484,7 @@ impl HelloClient<'_> {
         ws : Arc<zenoh::Workspace>,
         instance_id : Uuid,
     ) -> HelloClient {
+
         let new_client = fog05_zservice::ZClientChannel::new(ws, "/this/is/generated/Hello/instance".to_string(), Some(instance_id));
         HelloClient{
             ch : new_client,
@@ -476,11 +493,12 @@ impl HelloClient<'_> {
     }
 
 
-    pub fn find_local_servers(ws : Arc<zenoh::Workspace>)
-    -> impl std::future::Future<Output = std::io::Result<Vec<Uuid>>> + '_
+    pub fn find_local_servers(z : Arc<zenoh::Zenoh>)
+    -> impl std::future::Future<Output = std::io::Result<Vec<Uuid>>> + 'static
     {
         async move {
-            let zsession = ws.session();
+            let ws = z.workspace(None).await.unwrap();
+            let zsession = z.session();
             let zinfo = zsession.info().await;
             let rid = hex::encode(&(zinfo.iter().find(|x| x.0 == zenoh::net::info::ZN_INFO_ROUTER_PID_KEY ).unwrap().1)).to_uppercase();
 
@@ -495,6 +513,28 @@ impl HelloClient<'_> {
                         if ca.routerid == rid {
                             servers.push(ca.uuid);
                         }
+                    },
+                    _ => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Component Advertisement is not encoded in RAW".to_string())),
+                }
+            }
+            std::result::Result::Ok(servers)
+        }
+    }
+
+    pub fn find_servers(z : Arc<zenoh::Zenoh>)
+    -> impl std::future::Future<Output = std::io::Result<Vec<Uuid>>> + 'static
+    {
+        async move {
+            let ws = z.workspace(None).await.unwrap();
+            let selector = zenoh::Selector::try_from("/this/is/generated/Hello/instance/*/info".to_string()).unwrap();
+            let mut ds = ws.get(&selector).await.unwrap();
+            let mut servers = Vec::new();
+
+            while let Some(d) = ds.next().await {
+                match d.value {
+                    zenoh::Value::Raw(_,buf) => {
+                        let ca = bincode::deserialize::<fog05_zservice::ComponentAdvertisement>(&buf.to_vec()).unwrap();
+                        servers.push(ca.uuid);
                     },
                     _ => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Component Advertisement is not encoded in RAW".to_string())),
                 }
@@ -560,10 +600,13 @@ async fn main() {
 
     server.connect();
 
-    let local_servers = HelloClient::find_local_servers(ws.clone()).await;
-    println!("Local Servers found: {:#?}", local_servers);
+    let local_servers = HelloClient::find_local_servers(zenoh.clone()).await;
+    println!("local_servers: {:?}", local_servers);
 
-    let client = HelloClient::new(ws, instance_id);
+    let servers = HelloClient::find_servers(zenoh.clone()).await;
+    println!("servers found: {:?}", servers);
+
+    let client = HelloClient::new(ws.clone(), instance_id);
     // this should return an error as the server is not ready
     let hello = client.hello("client".to_string()).await;
     println!("Res is: {:?}", hello);
@@ -587,6 +630,7 @@ async fn main() {
     server.unannounce();
     server.unregister();
     server.disconnect();
+    server.stop();
 
     handle.await;
 

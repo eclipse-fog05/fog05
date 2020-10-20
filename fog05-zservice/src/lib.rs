@@ -42,15 +42,18 @@ pub trait ZServe<Req> : Sized + Clone {
     /// Starts serving all requests
     fn serve(&self, stop : async_std::sync::Receiver<()>);//, ws: async_std::sync::Arc<zenoh::Workspace>);
 
-    // / State changes to UNWORKING, will stop serve/work
+    /// State changes to UNWORKING, will stop serve/work
     fn unwork(&self, stop: async_std::sync::Sender<()>);
 
     // state changes to UNANNOUNCED
     fn unannounce(&self);
 
-    // /  state changes to UNREGISTERED
+    ///  state changes to UNREGISTERED
     fn unregister(&self);
 
-    // / Disconnects, state changes to HALTED
-    fn disconnect(self);
+    /// state changes to DISCONNECTED
+    fn disconnect(&self);
+
+    /// removes the advertisement
+    fn stop(self);
 }
