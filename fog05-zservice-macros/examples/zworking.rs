@@ -468,7 +468,7 @@ impl HelloClient<'_> {
         ws : Arc<zenoh::Workspace>,
         instance_id : Uuid,
     ) -> HelloClient {
-        let new_client = fog05_zservice::ZClientChannel::new(ws, format!("/this/is/generated/instance/{}/eval", instance_id));
+        let new_client = fog05_zservice::ZClientChannel::new(ws, "/this/is/generated/instance".to_string(), Some(instance_id));
         HelloClient{
             ch : new_client,
             phantom : PhantomData,
@@ -480,25 +480,37 @@ impl HelloClient<'_>
 {
     #[allow(unused)]
     pub fn hello(
-        &mut self,
+        &self,
         name: String,
     ) -> impl std::future::Future<Output = std::io::Result<String>> + '_{
         let request = HelloRequest::Hello { name };
         // Timeout is implemented here
-        let resp = self.ch.call_fun(request);
         async move {
-            let dur = Duration::from_secs(10);
-            match async_std::future::timeout(dur, resp).await {
-                Ok(r) => match r {
-                    Ok(zr) =>
-                        match zr {
-                            HelloResponse::Hello(msg) => std::result::Result::Ok(msg),
-                            _ => ::std::rt::begin_panic("internal error: entered unreachable code"),
+            match self.is_server_available().await {
+                false => Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "Server is not available".to_string())),
+                true => {
+                    let resp = self.ch.call_fun(request);
+                    let dur = Duration::from_secs(10);
+                    match async_std::future::timeout(dur, resp).await {
+                        Ok(r) => match r {
+                            Ok(zr) =>
+                                match zr {
+                                    HelloResponse::Hello(msg) => std::result::Result::Ok(msg),
+                                    _ => ::std::rt::begin_panic("internal error: entered unreachable code"),
+                                },
+                            Err(e) => Err(e),
                         },
-                    Err(e) => Err(e),
-                },
-                Err(e) => Err(std::io::Error::new(std::io::ErrorKind::TimedOut, format!("{}", e))),
+                        Err(e) => Err(std::io::Error::new(std::io::ErrorKind::TimedOut, format!("{}", e))),
+                    }
+                }
             }
+        }
+    }
+
+    #[allow(unused)]
+    pub fn is_server_available(&self) -> impl std::future::Future<Output = bool> + '_ {
+        async move {
+            self.ch.verify_server().await
         }
     }
 }
@@ -513,18 +525,26 @@ async fn main() {
 
     let service = HelloZService("test service".to_string());
 
-
     let z = zenoh.clone();
     let server = service.get_server(z);
+
+    let instance_id = Uuid::from_str("00000000-0000-0000-0000-000000000000").unwrap();
+    let mut client = HelloClient::new(ws, instance_id);
+
     server.connect();
+
+
+    // this should return an error as the server is not ready
+    let hello = client.hello("client".to_string()).await;
+    println!("Res is: {:?}", hello);
+
     server.authenticate();
     server.register();
     server.announce();
 
     let (s, handle) = server.work();
 
-    let instance_id = Uuid::from_str("00000000-0000-0000-0000-000000000000").unwrap();
-    let mut client = HelloClient::new(ws, instance_id);
+
     task::sleep(Duration::from_secs(1)).await;
     let hello = client.hello("client".to_string()).await;
     println!("Res is: {:?}", hello);
@@ -539,6 +559,5 @@ async fn main() {
     server.disconnect();
 
     handle.await;
-
 
 }

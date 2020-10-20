@@ -43,17 +43,23 @@ async fn main() {
     let z = zenoh.clone();
     let ser_uuid = service.instance_uuid();
     let server = service.get_server(z);
+    let mut client = HelloClient::new(ws, ser_uuid);
 
 
     server.connect();
     server.authenticate();
+
+    // this should return an error as the server is not ready
+    let hello = client.hello("client".to_string()).await;
+    println!("Res is: {:?}", hello);
+
     server.register();
     server.announce();
 
     let (s, handle) = server.work();
 
 
-    let mut client = HelloClient::new(ws, ser_uuid);
+
     task::sleep(Duration::from_secs(1)).await;
     let hello = client.hello("client".to_string()).await;
     println!("Res is: {:?}", hello);
@@ -68,6 +74,10 @@ async fn main() {
     server.disconnect();
 
     handle.await;
+
+    // this should return an error as the server is not there
+    let hello = client.hello("client".to_string()).await;
+    println!("Res is: {:?}", hello);
 
 
 }

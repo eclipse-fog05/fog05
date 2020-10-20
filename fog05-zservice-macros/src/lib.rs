@@ -912,7 +912,7 @@ impl<'a> ZServiceGenerator<'a> {
                     ws : async_std::sync::Arc<zenoh::Workspace>,
                     instance_id : uuid::Uuid
                 ) -> #client_ident {
-                        let new_client = fog05_zservice::ZClientChannel::new(ws, format!("{}/{}/eval",#eval_path, instance_id));
+                        let new_client = fog05_zservice::ZClientChannel::new(ws, format!("{}",#eval_path), Some(instance_id));
                         #client_ident{
                             ch : new_client,
                             phantom : std::marker::PhantomData,
@@ -943,24 +943,37 @@ impl<'a> ZServiceGenerator<'a> {
 
         quote! {
             impl #client_ident<'_> {
+
+                #[allow(unused)]
+                pub fn is_server_available(&self) -> impl std::future::Future<Output = bool> + '_ {
+                    async move {
+                        self.ch.verify_server().await
+                    }
+                }
+
                 #(
                     #[allow(unused)]
                     #( #method_attrs )*
-                    #vis fn #method_idents(&mut self, #( #args ),*)
+                    #vis fn #method_idents(&self, #( #args ),*)
                         -> impl std::future::Future<Output = std::io::Result<#return_types>> + '_ {
                         let request = #request_ident::#camel_case_idents { #( #arg_pats ),* };
-                        let resp = self.ch.call_fun(request);
                         async move {
-                            let dur = std::time::Duration::from_secs(#timeout as u64);
-                            match async_std::future::timeout(dur, resp).await {
-                                Ok(r) => match r {
-                                    Ok(zr) => match zr {
-                                            #response_ident::#camel_case_idents(msg) => std::result::Result::Ok(msg),
-                                            _ => unreachable!(),
+                            match self.is_server_available().await {
+                                false => Err(std::io::Error::new(std::io::ErrorKind::PermissionDenied, "Server is not available".to_string())),
+                                true => {
+                                    let resp = self.ch.call_fun(request);
+                                    let dur = std::time::Duration::from_secs(#timeout as u64);
+                                    match async_std::future::timeout(dur, resp).await {
+                                        Ok(r) => match r {
+                                            Ok(zr) => match zr {
+                                                    #response_ident::#camel_case_idents(msg) => std::result::Result::Ok(msg),
+                                                    _ => unreachable!(),
+                                                },
+                                            Err(e) => Err(e),
                                         },
-                                    Err(e) => Err(e),
-                                },
-                                Err(e) => Err(std::io::Error::new(std::io::ErrorKind::TimedOut, format!("{}", e))),
+                                        Err(e) => Err(std::io::Error::new(std::io::ErrorKind::TimedOut, format!("{}", e))),
+                                    }
+                                }
                             }
                         }
                     }
