@@ -26,7 +26,8 @@ extern crate serde;
 pub mod im;
 pub mod zconnector;
 
-
+pub mod fresult;
+pub mod types;
 
 use std::convert::TryInto;
 use std::convert::TryFrom;
