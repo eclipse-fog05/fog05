@@ -36,11 +36,11 @@ pub trait ZServe<Req> : Sized + Clone {
     // Announce, state changes to ANNOUNCED
     fn announce(&self);
 
-    /// State changes to WORKING, will call or replace serve?
-    fn work(&self) -> (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>); //, ws: async_std::sync::Arc<zenoh::Workspace>);
+    /// State changes to WORKING, calls serve on a task::spawn, returns a stop sender and the serve task handle
+    fn work(&self) -> (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>);
 
     /// Starts serving all requests
-    fn serve(&self, stop : async_std::sync::Receiver<()>);//, ws: async_std::sync::Arc<zenoh::Workspace>);
+    fn serve(&self, stop : async_std::sync::Receiver<()>);
 
     /// State changes to UNWORKING, will stop serve/work
     fn unwork(&self, stop: async_std::sync::Sender<()>);

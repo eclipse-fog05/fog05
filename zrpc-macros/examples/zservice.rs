@@ -47,6 +47,9 @@ async fn main() {
 
 
     server.connect();
+    server.authenticate();
+    server.register();
+    server.announce();
 
     let local_servers = HelloClient::find_local_servers(zenoh.clone()).await;
     println!("local_servers: {:?}", local_servers);
@@ -54,14 +57,9 @@ async fn main() {
     let servers = HelloClient::find_servers(zenoh.clone()).await;
     println!("servers found: {:?}", servers);
 
-    server.authenticate();
-
     // this should return an error as the server is not ready
     let hello = client.hello("client".to_string()).await;
     println!("Res is: {:?}", hello);
-
-    server.register();
-    server.announce();
 
     let (s, handle) = server.work();
 
@@ -77,6 +75,13 @@ async fn main() {
 
     server.unwork(s);
     server.unannounce();
+
+    let local_servers = HelloClient::find_local_servers(zenoh.clone()).await;
+    println!("local_servers: {:?}", local_servers);
+
+    let servers = HelloClient::find_servers(zenoh.clone()).await;
+    println!("servers found: {:?}", servers);
+
     server.unregister();
     server.disconnect();
     server.stop();
@@ -86,14 +91,4 @@ async fn main() {
     // this should return an error as the server is not there
     let hello = client.hello("client".to_string()).await;
     println!("Res is: {:?}", hello);
-
-    let local_servers = HelloClient::find_local_servers(zenoh.clone()).await;
-    println!("local_servers: {:?}", local_servers);
-
-    let servers = HelloClient::find_servers(zenoh.clone()).await;
-    println!("servers found: {:?}", servers);
-
-
 }
-
-

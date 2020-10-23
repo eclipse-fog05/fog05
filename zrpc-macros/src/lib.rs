@@ -481,15 +481,7 @@ impl<'a> ZServiceGenerator<'a> {
                             let rid = hex::encode(&(zinfo.iter().find(|x| x.0 == zenoh::net::info::ZN_INFO_ROUTER_PID_KEY ).unwrap().1));
                             let pid = hex::encode(&(zinfo.iter().find(|x| x.0 == zenoh::net::info::ZN_INFO_PID_KEY).unwrap().1));
                             let ws = self.z.workspace(None).await.unwrap();
-                            let component_advertisement = zrpc::ComponentAdvertisement{
-                                uuid : self.server.instance_uuid(),
-                                name : format!("{}", #service_name),
-                                routerid : rid.clone().to_uppercase(),
-                                peerid : pid.clone().to_uppercase(),
-                            };
-                            let encoded_ca = bincode::serialize(&component_advertisement).unwrap();
-                            let path = zenoh::Path::try_from(format!("/{}/{}/info",#eval_path,self.server.instance_uuid())).unwrap();
-                            ws.put(&path.into(),encoded_ca.into()).await.unwrap();
+
 
                             let component_info = zrpc::ComponentInformation{
                                 uuid : self.server.instance_uuid(),
@@ -566,7 +558,7 @@ impl<'a> ZServiceGenerator<'a> {
                                                     let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
                                                 },
-                                                _ => panic!("Cannot authenticate a component in a state different than BUILDING"),
+                                                _ => panic!("Cannot register a component in a state different than BUILDING"),
                                             }
                                         },
                                         _ => panic!("Component state is expected to be RAW in Zenoh!!"),
@@ -597,12 +589,25 @@ impl<'a> ZServiceGenerator<'a> {
                                             let mut ci = bincode::deserialize::<zrpc::ComponentInformation>(&buf.to_vec()).unwrap();
                                             match ci.status {
                                                 zrpc::ComponentStatus::REGISTERED => {
+
+
+                                                    // Sending advertisement
+                                                    let component_advertisement = zrpc::ComponentAdvertisement{
+                                                        uuid : self.server.instance_uuid(),
+                                                        name : format!("{}", #service_name),
+                                                        routerid : ci.routerid.clone().to_uppercase(),
+                                                        peerid : ci.peerid.clone().to_uppercase(),
+                                                    };
+                                                    let encoded_ca = bincode::serialize(&component_advertisement).unwrap();
+                                                    let path = zenoh::Path::try_from(format!("/{}/{}/info",#eval_path,self.server.instance_uuid())).unwrap();
+                                                    ws.put(&path.into(),encoded_ca.into()).await.unwrap();
+
                                                     ci.status = zrpc::ComponentStatus::ANNOUNCED;
                                                     let encoded_ci = bincode::serialize(&ci).unwrap();
                                                     let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
                                                 },
-                                                _ => panic!("Cannot authenticate a component in a state different than REGISTERED"),
+                                                _ => panic!("Cannot announce a component in a state different than REGISTERED"),
                                             }
                                         },
                                         _ => panic!("Component state is expected to be RAW in Zenoh!!"),
@@ -644,7 +649,7 @@ impl<'a> ZServiceGenerator<'a> {
                                                     });
                                                     (s,h)
                                                 },
-                                                _ => panic!("Cannot authenticate a component in a state different than ANNOUNCED"),
+                                                _ => panic!("Cannot work a component in a state different than ANNOUNCED"),
                                             }
                                         },
                                         _ => panic!("Component state is expected to be RAW in Zenoh!!"),
@@ -659,30 +664,58 @@ impl<'a> ZServiceGenerator<'a> {
 
                 fn serve(&self, stop : async_std::sync::Receiver<()>) {
                     task::block_on(async {
+                        let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
                         let ws = self.z.workspace(None).await.unwrap();
-                        let path = zenoh::Path::try_from(format!("{}/{}/eval",#eval_path, self.server.instance_uuid())).unwrap();
-                        let mut rcv = ws.register_eval(&path.clone().into()).await.unwrap();
-                        let rcv_loop = async {
-                            loop {
-                                let get_request = rcv.next().await.unwrap();
-                                let base64_req = get_request.selector.properties.get("req").cloned().unwrap();
-                                let b64_bytes = base64::decode(base64_req).unwrap();
-                                let js_req = str::from_utf8(&b64_bytes).unwrap();
-                                let req = serde_json::from_str::<#request_ident>(&js_req).unwrap();
+                        let mut ds = ws.get(&selector).await.unwrap();
+                        let mut data = Vec::new();
+                        while let Some(d) = ds.next().await {
+                            data.push(d)
+                        }
+                        match data.len() {
+                            0 => panic!("This component state is not present in Zenoh!!"),
+                            1 => {
+                                let kv = &data[0];
+                                match &kv.value {
+                                    zenoh::Value::Raw(_,buf) => {
+                                        let ci = bincode::deserialize::<zrpc::ComponentInformation>(&buf.to_vec()).unwrap();
+                                        match ci.status {
+                                            zrpc::ComponentStatus::WORK => {
+                                                let path = zenoh::Path::try_from(format!("{}/{}/eval",#eval_path, self.server.instance_uuid())).unwrap();
+                                                let mut rcv = ws.register_eval(&path.clone().into()).await.unwrap();
+                                                let rcv_loop = async {
+                                                    loop {
+                                                        let get_request = rcv.next().await.unwrap();
+                                                        let base64_req = get_request.selector.properties.get("req").cloned().unwrap();
+                                                        let b64_bytes = base64::decode(base64_req).unwrap();
+                                                        let js_req = str::from_utf8(&b64_bytes).unwrap();
+                                                        let req = serde_json::from_str::<#request_ident>(&js_req).unwrap();
 
-                                match req {
-                                    #(
-                                        #request_ident::#camel_case_idents{#(#arg_pats),*} => {
-                                            let resp = #response_ident::#camel_case_idents(
-                                                #service_ident::#method_idents(self.server.clone(), #(#arg_pats),*));
-                                            let encoded = bincode::serialize(&resp).unwrap();
-                                            get_request.reply(path.clone().into(), encoded.into()).await;
+                                                        match req {
+                                                            #(
+                                                                #request_ident::#camel_case_idents{#(#arg_pats),*} => {
+                                                                    let resp = #response_ident::#camel_case_idents(
+                                                                        #service_ident::#method_idents(self.server.clone(), #(#arg_pats),*));
+                                                                    let encoded = bincode::serialize(&resp).unwrap();
+                                                                    get_request.reply(path.clone().into(), encoded.into()).await;
+                                                                }
+                                                            )*
+                                                        }
+                                                    }
+                                                };
+                                                rcv_loop.race(stop.recv()).await.unwrap();
+                                            },
+                                            _ => panic!("State is not WORK, serve called directly? serve is called by calling work!"),
                                         }
-                                    )*
+                                    },
+                                    _ => panic!("Component state is expected to be RAW in Zenoh!!"),
                                 }
-                            }
-                        };
-                        rcv_loop.race(stop.recv()).await.unwrap();
+                            },
+                            _ => unreachable!(),
+                        }
+
+
+
+
                     });
                 }
 
@@ -711,7 +744,7 @@ impl<'a> ZServiceGenerator<'a> {
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
                                                     stop.send(()).await;
                                                 },
-                                                _ => panic!("Cannot authenticate a component in a state different than WORK"),
+                                                _ => panic!("Cannot unwork a component in a state different than WORK"),
                                             }
                                         },
                                         _ => panic!("Component state is expected to be RAW in Zenoh!!"),
@@ -746,8 +779,12 @@ impl<'a> ZServiceGenerator<'a> {
                                                     let encoded_ci = bincode::serialize(&ci).unwrap();
                                                     let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
+
+                                                    // Removing the advertisement
+                                                    let path = zenoh::Path::try_from(format!("/{}/{}/info",#eval_path,self.server.instance_uuid())).unwrap();
+                                                    ws.delete(&path).await.unwrap();
                                                 },
-                                                _ => panic!("Cannot authenticate a component in a state different than UNWORK"),
+                                                _ => panic!("Cannot unannounce a component in a state different than UNWORK"),
                                             }
                                         },
                                         _ => panic!("Component state is expected to be RAW in Zenoh!!"),
@@ -783,7 +820,7 @@ impl<'a> ZServiceGenerator<'a> {
                                                     let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
                                                 },
-                                                _ => panic!("Cannot authenticate a component in a state different than UNANNOUNCED"),
+                                                _ => panic!("Cannot unregister a component in a state different than UNANNOUNCED"),
                                             }
                                         },
                                         _ => panic!("Component state is expected to be RAW in Zenoh!!"),
@@ -819,7 +856,7 @@ impl<'a> ZServiceGenerator<'a> {
                                                     let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
                                                 },
-                                                _ => panic!("Cannot authenticate a component in a state different than UNREGISTERED"),
+                                                _ => panic!("Cannot disconnect a component in a state different than UNREGISTERED"),
                                             }
                                         },
                                         _ => panic!("Component state is expected to be RAW in Zenoh!!"),
@@ -838,8 +875,7 @@ impl<'a> ZServiceGenerator<'a> {
                             let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
                             ws.delete(&path).await.unwrap();
 
-                            let path = zenoh::Path::try_from(format!("/{}/{}/info",#eval_path,self.server.instance_uuid())).unwrap();
-                            ws.delete(&path).await.unwrap();
+
 
                         }
                     );
