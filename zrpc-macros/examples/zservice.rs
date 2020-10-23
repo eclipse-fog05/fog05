@@ -6,14 +6,14 @@ use async_std::sync::Arc;
 use async_std::prelude::FutureExt;
 use std::time::Duration;
 use futures::prelude::*;
-use fog05_zservice::ZServe;
+use zrpc::ZServe;
 use zenoh::*;
 use std::str;
 use std::str::FromStr;
 use std::convert::TryFrom;
 use uuid::Uuid;
 //importing the macros
-use fog05_zservice_macros::{zservice, zserver};
+use zrpc_macros::{zservice, zserver};
 
 #[zservice(timeout_s = 10, prefix = "/lfos")]
 pub trait Hello {

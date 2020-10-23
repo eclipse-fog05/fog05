@@ -466,7 +466,7 @@ impl<'a> ZServiceGenerator<'a> {
         } = self;
 
         quote!{
-            impl<S> fog05_zservice::ZServe<#request_ident> for #server_ident<S>
+            impl<S> zrpc::ZServe<#request_ident> for #server_ident<S>
             where S: #service_ident + Send +'static
             {
 
@@ -481,7 +481,7 @@ impl<'a> ZServiceGenerator<'a> {
                             let rid = hex::encode(&(zinfo.iter().find(|x| x.0 == zenoh::net::info::ZN_INFO_ROUTER_PID_KEY ).unwrap().1));
                             let pid = hex::encode(&(zinfo.iter().find(|x| x.0 == zenoh::net::info::ZN_INFO_PID_KEY).unwrap().1));
                             let ws = self.z.workspace(None).await.unwrap();
-                            let component_advertisement = fog05_zservice::ComponentAdvertisement{
+                            let component_advertisement = zrpc::ComponentAdvertisement{
                                 uuid : self.server.instance_uuid(),
                                 name : format!("{}", #service_name),
                                 routerid : rid.clone().to_uppercase(),
@@ -491,12 +491,12 @@ impl<'a> ZServiceGenerator<'a> {
                             let path = zenoh::Path::try_from(format!("/{}/{}/info",#eval_path,self.server.instance_uuid())).unwrap();
                             ws.put(&path.into(),encoded_ca.into()).await.unwrap();
 
-                            let component_info = fog05_zservice::ComponentInformation{
+                            let component_info = zrpc::ComponentInformation{
                                 uuid : self.server.instance_uuid(),
                                 name : format!("{}", #service_name),
                                 routerid : rid.clone().to_uppercase(),
                                 peerid : pid.clone().to_uppercase(),
-                                status : fog05_zservice::ComponentStatus::HALTED,
+                                status : zrpc::ComponentStatus::HALTED,
                             };
                             let encoded_ci = bincode::serialize(&component_info).unwrap();
                             let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
@@ -522,10 +522,10 @@ impl<'a> ZServiceGenerator<'a> {
                                     let kv = &data[0];
                                     match &kv.value {
                                         zenoh::Value::Raw(_,buf) => {
-                                            let mut ci = bincode::deserialize::<fog05_zservice::ComponentInformation>(&buf.to_vec()).unwrap();
+                                            let mut ci = bincode::deserialize::<zrpc::ComponentInformation>(&buf.to_vec()).unwrap();
                                             match ci.status {
-                                                fog05_zservice::ComponentStatus::HALTED => {
-                                                    ci.status = fog05_zservice::ComponentStatus::BUILDING;
+                                                zrpc::ComponentStatus::HALTED => {
+                                                    ci.status = zrpc::ComponentStatus::BUILDING;
                                                     let encoded_ci = bincode::serialize(&ci).unwrap();
                                                     let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
@@ -558,10 +558,10 @@ impl<'a> ZServiceGenerator<'a> {
                                     let kv = &data[0];
                                     match &kv.value {
                                         zenoh::Value::Raw(_,buf) => {
-                                            let mut ci = bincode::deserialize::<fog05_zservice::ComponentInformation>(&buf.to_vec()).unwrap();
+                                            let mut ci = bincode::deserialize::<zrpc::ComponentInformation>(&buf.to_vec()).unwrap();
                                             match ci.status {
-                                                fog05_zservice::ComponentStatus::BUILDING => {
-                                                    ci.status = fog05_zservice::ComponentStatus::REGISTERED;
+                                                zrpc::ComponentStatus::BUILDING => {
+                                                    ci.status = zrpc::ComponentStatus::REGISTERED;
                                                     let encoded_ci = bincode::serialize(&ci).unwrap();
                                                     let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
@@ -594,10 +594,10 @@ impl<'a> ZServiceGenerator<'a> {
                                     let kv = &data[0];
                                     match &kv.value {
                                         zenoh::Value::Raw(_,buf) => {
-                                            let mut ci = bincode::deserialize::<fog05_zservice::ComponentInformation>(&buf.to_vec()).unwrap();
+                                            let mut ci = bincode::deserialize::<zrpc::ComponentInformation>(&buf.to_vec()).unwrap();
                                             match ci.status {
-                                                fog05_zservice::ComponentStatus::REGISTERED => {
-                                                    ci.status = fog05_zservice::ComponentStatus::ANNOUNCED;
+                                                zrpc::ComponentStatus::REGISTERED => {
+                                                    ci.status = zrpc::ComponentStatus::ANNOUNCED;
                                                     let encoded_ci = bincode::serialize(&ci).unwrap();
                                                     let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
@@ -631,10 +631,10 @@ impl<'a> ZServiceGenerator<'a> {
                                     let kv = &data[0];
                                     match &kv.value {
                                         zenoh::Value::Raw(_,buf) => {
-                                            let mut ci = bincode::deserialize::<fog05_zservice::ComponentInformation>(&buf.to_vec()).unwrap();
+                                            let mut ci = bincode::deserialize::<zrpc::ComponentInformation>(&buf.to_vec()).unwrap();
                                             match ci.status {
-                                                fog05_zservice::ComponentStatus::ANNOUNCED => {
-                                                    ci.status = fog05_zservice::ComponentStatus::WORK;
+                                                zrpc::ComponentStatus::ANNOUNCED => {
+                                                    ci.status = zrpc::ComponentStatus::WORK;
                                                     let encoded_ci = bincode::serialize(&ci).unwrap();
                                                     let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
@@ -702,10 +702,10 @@ impl<'a> ZServiceGenerator<'a> {
                                     let kv = &data[0];
                                     match &kv.value {
                                         zenoh::Value::Raw(_,buf) => {
-                                            let mut ci = bincode::deserialize::<fog05_zservice::ComponentInformation>(&buf.to_vec()).unwrap();
+                                            let mut ci = bincode::deserialize::<zrpc::ComponentInformation>(&buf.to_vec()).unwrap();
                                             match ci.status {
-                                                fog05_zservice::ComponentStatus::WORK => {
-                                                    ci.status = fog05_zservice::ComponentStatus::UNWORK;
+                                                zrpc::ComponentStatus::WORK => {
+                                                    ci.status = zrpc::ComponentStatus::UNWORK;
                                                     let encoded_ci = bincode::serialize(&ci).unwrap();
                                                     let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
@@ -739,10 +739,10 @@ impl<'a> ZServiceGenerator<'a> {
                                     let kv = &data[0];
                                     match &kv.value {
                                         zenoh::Value::Raw(_,buf) => {
-                                            let mut ci = bincode::deserialize::<fog05_zservice::ComponentInformation>(&buf.to_vec()).unwrap();
+                                            let mut ci = bincode::deserialize::<zrpc::ComponentInformation>(&buf.to_vec()).unwrap();
                                             match ci.status {
-                                                fog05_zservice::ComponentStatus::UNWORK => {
-                                                    ci.status = fog05_zservice::ComponentStatus::UNANNOUNCED;
+                                                zrpc::ComponentStatus::UNWORK => {
+                                                    ci.status = zrpc::ComponentStatus::UNANNOUNCED;
                                                     let encoded_ci = bincode::serialize(&ci).unwrap();
                                                     let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
@@ -775,10 +775,10 @@ impl<'a> ZServiceGenerator<'a> {
                                     let kv = &data[0];
                                     match &kv.value {
                                         zenoh::Value::Raw(_,buf) => {
-                                            let mut ci = bincode::deserialize::<fog05_zservice::ComponentInformation>(&buf.to_vec()).unwrap();
+                                            let mut ci = bincode::deserialize::<zrpc::ComponentInformation>(&buf.to_vec()).unwrap();
                                             match ci.status {
-                                                fog05_zservice::ComponentStatus::UNANNOUNCED => {
-                                                    ci.status = fog05_zservice::ComponentStatus::UNREGISTERED;
+                                                zrpc::ComponentStatus::UNANNOUNCED => {
+                                                    ci.status = zrpc::ComponentStatus::UNREGISTERED;
                                                     let encoded_ci = bincode::serialize(&ci).unwrap();
                                                     let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
@@ -811,10 +811,10 @@ impl<'a> ZServiceGenerator<'a> {
                                     let kv = &data[0];
                                     match &kv.value {
                                         zenoh::Value::Raw(_,buf) => {
-                                            let mut ci = bincode::deserialize::<fog05_zservice::ComponentInformation>(&buf.to_vec()).unwrap();
+                                            let mut ci = bincode::deserialize::<zrpc::ComponentInformation>(&buf.to_vec()).unwrap();
                                             match ci.status {
-                                                fog05_zservice::ComponentStatus::UNREGISTERED => {
-                                                    ci.status = fog05_zservice::ComponentStatus::DISCONNECTED;
+                                                zrpc::ComponentStatus::UNREGISTERED => {
+                                                    ci.status = zrpc::ComponentStatus::DISCONNECTED;
                                                     let encoded_ci = bincode::serialize(&ci).unwrap();
                                                     let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.server.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
@@ -903,7 +903,7 @@ impl<'a> ZServiceGenerator<'a> {
     quote! {
             #[allow(unused)]
             #[derive(Clone, Debug)]
-            #vis struct #client_ident<'a, C = fog05_zservice::ZClientChannel<'a, #request_ident, #response_ident>>{
+            #vis struct #client_ident<'a, C = zrpc::ZClientChannel<'a, #request_ident, #response_ident>>{
                 ch : C,
                 phantom : std::marker::PhantomData<&'a ()>
             }
@@ -926,7 +926,7 @@ impl<'a> ZServiceGenerator<'a> {
                     ws : async_std::sync::Arc<zenoh::Workspace>,
                     instance_id : uuid::Uuid
                 ) -> #client_ident {
-                        let new_client = fog05_zservice::ZClientChannel::new(ws, format!("{}",#eval_path), Some(instance_id));
+                        let new_client = zrpc::ZClientChannel::new(ws, format!("{}",#eval_path), Some(instance_id));
                         #client_ident{
                             ch : new_client,
                             phantom : std::marker::PhantomData,
@@ -952,7 +952,7 @@ impl<'a> ZServiceGenerator<'a> {
                         while let Some(d) = ds.next().await {
                             match d.value {
                                 zenoh::Value::Raw(_,buf) => {
-                                    let ca = bincode::deserialize::<fog05_zservice::ComponentAdvertisement>(&buf.to_vec()).unwrap();
+                                    let ca = bincode::deserialize::<zrpc::ComponentAdvertisement>(&buf.to_vec()).unwrap();
                                     if ca.routerid == rid {
                                         servers.push(ca.uuid);
                                     }
@@ -979,7 +979,7 @@ impl<'a> ZServiceGenerator<'a> {
                         while let Some(d) = ds.next().await {
                             match d.value {
                                 zenoh::Value::Raw(_,buf) => {
-                                    let ca = bincode::deserialize::<fog05_zservice::ComponentAdvertisement>(&buf.to_vec()).unwrap();
+                                    let ca = bincode::deserialize::<zrpc::ComponentAdvertisement>(&buf.to_vec()).unwrap();
                                     servers.push(ca.uuid);
                                 },
                                 _ => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Component Advertisement is not encoded in RAW".to_string())),

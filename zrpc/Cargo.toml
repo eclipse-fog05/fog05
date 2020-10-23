@@ -1,6 +1,6 @@
 [package]
-name = "fog05-zservice"
-version = "0.1.0"
+name = "zrpc"
+version = "0.3.0"
 authors = ["gabrik <gabriele.baldoni@gmail.com>"]
 edition = "2018"
 

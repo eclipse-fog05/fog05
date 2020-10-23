@@ -1,5 +1,5 @@
 [package]
-name = "fog05-zservice-macros"
+name = "zrpc-macros"
 version = "0.3.0"
 repository = "https://github.com/eclipse-fog05/fog05"
 homepage = "http://fog05.io"
@@ -22,7 +22,7 @@ serde = { version = "1.0.55", features = ["derive"] }
 serde_json = "1.0.55"
 bincode = "1.3.1"
 zenoh = "0.5.0-beta.3"
-fog05-zservice = {path = "../fog05-zservice"}
+zrpc = {path = "../zrpc"}
 base64 = "0.12.3"
 log = "0.4.11"
 uuid = { version = "0.8.1", features = ["serde", "v4"] }

@@ -14,9 +14,9 @@
 [workspace]
 
 members = [
+  "zrpc",
+  "zrpc-macros",
   "fog05-sdk",
-  "fog05-zservice",
-  "fog05-zservice-macros",
   "fosctl",
 ]
 
