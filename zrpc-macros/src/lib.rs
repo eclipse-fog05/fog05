@@ -39,6 +39,7 @@ use syn::{
     parse_macro_input, parse_quote,
     spanned::Spanned,
     token::Comma,
+    Block,
     Attribute, FnArg, Ident, ImplItem, ImplItemMethod, ImplItemType, ItemImpl,
     Pat, PatType, ReturnType, Token, Type, Visibility,
 };
@@ -278,8 +279,26 @@ pub fn zserver(_attr: TokenStream, input: TokenStream) -> TokenStream {
         match inner {
             ImplItem::Method(method) => {
                 if method.sig.asyncness.is_some() {
+
+
+
                     // if this function is declared async, transform it into a regular function
-                    method.sig.asyncness = None
+                    method.sig.asyncness = None;
+                    // and put the body inside an task::block_on(async {})
+                    let content = method.block.to_token_stream();
+
+                    let updated_impl = TokenStream::from(
+                        quote!{
+                            {
+                                task::block_on(
+                                    async move
+                                    #content
+                                )
+                            }
+                        }
+                    );
+                    method.block = parse_macro_input!(updated_impl as Block);
+
                 } else {
                     // If it's not async, keep track of all required associated types for better
                     // error reporting.

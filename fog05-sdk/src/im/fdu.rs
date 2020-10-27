@@ -221,6 +221,13 @@ pub struct FDUDescriptor {
 // FDU Record
 
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct FDURecord {
+    pub uuid: Option<Uuid>,
+    pub fdu_uuid : Option<Uuid>,
+}
+
+
 // #[derive(Serialize,Deserialize,Debug, Clone)]
 // pub struct FDURecordInterface {
 //     pub is_mgmt : bool,

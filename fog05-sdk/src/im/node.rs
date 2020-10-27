@@ -31,7 +31,7 @@ pub enum NodeStatusEnum {
 #[derive(Serialize,Deserialize,Debug, Clone)]
 pub struct CPUSpec {
     pub model : String,
-    pub frequency : f64,
+    pub frequency : u64, //in MHz
     pub arch : String
 }
 
@@ -56,11 +56,11 @@ pub struct IOSpec {
     pub available : bool
 }
 
-#[derive(Serialize,Deserialize,Debug, Clone)]
-pub struct VolatilitySpec {
-    pub avg_availability_minutes : u64,
-    pub quartile_availability_minutes : Vec<u64>
-}
+// #[derive(Serialize,Deserialize,Debug, Clone)]
+// pub struct VolatilitySpec {
+//     pub avg_availability_minutes : u64,
+//     pub quartile_availability_minutes : Vec<u64>
+// }
 
 #[derive(Serialize,Deserialize,Debug, Clone)]
 pub struct AcceleratorSpec {
@@ -99,7 +99,7 @@ pub struct NodeInfo {
     pub io : Vec<IOSpec>,
     pub accelerators : Vec<AcceleratorSpec>,
     pub position : Option<PositionSpec>,
-    pub volatility : Option<VolatilitySpec>
+    //pub volatility : Option<VolatilitySpec>
 
 }
 

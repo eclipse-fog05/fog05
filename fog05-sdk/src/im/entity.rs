@@ -24,7 +24,7 @@ use derive_more::Display;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use semver::Version;
-
+use crate::types::IPAddress;
 
 // Entity
 
@@ -44,14 +44,15 @@ pub enum LinkKind {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IPConfiguration {
-    pub subnet: Option<String>,     // AAA.AAA.AAA.AAA/S
-    pub gateway: Option<String>,    // AAA.AAA.AAA.AAA
-    pub dhcp_range: Option<String>, // AAA.AAA.AAA.AAA,AAA.AAA.AAA.AAA
-    pub dns: Option<String>,        // AAA.AAA.AAA.AAA,AAA.AAA.AAA.AAA,AAA.AAA.AAA.AAA
+    pub subnet: Option<(IPAddress,u8)>,     // AAA.AAA.AAA.AAA/S
+    pub gateway: Option<IPAddress>,    // AAA.AAA.AAA.AAA
+    pub dhcp_range: Option<(IPAddress,IPAddress)>, // AAA.AAA.AAA.AAA,AAA.AAA.AAA.AAA
+    pub dns: Option<Vec<IPAddress>>,        // AAA.AAA.AAA.AAA,AAA.AAA.AAA.AAA,AAA.AAA.AAA.AAA
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct VirtualLinkDescriptor {
+pub struct VirtualNetwork {
+    pub uuid : Option<Uuid>,
     pub id: String,
     pub name: Option<String>,
     pub is_mgmt: bool, //MGMT from a user point of view
@@ -69,7 +70,7 @@ pub struct EntityDescriptor {
     pub name: String,
     pub description: Option<String>,
     pub fdus: Vec<super::fdu::FDUDescriptor>,
-    pub virtual_links: Vec<VirtualLinkDescriptor>,
+    pub virtual_links: Vec<VirtualNetwork>,
 }
 
 // Record

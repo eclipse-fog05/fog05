@@ -488,8 +488,12 @@ impl Hello for HelloZService {
         name: String,
     ) -> String
     {
-        let res = format!("Hello {}!, you are connected to {}", name, self.0);
-        res
+        task::block_on(
+            async move {
+                let res = format!("Hello {}!, you are connected to {}", name, self.0);
+                res
+            }
+        )
     }
 
     fn instance_uuid(&self) -> uuid::Uuid {
