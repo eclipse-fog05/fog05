@@ -47,9 +47,8 @@ async fn main() {
 
 
     server.connect();
-    server.authenticate();
+    server.initialize();
     server.register();
-    server.announce();
 
     let local_servers = HelloClient::find_local_servers(zenoh.clone()).await;
     println!("local_servers: {:?}", local_servers);
@@ -61,9 +60,13 @@ async fn main() {
     let hello = client.hello("client".to_string()).await;
     println!("Res is: {:?}", hello);
 
-    let (s, handle) = server.work();
+    let (s, handle) = server.start();
 
+    let local_servers = HelloClient::find_local_servers(zenoh.clone()).await;
+    println!("local_servers: {:?}", local_servers);
 
+    let servers = HelloClient::find_servers(zenoh.clone()).await;
+    println!("servers found: {:?}", servers);
 
     task::sleep(Duration::from_secs(1)).await;
     let hello = client.hello("client".to_string()).await;
@@ -73,8 +76,7 @@ async fn main() {
     println!("Res is: {:?}", hello);
 
 
-    server.unwork(s);
-    server.unannounce();
+    server.stop(s);
 
     let local_servers = HelloClient::find_local_servers(zenoh.clone()).await;
     println!("local_servers: {:?}", local_servers);
@@ -84,7 +86,6 @@ async fn main() {
 
     server.unregister();
     server.disconnect();
-    server.stop();
 
     handle.await;
 

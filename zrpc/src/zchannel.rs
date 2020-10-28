@@ -111,7 +111,7 @@ where
 
         if self.server_uuid.is_none() { return Ok(false) }
 
-        let selector = zenoh::Selector::try_from(format!("{}/{}/info",self.path, self.server_uuid.unwrap())).unwrap();
+        let selector = zenoh::Selector::try_from(format!("{}/{}/state",self.path, self.server_uuid.unwrap())).unwrap();
         let mut ds = self.workspace.get(&selector).await.unwrap();
         let mut idata = Vec::new();
 
@@ -122,8 +122,8 @@ where
         let iv = &idata[0];
         match &iv.value {
             zenoh::Value::Raw(_,buf) => {
-                let ca = bincode::deserialize::<super::ComponentAdvertisement>(&buf.to_vec()).unwrap();
-                let selector = zenoh::Selector::try_from(format!("/@/router/{}", String::from(&ca.routerid))).unwrap();
+                let cs = bincode::deserialize::<super::ComponentState>(&buf.to_vec()).unwrap();
+                let selector = zenoh::Selector::try_from(format!("/@/router/{}", String::from(&cs.routerid))).unwrap();
                 let mut ds = self.workspace.get(&selector).await.unwrap();
                 let mut rdata = Vec::new();
 
@@ -136,28 +136,13 @@ where
                     zenoh::Value::Json(sv) => {
                         let ri = serde_json::from_str::<super::types::ZRouterInfo>(&sv).unwrap();
                         let mut it = ri.sessions.iter();
-                        let f = it.find(|&x| {x.peer == String::from(&ca.peerid).to_uppercase()});
+                        let f = it.find(|&x| {x.peer == String::from(&cs.peerid).to_uppercase()});
 
                         if f.is_none() { return Ok(false) }
 
-                        let selector = zenoh::Selector::try_from(format!("{}/{}/state",self.path, self.server_uuid.unwrap())).unwrap();
-                        let mut ds = self.workspace.get(&selector).await.unwrap();
-                        let mut data = Vec::new();
-
-                        while let Some(d) = ds.next().await { data.push(d) }
-
-                        if data.len() == 0 { return Ok(false) }
-
-                        let kv = &data[0];
-                        match &kv.value {
-                            zenoh::Value::Raw(_,buf) => {
-                                let ci = bincode::deserialize::<super::ComponentInformation>(&buf.to_vec()).unwrap();
-                                match ci.status {
-                                    super::ComponentStatus::WORK => return Ok(true),
-                                    _ => return Ok(false),
-                                }
-                            },
-                            _ => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Component Information is not encoded in RAW".to_string())),
+                        match cs.status {
+                            super::ComponentStatus::SERVING => return Ok(true),
+                            _ => return Ok(false),
                         }
                     },
                     _ => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Router information is not encoded in JSON".to_string())),

@@ -67,7 +67,7 @@ where
                 let ws = self.z.workspace(None).await.unwrap();
 
 
-                let component_info = zrpc::ComponentInformation{
+                let component_info = zrpc::ComponentState{
                     uuid : self.server.instance_uuid(),
                     name : "Hello".to_string(),
                     routerid : rid.clone().to_uppercase(),
@@ -81,7 +81,7 @@ where
         )
     }
 
-    fn authenticate(&self){
+    fn initialize(&self){
         task::block_on(
             async {
                 let selector = zenoh::Selector::try_from(format!("/this/is/generated/Hello/instance/{}/state",self.server.instance_uuid())).unwrap();
@@ -97,10 +97,10 @@ where
                         let kv = &data[0];
                         match &kv.value {
                             zenoh::Value::Raw(_,buf) => {
-                                let mut ci = bincode::deserialize::<zrpc::ComponentInformation>(&buf.to_vec()).unwrap();
+                                let mut ci = bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
                                 match ci.status {
                                     zrpc::ComponentStatus::HALTED => {
-                                        ci.status = zrpc::ComponentStatus::BUILDING;
+                                        ci.status = zrpc::ComponentStatus::INITIALIZING;
                                         let encoded_ci = bincode::serialize(&ci).unwrap();
                                         let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
                                         ws.put(&path.into(),encoded_ci.into()).await.unwrap();
@@ -133,9 +133,9 @@ where
                         let kv = &data[0];
                         match &kv.value {
                             zenoh::Value::Raw(_,buf) => {
-                                let mut ci = bincode::deserialize::<zrpc::ComponentInformation>(&buf.to_vec()).unwrap();
+                                let mut ci = bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
                                 match ci.status {
-                                    zrpc::ComponentStatus::BUILDING => {
+                                    zrpc::ComponentStatus::INITIALIZING => {
                                         ci.status = zrpc::ComponentStatus::REGISTERED;
                                         let encoded_ci = bincode::serialize(&ci).unwrap();
                                         let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
@@ -153,55 +153,7 @@ where
         )
     }
 
-    fn announce(&self){
-        task::block_on(
-            async {
-                let selector = zenoh::Selector::try_from(format!("/this/is/generated/Hello/instance/{}/state",self.server.instance_uuid())).unwrap();
-                let ws = self.z.workspace(None).await.unwrap();
-                let mut ds = ws.get(&selector).await.unwrap();
-                let mut data = Vec::new();
-                while let Some(d) = ds.next().await {
-                    data.push(d)
-                }
-                match data.len() {
-                    0 => panic!("This component state is not present in Zenoh!!"),
-                    1 => {
-                        let kv = &data[0];
-                        match &kv.value {
-                            zenoh::Value::Raw(_,buf) => {
-                                let mut ci = bincode::deserialize::<zrpc::ComponentInformation>(&buf.to_vec()).unwrap();
-                                match ci.status {
-                                    zrpc::ComponentStatus::REGISTERED => {
-
-                                        // Sending advertisement
-                                        let component_advertisement = zrpc::ComponentAdvertisement{
-                                            uuid : self.server.instance_uuid(),
-                                            name : "Hello".to_string(),
-                                            routerid : ci.routerid.clone().to_uppercase(),
-                                            peerid : ci.peerid.clone().to_uppercase(),
-                                        };
-                                        let encoded_ca = bincode::serialize(&component_advertisement).unwrap();
-                                        let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/info", self.server.instance_uuid())).unwrap();
-                                        ws.put(&path.into(),encoded_ca.into()).await.unwrap();
-
-                                        ci.status = zrpc::ComponentStatus::ANNOUNCED;
-                                        let encoded_ci = bincode::serialize(&ci).unwrap();
-                                        let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
-                                        ws.put(&path.into(),encoded_ci.into()).await.unwrap();
-                                    },
-                                    _ => panic!("Cannot announce a component in a state different than REGISTERED"),
-                                }
-                            },
-                            _ => panic!("Component state is expected to be RAW in Zenoh!!"),
-                        }
-                    },
-                    _ => unreachable!(),
-                }
-            }
-        )
-    }
-
-    fn work(&self) ->  (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>) {
+    fn start(&self) ->  (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>) {
         task::block_on(
             async {
                 let (s, r) = async_std::sync::channel::<()>(1);
@@ -218,10 +170,10 @@ where
                         let kv = &data[0];
                         match &kv.value {
                             zenoh::Value::Raw(_,buf) => {
-                                let mut ci = bincode::deserialize::<zrpc::ComponentInformation>(&buf.to_vec()).unwrap();
+                                let mut ci = bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
                                 match ci.status {
-                                    zrpc::ComponentStatus::ANNOUNCED => {
-                                        ci.status = zrpc::ComponentStatus::WORK;
+                                    zrpc::ComponentStatus::REGISTERED => {
+                                        ci.status = zrpc::ComponentStatus::SERVING;
                                         let encoded_ci = bincode::serialize(&ci).unwrap();
                                         let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
                                         ws.put(&path.into(),encoded_ci.into()).await.unwrap();
@@ -260,9 +212,9 @@ where
                     let kv = &data[0];
                     match &kv.value {
                         zenoh::Value::Raw(_,buf) => {
-                            let ci = bincode::deserialize::<zrpc::ComponentInformation>(&buf.to_vec()).unwrap();
+                            let ci = bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
                             match ci.status {
-                                zrpc::ComponentStatus::WORK => {
+                                zrpc::ComponentStatus::SERVING => {
                                     let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/eval", self.server.instance_uuid())).unwrap();
                                     let mut rcv = ws.register_eval(&path.clone().into()).await.unwrap();
                                     let rcv_loop = async {
@@ -294,7 +246,7 @@ where
         });
     }
 
-    fn unwork(&self, stop : async_std::sync::Sender<()>){
+    fn stop(&self, stop : async_std::sync::Sender<()>){
         task::block_on(
             async {
                 let selector = zenoh::Selector::try_from(format!("/this/is/generated/Hello/instance/{}/state",self.server.instance_uuid())).unwrap();
@@ -310,10 +262,10 @@ where
                         let kv = &data[0];
                         match &kv.value {
                             zenoh::Value::Raw(_,buf) => {
-                                let mut ci = bincode::deserialize::<zrpc::ComponentInformation>(&buf.to_vec()).unwrap();
+                                let mut ci = bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
                                 match ci.status {
-                                    zrpc::ComponentStatus::WORK => {
-                                        ci.status = zrpc::ComponentStatus::UNWORK;
+                                    zrpc::ComponentStatus::SERVING => {
+                                        ci.status = zrpc::ComponentStatus::REGISTERED;
                                         let encoded_ci = bincode::serialize(&ci).unwrap();
                                         let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
                                         ws.put(&path.into(),encoded_ci.into()).await.unwrap();
@@ -321,46 +273,6 @@ where
                                         stop.send(()).await;
                                     },
                                     _ => panic!("Cannot unwork a component in a state different than WORK"),
-                                }
-                            },
-                            _ => panic!("Component state is expected to be RAW in Zenoh!!"),
-                        }
-                    },
-                    _ => unreachable!(),
-                }
-            }
-        )
-    }
-
-    fn unannounce(&self){
-        task::block_on(
-            async {
-                let selector = zenoh::Selector::try_from(format!("/this/is/generated/Hello/instance/{}/state",self.server.instance_uuid())).unwrap();
-                let ws = self.z.workspace(None).await.unwrap();
-                let mut ds = ws.get(&selector).await.unwrap();
-                let mut data = Vec::new();
-                while let Some(d) = ds.next().await {
-                    data.push(d)
-                }
-                match data.len() {
-                    0 => panic!("This component state is not present in Zenoh!!"),
-                    1 => {
-                        let kv = &data[0];
-                        match &kv.value {
-                            zenoh::Value::Raw(_,buf) => {
-                                let mut ci = bincode::deserialize::<zrpc::ComponentInformation>(&buf.to_vec()).unwrap();
-                                match ci.status {
-                                    zrpc::ComponentStatus::UNWORK => {
-                                        ci.status = zrpc::ComponentStatus::UNANNOUNCED;
-                                        let encoded_ci = bincode::serialize(&ci).unwrap();
-                                        let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
-                                        ws.put(&path.into(),encoded_ci.into()).await.unwrap();
-
-                                        // Removing advertisement
-                                        let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/info",self.server.instance_uuid())).unwrap();
-                                        ws.delete(&path).await.unwrap();
-                                    },
-                                    _ => panic!("Cannot unannounce a component in a state different than UNWORK"),
                                 }
                             },
                             _ => panic!("Component state is expected to be RAW in Zenoh!!"),
@@ -388,10 +300,10 @@ where
                         let kv = &data[0];
                         match &kv.value {
                             zenoh::Value::Raw(_,buf) => {
-                                let mut ci = bincode::deserialize::<zrpc::ComponentInformation>(&buf.to_vec()).unwrap();
+                                let mut ci = bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
                                 match ci.status {
-                                    zrpc::ComponentStatus::UNANNOUNCED => {
-                                        ci.status = zrpc::ComponentStatus::UNREGISTERED;
+                                    zrpc::ComponentStatus::REGISTERED => {
+                                        ci.status = zrpc::ComponentStatus::HALTED;
                                         let encoded_ci = bincode::serialize(&ci).unwrap();
                                         let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
                                         ws.put(&path.into(),encoded_ci.into()).await.unwrap();
@@ -409,54 +321,14 @@ where
         )
     }
 
-    fn disconnect(&self){
-        task::block_on(
-            async {
-                let selector = zenoh::Selector::try_from(format!("/this/is/generated/Hello/instance/{}/state",self.server.instance_uuid())).unwrap();
-                let ws = self.z.workspace(None).await.unwrap();
-                let mut ds = ws.get(&selector).await.unwrap();
-                let mut data = Vec::new();
-                while let Some(d) = ds.next().await {
-                    data.push(d)
-                }
-                match data.len() {
-                    0 => panic!("This component state is not present in Zenoh!!"),
-                    1 => {
-                        let kv = &data[0];
-                        match &kv.value {
-                            zenoh::Value::Raw(_,buf) => {
-                                let mut ci = bincode::deserialize::<zrpc::ComponentInformation>(&buf.to_vec()).unwrap();
-                                match ci.status {
-                                    zrpc::ComponentStatus::UNREGISTERED => {
-                                        ci.status = zrpc::ComponentStatus::DISCONNECTED;
-                                        let encoded_ci = bincode::serialize(&ci).unwrap();
-                                        let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
-                                        ws.put(&path.into(),encoded_ci.into()).await.unwrap();
-                                        // Here we should stop the serve
-                                    },
-                                    _ => panic!("Cannot disconnect a component in a state different than UNREGISTERED"),
-                                }
-                            },
-                            _ => panic!("Component state is expected to be RAW in Zenoh!!"),
-                        }
-                    },
-                    _ => unreachable!(),
-                }
-            }
-        )
-    }
 
-    fn stop(self){
+    fn disconnect(self){
         task::block_on(
             async {
 
                 let ws = self.z.workspace(None).await.unwrap();
                 let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state",self.server.instance_uuid())).unwrap();
                 ws.delete(&path).await.unwrap();
-
-
-
-
             }
         )
     }
@@ -533,14 +405,14 @@ impl HelloClient<'_> {
             let zinfo = zsession.info().await;
             let rid = hex::encode(&(zinfo.iter().find(|x| x.0 == zenoh::net::info::ZN_INFO_ROUTER_PID_KEY ).unwrap().1)).to_uppercase();
 
-            let selector = zenoh::Selector::try_from("/this/is/generated/Hello/instance/*/info".to_string()).unwrap();
+            let selector = zenoh::Selector::try_from("/this/is/generated/Hello/instance/*/state".to_string()).unwrap();
             let mut ds = ws.get(&selector).await.unwrap();
             let mut servers = Vec::new();
 
             while let Some(d) = ds.next().await {
                 match d.value {
                     zenoh::Value::Raw(_,buf) => {
-                        let ca = bincode::deserialize::<zrpc::ComponentAdvertisement>(&buf.to_vec()).unwrap();
+                        let ca = bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
                         if ca.routerid == rid {
                             servers.push(ca.uuid);
                         }
@@ -557,14 +429,14 @@ impl HelloClient<'_> {
     {
         async move {
             let ws = z.workspace(None).await.unwrap();
-            let selector = zenoh::Selector::try_from("/this/is/generated/Hello/instance/*/info".to_string()).unwrap();
+            let selector = zenoh::Selector::try_from("/this/is/generated/Hello/instance/*/state".to_string()).unwrap();
             let mut ds = ws.get(&selector).await.unwrap();
             let mut servers = Vec::new();
 
             while let Some(d) = ds.next().await {
                 match d.value {
                     zenoh::Value::Raw(_,buf) => {
-                        let ca = bincode::deserialize::<zrpc::ComponentAdvertisement>(&buf.to_vec()).unwrap();
+                        let ca = bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
                         servers.push(ca.uuid);
                     },
                     _ => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Component Advertisement is not encoded in RAW".to_string())),
@@ -629,9 +501,9 @@ async fn main() {
 
 
     server.connect();
-    server.authenticate();
+    server.initialize();
     server.register();
-    server.announce();
+
 
     let local_servers = HelloClient::find_local_servers(zenoh.clone()).await;
     println!("local_servers: {:?}", local_servers);
@@ -643,9 +515,13 @@ async fn main() {
     let hello = client.hello("client".to_string()).await;
     println!("Res is: {:?}", hello);
 
-    let (s, handle) = server.work();
+    let (s, handle) = server.start();
 
+    let local_servers = HelloClient::find_local_servers(zenoh.clone()).await;
+    println!("local_servers: {:?}", local_servers);
 
+    let servers = HelloClient::find_servers(zenoh.clone()).await;
+    println!("servers found: {:?}", servers);
 
     task::sleep(Duration::from_secs(1)).await;
     let hello = client.hello("client".to_string()).await;
@@ -655,8 +531,7 @@ async fn main() {
     println!("Res is: {:?}", hello);
 
 
-    server.unwork(s);
-    server.unannounce();
+    server.stop(s);
 
     let local_servers = HelloClient::find_local_servers(zenoh.clone()).await;
     println!("local_servers: {:?}", local_servers);
@@ -666,7 +541,6 @@ async fn main() {
 
     server.unregister();
     server.disconnect();
-    server.stop();
 
     handle.await;
 
