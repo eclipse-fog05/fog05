@@ -15,6 +15,7 @@ extern crate serde;
 extern crate serde_json;
 extern crate serde_yaml;
 
+use uuid::Uuid;
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -90,7 +91,7 @@ pub struct InterfaceConfiguration {
 
 #[derive(Serialize,Deserialize,Debug, Clone)]
 pub struct NodeInfo {
-    pub uuid : String,
+    pub uuid : Uuid,
     pub name : String,
     pub os : String,
     pub cpu : Vec<CPUSpec>,
@@ -157,7 +158,7 @@ pub struct HeartbeatInfo {
 
 #[derive(Serialize,Deserialize,Debug, Clone)]
 pub struct NodeStatus {
-    pub uuid : String,
+    pub uuid : Uuid,
     pub status : NodeStatusEnum,
     pub supported_hypervisors : Vec<String>,
     pub ram : RAMStatus,

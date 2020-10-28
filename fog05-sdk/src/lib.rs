@@ -18,4 +18,4 @@ pub mod zconnector;
 pub mod fresult;
 pub mod types;
 pub mod agent;
-
+pub mod plugins;

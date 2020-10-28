@@ -158,7 +158,7 @@ impl Parse for EvalMethod {
                 FnArg::Receiver(_) => {
                     extend_errors!(
                         errors,
-                        syn::Error::new(arg.span(), "method args cannot start with self")
+                        syn::Error::new(arg.span(), "method args cannot start with self, &mut self is added by the macro!")
                     );
                 }
             }
@@ -429,7 +429,7 @@ impl<'a> ZServiceGenerator<'a> {
                     quote! {
 
                         #(#attrs)*
-                        fn #ident(self, #(#args),*) -> #output;
+                        fn #ident(&mut self, #(#args),*) -> #output;
                     }
                 },
             );
@@ -659,12 +659,12 @@ impl<'a> ZServiceGenerator<'a> {
                                                         let b64_bytes = base64::decode(base64_req).unwrap();
                                                         let js_req = str::from_utf8(&b64_bytes).unwrap();
                                                         let req = serde_json::from_str::<#request_ident>(&js_req).unwrap();
-
+                                                        let mut ser = self.server.clone();
                                                         match req {
                                                             #(
                                                                 #request_ident::#camel_case_idents{#(#arg_pats),*} => {
-                                                                    let resp = #response_ident::#camel_case_idents(
-                                                                        #service_ident::#method_idents(self.server.clone(), #(#arg_pats),*));
+                                                                    let resp = #response_ident::#camel_case_idents(ser.#method_idents( #(#arg_pats),*));
+                                                                        // #service_ident::#method_idents(self.server.clone(), #(#arg_pats),*));
                                                                     let encoded = bincode::serialize(&resp).unwrap();
                                                                     get_request.reply(path.clone().into(), encoded.into()).await;
                                                                 }
@@ -790,7 +790,7 @@ impl<'a> ZServiceGenerator<'a> {
 
         quote! {
             /// The request sent over the wire from the client to the server.
-            #[derive(Debug, serde::Serialize, serde::Deserialize)]
+            #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
             #vis enum #request_ident {
                 #( #camel_case_idents{ #( #args ),* } ),*
             }
@@ -810,7 +810,7 @@ impl<'a> ZServiceGenerator<'a> {
 
         quote! {
             /// The response sent over the wire from the server to the client.
-            #[derive(Debug, serde::Serialize, serde::Deserialize)]
+            #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
             #vis enum #response_ident {
                 #( #camel_case_idents(#return_types) ),*
             }
@@ -831,9 +831,8 @@ impl<'a> ZServiceGenerator<'a> {
     quote! {
             #[allow(unused)]
             #[derive(Clone, Debug)]
-            #vis struct #client_ident<'a, C = zrpc::ZClientChannel<'a, #request_ident, #response_ident>>{
+            #vis struct #client_ident<C = zrpc::ZClientChannel<#request_ident, #response_ident>>{
                 ch : C,
-                phantom : std::marker::PhantomData<&'a ()>
             }
         }
     }
@@ -849,15 +848,14 @@ impl<'a> ZServiceGenerator<'a> {
         } = self;
 
         quote! {
-            impl #client_ident<'_> {
+            impl #client_ident {
                 #vis fn new(
-                    ws : async_std::sync::Arc<zenoh::Workspace>,
+                    z : async_std::sync::Arc<zenoh::Zenoh>,
                     instance_id : uuid::Uuid
                 ) -> #client_ident {
-                        let new_client = zrpc::ZClientChannel::new(ws, format!("{}",#eval_path), Some(instance_id));
+                        let new_client = zrpc::ZClientChannel::new(z, format!("{}",#eval_path), Some(instance_id));
                         #client_ident{
                             ch : new_client,
-                            phantom : std::marker::PhantomData,
                         }
 
                     }
@@ -942,7 +940,7 @@ impl<'a> ZServiceGenerator<'a> {
         } = self;
 
         quote! {
-            impl #client_ident<'_> {
+            impl #client_ident {
 
                 #(
                     #[allow(unused)]

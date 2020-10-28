@@ -16,13 +16,14 @@ use thiserror::Error;
 use std::fmt;
 use serde::{Deserialize,Serialize};
 
-#[derive(Error, Debug, Serialize,Deserialize)]
+#[derive(Error, Debug, Serialize,Deserialize, Clone)]
 pub enum FError {
     ZConnectorError,
     EncodingError,
     TooMuchError,
     TransitionNotAllowed,
     NotFound,
+    AlreadyPresent,
     ConversionError(String),
     IOError(String),
     BincodeError(String),
@@ -38,6 +39,7 @@ impl fmt::Display for FError {
             FError::TooMuchError => write!(f, "Expected less data!"),
             FError::TransitionNotAllowed => write!(f, "Transition Not allowed"),
             FError::NotFound => write!(f, "Not Found"),
+            FError::AlreadyPresent => write!(f, "Already Present"),
             FError::ConversionError(err) => write!(f, "{}",err),
             FError::IOError(ioerr) => write!(f, "{}",ioerr),
             FError::ZError(zerr) => write!(f, "{}", zerr),

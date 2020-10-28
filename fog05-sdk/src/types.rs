@@ -21,20 +21,13 @@ use serde::{Deserialize,Serialize};
 
 
 pub type IPAddress = std::net::IpAddr; //this is just address, to investigate if we want CIRD notation in address to have the netmask
-// pub type MACAddress = mac_address::MacAddress;
-
-// #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-// pub struct MACAddress {
-//     bytes: [u8; 6],
-// }
-
-//Types used in the VirtualInterfaceKind enum
+pub type MACAddress = mac_address::MacAddress;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum PluginKind {
     NETWORKING,
-    FDU,
+    HYPERVISOR(String),
     IO,
     ACCELERATOR,
     GPS,
@@ -109,7 +102,20 @@ pub struct VirtualInterface {
     pub parent : Option<Uuid>, //present if the interface is under a BRIDGE, ref to VirtualInterface
 
     pub addresses : Vec<IPAddress>,
-    pub phy_address : mac_address::MacAddress,
+    pub phy_address : MACAddress,
+}
+
+/// A virtual interface managed by fog05
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct VirtualInterfaceConfig {
+    pub uuid : Uuid,
+    pub if_name : String,
+    pub net_ns : Option<NetworkNamespace>, //if none interface is in default namespace
+    pub kind : VirtualInterfaceKind,
+    pub parent : Option<Uuid>, //present if the interface is under a BRIDGE, ref to VirtualInterface
+
+    pub addresses : Vec<IPAddress>,
+    pub phy_address : MACAddress,
 }
 
 /// A network namespace managed by fog05
@@ -158,7 +164,7 @@ pub struct Interface {
     pub if_name : String,
     pub kind : InterfaceKind,
     pub addresses : Vec<IPAddress>,
-    pub phy_address : Option<mac_address::MacAddress>,
+    pub phy_address : Option<MACAddress>,
 
 }
 

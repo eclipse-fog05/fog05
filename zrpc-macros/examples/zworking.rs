@@ -30,7 +30,7 @@ use async_std::prelude::FutureExt;
 
 pub trait Hello: Clone {
 
-    fn hello(self, name: String) -> String;
+    fn hello(&self, name: String) -> String;
     fn get_server(self, z : Arc<zenoh::Zenoh>) -> ServeHello<Self> {
         ServeHello {
             z : z,
@@ -226,7 +226,8 @@ where
                                             let req = serde_json::from_str::<HelloRequest>(&js_req).unwrap();
                                             match req {
                                                 HelloRequest::Hello { name } => {
-                                                    let resp = HelloResponse::Hello(Hello::hello(self.server.clone(), name));
+                                                    let ser = self.server.clone();
+                                                    let resp = HelloResponse::Hello(ser.hello(name));
                                                     let encoded = bincode::serialize(&resp).unwrap();
                                                     get_request.reply(path.clone().into(), encoded.into()).await;
                                                 }
@@ -356,7 +357,7 @@ struct HelloZService(String);
 
 impl Hello for HelloZService {
     fn hello(
-        self,
+        &self,
         name: String,
     ) -> String
     {
@@ -377,21 +378,21 @@ impl Hello for HelloZService {
 #[allow(unused)]
 /// The client stub that makes RPC calls to the server. Exposes a Future interface.
 #[derive(Clone,Debug)]
-pub struct HelloClient<'a, C = zrpc::ZClientChannel<'a, HelloRequest, HelloResponse>>{
+pub struct HelloClient<C = zrpc::ZClientChannel<HelloRequest, HelloResponse>>{
     ch : C,
-    phantom : PhantomData<&'a ()>
+    // phantom : PhantomData<&'a ()>
 }
 
-impl HelloClient<'_> {
+impl HelloClient {
     pub fn new(
-        ws : Arc<zenoh::Workspace>,
+        z : Arc<zenoh::Zenoh>,
         instance_id : Uuid,
     ) -> HelloClient {
 
-        let new_client = zrpc::ZClientChannel::new(ws, "/this/is/generated/Hello/instance".to_string(), Some(instance_id));
+        let new_client =  zrpc::ZClientChannel::new(z, "/this/is/generated/Hello/instance".to_string(), Some(instance_id));
         HelloClient{
             ch : new_client,
-            phantom : PhantomData,
+            // phantom : PhantomData,
         }
     }
 
@@ -447,7 +448,7 @@ impl HelloClient<'_> {
     }
 }
 
-impl HelloClient<'_>
+impl HelloClient
 {
     #[allow(unused)]
     pub fn hello(
@@ -490,14 +491,14 @@ async fn main() {
 
 
     let zenoh = Arc::new(Zenoh::new(zenoh::config::client(Some(format!("tcp/127.0.0.1:7447").to_string()))).await.unwrap());
-    let ws = Arc::new(zenoh.workspace(None).await.unwrap());
+    // let ws = Arc::new(zenoh.workspace(None).await.unwrap());
 
     let service = HelloZService("test service".to_string());
 
     let z = zenoh.clone();
     let server = service.get_server(z);
     let instance_id = Uuid::from_str("00000000-0000-0000-0000-000000000000").unwrap();
-    let client = HelloClient::new(ws.clone(), instance_id);
+    let client = HelloClient::new(zenoh.clone(), instance_id);
 
 
     server.connect();

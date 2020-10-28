@@ -26,7 +26,7 @@ struct HelloZService(String);
 
 #[zserver(uuid = "10000000-0000-0000-0000-000000000001")]
 impl Hello for HelloZService{
-    async fn hello(self, name: String) -> String{
+    async fn hello(&mut self, name: String) -> String{
         format!("Hello {}!, you are connected to {}", name, self.0)
     }
 }
@@ -35,7 +35,7 @@ impl Hello for HelloZService{
 async fn main() {
 
     let zenoh = Arc::new(Zenoh::new(zenoh::config::client(Some(format!("tcp/127.0.0.1:7447").to_string()))).await.unwrap());
-    let ws = Arc::new(zenoh.workspace(None).await.unwrap());
+    // let ws = Arc::new(zenoh.workspace(None).await.unwrap());
 
     let service = HelloZService("test service".to_string());
 
@@ -43,7 +43,7 @@ async fn main() {
     let z = zenoh.clone();
     let ser_uuid = service.instance_uuid();
     let server = service.get_server(z);
-    let client = HelloClient::new(ws.clone(), ser_uuid);
+    let client = HelloClient::new(zenoh.clone(), ser_uuid);
 
 
     server.connect();

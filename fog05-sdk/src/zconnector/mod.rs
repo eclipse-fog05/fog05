@@ -255,4 +255,8 @@ impl ZConnector {
             global : Global::new(z, sys_id, ten_id),
         }
     }
+
+    pub fn close(self) {
+        drop(self);
+    }
 }

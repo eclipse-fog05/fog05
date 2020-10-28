@@ -26,9 +26,9 @@ use uuid::Uuid;
 
 use serde::{Serialize, de::DeserializeOwned};
 
-pub struct ZClientChannel<'a, Req, Resp> {
-
-    workspace : Arc<zenoh::Workspace<'a>>,
+#[derive(Clone)]
+pub struct ZClientChannel<Req, Resp> {
+    z : Arc<zenoh::Zenoh>,
     path : String,
     server_uuid : Option<Uuid>,
     phantom_resp : PhantomData<Resp>,
@@ -37,20 +37,7 @@ pub struct ZClientChannel<'a, Req, Resp> {
 }
 
 
-impl<'a, Req, Resp> Clone for ZClientChannel<'a, Req, Resp> {
-    fn clone(&self) -> Self {
-        Self {
-            workspace : self.workspace.clone(),
-            path : self.path.clone(),
-            server_uuid : self.server_uuid.clone(),
-            phantom_resp : self.phantom_resp.clone(),
-            phantom_req : self.phantom_req.clone(),
-        }
-    }
-}
-
-
-impl<'a, Req, Resp> ZClientChannel<'a, Req, Resp>
+impl<Req, Resp> ZClientChannel<Req, Resp>
 where
     Resp : DeserializeOwned,
     Req : std::fmt::Debug + Serialize,
@@ -58,14 +45,14 @@ where
 
     pub fn new
     (
-        ws : Arc<zenoh::Workspace<'a>>,
+        z : Arc<zenoh::Zenoh>,
         path : String,
         server_uuid : Option<Uuid>
     ) -> ZClientChannel<Req,Resp>
     {
         ZClientChannel {
-            workspace : ws,
-            path: path,
+            z : z,
+            path,
             server_uuid,
             phantom_resp : PhantomData,
             phantom_req : PhantomData,
@@ -76,18 +63,19 @@ where
     /// it serialized the request on the as properties in the selector
     /// the request is first serialized as json and then encoded in base64 and
     /// passed as a property named req
-    async fn send(&self, request: &Req) -> zenoh::DataStream{
+    async fn send(&self, ws : zenoh::Workspace<'_> ,request: &Req) -> zenoh::DataStream{
         let req = serde_json::to_string(&request).unwrap(); //those are to be passed to the eval selector
         let selector = zenoh::Selector::try_from(format!("{}/{}/eval?(req={})",self.path, self.server_uuid.unwrap(), base64::encode(req))).unwrap();
         //Should create the appropriate Error type and the conversions form ZError
-        self.workspace.get(&selector).await.unwrap()
+        ws.get(&selector).await.unwrap()
 
     }
 
     /// This function calls the eval on the server and deserialized the result
     /// if the value is not deserializable or the eval returns none it returns an IOError
     pub async fn call_fun(&self,  request: Req) -> std::io::Result<Resp> {
-        let mut data_stream = self.send(&request).await;
+        let ws = self.z.workspace(None).await.unwrap();
+        let mut data_stream = self.send(ws, &request).await;
         //takes only one, eval goes to only one
         let resp = data_stream.next().await;
         if let Some(data) = resp {
@@ -111,8 +99,10 @@ where
 
         if self.server_uuid.is_none() { return Ok(false) }
 
+        let ws = self.z.workspace(None).await.unwrap();
+
         let selector = zenoh::Selector::try_from(format!("{}/{}/state",self.path, self.server_uuid.unwrap())).unwrap();
-        let mut ds = self.workspace.get(&selector).await.unwrap();
+        let mut ds = ws.get(&selector).await.unwrap();
         let mut idata = Vec::new();
 
         while let Some(d) = ds.next().await { idata.push(d)}
@@ -124,7 +114,7 @@ where
             zenoh::Value::Raw(_,buf) => {
                 let cs = bincode::deserialize::<super::ComponentState>(&buf.to_vec()).unwrap();
                 let selector = zenoh::Selector::try_from(format!("/@/router/{}", String::from(&cs.routerid))).unwrap();
-                let mut ds = self.workspace.get(&selector).await.unwrap();
+                let mut ds = ws.get(&selector).await.unwrap();
                 let mut rdata = Vec::new();
 
                 while let Some(d) = ds.next().await { rdata.push(d) }
