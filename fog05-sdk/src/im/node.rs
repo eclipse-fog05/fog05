@@ -26,6 +26,17 @@ pub enum NodeStatusEnum {
     READY,
 }
 
+impl std::fmt::Display for NodeStatusEnum {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self{
+            NodeStatusEnum::NOTREADY => write!(f,"NotReady"),
+            NodeStatusEnum::READY => write!(f,"Ready"),
+            NodeStatusEnum::UNKNOWN => write!(f,"Unknown"),
+
+        }
+    }
+}
+
 
 // Node Information
 
@@ -162,6 +173,6 @@ pub struct NodeStatus {
     pub status : NodeStatusEnum,
     pub supported_hypervisors : Vec<String>,
     pub ram : RAMStatus,
-    pub disk : DiskStatus,
+    pub disk : Vec<DiskStatus>,
     pub neighbors : Vec<Neighbor>
 }

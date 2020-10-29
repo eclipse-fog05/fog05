@@ -41,9 +41,9 @@ impl fmt::Display for FError {
             FError::NotFound => write!(f, "Not Found"),
             FError::AlreadyPresent => write!(f, "Already Present"),
             FError::ConversionError(err) => write!(f, "{}",err),
-            FError::IOError(ioerr) => write!(f, "{}",ioerr),
-            FError::ZError(zerr) => write!(f, "{}", zerr),
-            FError::BincodeError(berr) => write!(f, "{}", berr),
+            FError::IOError(err) => write!(f, "{}",err),
+            FError::ZError(err) => write!(f, "{}", err),
+            FError::BincodeError(err) => write!(f, "{}", err),
             FError::UnknownError(err) => write!(f, "Error {}", err)
         }
      }
@@ -70,6 +70,12 @@ impl From<std::io::Error> for FError {
 impl From<std::num::TryFromIntError> for FError {
     fn from(err : std::num::TryFromIntError) -> Self {
         FError::ConversionError(err.to_string())
+    }
+}
+
+impl From<reqwest::Error> for FError {
+    fn from(err : reqwest::Error) -> Self {
+        FError::IOError(err.to_string())
     }
 }
 

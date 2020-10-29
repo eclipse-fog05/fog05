@@ -27,6 +27,9 @@ use std::str;
 use std::str::FromStr;
 use std::convert::TryFrom;
 use uuid::Uuid;
+
+use log::{trace};
+
 //importing the macros
 use zrpc_macros::{zservice, zserver};
 
@@ -34,6 +37,8 @@ use crate::fresult::FResult;
 use crate::types::{IPAddress, InterfaceKind};
 use crate::im;
 use crate::types;
+
+
 
 
 #[zservice(timeout_s = 10, prefix = "/fos/local")]

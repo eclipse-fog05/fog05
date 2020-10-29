@@ -15,6 +15,8 @@ use uuid::Uuid;
 //importing the macros
 use zrpc_macros::{zservice, zserver};
 
+use log::{trace};
+
 #[zservice(timeout_s = 10, prefix = "/lfos")]
 pub trait Hello {
     async fn hello(name: String) -> String;
@@ -34,7 +36,7 @@ impl Hello for HelloZService{
 #[async_std::main]
 async fn main() {
 
-    let zenoh = Arc::new(Zenoh::new(zenoh::config::client(Some(format!("tcp/127.0.0.1:7447").to_string()))).await.unwrap());
+    let zenoh = Arc::new(Zenoh::new(Properties::from("mode=client;peer=tcp/127.0.0.1:7447").into()).await.unwrap());
     // let ws = Arc::new(zenoh.workspace(None).await.unwrap());
 
     let service = HelloZService("test service".to_string());
@@ -42,7 +44,7 @@ async fn main() {
 
     let z = zenoh.clone();
     let ser_uuid = service.instance_uuid();
-    let server = service.get_server(z);
+    let server = service.get_hello_server(z);
     let client = HelloClient::new(zenoh.clone(), ser_uuid);
 
 

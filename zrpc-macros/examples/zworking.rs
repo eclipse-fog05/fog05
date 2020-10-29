@@ -31,7 +31,7 @@ use async_std::prelude::FutureExt;
 pub trait Hello: Clone {
 
     fn hello(&self, name: String) -> String;
-    fn get_server(self, z : Arc<zenoh::Zenoh>) -> ServeHello<Self> {
+    fn get_hello_server(self, z : Arc<zenoh::Zenoh>) -> ServeHello<Self> {
         ServeHello {
             z : z,
             server: self,
@@ -62,8 +62,8 @@ where
             async {
                 let zsession = self.z.session();
                 let zinfo = zsession.info().await;
-                let rid = hex::encode(&(zinfo.iter().find(|x| x.0 == zenoh::net::info::ZN_INFO_ROUTER_PID_KEY ).unwrap().1));
-                let pid = hex::encode(&(zinfo.iter().find(|x| x.0 == zenoh::net::info::ZN_INFO_PID_KEY).unwrap().1));
+                let pid = zinfo.get(&zenoh::net::info::ZN_INFO_PID_KEY).unwrap().to_uppercase();
+                let rid = zinfo.get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY).unwrap().split(",").collect::<Vec<_>>()[0].to_uppercase();
                 let ws = self.z.workspace(None).await.unwrap();
 
 
@@ -404,7 +404,7 @@ impl HelloClient {
             let ws = z.workspace(None).await.unwrap();
             let zsession = z.session();
             let zinfo = zsession.info().await;
-            let rid = hex::encode(&(zinfo.iter().find(|x| x.0 == zenoh::net::info::ZN_INFO_ROUTER_PID_KEY ).unwrap().1)).to_uppercase();
+            let rid = zinfo.get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY).unwrap().split(",").collect::<Vec<_>>()[0].to_uppercase();
 
             let selector = zenoh::Selector::try_from("/this/is/generated/Hello/instance/*/state".to_string()).unwrap();
             let mut ds = ws.get(&selector).await.unwrap();
@@ -490,13 +490,13 @@ async fn main() {
     println!("HelloWorld!");
 
 
-    let zenoh = Arc::new(Zenoh::new(zenoh::config::client(Some(format!("tcp/127.0.0.1:7447").to_string()))).await.unwrap());
+    let zenoh = Arc::new(Zenoh::new(Properties::from("mode=client;peer=tcp/127.0.0.1:7447").into()).await.unwrap());
     // let ws = Arc::new(zenoh.workspace(None).await.unwrap());
 
     let service = HelloZService("test service".to_string());
 
     let z = zenoh.clone();
-    let server = service.get_server(z);
+    let server = service.get_hello_server(z);
     let instance_id = Uuid::from_str("00000000-0000-0000-0000-000000000000").unwrap();
     let client = HelloClient::new(zenoh.clone(), instance_id);
 

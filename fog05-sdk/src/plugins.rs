@@ -27,6 +27,9 @@ use std::str;
 use std::str::FromStr;
 use std::convert::TryFrom;
 use uuid::Uuid;
+
+use log::{trace};
+
 //importing the macros
 use zrpc_macros::{zservice, zserver};
 

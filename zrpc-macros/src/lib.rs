@@ -43,7 +43,8 @@ use syn::{
     Attribute, FnArg, Ident, ImplItem, ImplItemMethod, ImplItemType, ItemImpl,
     Pat, PatType, ReturnType, Token, Type, Visibility,
 };
-
+use inflector::cases::snakecase::to_snake_case;
+use log::{trace};
 
 
 
@@ -209,6 +210,8 @@ pub fn zservice(_attr : TokenStream, input : TokenStream) -> TokenStream {
         .map(|eval| snake_to_camel(&eval.ident.unraw().to_string()))
         .collect();
 
+    let snake_case_ident = to_snake_case(&ident.unraw().to_string());
+
     // Collects the pattern for the types
     let args : &[&[PatType]] = &evals.iter().map(|eval| &*eval.args).collect::<Vec<_>>();
 
@@ -251,6 +254,7 @@ pub fn zservice(_attr : TokenStream, input : TokenStream) -> TokenStream {
         timeout : &macro_args.timeout_s,
         eval_path : &path,
         service_name : &service_name,
+        service_get_server_ident: &format_ident!("get_{}_server", snake_case_ident)
     }
     .into_token_stream()
     .into();
@@ -402,6 +406,7 @@ struct ZServiceGenerator<'a> {
     timeout: &'a u16,                       //eval timeout
     eval_path : &'a String,                 //path for evals
     service_name : &'a String,              //service name on zenoh
+    service_get_server_ident : &'a Ident,   //the ident for the get_<trait>_server
 }
 
 
@@ -416,6 +421,7 @@ impl<'a> ZServiceGenerator<'a> {
             return_types,
             service_ident,
             server_ident,
+            service_get_server_ident,
             ..
         } = self;
 
@@ -440,7 +446,7 @@ impl<'a> ZServiceGenerator<'a> {
                 #(#fns)*
 
                 /// Returns the server object
-                fn get_server(self, z : async_std::sync::Arc<zenoh::Zenoh>) -> #server_ident<Self>{
+                fn #service_get_server_ident(self, z : async_std::sync::Arc<zenoh::Zenoh>) -> #server_ident<Self>{
                     #server_ident {
                         server : self,
                         z : z,
@@ -485,6 +491,7 @@ impl<'a> ZServiceGenerator<'a> {
         } = self;
 
         quote!{
+
             impl<S> zrpc::ZServe<#request_ident> for #server_ident<S>
             where S: #service_ident + Send +'static
             {
@@ -497,8 +504,8 @@ impl<'a> ZServiceGenerator<'a> {
                         async {
                             let zsession = self.z.session();
                             let zinfo = zsession.info().await;
-                            let rid = hex::encode(&(zinfo.iter().find(|x| x.0 == zenoh::net::info::ZN_INFO_ROUTER_PID_KEY ).unwrap().1));
-                            let pid = hex::encode(&(zinfo.iter().find(|x| x.0 == zenoh::net::info::ZN_INFO_PID_KEY).unwrap().1));
+                            let pid = zinfo.get(&zenoh::net::info::ZN_INFO_PID_KEY).unwrap().to_uppercase();
+                            let rid = zinfo.get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY).unwrap().split(",").collect::<Vec<_>>()[0].to_uppercase();
                             let ws = self.z.workspace(None).await.unwrap();
 
 
@@ -651,7 +658,9 @@ impl<'a> ZServiceGenerator<'a> {
                                         match ci.status {
                                             zrpc::ComponentStatus::SERVING => {
                                                 let path = zenoh::Path::try_from(format!("{}/{}/eval",#eval_path, self.server.instance_uuid())).unwrap();
+                                                trace!("Registering eval on {:?}", path);
                                                 let mut rcv = ws.register_eval(&path.clone().into()).await.unwrap();
+                                                trace!("Registered on {:?}", path);
                                                 let rcv_loop = async {
                                                     loop {
                                                         let get_request = rcv.next().await.unwrap();
@@ -660,6 +669,7 @@ impl<'a> ZServiceGenerator<'a> {
                                                         let js_req = str::from_utf8(&b64_bytes).unwrap();
                                                         let req = serde_json::from_str::<#request_ident>(&js_req).unwrap();
                                                         let mut ser = self.server.clone();
+                                                        trace!("Received on {:?} {:?}", path, req);
                                                         match req {
                                                             #(
                                                                 #request_ident::#camel_case_idents{#(#arg_pats),*} => {
@@ -869,7 +879,7 @@ impl<'a> ZServiceGenerator<'a> {
                         let ws = z.workspace(None).await.unwrap();
                         let zsession = z.session();
                         let zinfo = zsession.info().await;
-                        let rid = hex::encode(&(zinfo.iter().find(|x| x.0 == zenoh::net::info::ZN_INFO_ROUTER_PID_KEY ).unwrap().1)).to_uppercase();
+                        let rid = zinfo.get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY).unwrap().split(",").collect::<Vec<_>>()[0].to_uppercase();
 
                         let selector = zenoh::Selector::try_from(format!("{}/*/state",#eval_path)).unwrap();
                         let mut ds = ws.get(&selector).await.unwrap();
@@ -948,6 +958,7 @@ impl<'a> ZServiceGenerator<'a> {
                     #vis fn #method_idents(&self, #( #args ),*)
                         -> impl std::future::Future<Output = std::io::Result<#return_types>> + '_ {
                         let request = #request_ident::#camel_case_idents { #( #arg_pats ),* };
+                        trace!("Sending {:?}", request);
                         async move {
                             match self.ch.verify_server().await {
                                 Ok(b) => {

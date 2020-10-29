@@ -26,6 +26,8 @@ use uuid::Uuid;
 
 use serde::{Serialize, de::DeserializeOwned};
 
+use log::{trace};
+
 #[derive(Clone)]
 pub struct ZClientChannel<Req, Resp> {
     z : Arc<zenoh::Zenoh>,
@@ -67,6 +69,7 @@ where
         let req = serde_json::to_string(&request).unwrap(); //those are to be passed to the eval selector
         let selector = zenoh::Selector::try_from(format!("{}/{}/eval?(req={})",self.path, self.server_uuid.unwrap(), base64::encode(req))).unwrap();
         //Should create the appropriate Error type and the conversions form ZError
+        trace!("Sending {:?} to  {:?}", request, selector);
         ws.get(&selector).await.unwrap()
 
     }
