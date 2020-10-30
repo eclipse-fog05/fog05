@@ -104,10 +104,11 @@ pub enum DeleteKind {
 }
 
 #[derive(StructOpt, Debug)]
-pub enum FOrcECtl {
+pub enum FOSCtl {
     Add(AddKind),
     Get(GetKind),
     Delete(DeleteKind),
+    FIM(FIMCtl)
 }
 
 
@@ -148,12 +149,6 @@ pub enum FIMCtl {
     Delete(DeleteFIMKind),
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(about = "Eclipse fog05 CLI Tool")]
-pub enum FOSCtl {
-    FIM(FIMCtl),
-    FORCE(FOrcECtl),
-}
 
 fn main() -> Result<(), ExitFailure> {
     let force_host = match std::env::var("FORCE") {
@@ -169,7 +164,7 @@ fn main() -> Result<(), ExitFailure> {
     let args = FOSCtl::from_args();
     println!("{:?}", args);
     match args {
-        FOSCtl::FORCE(force_args) => force::force_cli(force_args, force_host),
         FOSCtl::FIM(fim_args) => fim::fim_cli(fim_args, zlocator),
+        _ => force::force_cli(args, force_host),
     }
 }

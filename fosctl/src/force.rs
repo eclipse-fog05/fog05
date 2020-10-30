@@ -12,15 +12,15 @@ use uuid::Uuid;
 use fog05_sdk::im::entity::{EntityDescriptor, EntityRecord};
 
 use crate::types;
-use crate::{FOrcECtl,Kind, AddKind, GetKind, DeleteKind};
+use crate::{FOSCtl,Kind, AddKind, GetKind, DeleteKind};
 
-pub fn force_cli(args : FOrcECtl, force_host : String) -> Result<(), ExitFailure> {
+pub fn force_cli(args : FOSCtl, force_host : String) -> Result<(), ExitFailure> {
     let client = reqwest::blocking::Client::builder()
         .timeout(Duration::from_secs(10))
         .build()
         .with_context(|_| "Unable to build HTTP client".to_string())?;
     match args {
-        FOrcECtl::Add(ak) => {
+        FOSCtl::Add(ak) => {
             match ak {
                 AddKind::Entity { descriptor_path } => {
                     let data = std::fs::read_to_string(&descriptor_path)
@@ -175,7 +175,7 @@ pub fn force_cli(args : FOrcECtl, force_host : String) -> Result<(), ExitFailure
                 }
             }
         }
-        FOrcECtl::Get(gk) => match gk {
+        FOSCtl::Get(gk) => match gk {
             GetKind::Entity { id } => match id {
                 Some(entity_id) => {
                     let url = format!("http://{}:9191/system/00000000-0000-0000-0000-000000000000/tenant/00000000-0000-0000-0000-000000000000/entity/{}",force_host, entity_id);
@@ -380,7 +380,7 @@ pub fn force_cli(args : FOrcECtl, force_host : String) -> Result<(), ExitFailure
                 }
             },
         },
-        FOrcECtl::Delete(dk) => {
+        FOSCtl::Delete(dk) => {
             match dk {
                 DeleteKind::Entity { id } => {
                     let url = format!("http://{}:9191/system/00000000-0000-0000-0000-000000000000/tenant/00000000-0000-0000-0000-000000000000/job", force_host);
@@ -465,5 +465,6 @@ pub fn force_cli(args : FOrcECtl, force_host : String) -> Result<(), ExitFailure
                 }
             }
         }
+        _ => unreachable!()
     }
 }

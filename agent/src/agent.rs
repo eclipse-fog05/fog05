@@ -278,13 +278,16 @@ impl AgentPluginInterface for Agent {
     }
 
     async fn register_plugin(&mut self, plugin_uuid : Uuid, kind : types::PluginKind) -> FResult<Uuid> {
+        trace!("register_plugin called with {} {:?}", plugin_uuid, kind);
         match kind {
             types::PluginKind::HYPERVISOR(hv) => {
                 match self.hypervisors.get(&hv) {
                     Some(_) => Err(FError::AlreadyPresent),
                     None => {
+                        trace!("Adding Hypervisor plugin {} {}", plugin_uuid, hv);
                         let hv_client = HypervisorPluginClient::new(self.z.clone(), plugin_uuid);
-                        self.hypervisors.insert(hv, hv_client);
+                        self.hypervisors.insert(hv.clone(), hv_client);
+                        trace!("Added Hypervisor plugin {} {}", plugin_uuid, hv);
                         Ok(plugin_uuid)
                     },
                 }

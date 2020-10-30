@@ -18,7 +18,8 @@ members = [
   "zrpc-macros",
   "fog05-sdk",
   "fosctl",
-  "agent"
+  "agent",
+  "dummy-hypervisor",
 ]
 
 exclude = []
