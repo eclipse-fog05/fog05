@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use async_std::task;
-use async_std::sync::Arc;
+use async_std::sync::{Arc, RwLock};
 use async_std::fs;
 use async_std::path::Path;
 use async_std::prelude::*;
@@ -47,7 +47,7 @@ use structopt::StructOpt;
 
 pub mod agent;
 
-use agent::{Agent,AgentConfig};
+use agent::{Agent,AgentConfig, AgentInner};
 
 static AGENT_PID_FILE: &str = "/tmp/fos_agent.pid";
 static AGENT_CONFIG_FILE: &str = "/etc/fos/agent.yaml";
@@ -143,11 +143,16 @@ async fn main() {
     let agent = Agent{
         z : zenoh.clone(),
         connector : zconnector.clone(),
-        pid : my_pid,
         node_uuid : node_uuid,
-        networking : None,
-        hypervisors : HashMap::new(),
-        config,
+        agent : Arc::new(RwLock::new(
+            AgentInner{
+                pid : my_pid,
+                networking : None,
+                hypervisors : HashMap::new(),
+                config,
+            }
+        ))
+
     };
 
     //Starting the agent

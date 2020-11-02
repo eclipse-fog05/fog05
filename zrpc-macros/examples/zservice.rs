@@ -19,7 +19,7 @@ use log::{trace};
 
 #[zservice(timeout_s = 10, prefix = "/lfos")]
 pub trait Hello {
-    async fn hello(name: String) -> String;
+    async fn hello(&self, name: String) -> String;
 }
 
 
@@ -28,7 +28,7 @@ struct HelloZService(String);
 
 #[zserver(uuid = "10000000-0000-0000-0000-000000000001")]
 impl Hello for HelloZService{
-    async fn hello(&mut self, name: String) -> String{
+    async fn hello(&self, name: String) -> String{
         format!("Hello {}!, you are connected to {}", name, self.0)
     }
 }

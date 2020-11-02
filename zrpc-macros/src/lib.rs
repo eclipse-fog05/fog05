@@ -41,7 +41,7 @@ use syn::{
     token::Comma,
     Block,
     Attribute, FnArg, Ident, ImplItem, ImplItemMethod, ImplItemType, ItemImpl,
-    Pat, PatType, ReturnType, Token, Type, Visibility,
+    Pat, PatType, Receiver, ReturnType, Token, Type, Visibility,
 };
 use inflector::cases::snakecase::to_snake_case;
 use log::{trace};
@@ -131,6 +131,7 @@ impl Parse for ZService {
 struct EvalMethod{
     attrs : Vec<Attribute>,
     ident : Ident,
+    receiver : Receiver,
     args : Vec<PatType>,
     output : ReturnType
 }
@@ -142,6 +143,7 @@ impl Parse for EvalMethod {
         input.parse::<Token![fn]>()?;
         let ident = input.parse()?;
         let content;
+        let mut recv : Option<Receiver> = None;
         parenthesized!(content in input);
         let mut args = Vec::new();
         let mut errors = Ok(());
@@ -156,21 +158,32 @@ impl Parse for EvalMethod {
                         syn::Error::new(captured.pat.span(), "patterns aren't allowed in RPC args")
                     );
                 }
-                FnArg::Receiver(_) => {
-                    extend_errors!(
-                        errors,
-                        syn::Error::new(arg.span(), "method args cannot start with self, &mut self is added by the macro!")
-                    );
+                FnArg::Receiver(receiver) => { //Should take whatever used by the user and strip it for client
+                    recv = Some(receiver)
+                    // extend_errors!(
+                    //     errors,
+                    //     syn::Error::new(arg.span(), "method args cannot start with self, &mut self is added by the macro!")
+                    // );
                 }
             }
         }
+        match recv {
+            None => extend_errors!(
+                    errors,
+                    syn::Error::new(recv.span(), "Missing any receiver in method declaration, please add one!")
+                 ),
+            Some(_) => ()
+        }
+
         errors?;
         let output = input.parse()?;
         input.parse::<Token![;]>()?;
+        let receiver = recv.unwrap();
 
         Ok(Self {
             attrs,
             ident,
+            receiver,
             args,
             output,
         })
@@ -429,13 +442,13 @@ impl<'a> ZServiceGenerator<'a> {
             .iter()
             .zip(return_types.iter())
             .map(
-                |(EvalMethod{attrs,ident,args,..},output,)|
+                |(EvalMethod{attrs,ident,receiver,args,..},output,)|
                 {
 
                     quote! {
 
                         #(#attrs)*
-                        fn #ident(&mut self, #(#args),*) -> #output;
+                        fn #ident(#receiver, #(#args),*) -> #output;
                     }
                 },
             );

@@ -70,54 +70,54 @@ pub struct DummyHypervisor {
 #[zserver(uuid = "00000000-0000-0000-0000-000000000003")]
 impl HypervisorPlugin for DummyHypervisor {
 
-    async fn define_fdu(&mut self, fdu : FDUDescriptor) -> FResult<FDURecord> {
+    async fn define_fdu(&self, fdu : FDUDescriptor) -> FResult<FDURecord> {
         Err(FError::UnknownError("Not yet...".to_string()))
     }
 
-    async fn undefine_fdu(&mut self, instance_uuid : Uuid) -> FResult<Uuid> {
+    async fn undefine_fdu(&self, instance_uuid : Uuid) -> FResult<Uuid> {
         Err(FError::UnknownError("Not yet...".to_string()))
     }
 
-    async fn configure_fdu(&mut self,instance_uuid : Uuid) -> FResult<Uuid> {
+    async fn configure_fdu(&self,instance_uuid : Uuid) -> FResult<Uuid> {
         Err(FError::UnknownError("Not yet...".to_string()))
     }
 
-    async fn clean_fdu(&mut self,instance_uuid : Uuid) -> FResult<Uuid> {
-        Err(FError::UnknownError("Not yet...".to_string()))
-    }
-
-
-    async fn start_fdu(&mut self,instance_uuid : Uuid) -> FResult<Uuid> {
+    async fn clean_fdu(&self,instance_uuid : Uuid) -> FResult<Uuid> {
         Err(FError::UnknownError("Not yet...".to_string()))
     }
 
 
-
-    async fn run_fdu(&mut self,instance_uuid : Uuid) -> FResult<Uuid> { //this should be somehow blocking...
-        Err(FError::UnknownError("Not yet...".to_string()))
-    }
-
-    async fn log_fdu(&mut self,instance_uuid : Uuid) -> FResult<String> {
-        Err(FError::UnknownError("Not yet...".to_string()))
-    }
-    async fn ls_fdu(&mut self,instance_uuid : Uuid) -> FResult<Vec<String>> {
-        Err(FError::UnknownError("Not yet...".to_string()))
-    }
-
-    async fn file_fdu(&mut self,instance_uuid : Uuid, file_name : String) -> FResult<String> {
+    async fn start_fdu(&self,instance_uuid : Uuid) -> FResult<Uuid> {
         Err(FError::UnknownError("Not yet...".to_string()))
     }
 
 
-    async fn stop_fdu(&mut self,instance_uuid : Uuid) -> FResult<Uuid> {
+
+    async fn run_fdu(&self,instance_uuid : Uuid) -> FResult<Uuid> { //this should be somehow blocking...
         Err(FError::UnknownError("Not yet...".to_string()))
     }
 
-    async fn migrate_fdu(&mut self,instance_uuid : Uuid, destination_uuid : Uuid) -> FResult<Uuid> {
+    async fn log_fdu(&self,instance_uuid : Uuid) -> FResult<String> {
+        Err(FError::UnknownError("Not yet...".to_string()))
+    }
+    async fn ls_fdu(&self,instance_uuid : Uuid) -> FResult<Vec<String>> {
         Err(FError::UnknownError("Not yet...".to_string()))
     }
 
-    async fn get_fdu_status(&mut self,instance_uuid : Uuid) -> FResult<FDURecord> {
+    async fn file_fdu(&self,instance_uuid : Uuid, file_name : String) -> FResult<String> {
+        Err(FError::UnknownError("Not yet...".to_string()))
+    }
+
+
+    async fn stop_fdu(&self,instance_uuid : Uuid) -> FResult<Uuid> {
+        Err(FError::UnknownError("Not yet...".to_string()))
+    }
+
+    async fn migrate_fdu(&self,instance_uuid : Uuid, destination_uuid : Uuid) -> FResult<Uuid> {
+        Err(FError::UnknownError("Not yet...".to_string()))
+    }
+
+    async fn get_fdu_status(&self,instance_uuid : Uuid) -> FResult<FDURecord> {
         Err(FError::UnknownError("Not yet...".to_string()))
     }
 

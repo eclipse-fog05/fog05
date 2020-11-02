@@ -14,7 +14,7 @@ use std::time::Duration;
 use std::collections::HashMap;
 
 use async_std::task;
-use async_std::sync::Arc;
+use async_std::sync::{Arc, RwLock};
 use async_std::fs;
 use async_std::path::Path;
 use async_std::prelude::*;
@@ -60,15 +60,23 @@ pub struct AgentConfig {
 }
 
 
+//should be AgentInner that contains the state
+// and agent that is an Arc<RwLock<AgentInner>>
+#[derive(Clone)]
+pub struct AgentInner {
+    pub pid : u32,
+    pub networking : Option<NetworkingPluginClient>,
+    pub hypervisors : HashMap<String,HypervisorPluginClient>,
+    pub config : AgentConfig,
+}
+
+
 #[derive(Clone)]
 pub struct Agent {
     pub z : Arc<zenoh::Zenoh>,
     pub connector : Arc<fog05_sdk::zconnector::ZConnector>,
-    pub pid : u32,
     pub node_uuid : Uuid,
-    pub networking : Option<NetworkingPluginClient>,
-    pub hypervisors : HashMap<String,HypervisorPluginClient>,
-    pub config : AgentConfig,
+    pub agent : Arc<RwLock<AgentInner>>,
 }
 
 impl Agent {
@@ -96,9 +104,14 @@ impl Agent {
 
 
         let monitoring = async {
-            info!("Monitoring loop started, with interveal {}", self.config.monitoring_interveal);
+            let guard = self.agent.read().await;
+            info!("Monitoring loop started with interveal {}", guard.config.monitoring_interveal);
+            drop(guard);
             let mut system = sysinfo::System::new_all();
             loop {
+                let guard = self.agent.read().await;
+                let interveal = guard.config.monitoring_interveal;
+                trace!("Monitoring loop, with interveal {}", interveal);
                 let mut disks = Vec::<im::node::DiskStatus>::new();
                 system.refresh_all();
                 let mem = im::node::RAMStatus {
@@ -114,8 +127,8 @@ impl Agent {
                     disks.push(disk_status);
                 }
 
-                let hvs : Vec<String> = self.hypervisors.keys().map(|x| (*x).clone()).collect();
-                let status = match self.networking {
+                let hvs : Vec<String> = guard.hypervisors.keys().map(|x| (*x).clone()).collect();
+                let status = match guard.networking {
                     Some(_) => {
                         match hvs.len() {
                             0 => im::node::NodeStatusEnum::NOTREADY,
@@ -134,8 +147,8 @@ impl Agent {
                 };
 
                 self.connector.global.add_node_status(node_status).await.unwrap();
-
-                task::sleep(Duration::from_secs(self.config.monitoring_interveal)).await;
+                drop(guard);
+                task::sleep(Duration::from_secs(interveal)).await;
             }
         };
         monitoring.race(stop.recv()).await;
@@ -191,7 +204,6 @@ impl Agent {
 
             disks.push(disk_spec);
         }
-
         let ni = im::node::NodeInfo{
             uuid : self.node_uuid.clone(),
             name : name,
@@ -229,75 +241,77 @@ impl Agent {
 
 #[zserver(uuid = "00000000-0000-0000-0000-000000000001")]
 impl AgentPluginInterface for Agent {
-    async fn fdu_info(&mut self, fdu_uuid : Uuid) -> FResult<im::fdu::FDUDescriptor> {
+    async fn fdu_info(&self, fdu_uuid : Uuid) -> FResult<im::fdu::FDUDescriptor> {
         trace!("Called fdu_info with {:?}", fdu_uuid);
         Err(FError::UnknownError("Not yet...".to_string()))
     }
-    async fn image_info(&mut self, image_uuid : Uuid) -> FResult<im::fdu::Image> {
+    async fn image_info(&self, image_uuid : Uuid) -> FResult<im::fdu::Image> {
         Err(FError::UnknownError("Not yet...".to_string()))
     }
-    async fn node_fdu_info(&mut self, fdu_uuid : Uuid, node_uuid : Uuid, instance_uuid : Uuid) -> FResult<im::fdu::FDURecord> {
+    async fn node_fdu_info(&self, fdu_uuid : Uuid, node_uuid : Uuid, instance_uuid : Uuid) -> FResult<im::fdu::FDURecord> {
         Err(FError::UnknownError("Not yet...".to_string()))
     }
-    async fn network_info(&mut self, network_uuid : Uuid) -> FResult<types::VirtualNetwork> {
+    async fn network_info(&self, network_uuid : Uuid) -> FResult<types::VirtualNetwork> {
         Err(FError::UnknownError("Not yet...".to_string()))
     }
-    async fn connection_point_info(&mut self, cp_uuid : Uuid) -> FResult<types::ConnectionPoint> {
+    async fn connection_point_info(&self, cp_uuid : Uuid) -> FResult<types::ConnectionPoint> {
         Err(FError::UnknownError("Not yet...".to_string()))
     }
-    async fn node_management_address(&mut self, node_uuid : Uuid) -> FResult<IPAddress> {
-        Err(FError::UnknownError("Not yet...".to_string()))
-    }
-
-    async fn create_virtual_network(&mut self, vnet : types::VirtualNetworkConfig) -> FResult<types::VirtualNetwork> {
-        Err(FError::UnknownError("Not yet...".to_string()))
-    }
-    async fn remove_virtual_network(&mut self, vnet_uuid : Uuid) -> FResult<Uuid> {
+    async fn node_management_address(&self, node_uuid : Uuid) -> FResult<IPAddress> {
         Err(FError::UnknownError("Not yet...".to_string()))
     }
 
-    async fn create_connection_point(&mut self, cp : types::ConnectionPointConfig) -> FResult<types::ConnectionPoint> {
+    async fn create_virtual_network(&self, vnet : types::VirtualNetworkConfig) -> FResult<types::VirtualNetwork> {
         Err(FError::UnknownError("Not yet...".to_string()))
     }
-    async fn remove_connection_point(&mut self, cp_uuid : Uuid) -> FResult<Uuid> {
-        Err(FError::UnknownError("Not yet...".to_string()))
-    }
-
-    async fn bind_cp_to_fdu_face(&mut self, cp_uuid : Uuid, instance_uuid : Uuid, interface : String) -> FResult<Uuid> {
-        Err(FError::UnknownError("Not yet...".to_string()))
-    }
-    async fn unbind_co_from_fdu_face(&mut self, cp_uuid : Uuid, instance_uuid : Uuid, interface : String) -> FResult<Uuid> {
+    async fn remove_virtual_network(&self, vnet_uuid : Uuid) -> FResult<Uuid> {
         Err(FError::UnknownError("Not yet...".to_string()))
     }
 
-    async fn bind_cp_to_network(&mut self, cp_uuid : Uuid, vnet_uuid : Uuid) -> FResult<Uuid> {
+    async fn create_connection_point(&self, cp : types::ConnectionPointConfig) -> FResult<types::ConnectionPoint> {
         Err(FError::UnknownError("Not yet...".to_string()))
     }
-    async fn unbind_cp_from_network(&mut self, cp_uuid : Uuid, vnet_uuid : Uuid) -> FResult<Uuid> {
+    async fn remove_connection_point(&self, cp_uuid : Uuid) -> FResult<Uuid> {
+        Err(FError::UnknownError("Not yet...".to_string()))
+    }
+
+    async fn bind_cp_to_fdu_face(&self, cp_uuid : Uuid, instance_uuid : Uuid, interface : String) -> FResult<Uuid> {
+        Err(FError::UnknownError("Not yet...".to_string()))
+    }
+    async fn unbind_co_from_fdu_face(&self, cp_uuid : Uuid, instance_uuid : Uuid, interface : String) -> FResult<Uuid> {
+        Err(FError::UnknownError("Not yet...".to_string()))
+    }
+
+    async fn bind_cp_to_network(&self, cp_uuid : Uuid, vnet_uuid : Uuid) -> FResult<Uuid> {
+        Err(FError::UnknownError("Not yet...".to_string()))
+    }
+    async fn unbind_cp_from_network(&self, cp_uuid : Uuid, vnet_uuid : Uuid) -> FResult<Uuid> {
         Err(FError::UnknownError("Not yet...".to_string()))
     }
 
     async fn register_plugin(&mut self, plugin_uuid : Uuid, kind : types::PluginKind) -> FResult<Uuid> {
         trace!("register_plugin called with {} {:?}", plugin_uuid, kind);
+        let mut guard = self.agent.write().await;
+        trace!("register_plugin took WriteLock!");
         match kind {
             types::PluginKind::HYPERVISOR(hv) => {
-                match self.hypervisors.get(&hv) {
+                match guard.hypervisors.get(&hv) {
                     Some(_) => Err(FError::AlreadyPresent),
                     None => {
                         trace!("Adding Hypervisor plugin {} {}", plugin_uuid, hv);
                         let hv_client = HypervisorPluginClient::new(self.z.clone(), plugin_uuid);
-                        self.hypervisors.insert(hv.clone(), hv_client);
+                        guard.hypervisors.insert(hv.clone(), hv_client);
                         trace!("Added Hypervisor plugin {} {}", plugin_uuid, hv);
                         Ok(plugin_uuid)
                     },
                 }
             },
             types::PluginKind::NETWORKING => {
-                match self.networking {
+                match guard.networking {
                     Some(_) => Err(FError::AlreadyPresent),
                     None => {
                         let nw_client = NetworkingPluginClient::new(self.z.clone(), plugin_uuid);
-                        self.networking = Some(nw_client);
+                        guard.networking = Some(nw_client);
                         Ok(plugin_uuid)
                     },
                 }
@@ -307,6 +321,7 @@ impl AgentPluginInterface for Agent {
     }
 
     async fn unregister_plugin(&mut self, plugin_uuid : Uuid) -> FResult<Uuid> {
+        let guard = self.agent.write().await;
         Err(FError::UnknownError("Not yet...".to_string()))
     }
 }
@@ -316,7 +331,7 @@ impl AgentPluginInterface for Agent {
 
 #[zserver(uuid = "00000000-0000-0000-0000-000000000001")]
 impl OS for Agent {
-    async fn dir_exists(&mut self, dir_path : String) -> FResult<bool> {
+    async fn dir_exists(&self, dir_path : String) -> FResult<bool> {
         let path = Path::new(&dir_path);
         if !path.exists().await {
             return Ok(false)
@@ -327,18 +342,18 @@ impl OS for Agent {
         }
         Ok(false)
     }
-    async fn create_dir(&mut self, dir_path : String) -> FResult<bool> {
+    async fn create_dir(&self, dir_path : String) -> FResult<bool> {
         let path = Path::new(&dir_path);
         fs::create_dir(path).await?;
         Ok(true)
     }
-    async fn rm_dir(&mut self, dir_path : String) -> FResult<bool> {
+    async fn rm_dir(&self, dir_path : String) -> FResult<bool> {
         let path = Path::new(&dir_path);
         fs::remove_dir(path).await?;
         Ok(true)
     }
 
-    async fn download_file(&mut self, url : url::Url, dest_path : String) -> FResult<bool> {
+    async fn download_file(&self, url : url::Url, dest_path : String) -> FResult<bool> {
         task::spawn(
             async move {
                 trace!("Start downloading: {}", url);
@@ -364,7 +379,7 @@ impl OS for Agent {
         Ok(true)
     }
 
-    async fn create_file(&mut self, file_path : String) -> FResult<bool> {
+    async fn create_file(&self, file_path : String) -> FResult<bool> {
         let path = Path::new(&file_path);
         if !path.exists().await {
             let file = fs::File::create(path).await?;
@@ -374,24 +389,24 @@ impl OS for Agent {
         Ok(false)
     }
 
-    async fn rm_file(&mut self, file_path : String) -> FResult<bool> {
+    async fn rm_file(&self, file_path : String) -> FResult<bool> {
         let path = Path::new(&file_path);
         fs::remove_file(path).await?;
         Ok(true)
     }
 
-    async fn store_file(&mut self, content : Vec<u8>, file_path : String) -> FResult<bool> {
+    async fn store_file(&self, content : Vec<u8>, file_path : String) -> FResult<bool> {
         Ok(true)
     }
 
-    async fn read_file(&mut self, file_path : String) -> FResult<Vec<u8>> {
+    async fn read_file(&self, file_path : String) -> FResult<Vec<u8>> {
         let path = Path::new(&file_path);
         let mut file = fs::File::open(path).await?;
         let mut content : Vec<u8> = Vec::new();
         file.read_to_end(&mut content).await?;
         Ok(content)
     }
-    async fn file_exists(&mut self, file_path : String) -> FResult<bool> {
+    async fn file_exists(&self, file_path : String) -> FResult<bool> {
         let path = Path::new(&file_path);
         if !path.exists().await {
             return Ok(false)
@@ -403,11 +418,11 @@ impl OS for Agent {
         Ok(false)
     }
 
-    async fn execute_command(&mut self, cmd : String) -> FResult<String> {
+    async fn execute_command(&self, cmd : String) -> FResult<String> {
         Ok("".to_string())
     }
 
-    async fn send_signal(&mut self, signal : u8, pid : u32) -> FResult<bool> {
+    async fn send_signal(&self, signal : u8, pid : u32) -> FResult<bool> {
         let mut system = sysinfo::System::new_all();
         system.refresh_all();
         let process = system.get_process(pid.try_into()?);
@@ -420,7 +435,7 @@ impl OS for Agent {
         }
     }
 
-    async fn check_if_pid_exists(&mut self, pid : u32) -> FResult<bool> {
+    async fn check_if_pid_exists(&self, pid : u32) -> FResult<bool> {
         let mut system = sysinfo::System::new_all();
         system.refresh_all();
         let process = system.get_process(pid.try_into()?);
@@ -430,19 +445,19 @@ impl OS for Agent {
         }
     }
 
-    async fn get_interface_type(&mut self, iface : String) -> FResult<InterfaceKind> {
+    async fn get_interface_type(&self, iface : String) -> FResult<InterfaceKind> {
         Err(FError::UnknownError("Not yet...".to_string()))
     }
 
-    async fn set_interface_unavailable(&mut self, iface : String) -> FResult<bool> {
+    async fn set_interface_unavailable(&self, iface : String) -> FResult<bool> {
         Err(FError::UnknownError("Not yet...".to_string()))
     }
 
-    async fn set_interface_available(&mut self, iface : String) -> FResult<bool> {
+    async fn set_interface_available(&self, iface : String) -> FResult<bool> {
         Err(FError::UnknownError("Not yet...".to_string()))
     }
 
-    async fn get_local_mgmt_address(&mut self) -> FResult<IPAddress> {
+    async fn get_local_mgmt_address(&self) -> FResult<IPAddress> {
         Err(FError::UnknownError("Not yet...".to_string()))
     }
 
