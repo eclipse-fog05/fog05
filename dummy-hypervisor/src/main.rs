@@ -11,7 +11,7 @@ use std::str::FromStr;
 use std::time::Duration;
 
 use async_std::prelude::*;
-use async_std::sync::Arc;
+use async_std::sync::{Arc, RwLock};
 use async_std::task;
 
 use log::{error, info, trace};
@@ -23,7 +23,8 @@ use zrpc_macros::zserver;
 
 use fog05_sdk::agent::{AgentPluginInterfaceClient, OSClient};
 use fog05_sdk::fresult::{FError, FResult};
-use fog05_sdk::im::fdu::{FDUDescriptor, FDURecord};
+use fog05_sdk::im::fdu::*;
+use fog05_sdk::im::fdu::{FDUDescriptor, FDURecord, FDUState};
 use fog05_sdk::plugins::{HypervisorPlugin, NetworkingPluginClient};
 use fog05_sdk::types::PluginKind;
 use fog05_sdk::zconnector::ZConnector;
@@ -41,6 +42,11 @@ struct DummyArgs {
 }
 
 #[derive(Clone)]
+pub struct DummyHVState {
+    pub fdus: HashMap<Uuid, FDURecord>,
+}
+
+#[derive(Clone)]
 pub struct DummyHypervisor {
     pub uuid: Uuid,
     pub z: Arc<zenoh::Zenoh>,
@@ -49,56 +55,265 @@ pub struct DummyHypervisor {
     pub agent: Option<AgentPluginInterfaceClient>,
     pub os: Option<OSClient>,
     pub net: Option<NetworkingPluginClient>,
-    pub fdus: HashMap<Uuid, FDURecord>,
+    pub fdus: Arc<RwLock<DummyHVState>>,
 }
 
 #[zserver(uuid = "00000000-0000-0000-0000-000000000003")]
 impl HypervisorPlugin for DummyHypervisor {
-    async fn define_fdu(&self, fdu: FDUDescriptor) -> FResult<FDURecord> {
+    async fn define_fdu(&mut self, fdu: FDUDescriptor) -> FResult<FDURecord> {
+        let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
+        let mut guard = self.fdus.write().await;
+        let instance_uuid = Uuid::new_v4();
+        let instance = FDURecord {
+            uuid: instance_uuid,
+            fdu_uuid: fdu.uuid.unwrap(), //this is present because it is populated by the agent/orchestrator
+            node: node_uuid,
+            interfaces: Vec::new(),
+            connection_points: Vec::new(),
+            status: FDUState::DEFINED,
+            error: None,
+        };
+        guard.fdus.insert(instance_uuid, instance.clone());
+        self.connector
+            .global
+            .add_node_instance(node_uuid, instance.clone())
+            .await?;
+        Ok(instance)
+    }
+
+    async fn undefine_fdu(&mut self, instance_uuid: Uuid) -> FResult<Uuid> {
+        let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
+        let instance = self
+            .connector
+            .global
+            .get_node_instance(node_uuid, instance_uuid)
+            .await?;
+        match instance.status {
+            FDUState::DEFINED => {
+                let mut guard = self.fdus.write().await;
+                guard.fdus.remove(&instance_uuid);
+                self.connector
+                    .global
+                    .remove_node_instance(node_uuid, instance_uuid)
+                    .await?;
+                Ok(instance_uuid)
+            }
+            _ => Err(FError::TransitionNotAllowed),
+        }
+    }
+
+    async fn configure_fdu(&mut self, instance_uuid: Uuid) -> FResult<Uuid> {
+        let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
+        let mut instance = self
+            .connector
+            .global
+            .get_node_instance(node_uuid, instance_uuid)
+            .await?;
+        match instance.status {
+            FDUState::DEFINED => {
+                let mut guard = self.fdus.write().await; //taking lock
+
+                // Here we should create the network interfaces
+                // connection points, etc...
+                // dummy ask the creation of a namespace for FDU networking
+                let descriptor = self
+                    .agent
+                    .as_ref()
+                    .unwrap()
+                    .fdu_info(instance.fdu_uuid)
+                    .await??;
+                let fdu_ns = self
+                    .net
+                    .as_ref()
+                    .unwrap()
+                    .create_network_namespace()
+                    .await??;
+                let mut interfaces: Vec<FDURecordInterface> = Vec::new();
+                let mut cps: HashMap<String, Uuid> = HashMap::new();
+                for cp in descriptor.connection_points {
+                    let vcp = self
+                        .net
+                        .as_ref()
+                        .unwrap()
+                        .create_connection_point()
+                        .await??;
+                    cps.insert(cp.id, vcp.uuid);
+                    // we should ask the connection of the cp to the virtual network here
+                }
+
+                for intf in descriptor.interfaces {
+                    let viface_config = fog05_sdk::types::VirtualInterfaceConfig {
+                        if_name: intf.name.clone(),
+                        kind: fog05_sdk::types::VirtualInterfaceConfigKind::VETH,
+                    };
+                    let viface = self
+                        .net
+                        .as_ref()
+                        .unwrap()
+                        .create_virtual_interface_in_namespace(viface_config, fdu_ns.uuid)
+                        .await??;
+                    let pair = match viface.kind {
+                        fog05_sdk::types::VirtualInterfaceKind::VETH(info) => info.pair,
+                        _ => return Err(FError::MalformedDescriptor),
+                    };
+                    let cp_uuid = match intf.cp_id {
+                        Some(cp_id) => {
+                            let cp_uuid = cps.get(&cp_id).ok_or(FError::NotFound)?;
+                            self.net
+                                .as_ref()
+                                .unwrap()
+                                .bind_interface_to_connection_point(pair, *cp_uuid)
+                                .await??;
+                            Some(*cp_uuid)
+                        }
+                        None => {
+                            self.net
+                                .as_ref()
+                                .unwrap()
+                                .move_interface_into_default_namespace(pair)
+                                .await??;
+                            None
+                        }
+                    };
+
+                    // dummy hv creates all the faces as veth pairs
+                    let fdu_intf = FDURecordInterface {
+                        name: intf.name,
+                        kind: intf.kind,
+                        mac_address: intf.mac_address,
+                        cp_id: cp_uuid,
+                        intf_uuid: viface.uuid,
+                        virtual_interface: FDURecordVirtualInterface {
+                            vif_kind: VirtualInterfaceKind::E1000,
+                            bandwidht: None,
+                        },
+                    };
+                    interfaces.push(fdu_intf)
+                }
+                instance.interfaces = interfaces;
+                instance.connection_points = cps.into_iter().map(|(_, v)| v).collect();
+                instance.status = FDUState::CONFIGURED;
+                self.connector
+                    .global
+                    .add_node_instance(node_uuid, instance.clone())
+                    .await?;
+                guard.fdus.insert(instance_uuid, instance);
+                Ok(instance_uuid)
+            }
+            _ => Err(FError::TransitionNotAllowed),
+        }
+    }
+
+    async fn clean_fdu(&mut self, instance_uuid: Uuid) -> FResult<Uuid> {
+        let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
+        let mut instance = self
+            .connector
+            .global
+            .get_node_instance(node_uuid, instance_uuid)
+            .await?;
+        match instance.status {
+            FDUState::CONFIGURED => {
+                let mut guard = self.fdus.write().await;
+
+                for iface in instance.interfaces {
+                    self.net
+                        .as_ref()
+                        .unwrap()
+                        .delete_virtual_interface(iface.intf_uuid)
+                        .await??;
+                }
+
+                for cp in instance.connection_points {
+                    self.net
+                        .as_ref()
+                        .unwrap()
+                        .delete_connection_point(cp)
+                        .await??;
+                }
+
+                instance.interfaces = Vec::new();
+                instance.connection_points = Vec::new();
+                instance.status = FDUState::DEFINED;
+                self.connector
+                    .global
+                    .add_node_instance(node_uuid, instance.clone())
+                    .await?;
+                guard.fdus.insert(instance_uuid, instance);
+                Ok(instance_uuid)
+            }
+            _ => Err(FError::TransitionNotAllowed),
+        }
+    }
+
+    async fn start_fdu(&mut self, instance_uuid: Uuid) -> FResult<Uuid> {
+        let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
+        let mut instance = self
+            .connector
+            .global
+            .get_node_instance(node_uuid, instance_uuid)
+            .await?;
+        match instance.status {
+            FDUState::CONFIGURED => {
+                let mut guard = self.fdus.write().await;
+                instance.status = FDUState::RUNNING;
+                self.connector
+                    .global
+                    .add_node_instance(node_uuid, instance.clone())
+                    .await?;
+                guard.fdus.insert(instance_uuid, instance);
+                Ok(instance_uuid)
+            }
+            _ => Err(FError::TransitionNotAllowed),
+        }
+    }
+
+    async fn run_fdu(&mut self, instance_uuid: Uuid) -> FResult<Uuid> {
         Err(FError::Unimplemented)
     }
 
-    async fn undefine_fdu(&self, instance_uuid: Uuid) -> FResult<Uuid> {
+    async fn log_fdu(&mut self, instance_uuid: Uuid) -> FResult<String> {
+        Err(FError::Unimplemented)
+    }
+    async fn ls_fdu(&mut self, instance_uuid: Uuid) -> FResult<Vec<String>> {
         Err(FError::Unimplemented)
     }
 
-    async fn configure_fdu(&self, instance_uuid: Uuid) -> FResult<Uuid> {
+    async fn file_fdu(&mut self, instance_uuid: Uuid, file_name: String) -> FResult<String> {
         Err(FError::Unimplemented)
     }
 
-    async fn clean_fdu(&self, instance_uuid: Uuid) -> FResult<Uuid> {
-        Err(FError::Unimplemented)
+    async fn stop_fdu(&mut self, instance_uuid: Uuid) -> FResult<Uuid> {
+        let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
+        let mut instance = self
+            .connector
+            .global
+            .get_node_instance(node_uuid, instance_uuid)
+            .await?;
+        match instance.status {
+            FDUState::RUNNING => {
+                let mut guard = self.fdus.write().await;
+                instance.status = FDUState::CONFIGURED;
+                self.connector
+                    .global
+                    .add_node_instance(node_uuid, instance.clone())
+                    .await?;
+                guard.fdus.insert(instance_uuid, instance);
+                Ok(instance_uuid)
+            }
+            _ => Err(FError::TransitionNotAllowed),
+        }
     }
 
-    async fn start_fdu(&self, instance_uuid: Uuid) -> FResult<Uuid> {
-        Err(FError::Unimplemented)
-    }
-
-    async fn run_fdu(&self, instance_uuid: Uuid) -> FResult<Uuid> {
-        Err(FError::Unimplemented)
-    }
-
-    async fn log_fdu(&self, instance_uuid: Uuid) -> FResult<String> {
-        Err(FError::Unimplemented)
-    }
-    async fn ls_fdu(&self, instance_uuid: Uuid) -> FResult<Vec<String>> {
-        Err(FError::Unimplemented)
-    }
-
-    async fn file_fdu(&self, instance_uuid: Uuid, file_name: String) -> FResult<String> {
-        Err(FError::Unimplemented)
-    }
-
-    async fn stop_fdu(&self, instance_uuid: Uuid) -> FResult<Uuid> {
-        Err(FError::Unimplemented)
-    }
-
-    async fn migrate_fdu(&self, instance_uuid: Uuid, destination_uuid: Uuid) -> FResult<Uuid> {
+    async fn migrate_fdu(&mut self, instance_uuid: Uuid, destination_uuid: Uuid) -> FResult<Uuid> {
         Err(FError::Unimplemented)
     }
 
     async fn get_fdu_status(&self, instance_uuid: Uuid) -> FResult<FDURecord> {
-        Err(FError::Unimplemented)
+        let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
+        self.connector
+            .global
+            .get_node_instance(node_uuid, instance_uuid)
+            .await
     }
 }
 
@@ -211,7 +426,9 @@ async fn main() {
         agent: None,
         os: None,
         net: None,
-        fdus: HashMap::new(),
+        fdus: Arc::new(RwLock::new(DummyHVState {
+            fdus: HashMap::new(),
+        })),
     };
 
     let (s, h) = dummy.start().await;

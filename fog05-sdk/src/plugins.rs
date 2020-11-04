@@ -245,39 +245,39 @@ pub trait NetworkingPlugin {
 #[zservice(timeout_s = 10, prefix = "/fos/local")]
 pub trait HypervisorPlugin {
     /// Defines the given FDU in the node
-    async fn define_fdu(&self, fdu: FDUDescriptor) -> FResult<FDURecord>;
+    async fn define_fdu(&mut self, fdu: FDUDescriptor) -> FResult<FDURecord>;
 
     /// Undefines the given instance
-    async fn undefine_fdu(&self, instance_uuid: Uuid) -> FResult<Uuid>;
+    async fn undefine_fdu(&mut self, instance_uuid: Uuid) -> FResult<Uuid>;
 
     /// Configures the given instance
-    async fn configure_fdu(&self, instance_uuid: Uuid) -> FResult<Uuid>;
+    async fn configure_fdu(&mut self, instance_uuid: Uuid) -> FResult<Uuid>;
 
     /// Cleans the given instance
-    async fn clean_fdu(&self, instance_uuid: Uuid) -> FResult<Uuid>;
+    async fn clean_fdu(&mut self, instance_uuid: Uuid) -> FResult<Uuid>;
 
     /// Starts the given instance
-    async fn start_fdu(&self, instance_uuid: Uuid) -> FResult<Uuid>;
+    async fn start_fdu(&mut self, instance_uuid: Uuid) -> FResult<Uuid>;
 
     /// Runs the given instance in a BLOCKING mode
-    async fn run_fdu(&self, instance_uuid: Uuid) -> FResult<Uuid>; //this should be somehow blocking...
+    async fn run_fdu(&mut self, instance_uuid: Uuid) -> FResult<Uuid>; //this should be somehow blocking...
 
     /// Gets log of the given instance, what log means depend on the FDU
     /// may be left unimplemented
-    async fn log_fdu(&self, instance_uuid: Uuid) -> FResult<String>;
+    async fn log_fdu(&mut self, instance_uuid: Uuid) -> FResult<String>;
 
     /// Lists files in the instance, may be left unimplemented, depends on the FDU
-    async fn ls_fdu(&self, instance_uuid: Uuid) -> FResult<Vec<String>>;
+    async fn ls_fdu(&mut self, instance_uuid: Uuid) -> FResult<Vec<String>>;
 
     /// Gets the specified file from the instance, may be left unimplemented
     /// depends on th FDU
-    async fn file_fdu(&self, instance_uuid: Uuid, file_name: String) -> FResult<String>;
+    async fn file_fdu(&mut self, instance_uuid: Uuid, file_name: String) -> FResult<String>;
 
     /// Stops the given instance
-    async fn stop_fdu(&self, instance_uuid: Uuid) -> FResult<Uuid>;
+    async fn stop_fdu(&mut self, instance_uuid: Uuid) -> FResult<Uuid>;
 
     /// Migrates the instance to destination node
-    async fn migrate_fdu(&self, instance_uuid: Uuid, destination_uuid: Uuid) -> FResult<Uuid>;
+    async fn migrate_fdu(&mut self, instance_uuid: Uuid, destination_uuid: Uuid) -> FResult<Uuid>;
 
     /// Gets the status of the instance from the hypervisor
     async fn get_fdu_status(&self, instance_uuid: Uuid) -> FResult<FDURecord>;

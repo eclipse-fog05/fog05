@@ -171,7 +171,7 @@ pub struct ConnectionPointDescriptor {
 pub struct Interface {
     pub name: String,
     pub kind: InterfaceKind,
-    pub mac_address: Option<String>,
+    pub mac_address: Option<crate::types::MACAddress>,
     pub virtual_interface: VirtualInterface,
     pub cp_id: Option<String>, //internal to this descriptor
 }
@@ -215,28 +215,40 @@ pub struct FDUDescriptor {
 
 // FDU Record
 
+#[derive(Serialize, Deserialize, Debug, Clone, Display)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum FDUState {
+    DEFINED,
+    CONFIGURED,
+    RUNNING,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FDURecord {
     pub uuid: Uuid,
     pub fdu_uuid: Uuid,
     pub node: Uuid,
+    pub interfaces: Vec<FDURecordInterface>,
+    pub connection_points: Vec<Uuid>,
+    pub status: FDUState,
+    pub error: Option<crate::fresult::FError>,
 }
 
-// #[derive(Serialize,Deserialize,Debug, Clone)]
-// pub struct FDURecordInterface {
-//     pub is_mgmt : bool,
-//     pub if_type : InterfaceKind,
-//     pub mac_address : Option<String>,
-//     pub virtual_interface : VirtualInterface,
-//     pub cp_id : Option<String>,
-//     pub ext_cp_id : Option<String>,
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct FDURecordInterface {
+    pub name: String,
+    pub kind: InterfaceKind,
+    pub mac_address: Option<crate::types::MACAddress>,
+    pub virtual_interface: FDURecordVirtualInterface,
+    pub cp_id: Option<Uuid>, //internal to this descriptor
+    pub intf_uuid: Uuid,
+}
 
-//     pub vintf_name : String,
-//     pub status : String,
-//     pub phy_iface : Option<String>,
-//     pub veth_iface_name : Option<String>,
-//     pub properties : String,
-// }
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct FDURecordVirtualInterface {
+    pub vif_kind: VirtualInterfaceKind,
+    pub bandwidht: Option<u8>,
+}
 
 // #[derive(Serialize,Deserialize,Debug, Clone)]
 // pub struct FDUMigrationProperties {

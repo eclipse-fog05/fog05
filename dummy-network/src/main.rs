@@ -430,6 +430,12 @@ impl NetworkingPlugin for DummyNetwork {
         {
             Err(_) => Err(FError::NotFound),
             Ok(intf) => {
+                if let VirtualInterfaceKind::VETH(ref info) = intf.kind {
+                    self.connector
+                        .global
+                        .remove_node_interface(node_uuid, info.pair)
+                        .await?;
+                }
                 self.connector
                     .global
                     .remove_node_interface(node_uuid, intf_uuid)
@@ -1164,6 +1170,12 @@ impl NetworkingPlugin for DummyNetwork {
                     match netns.interfaces.iter().position(|&x| x == iface.uuid) {
                         Some(p) => {
                             netns.interfaces.remove(p);
+                            if let VirtualInterfaceKind::VETH(ref info) = iface.kind {
+                                self.connector
+                                    .global
+                                    .remove_node_interface(node_uuid, info.pair)
+                                    .await?;
+                            }
                             self.connector
                                 .global
                                 .add_node_network_namespace(node_uuid, netns.clone())
