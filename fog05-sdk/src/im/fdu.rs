@@ -19,12 +19,10 @@ extern crate serde_aux;
 extern crate serde_json;
 extern crate serde_yaml;
 
-
 use derive_more::Display;
+use semver::Version;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use semver::Version;
-
 
 fn default_zero() -> u8 {
     0
@@ -35,8 +33,6 @@ fn default_one() -> u8 {
 }
 
 // FDU Generic
-
-
 
 // Descriptors
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -139,8 +135,8 @@ pub struct Image {
 pub struct ComputationalRequirements {
     pub cpu_arch: String,
     #[serde(default = "default_zero")]
-	pub cpu_min_freq: u8, //default 0
-	#[serde(default = "default_one")]
+    pub cpu_min_freq: u8, //default 0
+    #[serde(default = "default_one")]
     pub cpu_min_count: u8, //default 1
     #[serde(default = "default_zero")]
     pub gpu_min_count: u8, //default 0
@@ -217,17 +213,14 @@ pub struct FDUDescriptor {
     pub depends_on: Vec<String>,
 }
 
-
 // FDU Record
-
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FDURecord {
     pub uuid: Uuid,
-    pub fdu_uuid : Uuid,
-    pub node : Uuid,
+    pub fdu_uuid: Uuid,
+    pub node: Uuid,
 }
-
 
 // #[derive(Serialize,Deserialize,Debug, Clone)]
 // pub struct FDURecordInterface {

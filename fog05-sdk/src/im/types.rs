@@ -15,29 +15,27 @@ extern crate serde;
 extern crate serde_json;
 extern crate serde_yaml;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-
-#[derive(Serialize,Deserialize,Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SystemInfo {
-    pub name : String,
-    pub uuid : String
+    pub name: String,
+    pub uuid: String,
 }
 
-#[derive(Serialize,Deserialize,Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SystemConfig {
-    pub config : String
+    pub config: String,
 }
 
-#[derive(Serialize,Deserialize,Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TenantInfo {
-    pub name : String,
-    pub uuid : String
+    pub name: String,
+    pub uuid: String,
 }
 
-
-#[derive(Serialize,Deserialize,Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum IPKind {
     IPV4,
-    IPV6
+    IPV6,
 }

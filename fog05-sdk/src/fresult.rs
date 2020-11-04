@@ -12,11 +12,11 @@
 *********************************************************************************/
 extern crate serde;
 
-use thiserror::Error;
+use serde::{Deserialize, Serialize};
 use std::fmt;
-use serde::{Deserialize,Serialize};
+use thiserror::Error;
 
-#[derive(Error, Debug, Serialize,Deserialize, Clone)]
+#[derive(Error, Debug, Serialize, Deserialize, Clone)]
 pub enum FError {
     ZConnectorError,
     EncodingError,
@@ -48,13 +48,13 @@ impl fmt::Display for FError {
             FError::AlreadyPresent => write!(f, "Already Present"),
             FError::Unimplemented => write!(f, "Function is not implemented!!"),
             FError::MalformedDescriptor => write!(f, "Malformed descriptor!"),
-            FError::ConversionError(err) => write!(f, "{}",err),
-            FError::IOError(err) => write!(f, "{}",err),
+            FError::ConversionError(err) => write!(f, "{}", err),
+            FError::IOError(err) => write!(f, "{}", err),
             FError::ZError(err) => write!(f, "{}", err),
             FError::BincodeError(err) => write!(f, "{}", err),
-            FError::UnknownError(err) => write!(f, "Error {}", err)
+            FError::UnknownError(err) => write!(f, "Error {}", err),
         }
-     }
+    }
 }
 
 impl From<zenoh::ZError> for FError {
@@ -64,25 +64,25 @@ impl From<zenoh::ZError> for FError {
 }
 
 impl From<Box<bincode::ErrorKind>> for FError {
-    fn from(err : Box<bincode::ErrorKind>) -> Self {
+    fn from(err: Box<bincode::ErrorKind>) -> Self {
         FError::BincodeError(err.to_string())
     }
 }
 
 impl From<std::io::Error> for FError {
-    fn from(err : std::io::Error) -> Self {
+    fn from(err: std::io::Error) -> Self {
         FError::IOError(err.to_string())
     }
 }
 
 impl From<std::num::TryFromIntError> for FError {
-    fn from(err : std::num::TryFromIntError) -> Self {
+    fn from(err: std::num::TryFromIntError) -> Self {
         FError::ConversionError(err.to_string())
     }
 }
 
 impl From<reqwest::Error> for FError {
-    fn from(err : reqwest::Error) -> Self {
+    fn from(err: reqwest::Error) -> Self {
         FError::IOError(err.to_string())
     }
 }

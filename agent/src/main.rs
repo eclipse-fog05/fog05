@@ -1,34 +1,29 @@
 extern crate machine_uid;
 
-
-
 use std::process;
 use std::str;
 
 use std::collections::HashMap;
 
-use async_std::sync::{Arc, RwLock};
 use async_std::fs;
 use async_std::path::Path;
 use async_std::prelude::*;
+use async_std::sync::{Arc, RwLock};
 
-
-use log::{info, error, trace};
+use log::{error, info, trace};
 
 use zenoh::*;
 
-
-
 use fog05_sdk::zconnector::ZConnector;
 
-use uuid::Uuid;
 use async_ctrlc::CtrlC;
+use uuid::Uuid;
 
 use structopt::StructOpt;
 
 pub mod agent;
 
-use agent::{Agent,AgentConfig, AgentInner};
+use agent::{Agent, AgentConfig, AgentInner};
 
 static AGENT_PID_FILE: &str = "/tmp/fos_agent.pid";
 static AGENT_CONFIG_FILE: &str = "/etc/fos/agent.yaml";
@@ -40,32 +35,26 @@ struct AgentArgs {
     config: String,
 }
 
-
-
-
-async fn read_file(path : &Path) -> String {
+async fn read_file(path: &Path) -> String {
     fs::read_to_string(path).await.unwrap()
 }
 
-
-async fn write_file(path : &Path, content : Vec<u8>) {
+async fn write_file(path: &Path, content: Vec<u8>) {
     let mut file = fs::File::create(path).await.unwrap();
     file.write_all(&content).await.unwrap();
     file.sync_all().await.unwrap();
-
 }
 
 #[async_std::main]
 async fn main() {
-
-
     let args = AgentArgs::from_args();
     let conf_file_path = Path::new(&args.config);
     let config = serde_yaml::from_str::<AgentConfig>(&(read_file(&conf_file_path).await)).unwrap();
 
     // Init logging
-    env_logger::init_from_env(env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "info"));
-
+    env_logger::init_from_env(
+        env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "info"),
+    );
 
     info!("Eclipse fog05 Agent -- bootstrap");
 
@@ -77,7 +66,7 @@ async fn main() {
     let pid_file_path = Path::new(AGENT_PID_FILE);
 
     //Read Agent PID file
-    let old_pid : Option<u32> = if pid_file_path.exists().await {
+    let old_pid: Option<u32> = if pid_file_path.exists().await {
         Some(read_file(pid_file_path).await.parse::<u32>().unwrap())
     } else {
         None
@@ -86,7 +75,10 @@ async fn main() {
     if let Some(pid) = old_pid {
         // There is a PID for an old agent
         // we check if it is still running
-        trace!("There is an old PID file existing, checking if the process {} is still running", pid);
+        trace!(
+            "There is an old PID file existing, checking if the process {} is still running",
+            pid
+        );
 
         match psutil::process::Process::new(pid) {
             Ok(old_proc) => {
@@ -95,7 +87,7 @@ async fn main() {
                     // We panic if there is already an agent running on this machine
                     panic!("A fog05 Agent is already running in this machine!!!")
                 }
-            },
+            }
             _ => trace!("Old agent is not running, removing the PID file..."),
         }
 
@@ -109,31 +101,27 @@ async fn main() {
 
     // Getting Node UUID
     let node_id_raw = machine_uid::get().unwrap();
-    let node_str : &str = &node_id_raw;
+    let node_str: &str = &node_id_raw;
     let node_uuid = Uuid::parse_str(node_str).unwrap();
     info!("Node UUID is {}", node_uuid);
 
-
     //Creating the Zenoh and ZConnector
-    let properties = format!("mode=client;peer={}",config.zlocator.clone());
+    let properties = format!("mode=client;peer={}", config.zlocator.clone());
     let zproperties = Properties::from(properties);
     let zenoh = Arc::new(Zenoh::new(zproperties.into()).await.unwrap());
     let zconnector = Arc::new(ZConnector::new(zenoh.clone(), Some(config.system), None));
 
     // Creating Agent
-    let agent = Agent{
-        z : zenoh.clone(),
-        connector : zconnector.clone(),
+    let agent = Agent {
+        z: zenoh.clone(),
+        connector: zconnector.clone(),
         node_uuid,
-        agent : Arc::new(RwLock::new(
-            AgentInner{
-                pid : my_pid,
-                networking : None,
-                hypervisors : HashMap::new(),
-                config,
-            }
-        ))
-
+        agent: Arc::new(RwLock::new(AgentInner {
+            pid: my_pid,
+            networking: None,
+            hypervisors: HashMap::new(),
+            config,
+        })),
     };
 
     //Starting the agent
@@ -158,10 +146,8 @@ async fn main() {
     //wait for the futures to ends
     h.await;
 
-
     //zconnector.close();
     //zenoh.close();
 
     info!("Bye!")
-
 }

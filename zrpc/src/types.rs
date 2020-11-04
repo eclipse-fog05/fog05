@@ -2,11 +2,10 @@ extern crate serde;
 extern crate serde_json;
 extern crate serde_yaml;
 
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use serde::{Serialize, Deserialize};
 
-
-#[derive(Clone,PartialEq,Eq,Debug,Hash, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash, Serialize, Deserialize)]
 // pub enum ComponentStatus {
 //     HALTED = 0,
 //     CONNECTED = 1,
@@ -34,35 +33,32 @@ pub enum ComponentStatus {
 //     pub peerid : String,
 // }
 
-#[derive(PartialEq,Clone, Serialize, Deserialize, Debug)]
+#[derive(PartialEq, Clone, Serialize, Deserialize, Debug)]
 pub struct ComponentState {
-    pub uuid : Uuid,
-    pub name : String,
-    pub routerid : String,
-    pub peerid : String,
-    pub status : ComponentStatus,
+    pub uuid: Uuid,
+    pub name: String,
+    pub routerid: String,
+    pub peerid: String,
+    pub status: ComponentStatus,
 }
 
-
-
-#[derive(Serialize,Deserialize,Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ZSessionInfo {
-    pub peer : String,
-    pub links : Vec<String>,
+    pub peer: String,
+    pub links: Vec<String>,
 }
 
-#[derive(Serialize,Deserialize,Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ZPluginInfo {
-    pub name : String,
-    pub path : String,
+    pub name: String,
+    pub path: String,
 }
 
-
-#[derive(Serialize,Deserialize,Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ZRouterInfo {
-    pub pid : String,
-    pub locators : Vec<String>,
-    pub sessions : Vec<ZSessionInfo>,
-    pub plugins : Vec<ZPluginInfo>,
-    pub time : Option<String>,
+    pub pid: String,
+    pub locators: Vec<String>,
+    pub sessions: Vec<ZSessionInfo>,
+    pub plugins: Vec<ZPluginInfo>,
+    pub time: Option<String>,
 }

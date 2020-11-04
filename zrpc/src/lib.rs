@@ -17,10 +17,8 @@ pub use zchannel::ZClientChannel;
 pub mod types;
 pub use types::*;
 
-
-
 /// Trait to be implemented by services
-pub trait ZServe<Req> : Sized + Clone {
+pub trait ZServe<Req>: Sized + Clone {
     /// Type of the response
     type Resp;
 
@@ -40,7 +38,7 @@ pub trait ZServe<Req> : Sized + Clone {
     fn start(&self) -> (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>);
 
     /// Starts serving all requests
-    fn serve(&self, stop : async_std::sync::Receiver<()>);
+    fn serve(&self, stop: async_std::sync::Receiver<()>);
 
     /// State changes to REGISTERED, will stop serve/work
     fn stop(&self, stop: async_std::sync::Sender<()>);
@@ -50,5 +48,4 @@ pub trait ZServe<Req> : Sized + Clone {
 
     /// removes state from Zenoh
     fn disconnect(self);
-
 }

@@ -1,7 +1,6 @@
 extern crate base64;
 extern crate exitfailure;
 
-
 use exitfailure::ExitFailure;
 use failure::ResultExt;
 use prettytable::Table;
@@ -11,9 +10,9 @@ use std::time::Duration;
 use fog05_sdk::im::entity::{EntityDescriptor, EntityRecord};
 
 use crate::types;
-use crate::{FOSCtl, AddKind, GetKind, DeleteKind};
+use crate::{AddKind, DeleteKind, FOSCtl, GetKind};
 
-pub fn force_cli(args : FOSCtl, force_host : String) -> Result<(), ExitFailure> {
+pub fn force_cli(args: FOSCtl, force_host: String) -> Result<(), ExitFailure> {
     let client = reqwest::blocking::Client::builder()
         .timeout(Duration::from_secs(10))
         .build()
@@ -24,9 +23,9 @@ pub fn force_cli(args : FOSCtl, force_host : String) -> Result<(), ExitFailure> 
                 AddKind::Entity { descriptor_path } => {
                     let data = std::fs::read_to_string(&descriptor_path)
                         .with_context(|_| format!("could not read file `{:?}`", descriptor_path))?;
-                    let _ = serde_json::from_str::<EntityDescriptor>(&data).with_context(
-                        |_| format!("Descriptor is not valid `{:?}`", descriptor_path),
-                    )?;
+                    let _ = serde_json::from_str::<EntityDescriptor>(&data).with_context(|_| {
+                        format!("Descriptor is not valid `{:?}`", descriptor_path)
+                    })?;
                     let url = format!("http://{}:9191/system/00000000-0000-0000-0000-000000000000/tenant/00000000-0000-0000-0000-000000000000/job", force_host);
                     let body = types::RequestNewJobMessage {
                         sender: String::from("cli"),
@@ -161,8 +160,7 @@ pub fn force_cli(args : FOSCtl, force_host : String) -> Result<(), ExitFailure> 
                                 "Add Instance failed",
                             )));
                         }
-                        if let Ok(record) = serde_json::from_str::<EntityRecord>(&resp.body)
-                        {
+                        if let Ok(record) = serde_json::from_str::<EntityRecord>(&resp.body) {
                             flag = true;
                             println!("{}", record.uuid);
                         }
@@ -464,6 +462,6 @@ pub fn force_cli(args : FOSCtl, force_host : String) -> Result<(), ExitFailure> 
                 }
             }
         }
-        _ => unreachable!()
+        _ => unreachable!(),
     }
 }

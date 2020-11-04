@@ -1,4 +1,3 @@
-
 /*********************************************************************************
 * Copyright (c) 2018,2020 ADLINK Technology Inc.
 *
@@ -15,7 +14,7 @@
 pub mod im;
 pub mod zconnector;
 
-pub mod fresult;
-pub mod types;
 pub mod agent;
+pub mod fresult;
 pub mod plugins;
+pub mod types;

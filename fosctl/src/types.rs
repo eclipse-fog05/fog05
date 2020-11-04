@@ -10,7 +10,6 @@
 // * Contributors:
 // *   ADLINK fog05 team, <fog05@adlink-labs.tech>
 // *********************************************************************************/
-
 #![allow(non_camel_case_types)]
 
 extern crate derive_more;
@@ -21,7 +20,6 @@ extern crate serde_yaml;
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-
 
 use fog05_sdk::im::entity::{EntityDescriptor, EntityRecord};
 
@@ -124,10 +122,9 @@ pub struct FIMInfo {
 pub struct CloudInfo {
     pub uuid: Uuid,
     pub config: String, //K8s client config
-    pub ca : String, //base64 of CA data
-    pub cert : String, //base64 of Client Certificate
-    pub key : String, //base64 of Client Key
-
+    pub ca: String,     //base64 of CA data
+    pub cert: String,   //base64 of Client Certificate
+    pub key: String,    //base64 of Client Key
 }
 
 // // Descriptors

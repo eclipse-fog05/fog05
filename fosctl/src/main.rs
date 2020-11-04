@@ -18,13 +18,13 @@ extern crate prettytable;
 extern crate base64;
 extern crate exitfailure;
 
-use structopt::StructOpt;
 use clap::arg_enum;
 use exitfailure::ExitFailure;
+use structopt::StructOpt;
 use uuid::Uuid;
-mod types;
-mod force;
 mod fim;
+mod force;
+mod types;
 
 arg_enum! {
     #[derive(Debug)]
@@ -100,9 +100,8 @@ pub enum FOSCtl {
     Add(AddKind),
     Get(GetKind),
     Delete(DeleteKind),
-    FIM(FIMCtl)
+    FIM(FIMCtl),
 }
-
 
 #[derive(StructOpt, Debug)]
 pub enum AddFIMKind {
@@ -140,7 +139,6 @@ pub enum FIMCtl {
     Get(GetFIMKind),
     Delete(DeleteFIMKind),
 }
-
 
 fn main() -> Result<(), ExitFailure> {
     let force_host = match std::env::var("FORCE") {

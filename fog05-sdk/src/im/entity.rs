@@ -19,12 +19,11 @@ extern crate serde_aux;
 extern crate serde_json;
 extern crate serde_yaml;
 
-
+use crate::types::IPAddress;
 use derive_more::Display;
+use semver::Version;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use semver::Version;
-use crate::types::IPAddress;
 
 // Entity
 
@@ -44,15 +43,15 @@ pub enum LinkKind {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct IPConfiguration {
-    pub subnet: Option<(IPAddress,u8)>,     // AAA.AAA.AAA.AAA/S
-    pub gateway: Option<IPAddress>,    // AAA.AAA.AAA.AAA
-    pub dhcp_range: Option<(IPAddress,IPAddress)>, // AAA.AAA.AAA.AAA,AAA.AAA.AAA.AAA
-    pub dns: Option<Vec<IPAddress>>,        // AAA.AAA.AAA.AAA,AAA.AAA.AAA.AAA,AAA.AAA.AAA.AAA
+    pub subnet: Option<(IPAddress, u8)>, // AAA.AAA.AAA.AAA/S
+    pub gateway: Option<IPAddress>,      // AAA.AAA.AAA.AAA
+    pub dhcp_range: Option<(IPAddress, IPAddress)>, // AAA.AAA.AAA.AAA,AAA.AAA.AAA.AAA
+    pub dns: Option<Vec<IPAddress>>,     // AAA.AAA.AAA.AAA,AAA.AAA.AAA.AAA,AAA.AAA.AAA.AAA
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct VirtualNetwork {
-    pub uuid : Option<Uuid>,
+    pub uuid: Option<Uuid>,
     pub id: String,
     pub name: Option<String>,
     pub is_mgmt: bool, //MGMT from a user point of view
@@ -65,7 +64,7 @@ pub struct VirtualNetwork {
 pub struct EntityDescriptor {
     pub uuid: Option<Uuid>, //verify if there is a UUID crate compatible with Serialize, Deserialize if not present is generated at onboarding in the catalog
     pub id: String,         // eg. foo.bar.my.entity
-    pub version: Version,    // semantic versioning of the descriptor
+    pub version: Version,   // semantic versioning of the descriptor
     pub entity_version: Version, //semantic versioning of the entity
     pub name: String,
     pub description: Option<String>,

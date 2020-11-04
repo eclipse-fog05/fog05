@@ -13,25 +13,23 @@
 
 #![recursion_limit = "512"]
 
+extern crate base64;
+extern crate bincode;
 extern crate darling;
 extern crate proc_macro;
 extern crate proc_macro2;
 extern crate quote;
-extern crate syn;
 extern crate serde;
-extern crate bincode;
 extern crate serde_json;
-extern crate base64;
+extern crate syn;
 
-
+use darling::FromMeta;
+use inflector::cases::snakecase::to_snake_case;
 use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, ToTokens};
-use uuid::Uuid;
 use std::str::FromStr;
-use darling::FromMeta;
 use syn::{
-    AttributeArgs,
     braced,
     ext::IdentExt,
     parenthesized,
@@ -39,12 +37,10 @@ use syn::{
     parse_macro_input, parse_quote,
     spanned::Spanned,
     token::Comma,
-    Block,
-    Attribute, FnArg, Ident, ImplItem, ImplItemMethod, ImplItemType, ItemImpl,
-    Pat, PatType, Receiver, ReturnType, Token, Type, Visibility,
+    Attribute, AttributeArgs, Block, FnArg, Ident, ImplItem, ImplItemMethod, ImplItemType,
+    ItemImpl, Pat, PatType, Receiver, ReturnType, Token, Type, Visibility,
 };
-use inflector::cases::snakecase::to_snake_case;
-
+use uuid::Uuid;
 
 macro_rules! extend_errors {
     ($errors: ident, $e: expr) => {
@@ -55,29 +51,25 @@ macro_rules! extend_errors {
     };
 }
 
-
-
 #[derive(Debug, FromMeta)]
 struct ZServiceMacroArgs {
     timeout_s: u16,
     #[darling(default)]
-    prefix : Option<String>
+    prefix: Option<String>,
 }
-
 
 #[derive(Debug, FromMeta)]
 struct ZServerMacroArgs {
     #[darling(default)]
-    uuid : Option<String>
+    uuid: Option<String>,
 }
 
 struct ZService {
     attrs: Vec<Attribute>,
-    vis : Visibility,
-    ident : Ident,
-    evals : Vec<EvalMethod>
+    vis: Visibility,
+    ident: Ident,
+    evals: Vec<EvalMethod>,
 }
-
 
 impl Parse for ZService {
     fn parse(input: ParseStream) -> syn::Result<Self> {
@@ -126,12 +118,12 @@ impl Parse for ZService {
     }
 }
 
-struct EvalMethod{
-    attrs : Vec<Attribute>,
-    ident : Ident,
-    receiver : Receiver,
-    args : Vec<PatType>,
-    output : ReturnType
+struct EvalMethod {
+    attrs: Vec<Attribute>,
+    ident: Ident,
+    receiver: Receiver,
+    args: Vec<PatType>,
+    output: ReturnType,
 }
 
 impl Parse for EvalMethod {
@@ -141,7 +133,7 @@ impl Parse for EvalMethod {
         input.parse::<Token![fn]>()?;
         let ident = input.parse()?;
         let content;
-        let mut recv : Option<Receiver> = None;
+        let mut recv: Option<Receiver> = None;
         parenthesized!(content in input);
         let mut args = Vec::new();
         let mut errors = Ok(());
@@ -156,7 +148,8 @@ impl Parse for EvalMethod {
                         syn::Error::new(captured.pat.span(), "patterns aren't allowed in RPC args")
                     );
                 }
-                FnArg::Receiver(receiver) => { //Should take whatever used by the user and strip it for client
+                FnArg::Receiver(receiver) => {
+                    //Should take whatever used by the user and strip it for client
                     recv = Some(receiver)
                     // extend_errors!(
                     //     errors,
@@ -167,10 +160,13 @@ impl Parse for EvalMethod {
         }
         match recv {
             None => extend_errors!(
-                    errors,
-                    syn::Error::new(recv.span(), "Missing any receiver in method declaration, please add one!")
-                 ),
-            Some(_) => ()
+                errors,
+                syn::Error::new(
+                    recv.span(),
+                    "Missing any receiver in method declaration, please add one!"
+                )
+            ),
+            Some(_) => (),
         }
 
         errors?;
@@ -188,7 +184,6 @@ impl Parse for EvalMethod {
     }
 }
 
-
 /// Generates:
 /// - service trait
 /// - serve fn
@@ -196,8 +191,8 @@ impl Parse for EvalMethod {
 /// - new_stub client factory fn
 /// - Request and Response enums
 #[proc_macro_attribute]
-pub fn zservice(_attr : TokenStream, input : TokenStream) -> TokenStream {
-    let unit_type : &Type = &parse_quote!(());
+pub fn zservice(_attr: TokenStream, input: TokenStream) -> TokenStream {
+    let unit_type: &Type = &parse_quote!(());
 
     //parsing the trait body
     let ZService {
@@ -207,12 +202,13 @@ pub fn zservice(_attr : TokenStream, input : TokenStream) -> TokenStream {
         ref evals,
     } = parse_macro_input!(input as ZService);
 
-
     //parsing the attributes to the macro
     let attr_args = parse_macro_input!(_attr as AttributeArgs);
     let macro_args = match ZServiceMacroArgs::from_list(&attr_args) {
         Ok(v) => v,
-        Err(e) => { return TokenStream::from(e.write_errors()); }
+        Err(e) => {
+            return TokenStream::from(e.write_errors());
+        }
     };
 
     //converts the functions names from snake_case to CamelCase
@@ -224,17 +220,17 @@ pub fn zservice(_attr : TokenStream, input : TokenStream) -> TokenStream {
     let snake_case_ident = to_snake_case(&ident.unraw().to_string());
 
     // Collects the pattern for the types
-    let args : &[&[PatType]] = &evals.iter().map(|eval| &*eval.args).collect::<Vec<_>>();
+    let args: &[&[PatType]] = &evals.iter().map(|eval| &*eval.args).collect::<Vec<_>>();
 
     //service eval path
     let path = match macro_args.prefix {
-        Some(prefix) => format!("{}/zservice/{}/",prefix, ident),
+        Some(prefix) => format!("{}/zservice/{}/", prefix, ident),
         None => format!("/zservice/{}/", ident),
     };
 
     let service_name = format!("{}Service", ident);
     // Generates the code
-    let ts : TokenStream = ZServiceGenerator{
+    let ts: TokenStream = ZServiceGenerator {
         service_ident: ident,
         server_ident: &format_ident!("Serve{}", ident), //Server is called Serve<Trait Name>
         client_ident: &format_ident!("{}Client", ident), //Client is called <Trait Name>Client
@@ -262,17 +258,15 @@ pub fn zservice(_attr : TokenStream, input : TokenStream) -> TokenStream {
             .zip(camel_case_fn_names.iter())
             .map(|(eval, name)| Ident::new(name, eval.ident.span()))
             .collect::<Vec<_>>(),
-        timeout : &macro_args.timeout_s,
-        eval_path : &path,
-        service_name : &service_name,
-        service_get_server_ident: &format_ident!("get_{}_server", snake_case_ident)
+        timeout: &macro_args.timeout_s,
+        eval_path: &path,
+        service_name: &service_name,
+        service_get_server_ident: &format_ident!("get_{}_server", snake_case_ident),
     }
     .into_token_stream()
     .into();
     ts
-
 }
-
 
 /// Update the implementation of the trait
 #[proc_macro_attribute]
@@ -280,11 +274,12 @@ pub fn zserver(_attr: TokenStream, input: TokenStream) -> TokenStream {
     let mut item = syn::parse_macro_input!(input as ItemImpl);
     let span = item.span();
 
-
     let attr_args = parse_macro_input!(_attr as AttributeArgs);
     let macro_args = match ZServerMacroArgs::from_list(&attr_args) {
         Ok(v) => v,
-        Err(e) => { return TokenStream::from(e.write_errors()); }
+        Err(e) => {
+            return TokenStream::from(e.write_errors());
+        }
     };
 
     let mut expected_non_async_types: Vec<(&ImplItemMethod, String)> = Vec::new();
@@ -294,26 +289,20 @@ pub fn zserver(_attr: TokenStream, input: TokenStream) -> TokenStream {
         match inner {
             ImplItem::Method(method) => {
                 if method.sig.asyncness.is_some() {
-
-
-
                     // if this function is declared async, transform it into a regular function
                     method.sig.asyncness = None;
                     // and put the body inside an task::block_on(async {})
                     let content = method.block.to_token_stream();
 
-                    let updated_impl = TokenStream::from(
-                        quote!{
-                            {
-                                task::block_on(
-                                    async move
-                                    #content
-                                )
-                            }
+                    let updated_impl = TokenStream::from(quote! {
+                        {
+                            task::block_on(
+                                async move
+                                #content
+                            )
                         }
-                    );
+                    });
                     method.block = parse_macro_input!(updated_impl as Block);
-
                 } else {
                     // If it's not async, keep track of all required associated types for better
                     // error reporting.
@@ -338,8 +327,7 @@ pub fn zserver(_attr: TokenStream, input: TokenStream) -> TokenStream {
 
     let str_uuid = format!("{}", uuid);
 
-    let uuid_imp = TokenStream::from(
-        quote!{
+    let uuid_imp = TokenStream::from(quote! {
         fn instance_uuid(&self) -> uuid::Uuid {
             Uuid::from_str(#str_uuid).unwrap()
         }
@@ -350,17 +338,12 @@ pub fn zserver(_attr: TokenStream, input: TokenStream) -> TokenStream {
     item.items.push(ImplItem::Method(method));
 
     TokenStream::from(quote!(#item))
-
-
 }
-
-
 
 /// Creates the type name for a future, to be removed...
 fn associated_type_for_eval(method: &ImplItemMethod) -> String {
     snake_to_camel(&method.sig.ident.unraw().to_string()) + "Fut"
 }
-
 
 /// Verifies if the types are provide for each methods
 fn verify_types_were_provided(
@@ -396,33 +379,29 @@ fn verify_types_were_provided(
     result
 }
 
-
-
 /// Generator for the ZService
 struct ZServiceGenerator<'a> {
-    service_ident : &'a Ident,              //service type
-    server_ident : &'a Ident,               //server type
-    client_ident : &'a Ident,               //client type
-    request_ident : &'a Ident,              //request type
-    response_ident : &'a Ident,             //response type
-    vis : &'a Visibility,                   //visibility
-    attrs : &'a [Attribute],                //attributes
-    evals : &'a [EvalMethod],               //functions to be exposed via evals
-    camel_case_idents: &'a [Ident],         //camel case conversion of all names
-    method_idents : &'a [&'a Ident],        //type of the methods
-    method_attrs : &'a [&'a [Attribute]],   //attributes of the methods
-    args : &'a [&'a [PatType]],             // types description pattern
-    return_types: &'a [&'a Type],           // return types of functions
-    arg_pats: &'a [Vec<&'a Pat>],           // patterns for args
-    timeout: &'a u16,                       //eval timeout
-    eval_path : &'a String,                 //path for evals
-    service_name : &'a String,              //service name on zenoh
-    service_get_server_ident : &'a Ident,   //the ident for the get_<trait>_server
+    service_ident: &'a Ident,            //service type
+    server_ident: &'a Ident,             //server type
+    client_ident: &'a Ident,             //client type
+    request_ident: &'a Ident,            //request type
+    response_ident: &'a Ident,           //response type
+    vis: &'a Visibility,                 //visibility
+    attrs: &'a [Attribute],              //attributes
+    evals: &'a [EvalMethod],             //functions to be exposed via evals
+    camel_case_idents: &'a [Ident],      //camel case conversion of all names
+    method_idents: &'a [&'a Ident],      //type of the methods
+    method_attrs: &'a [&'a [Attribute]], //attributes of the methods
+    args: &'a [&'a [PatType]],           // types description pattern
+    return_types: &'a [&'a Type],        // return types of functions
+    arg_pats: &'a [Vec<&'a Pat>],        // patterns for args
+    timeout: &'a u16,                    //eval timeout
+    eval_path: &'a String,               //path for evals
+    service_name: &'a String,            //service name on zenoh
+    service_get_server_ident: &'a Ident, //the ident for the get_<trait>_server
 }
 
-
 impl<'a> ZServiceGenerator<'a> {
-
     // crates the service trait
     fn trait_service(&self) -> TokenStream2 {
         let &Self {
@@ -436,22 +415,26 @@ impl<'a> ZServiceGenerator<'a> {
             ..
         } = self;
 
-        let fns = evals
-            .iter()
-            .zip(return_types.iter())
-            .map(
-                |(EvalMethod{attrs,ident,receiver,args,..},output,)|
-                {
-
-                    quote! {
-
-                        #(#attrs)*
-                        fn #ident(#receiver, #(#args),*) -> #output;
-                    }
+        let fns = evals.iter().zip(return_types.iter()).map(
+            |(
+                EvalMethod {
+                    attrs,
+                    ident,
+                    receiver,
+                    args,
+                    ..
                 },
-            );
+                output,
+            )| {
+                quote! {
 
-        quote!{
+                    #(#attrs)*
+                    fn #ident(#receiver, #(#args),*) -> #output;
+                }
+            },
+        );
+
+        quote! {
             #(#attrs)*
             #vis trait #service_ident : Clone{
                 #(#fns)*
@@ -473,11 +456,11 @@ impl<'a> ZServiceGenerator<'a> {
 
     //creates the server struct
     fn struct_server(&self) -> TokenStream2 {
-        let &Self{
+        let &Self {
             vis, server_ident, ..
         } = self;
 
-        quote!{
+        quote! {
             #[derive(Clone)]
             #vis struct #server_ident<S> {
                 z : async_std::sync::Arc<zenoh::Zenoh>,
@@ -501,7 +484,7 @@ impl<'a> ZServiceGenerator<'a> {
             ..
         } = self;
 
-        quote!{
+        quote! {
 
             impl<S> zrpc::ZServe<#request_ident> for #server_ident<S>
             where S: #service_ident + Send +'static
@@ -798,7 +781,6 @@ impl<'a> ZServiceGenerator<'a> {
         }
     }
 
-
     // Generates the request enum type, and makes it derive Debug, Serialize and Deserialize
     fn enum_request(&self) -> TokenStream2 {
         let &Self {
@@ -817,7 +799,6 @@ impl<'a> ZServiceGenerator<'a> {
             }
         }
     }
-
 
     // Generates the response enum type, and makes it derive Debug, Serialize and Deserialize
     fn enum_response(&self) -> TokenStream2 {
@@ -838,7 +819,6 @@ impl<'a> ZServiceGenerator<'a> {
         }
     }
 
-
     // Generates the client struct
     fn struct_client(&self) -> TokenStream2 {
         let &Self {
@@ -849,7 +829,7 @@ impl<'a> ZServiceGenerator<'a> {
             ..
         } = self;
 
-    quote! {
+        quote! {
             #[allow(unused)]
             #[derive(Clone, Debug)]
             #vis struct #client_ident<C = zrpc::ZClientChannel<#request_ident, #response_ident>>{
@@ -857,7 +837,6 @@ impl<'a> ZServiceGenerator<'a> {
             }
         }
     }
-
 
     // Generates the implentation of the client
     fn impl_client_new_find_servers(&self) -> TokenStream2 {
@@ -999,8 +978,6 @@ impl<'a> ZServiceGenerator<'a> {
             }
         }
     }
-
-
 }
 
 //Converts ZServiceGenerator to actual code
@@ -1018,7 +995,6 @@ impl<'a> ToTokens for ZServiceGenerator<'a> {
         ])
     }
 }
-
 
 //converts to snake_case to CamelCase, is used to convert functions name
 fn snake_to_camel(ident_str: &str) -> String {

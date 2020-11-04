@@ -15,11 +15,10 @@ extern crate serde;
 extern crate serde_json;
 extern crate serde_yaml;
 
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use serde::{Serialize, Deserialize};
 
-
-#[derive(Clone,PartialEq,Eq,Debug,Hash, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash, Serialize, Deserialize)]
 pub enum ComponentStatus {
     HALTED = 0,
     CONNECTED = 1,
@@ -33,20 +32,19 @@ pub enum ComponentStatus {
     DISCONNECTED = 9,
 }
 
-#[derive(PartialEq,Clone, Serialize, Deserialize, Debug)]
+#[derive(PartialEq, Clone, Serialize, Deserialize, Debug)]
 pub struct ComponentAdvertisement {
-    pub uuid : Uuid,
-    pub name : String,
-    pub routerid : String,
-    pub peerid : String,
+    pub uuid: Uuid,
+    pub name: String,
+    pub routerid: String,
+    pub peerid: String,
 }
 
-#[derive(PartialEq,Clone, Serialize, Deserialize, Debug)]
+#[derive(PartialEq, Clone, Serialize, Deserialize, Debug)]
 pub struct ComponentInformation {
-    pub uuid : Uuid,
-    pub name : String,
-    pub routerid : String,
-    pub peerid : String,
-    pub status : ComponentStatus,
+    pub uuid: Uuid,
+    pub name: String,
+    pub routerid: String,
+    pub peerid: String,
+    pub status: ComponentStatus,
 }
-
