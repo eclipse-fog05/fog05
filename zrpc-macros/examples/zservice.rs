@@ -1,3 +1,6 @@
+#![allow(clippy::manual_async_fn)]
+#![allow(clippy::large_enum_variant)]
+
 #[macro_use]
 extern crate std;
 

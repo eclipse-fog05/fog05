@@ -223,8 +223,9 @@ pub struct FDUDescriptor {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FDURecord {
-    pub uuid: Option<Uuid>,
-    pub fdu_uuid : Option<Uuid>,
+    pub uuid: Uuid,
+    pub fdu_uuid : Uuid,
+    pub node : Uuid,
 }
 
 

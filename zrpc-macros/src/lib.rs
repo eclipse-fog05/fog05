@@ -44,8 +44,6 @@ use syn::{
     Pat, PatType, Receiver, ReturnType, Token, Type, Visibility,
 };
 use inflector::cases::snakecase::to_snake_case;
-use log::{trace};
-
 
 
 macro_rules! extend_errors {
@@ -230,8 +228,8 @@ pub fn zservice(_attr : TokenStream, input : TokenStream) -> TokenStream {
 
     //service eval path
     let path = match macro_args.prefix {
-        Some(prefix) => format!("{}/zservice/{}/",prefix, ident).to_string(),
-        None => format!("/zservice/{}/", ident).to_string(),
+        Some(prefix) => format!("{}/zservice/{}/",prefix, ident),
+        None => format!("/zservice/{}/", ident),
     };
 
     let service_name = format!("{}Service", ident);

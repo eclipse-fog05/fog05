@@ -1,11 +1,9 @@
-
-use std::env;
 use async_std::sync::Arc;
 
 use zenoh::*;
 use fog05_sdk::agent::{OSClient};
 
-use url::{Url, ParseError};
+use url::Url;
 
 #[async_std::main]
 async fn main() {

@@ -1,18 +1,17 @@
 extern crate base64;
 extern crate exitfailure;
 
-use clap::arg_enum;
+
 use exitfailure::ExitFailure;
 use failure::ResultExt;
 use prettytable::Table;
 use std::io::{Error, ErrorKind};
 use std::time::Duration;
-use structopt::StructOpt;
-use uuid::Uuid;
+
 use fog05_sdk::im::entity::{EntityDescriptor, EntityRecord};
 
 use crate::types;
-use crate::{FOSCtl,Kind, AddKind, GetKind, DeleteKind};
+use crate::{FOSCtl, AddKind, GetKind, DeleteKind};
 
 pub fn force_cli(args : FOSCtl, force_host : String) -> Result<(), ExitFailure> {
     let client = reqwest::blocking::Client::builder()

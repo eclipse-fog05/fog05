@@ -1,14 +1,14 @@
+#![allow(unused_variables)]
+
 extern crate machine_uid;
 extern crate serde;
 extern crate serde_json;
 extern crate serde_yaml;
 
-use std::fmt;
-use std::io::Write;
-use std::process;
+
+
 use std::str;
 use std::str::FromStr;
-use std::convert::TryFrom;
 use std::convert::TryInto;
 use std::time::Duration;
 use std::collections::HashMap;
@@ -18,33 +18,24 @@ use async_std::sync::{Arc, RwLock};
 use async_std::fs;
 use async_std::path::Path;
 use async_std::prelude::*;
-//use async_std::prelude::{StreamExt,FutureExt};
+
 use async_std::io::ReadExt;
-// use futures::prelude::*;
 
-use thiserror::Error;
+use log::{info, error, trace};
 
-use log::{info, debug, warn, error, trace};
-
-use zenoh::*;
-
-use zrpc_macros::{zservice, zserver};
+use zrpc_macros::zserver;
 use zrpc::ZServe;
 
 use fog05_sdk::types;
 use fog05_sdk::fresult::{FResult, FError};
 use fog05_sdk::types::{IPAddress, InterfaceKind};
 use fog05_sdk::agent::{OS, AgentPluginInterface};
-use fog05_sdk::zconnector::ZConnector;
 use fog05_sdk::im;
 use fog05_sdk::plugins::{NetworkingPluginClient, HypervisorPluginClient};
 
 use uuid::Uuid;
-use async_ctrlc::CtrlC;
 
-use sysinfo;
-use sysinfo::{SystemExt, ProcessorExt, ProcessExt, DiskExt};
-
+use sysinfo::{SystemExt, ProcessorExt, DiskExt};
 
 use serde::{Serialize, Deserialize};
 
@@ -138,8 +129,8 @@ impl Agent {
                     None => im::node::NodeStatusEnum::NOTREADY
                 };
                 let node_status = im::node::NodeStatus {
-                    uuid : self.node_uuid.clone(),
-                    status : status,
+                    uuid : self.node_uuid,
+                    status,
                     ram : mem,
                     disk : disks,
                     supported_hypervisors : hvs,
@@ -151,7 +142,10 @@ impl Agent {
                 task::sleep(Duration::from_secs(interveal)).await;
             }
         };
-        monitoring.race(stop.recv()).await;
+        match monitoring.race(stop.recv()).await {
+            Ok(_) => trace!("Monitoring ending correct"),
+            Err(e) => trace!("Monitoring ending got error: {}",e),
+        }
 
         a2p_server.stop(sa2p);
         a2p_server.unregister();
@@ -180,7 +174,7 @@ impl Agent {
 
         for processor in system.get_processors() {
             let cpu_spec = im::node::CPUSpec {
-                model : processor.get_vendor_id().trim_end_matches("\u{0}").to_string(),
+                model : processor.get_vendor_id().trim_end_matches('\u{0}').to_string(),
                 frequency : processor.get_frequency(),
                 arch : arch.clone(),
             };
@@ -205,12 +199,12 @@ impl Agent {
             disks.push(disk_spec);
         }
         let ni = im::node::NodeInfo{
-            uuid : self.node_uuid.clone(),
-            name : name,
-            os : os,
+            uuid : self.node_uuid,
+            name,
+            os,
             cpu : processors,
             ram : mem,
-            disks : disks,
+            disks,
             io : Vec::new(),
             accelerators : Vec::new(),
             position : None,
@@ -243,57 +237,62 @@ impl Agent {
 impl AgentPluginInterface for Agent {
     async fn fdu_info(&self, fdu_uuid : Uuid) -> FResult<im::fdu::FDUDescriptor> {
         trace!("Called fdu_info with {:?}", fdu_uuid);
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
     async fn image_info(&self, image_uuid : Uuid) -> FResult<im::fdu::Image> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
     async fn node_fdu_info(&self, fdu_uuid : Uuid, node_uuid : Uuid, instance_uuid : Uuid) -> FResult<im::fdu::FDURecord> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
     async fn network_info(&self, network_uuid : Uuid) -> FResult<types::VirtualNetwork> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
     async fn connection_point_info(&self, cp_uuid : Uuid) -> FResult<types::ConnectionPoint> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
     async fn node_management_address(&self, node_uuid : Uuid) -> FResult<IPAddress> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
 
     async fn create_virtual_network(&self, vnet : types::VirtualNetworkConfig) -> FResult<types::VirtualNetwork> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
     async fn remove_virtual_network(&self, vnet_uuid : Uuid) -> FResult<Uuid> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
 
     async fn create_connection_point(&self, cp : types::ConnectionPointConfig) -> FResult<types::ConnectionPoint> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
     async fn remove_connection_point(&self, cp_uuid : Uuid) -> FResult<Uuid> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
 
     async fn bind_cp_to_fdu_face(&self, cp_uuid : Uuid, instance_uuid : Uuid, interface : String) -> FResult<Uuid> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
     async fn unbind_co_from_fdu_face(&self, cp_uuid : Uuid, instance_uuid : Uuid, interface : String) -> FResult<Uuid> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
 
     async fn bind_cp_to_network(&self, cp_uuid : Uuid, vnet_uuid : Uuid) -> FResult<Uuid> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
     async fn unbind_cp_from_network(&self, cp_uuid : Uuid, vnet_uuid : Uuid) -> FResult<Uuid> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
+    }
+
+
+    async fn get_node_uuid(&self) -> FResult<Uuid> {
+        Ok(self.node_uuid)
     }
 
     async fn register_plugin(&mut self, plugin_uuid : Uuid, kind : types::PluginKind) -> FResult<Uuid> {
-        trace!("register_plugin called with {} {:?}", plugin_uuid, kind);
+        trace!("register_plugin called with {} {}", plugin_uuid, kind);
         let mut guard = self.agent.write().await;
         trace!("register_plugin took WriteLock!");
-        match kind {
+        match kind.clone() {
             types::PluginKind::HYPERVISOR(hv) => {
                 match guard.hypervisors.get(&hv) {
                     Some(_) => Err(FError::AlreadyPresent),
@@ -302,6 +301,12 @@ impl AgentPluginInterface for Agent {
                         let hv_client = HypervisorPluginClient::new(self.z.clone(), plugin_uuid);
                         guard.hypervisors.insert(hv.clone(), hv_client);
                         trace!("Added Hypervisor plugin {} {}", plugin_uuid, hv);
+                        let pl_info = types::PluginInfo{
+                            uuid : plugin_uuid,
+                            kind : kind.clone(),
+                            name : format!("{}Plugin",kind),
+                        };
+                        self.connector.global.add_plugin(self.node_uuid, pl_info).await?;
                         Ok(plugin_uuid)
                     },
                 }
@@ -312,6 +317,12 @@ impl AgentPluginInterface for Agent {
                     None => {
                         let nw_client = NetworkingPluginClient::new(self.z.clone(), plugin_uuid);
                         guard.networking = Some(nw_client);
+                        let pl_info = types::PluginInfo{
+                            uuid : plugin_uuid,
+                            kind : kind.clone(),
+                            name : format!("{}Plugin",kind),
+                        };
+                        self.connector.global.add_plugin(self.node_uuid, pl_info).await?;
                         Ok(plugin_uuid)
                     },
                 }
@@ -321,8 +332,24 @@ impl AgentPluginInterface for Agent {
     }
 
     async fn unregister_plugin(&mut self, plugin_uuid : Uuid) -> FResult<Uuid> {
-        let guard = self.agent.write().await;
-        Err(FError::UnknownError("Not yet...".to_string()))
+        trace!("unregister_plugin called with {}", plugin_uuid);
+        let mut guard = self.agent.write().await;
+        trace!("register_plugin took WriteLock!");
+        let pl_info = self.connector.global.get_plugin(self.node_uuid, plugin_uuid).await?;
+        match pl_info.kind {
+            types::PluginKind::HYPERVISOR(hv) => {
+                guard.hypervisors.remove(&hv);
+                self.connector.global.remove_plugin(self.node_uuid, plugin_uuid).await?;
+                Ok(plugin_uuid)
+            },
+            types::PluginKind::NETWORKING => {
+                guard.networking = None;
+                self.connector.global.remove_plugin(self.node_uuid, plugin_uuid).await?;
+                Ok(plugin_uuid)
+            },
+            _ => Err(FError::Unimplemented),
+
+        }
     }
 }
 
@@ -360,7 +387,7 @@ impl OS for Agent {
                 match reqwest::blocking::get(url.clone()) {
                     Err(err) => error!("Error in getting {} error: {}", url, err),
                     Ok(resp) => {
-                        let mut out = fs::File::create(dest_path.clone()).await;
+                        let out = fs::File::create(dest_path.clone()).await;
                         match out {
                             Err(err) => error!("Unable to create destination file {} for {} error: {}", dest_path, url, err),
                             Ok(mut f) => {
@@ -419,7 +446,7 @@ impl OS for Agent {
     }
 
     async fn execute_command(&self, cmd : String) -> FResult<String> {
-        Ok("".to_string())
+        Err(FError::Unimplemented)
     }
 
     async fn send_signal(&self, signal : u8, pid : u32) -> FResult<bool> {
@@ -446,19 +473,19 @@ impl OS for Agent {
     }
 
     async fn get_interface_type(&self, iface : String) -> FResult<InterfaceKind> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
 
     async fn set_interface_unavailable(&self, iface : String) -> FResult<bool> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
 
     async fn set_interface_available(&self, iface : String) -> FResult<bool> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
 
     async fn get_local_mgmt_address(&self) -> FResult<IPAddress> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
 
 }

@@ -1,42 +1,35 @@
+#![allow(unused_variables)]
+
 extern crate machine_uid;
 extern crate serde;
 extern crate serde_json;
 extern crate serde_yaml;
 
-use std::fmt;
-use std::io::Write;
+
+
 use std::process;
-use std::str;
 use std::str::FromStr;
-use std::convert::TryFrom;
-use std::convert::TryInto;
 use std::time::Duration;
 use std::collections::HashMap;
 
 use async_std::task;
 use async_std::sync::Arc;
-use async_std::fs;
-use async_std::path::Path;
 use async_std::prelude::*;
-//use async_std::prelude::{StreamExt,FutureExt};
-use async_std::io::ReadExt;
-// use futures::prelude::*;
 
-use thiserror::Error;
 
-use log::{info, debug, warn, error, trace};
+
+use log::{info, error, trace};
 
 use zenoh::*;
 
-use zrpc_macros::{zservice, zserver};
+use zrpc_macros::zserver;
 use zrpc::ZServe;
 
-use fog05_sdk::types;
+
 use fog05_sdk::fresult::{FResult, FError};
-use fog05_sdk::types::{IPAddress, InterfaceKind, PluginKind};
+use fog05_sdk::types::PluginKind;
 use fog05_sdk::agent::{OSClient, AgentPluginInterfaceClient};
 use fog05_sdk::zconnector::ZConnector;
-use fog05_sdk::im;
 use fog05_sdk::plugins::{HypervisorPlugin, NetworkingPluginClient};
 use fog05_sdk::im::fdu::{FDUDescriptor, FDURecord};
 
@@ -71,54 +64,53 @@ pub struct DummyHypervisor {
 impl HypervisorPlugin for DummyHypervisor {
 
     async fn define_fdu(&self, fdu : FDUDescriptor) -> FResult<FDURecord> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
 
     async fn undefine_fdu(&self, instance_uuid : Uuid) -> FResult<Uuid> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
 
     async fn configure_fdu(&self,instance_uuid : Uuid) -> FResult<Uuid> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
 
     async fn clean_fdu(&self,instance_uuid : Uuid) -> FResult<Uuid> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
 
 
     async fn start_fdu(&self,instance_uuid : Uuid) -> FResult<Uuid> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
 
 
-
-    async fn run_fdu(&self,instance_uuid : Uuid) -> FResult<Uuid> { //this should be somehow blocking...
-        Err(FError::UnknownError("Not yet...".to_string()))
+    async fn run_fdu(&self,instance_uuid : Uuid) -> FResult<Uuid> {
+        Err(FError::Unimplemented)
     }
 
     async fn log_fdu(&self,instance_uuid : Uuid) -> FResult<String> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
     async fn ls_fdu(&self,instance_uuid : Uuid) -> FResult<Vec<String>> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
 
     async fn file_fdu(&self,instance_uuid : Uuid, file_name : String) -> FResult<String> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
 
 
     async fn stop_fdu(&self,instance_uuid : Uuid) -> FResult<Uuid> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
 
     async fn migrate_fdu(&self,instance_uuid : Uuid, destination_uuid : Uuid) -> FResult<Uuid> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
 
     async fn get_fdu_status(&self,instance_uuid : Uuid) -> FResult<FDURecord> {
-        Err(FError::UnknownError("Not yet...".to_string()))
+        Err(FError::Unimplemented)
     }
 
 }
@@ -134,7 +126,7 @@ impl DummyHypervisor {
         hv_server.initialize();
 
 
-        self.agent.clone().unwrap().register_plugin(self.uuid, PluginKind::HYPERVISOR(String::from("dummy"))).await.unwrap();
+        self.agent.clone().unwrap().register_plugin(self.uuid, PluginKind::HYPERVISOR(String::from("dummy"))).await.unwrap().unwrap();
 
         hv_server.register();
 
@@ -147,9 +139,12 @@ impl DummyHypervisor {
             }
         };
 
-        monitoring.race(stop.recv()).await;
+        match monitoring.race(stop.recv()).await {
+            Ok(_) => trace!("Monitoring ending correct"),
+            Err(e) => trace!("Monitoring ending got error: {}",e),
+        }
 
-        self.agent.clone().unwrap().unregister_plugin(self.uuid).await.unwrap();
+        self.agent.clone().unwrap().unregister_plugin(self.uuid).await.unwrap().unwrap();
 
         hv_server.stop(shv);
         hv_server.unregister();
@@ -161,13 +156,13 @@ impl DummyHypervisor {
     pub async fn start(&mut self) -> (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>) {
 
         let local_os = OSClient::find_local_servers(self.z.clone()).await.unwrap();
-        if local_os.len() == 0 {
+        if local_os.is_empty() {
             error!("Unable to find a local OS interface");
             panic!("No OS Server");
         }
 
         let local_agent = AgentPluginInterfaceClient::find_local_servers(self.z.clone()).await.unwrap();
-        if local_agent.len() == 0 {
+        if local_agent.is_empty() {
             error!("Unable to find a local Agent interface");
             panic!("No Agent Server");
         }
@@ -228,12 +223,8 @@ async fn main() {
     //Creating the Ctrl-C handler and racing with agent.run
     let ctrlc = CtrlC::new().expect("Unable to create Ctrl-C handler");
     let mut stream = ctrlc.enumerate().take(1);
-    while let Some((_, _)) = stream.next().await {
-        trace!("Received Ctrl-C start teardown");
-        break;
-    }
-
-    //ctrlc.race(h).await;
+    stream.next().await;
+    trace!("Received Ctrl-C start teardown");
 
     //Here we send the stop signal to the agent object and waits that it ends
     dummy.stop(s).await;

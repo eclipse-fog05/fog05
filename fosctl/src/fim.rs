@@ -1,23 +1,18 @@
+#![allow(unused_variables)]
+
 extern crate base64;
 extern crate exitfailure;
 
-use clap::arg_enum;
+
 use exitfailure::ExitFailure;
-use failure::ResultExt;
 use prettytable::Table;
-use std::io::{Error, ErrorKind};
-use std::time::Duration;
-use structopt::StructOpt;
-use uuid::Uuid;
-use fog05_sdk::im::node::{NodeInfo, NodeStatus, NodeStatusEnum};
 use fog05_sdk::zconnector::ZConnector;
 
 use async_std::sync::Arc;
 
 use zenoh::*;
 
-use crate::types;
-use crate::{FIMCtl, FIMKind, AddFIMKind, GetFIMKind, DeleteFIMKind};
+use crate::{FIMCtl, AddFIMKind, GetFIMKind, DeleteFIMKind};
 
 pub fn fim_cli(args : FIMCtl, zlocator : String) -> Result<(), ExitFailure> {
     async_std::task::block_on(

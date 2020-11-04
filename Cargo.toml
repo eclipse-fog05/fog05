@@ -20,6 +20,7 @@ members = [
   "fosctl",
   "agent",
   "dummy-hypervisor",
+  "dummy-network",
 ]
 
 exclude = []

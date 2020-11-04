@@ -23,7 +23,7 @@ use serde::{Deserialize,Serialize};
 pub type IPAddress = std::net::IpAddr; //this is just address, to investigate if we want CIRD notation in address to have the netmask
 pub type MACAddress = mac_address::MacAddress;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Display)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum PluginKind {
     NETWORKING,
@@ -33,12 +33,18 @@ pub enum PluginKind {
     GPS,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct PluginInfo {
+    pub uuid : Uuid,
+    pub kind : PluginKind,
+    pub name : String,
+}
+
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct VETHKind {
     pub pair : Uuid,
     pub internal : bool,
-    pub dev : Interface,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -86,7 +92,7 @@ pub enum VirtualInterfaceKind{
     GRETAP(GREKind),
     IP6GRE(GREKind),
     IP6GRETAP(GREKind),
-    MACVLAN(VXLANKind), //we always use mode VEPA
+    MACVLAN(MACVLANKind), //we always use mode VEPA
 }
 
 
@@ -97,7 +103,7 @@ pub enum VirtualInterfaceKind{
 pub struct VirtualInterface {
     pub uuid : Uuid,
     pub if_name : String,
-    pub net_ns : Option<NetworkNamespace>, //if none interface is in default namespace
+    pub net_ns : Option<Uuid>, //if none interface is in default namespace
     pub kind : VirtualInterfaceKind,
     pub parent : Option<Uuid>, //present if the interface is under a BRIDGE, ref to VirtualInterface
 
@@ -105,17 +111,38 @@ pub struct VirtualInterface {
     pub phy_address : MACAddress,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct VLANConfKind {
+    pub tag : u16,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct VXLANConfKind {
+    pub vni : u32, //actually should be u24
+    pub mcast_addr : IPAddress,
+    pub port : u16,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum VirtualInterfaceConfigKind{
+    VETH,
+    VLAN(VLANConfKind),
+    BRIDGE,
+    VXLAN(VXLANConfKind),
+    GRE(GREKind),
+    GRETAP(GREKind),
+    IP6GRE(GREKind),
+    IP6GRETAP(GREKind),
+    MACVLAN,
+}
+
+
 /// A virtual interface managed by fog05
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct VirtualInterfaceConfig {
-    pub uuid : Uuid,
     pub if_name : String,
-    pub net_ns : Option<NetworkNamespace>, //if none interface is in default namespace
-    pub kind : VirtualInterfaceKind,
-    pub parent : Option<Uuid>, //present if the interface is under a BRIDGE, ref to VirtualInterface
-
-    pub addresses : Vec<IPAddress>,
-    pub phy_address : MACAddress,
+    pub kind : VirtualInterfaceConfigKind,
 }
 
 /// A network namespace managed by fog05
@@ -176,12 +203,43 @@ pub enum IPVersion {
     IPV6,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Display)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MCastVXLANInfo{
+    pub vni : u32, //actually should be u24
+    pub mcast_addr : IPAddress,
+    pub port : u16,
+}
+
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct TreeGREInfo{
+    pub local_addr : IPAddress,
+    pub remote_addr : IPAddress,
+    pub ttl : u8,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct P2PVXLANInfo{
+    pub vni : u32, //actually should be u24
+    pub mcast_addr : IPAddress,
+    pub port : u16,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct P2PGREInfo{
+    pub vni : u32, //actually should be u24
+    pub mcast_addr : IPAddress,
+    pub port : u16,
+}
+
+
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum LinkKind {
-    L2,    //we do a Multicast VXLAN
-    L3,    //we do a GRE (tree-based, one Node receives all GRE connections and bridges)
-    ELINE, //we do a Point-to-Point VXLAN
-    ELAN,  //we do a Multicast VXLAN
+    L2(MCastVXLANInfo),    //we do a Multicast VXLAN
+    L3(TreeGREInfo),    //we do a GRE (tree-based, one Node receives all GRE connections and bridges)
+    ELINE(P2PVXLANInfo), //we do a Point-to-Point VXLAN
+    ELAN(P2PGREInfo),  //we do a Multicast VXLAN
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

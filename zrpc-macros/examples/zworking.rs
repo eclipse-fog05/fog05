@@ -1,3 +1,6 @@
+#![allow(clippy::manual_async_fn)]
+#![allow(clippy::large_enum_variant)]
+
 
 #![feature(libstd_sys_internals)]
 #![feature(print_internals)]
@@ -6,6 +9,8 @@
 #![feature(async_closure)]
 #[prelude_import]
 #[macro_use]
+
+
 
 extern crate std;
 extern crate serde;
@@ -20,7 +25,6 @@ use futures::prelude::*;
 use zrpc::ZServe;
 use serde::{Serialize, Deserialize};
 use zenoh::*;
-use std::marker::PhantomData;
 use std::str;
 use std::convert::TryFrom;
 use std::time::Duration;
@@ -33,7 +37,7 @@ pub trait Hello: Clone {
     fn hello(&self, name: String) -> String;
     fn get_hello_server(self, z : Arc<zenoh::Zenoh>) -> ServeHello<Self> {
         ServeHello {
-            z : z,
+            z,
             server: self,
         }
     }
@@ -63,7 +67,7 @@ where
                 let zsession = self.z.session();
                 let zinfo = zsession.info().await;
                 let pid = zinfo.get(&zenoh::net::info::ZN_INFO_PID_KEY).unwrap().to_uppercase();
-                let rid = zinfo.get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY).unwrap().split(",").collect::<Vec<_>>()[0].to_uppercase();
+                let rid = zinfo.get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY).unwrap().split(',').collect::<Vec<_>>()[0].to_uppercase();
                 let ws = self.z.workspace(None).await.unwrap();
 
 
@@ -76,7 +80,7 @@ where
                 };
                 let encoded_ci = bincode::serialize(&component_info).unwrap();
                 let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
-                ws.put(&path.into(),encoded_ci.into()).await.unwrap();
+                ws.put(&path,encoded_ci.into()).await.unwrap();
             }
         )
     }
@@ -103,7 +107,7 @@ where
                                         ci.status = zrpc::ComponentStatus::INITIALIZING;
                                         let encoded_ci = bincode::serialize(&ci).unwrap();
                                         let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
-                                        ws.put(&path.into(),encoded_ci.into()).await.unwrap();
+                                        ws.put(&path,encoded_ci.into()).await.unwrap();
                                     },
                                     _ => panic!("Cannot authenticate a component in a state different than HALTED"),
                                 }
@@ -139,7 +143,7 @@ where
                                         ci.status = zrpc::ComponentStatus::REGISTERED;
                                         let encoded_ci = bincode::serialize(&ci).unwrap();
                                         let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
-                                        ws.put(&path.into(),encoded_ci.into()).await.unwrap();
+                                        ws.put(&path,encoded_ci.into()).await.unwrap();
                                     },
                                     _ => panic!("Cannot register a component in a state different than BUILDING"),
                                 }
@@ -176,7 +180,7 @@ where
                                         ci.status = zrpc::ComponentStatus::SERVING;
                                         let encoded_ci = bincode::serialize(&ci).unwrap();
                                         let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
-                                        ws.put(&path.into(),encoded_ci.into()).await.unwrap();
+                                        ws.put(&path,encoded_ci.into()).await.unwrap();
                                         let server = self.clone();
                                         let h = async_std::task::spawn( async move {
                                             server.serve(r);
@@ -229,12 +233,12 @@ where
                                                     let ser = self.server.clone();
                                                     let resp = HelloResponse::Hello(ser.hello(name));
                                                     let encoded = bincode::serialize(&resp).unwrap();
-                                                    get_request.reply(path.clone().into(), encoded.into()).await;
+                                                    get_request.reply(path.clone(), encoded.into()).await;
                                                 }
                                             }
                                         }
                                     };
-                                    rcv_loop.race(stop.recv()).await;
+                                    rcv_loop.race(stop.recv()).await.unwrap();
                                 },
                                 _ => panic!("State is not WORK, serve called directly?"),
                             }
@@ -269,7 +273,7 @@ where
                                         ci.status = zrpc::ComponentStatus::REGISTERED;
                                         let encoded_ci = bincode::serialize(&ci).unwrap();
                                         let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
-                                        ws.put(&path.into(),encoded_ci.into()).await.unwrap();
+                                        ws.put(&path,encoded_ci.into()).await.unwrap();
                                         // Here we stop the serve
                                         stop.send(()).await;
                                     },
@@ -307,7 +311,7 @@ where
                                         ci.status = zrpc::ComponentStatus::HALTED;
                                         let encoded_ci = bincode::serialize(&ci).unwrap();
                                         let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state", self.server.instance_uuid())).unwrap();
-                                        ws.put(&path.into(),encoded_ci.into()).await.unwrap();
+                                        ws.put(&path,encoded_ci.into()).await.unwrap();
                                         // Here we should stop the serve
                                     },
                                     _ => panic!("Cannot unregister a component in a state different than UNANNOUNCED"),
@@ -404,7 +408,7 @@ impl HelloClient {
             let ws = z.workspace(None).await.unwrap();
             let zsession = z.session();
             let zinfo = zsession.info().await;
-            let rid = zinfo.get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY).unwrap().split(",").collect::<Vec<_>>()[0].to_uppercase();
+            let rid = zinfo.get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY).unwrap().split(',').collect::<Vec<_>>()[0].to_uppercase();
 
             let selector = zenoh::Selector::try_from("/this/is/generated/Hello/instance/*/state".to_string()).unwrap();
             let mut ds = ws.get(&selector).await.unwrap();

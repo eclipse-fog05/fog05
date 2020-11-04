@@ -53,7 +53,7 @@ where
     ) -> ZClientChannel<Req,Resp>
     {
         ZClientChannel {
-            z : z,
+            z,
             path,
             server_uuid,
             phantom_resp : PhantomData,
@@ -110,7 +110,7 @@ where
 
         while let Some(d) = ds.next().await { idata.push(d)}
 
-        if idata.len() == 0 { return Ok(false) }
+        if idata.is_empty() { return Ok(false) }
 
         let iv = &idata[0];
         match &iv.value {

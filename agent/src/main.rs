@@ -1,47 +1,28 @@
 extern crate machine_uid;
 
-use std::fmt;
-use std::io::Write;
+
+
 use std::process;
 use std::str;
-use std::str::FromStr;
-use std::convert::TryFrom;
-use std::convert::TryInto;
-use std::time::Duration;
-use std::collections::HashMap;
-use std::path::PathBuf;
 
-use async_std::task;
+use std::collections::HashMap;
+
 use async_std::sync::{Arc, RwLock};
 use async_std::fs;
 use async_std::path::Path;
 use async_std::prelude::*;
-//use async_std::prelude::{StreamExt,FutureExt};
-use async_std::io::ReadExt;
-// use futures::prelude::*;
 
-use thiserror::Error;
 
-use log::{info, debug, warn, error, trace};
+use log::{info, error, trace};
 
 use zenoh::*;
 
-use zrpc_macros::{zservice, zserver};
-use zrpc::ZServe;
 
-use fog05_sdk::types;
-use fog05_sdk::fresult::{FResult, FError};
-use fog05_sdk::types::{IPAddress, InterfaceKind};
-use fog05_sdk::agent::{OS, AgentPluginInterface};
+
 use fog05_sdk::zconnector::ZConnector;
-use fog05_sdk::im;
-use fog05_sdk::plugins::{NetworkingPluginClient, HypervisorPluginClient};
 
 use uuid::Uuid;
 use async_ctrlc::CtrlC;
-
-use sysinfo;
-use sysinfo::{SystemExt, ProcessorExt, ProcessExt, DiskExt};
 
 use structopt::StructOpt;
 
@@ -137,13 +118,13 @@ async fn main() {
     let properties = format!("mode=client;peer={}",config.zlocator.clone());
     let zproperties = Properties::from(properties);
     let zenoh = Arc::new(Zenoh::new(zproperties.into()).await.unwrap());
-    let zconnector = Arc::new(ZConnector::new(zenoh.clone(), Some(config.system.clone()), None));
+    let zconnector = Arc::new(ZConnector::new(zenoh.clone(), Some(config.system), None));
 
     // Creating Agent
     let agent = Agent{
         z : zenoh.clone(),
         connector : zconnector.clone(),
-        node_uuid : node_uuid,
+        node_uuid,
         agent : Arc::new(RwLock::new(
             AgentInner{
                 pid : my_pid,
@@ -161,10 +142,13 @@ async fn main() {
     //Creating the Ctrl-C handler and racing with agent.run
     let ctrlc = CtrlC::new().expect("Unable to create Ctrl-C handler");
     let mut stream = ctrlc.enumerate().take(1);
-    while let Some((_, _)) = stream.next().await {
-        trace!("Received Ctrl-C start teardown");
-        break;
-    }
+    stream.next().await;
+    trace!("Received Ctrl-C start teardown");
+
+    // while let Some((_, _)) = stream.next().await {
+    //     trace!("Received Ctrl-C start teardown");
+    //     break;
+    // }
 
     //ctrlc.race(h).await;
 

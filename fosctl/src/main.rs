@@ -10,7 +10,6 @@
 * Contributors:
 *   ADLINK fog05 team, <fog05@adlink-labs.tech>
 *********************************************************************************/
-#![feature(let_chains)]
 
 #[macro_use]
 extern crate failure;
@@ -19,18 +18,11 @@ extern crate prettytable;
 extern crate base64;
 extern crate exitfailure;
 
+use structopt::StructOpt;
 use clap::arg_enum;
 use exitfailure::ExitFailure;
-use failure::ResultExt;
-use prettytable::Table;
-use std::io::{Error, ErrorKind};
-use std::time::Duration;
-use structopt::StructOpt;
 use uuid::Uuid;
-use fog05_sdk::im::entity::{EntityDescriptor, EntityRecord};
-
 mod types;
-
 mod force;
 mod fim;
 

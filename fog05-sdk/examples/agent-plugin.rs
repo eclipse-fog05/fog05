@@ -1,5 +1,3 @@
-
-use std::env;
 use async_std::sync::Arc;
 
 use zenoh::*;

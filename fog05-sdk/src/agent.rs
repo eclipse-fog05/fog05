@@ -11,6 +11,8 @@
 *   ADLINK fog05 team, <fog05@adlink-labs.tech>
 *********************************************************************************/
 #![allow(unused)]
+#![allow(clippy::manual_async_fn)]
+#![allow(clippy::large_enum_variant)]
 
 use thiserror::Error;
 use zenoh::*;
@@ -92,6 +94,8 @@ pub trait AgentPluginInterface {
 
     async fn bind_cp_to_network(&self, cp_uuid : Uuid, vnet_uuid : Uuid) -> FResult<Uuid>;
     async fn unbind_cp_from_network(&self, cp_uuid : Uuid, vnet_uuid : Uuid) -> FResult<Uuid>;
+
+    async fn get_node_uuid(&self) -> FResult<Uuid>;
 
     async fn register_plugin(&mut self, plugin_uuid : Uuid, kind : types::PluginKind) -> FResult<Uuid>;
     async fn unregister_plugin(&mut self, plugin_uuid : Uuid) -> FResult<Uuid>;
