@@ -24,7 +24,7 @@ use log::{error, info, trace};
 use zrpc::ZServe;
 use zrpc_macros::zserver;
 
-use fog05_sdk::agent::{AgentPluginInterface, OS};
+use fog05_sdk::agent::{AgentOrchestratorInterface, AgentPluginInterface, OS};
 use fog05_sdk::fresult::{FError, FResult};
 use fog05_sdk::im;
 use fog05_sdk::plugins::{HypervisorPluginClient, NetworkingPluginClient};
@@ -524,6 +524,118 @@ impl OS for Agent {
     }
 
     async fn get_local_mgmt_address(&self) -> FResult<IPAddress> {
+        Err(FError::Unimplemented)
+    }
+}
+
+#[zserver(uuid = "00000000-0000-0000-0000-000000000001")]
+impl AgentOrchestratorInterface for Agent {
+    async fn check_fdu_compatibility(&self, fdu_uuid: Uuid) -> FResult<bool> {
+        let descriptor = self.connector.global.get_fdu(fdu_uuid).await?;
+        let node_info = self.connector.global.get_node_info(self.node_uuid).await?;
+        let node_status = self
+            .connector
+            .global
+            .get_node_status(self.node_uuid)
+            .await?;
+
+        let has_plugin = self
+            .agent
+            .read()
+            .await
+            .hypervisors
+            .get(&descriptor.hypervisor)
+            .is_some();
+        let cpu_arch = node_info.cpu[0].arch == descriptor.computation_requirements.cpu_arch;
+        let cpu_number =
+            (node_info.cpu.len() as u8) == descriptor.computation_requirements.cpu_min_count;
+        let cpu_freq =
+            node_info.cpu[0].frequency >= descriptor.computation_requirements.cpu_min_freq;
+        let ram_size =
+            node_status.ram.free >= (descriptor.computation_requirements.ram_size_mb as f64);
+        let disk_size = (node_status
+            .disk
+            .iter()
+            .find(|x| x.mount_point == *"/") //TODO This should be OS independent...
+            .unwrap()
+            .free
+            * 1024.0)
+            >= (descriptor.computation_requirements.storage_size_mb as f64);
+
+        let compatible = has_plugin && cpu_arch && cpu_number && cpu_freq && ram_size && disk_size;
+
+        Ok(compatible)
+    }
+
+    async fn schedule_fdu(&self, fdu_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
+        Err(FError::Unimplemented)
+    }
+
+    async fn onboard_fdu(&self, fdu: im::fdu::FDUDescriptor) -> FResult<Uuid> {
+        Err(FError::Unimplemented)
+    }
+
+    async fn define_fdu(&self, fdu_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
+        Err(FError::Unimplemented)
+    }
+
+    async fn configure_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
+        Err(FError::Unimplemented)
+    }
+
+    async fn start_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
+        Err(FError::Unimplemented)
+    }
+
+    async fn run_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
+        Err(FError::Unimplemented)
+    }
+
+    async fn log_fdu(&self, instance_uuid: Uuid) -> FResult<String> {
+        Err(FError::Unimplemented)
+    }
+
+    async fn ls_fdu(&self, instance_uuid: Uuid) -> FResult<Vec<String>> {
+        Err(FError::Unimplemented)
+    }
+
+    async fn file_fdu(&self, instance_uuid: Uuid, file_name: String) -> FResult<String> {
+        Err(FError::Unimplemented)
+    }
+
+    async fn stop_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
+        Err(FError::Unimplemented)
+    }
+
+    async fn clean_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
+        Err(FError::Unimplemented)
+    }
+
+    async fn undefine_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
+        Err(FError::Unimplemented)
+    }
+
+    async fn offload_fdu(&self, fdu_uuid: Uuid) -> FResult<Uuid> {
+        Err(FError::Unimplemented)
+    }
+
+    async fn fdu_status(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
+        Err(FError::Unimplemented)
+    }
+
+    async fn create_floating_ip(&self) -> FResult<Uuid> {
+        Err(FError::Unimplemented)
+    }
+
+    async fn delete_floating_ip(&self, ip_uuid: Uuid) -> FResult<Uuid> {
+        Err(FError::Unimplemented)
+    }
+
+    async fn assing_floating_ip(&self, ip_uuid: Uuid, cp_uuid: Uuid) -> FResult<Uuid> {
+        Err(FError::Unimplemented)
+    }
+
+    async fn retain_floating_ip(&self, ip_uuid: Uuid, cp_uuid: Uuid) -> FResult<Uuid> {
         Err(FError::Unimplemented)
     }
 }

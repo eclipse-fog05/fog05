@@ -28,6 +28,10 @@ fn default_zero() -> u8 {
     0
 }
 
+fn default_zero_u64() -> u64 {
+    0
+}
+
 fn default_one() -> u8 {
     1
 }
@@ -134,8 +138,8 @@ pub struct Image {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ComputationalRequirements {
     pub cpu_arch: String,
-    #[serde(default = "default_zero")]
-    pub cpu_min_freq: u8, //default 0
+    #[serde(default = "default_zero_u64")]
+    pub cpu_min_freq: u64, //default 0 in MHz
     #[serde(default = "default_one")]
     pub cpu_min_count: u8, //default 1
     #[serde(default = "default_zero")]
@@ -229,7 +233,7 @@ pub struct FDURecord {
     pub fdu_uuid: Uuid,
     pub node: Uuid,
     pub interfaces: Vec<FDURecordInterface>,
-    pub connection_points: Vec<Uuid>,
+    pub connection_points: Vec<FDURecordConnectionPoint>,
     pub status: FDUState,
     pub error: Option<crate::fresult::FError>,
 }
@@ -240,7 +244,7 @@ pub struct FDURecordInterface {
     pub kind: InterfaceKind,
     pub mac_address: Option<crate::types::MACAddress>,
     pub virtual_interface: FDURecordVirtualInterface,
-    pub cp_id: Option<Uuid>, //internal to this descriptor
+    pub cp_uuid: Option<Uuid>, //internal to this descriptor
     pub intf_uuid: Uuid,
 }
 
@@ -248,6 +252,12 @@ pub struct FDURecordInterface {
 pub struct FDURecordVirtualInterface {
     pub vif_kind: VirtualInterfaceKind,
     pub bandwidht: Option<u8>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct FDURecordConnectionPoint {
+    pub uuid: Uuid,
+    pub id: String,
 }
 
 // #[derive(Serialize,Deserialize,Debug, Clone)]

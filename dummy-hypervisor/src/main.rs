@@ -129,7 +129,7 @@ impl HypervisorPlugin for DummyHypervisor {
                     .create_network_namespace()
                     .await??;
                 let mut interfaces: Vec<FDURecordInterface> = Vec::new();
-                let mut cps: HashMap<String, Uuid> = HashMap::new();
+                let mut cps: HashMap<String, FDURecordConnectionPoint> = HashMap::new();
                 for cp in descriptor.connection_points {
                     let vcp = self
                         .net
@@ -137,7 +137,13 @@ impl HypervisorPlugin for DummyHypervisor {
                         .unwrap()
                         .create_connection_point()
                         .await??;
-                    cps.insert(cp.id, vcp.uuid);
+
+                    let fdu_cp = FDURecordConnectionPoint {
+                        uuid: vcp.uuid,
+                        id: cp.id.clone(),
+                    };
+
+                    cps.insert(cp.id, fdu_cp);
                     // we should ask the connection of the cp to the virtual network here
                 }
 
@@ -158,13 +164,13 @@ impl HypervisorPlugin for DummyHypervisor {
                     };
                     let cp_uuid = match intf.cp_id {
                         Some(cp_id) => {
-                            let cp_uuid = cps.get(&cp_id).ok_or(FError::NotFound)?;
+                            let cp = cps.get(&cp_id).ok_or(FError::NotFound)?;
                             self.net
                                 .as_ref()
                                 .unwrap()
-                                .bind_interface_to_connection_point(pair, *cp_uuid)
+                                .bind_interface_to_connection_point(pair, cp.uuid)
                                 .await??;
-                            Some(*cp_uuid)
+                            Some(cp.uuid)
                         }
                         None => {
                             self.net
@@ -181,7 +187,7 @@ impl HypervisorPlugin for DummyHypervisor {
                         name: intf.name,
                         kind: intf.kind,
                         mac_address: intf.mac_address,
-                        cp_id: cp_uuid,
+                        cp_uuid,
                         intf_uuid: viface.uuid,
                         virtual_interface: FDURecordVirtualInterface {
                             vif_kind: VirtualInterfaceKind::E1000,
@@ -227,7 +233,7 @@ impl HypervisorPlugin for DummyHypervisor {
                     self.net
                         .as_ref()
                         .unwrap()
-                        .delete_connection_point(cp)
+                        .delete_connection_point(cp.uuid)
                         .await??;
                 }
 
