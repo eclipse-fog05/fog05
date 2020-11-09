@@ -418,6 +418,7 @@ impl Hello for HelloZService {
 #[derive(Clone, Debug)]
 pub struct HelloClient<C = zrpc::ZClientChannel<HelloRequest, HelloResponse>> {
     ch: C,
+    server_uuid: Uuid,
     // phantom : PhantomData<&'a ()>
 }
 
@@ -430,8 +431,13 @@ impl HelloClient {
         );
         HelloClient {
             ch: new_client,
+            server_uuid: instance_id,
             // phantom : PhantomData,
         }
+    }
+
+    pub fn get_server_uuid(&self) -> Uuid {
+        self.server_uuid
     }
 
     pub fn find_local_servers(

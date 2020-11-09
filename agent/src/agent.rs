@@ -1,10 +1,10 @@
 #![allow(unused_variables)]
 
 extern crate machine_uid;
+extern crate pnet_datalink;
 extern crate serde;
 extern crate serde_json;
 extern crate serde_yaml;
-extern crate pnet_datalink;
 
 use std::collections::HashMap;
 use std::convert::TryInto;
@@ -25,7 +25,9 @@ use log::{error, info, trace};
 use zrpc::ZServe;
 use zrpc_macros::zserver;
 
-use fog05_sdk::agent::{AgentOrchestratorInterface, AgentPluginInterface, OS};
+use fog05_sdk::agent::{
+    AgentOrchestratorInterface, AgentOrchestratorInterfaceClient, AgentPluginInterface, OS,
+};
 use fog05_sdk::fresult::{FError, FResult};
 use fog05_sdk::im;
 use fog05_sdk::plugins::{HypervisorPluginClient, NetworkingPluginClient};
@@ -34,9 +36,11 @@ use fog05_sdk::types::{IPAddress, InterfaceKind};
 
 use uuid::Uuid;
 
-use sysinfo::{DiskExt, ProcessorExt, SystemExt, NetworksExt, NetworkExt};
+use sysinfo::{DiskExt, NetworkExt, NetworksExt, ProcessorExt, SystemExt};
 
 use serde::{Deserialize, Serialize};
+
+use rand::seq::SliceRandom;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AgentConfig {
@@ -119,25 +123,28 @@ impl Agent {
                 }
 
                 for iface in pnet::datalink::interfaces() {
-
-
                     // TODO: psutil-rust is not yet implementing net_if_stats for Linux, macOS and Windows...
                     //let ps_ifaces = psutil::network::net_if_stats().unwrap();
                     //let ps_iface = ps_ifaces.get(&iface.name).ok_or(FError::NotFound).unwrap();
-                    let (_, sys_iface) = system.get_networks().iter().find(|(name,_)| **name == iface.name ).ok_or(FError::NotFound).unwrap();
+                    let (_, sys_iface) = system
+                        .get_networks()
+                        .iter()
+                        .find(|(name, _)| **name == iface.name)
+                        .ok_or(FError::NotFound)
+                        .unwrap();
                     let face = im::node::NetworkInterfaceStatus {
-                        name : iface.name,
-                        index : iface.index,
-                        mac : iface.mac,
-                        ips : iface.ips,
-                        flags : iface.flags,
-                        is_up : true,  //ps_iface.is_up(), //Filling because psutil-rust is not yet working
-                        mtu : 1500,    //ps_iface.mtu(),
-                        speed : 100,   //ps_iface.speed(),
-                        sent_pkts : sys_iface.get_total_packets_transmitted(),
-                        recv_pkts : sys_iface.get_total_packets_received(),
-                        sent_bytes : sys_iface.get_total_transmitted(),
-                        recv_bytes : sys_iface.get_total_received(),
+                        name: iface.name,
+                        index: iface.index,
+                        mac: iface.mac,
+                        ips: iface.ips,
+                        flags: iface.flags,
+                        is_up: true, //ps_iface.is_up(), //Filling because psutil-rust is not yet working
+                        mtu: 1500,   //ps_iface.mtu(),
+                        speed: 100,  //ps_iface.speed(),
+                        sent_pkts: sys_iface.get_total_packets_transmitted(),
+                        recv_pkts: sys_iface.get_total_packets_received(),
+                        sent_bytes: sys_iface.get_total_transmitted(),
+                        recv_bytes: sys_iface.get_total_received(),
                     };
 
                     ifaces.push(face);
@@ -157,7 +164,7 @@ impl Agent {
                     ram: mem,
                     disk: disks,
                     supported_hypervisors: hvs,
-                    interfaces : ifaces,
+                    interfaces: ifaces,
                     neighbors: Vec::new(), //not yet...
                 };
 
@@ -232,11 +239,11 @@ impl Agent {
 
         for iface in pnet::datalink::interfaces() {
             let face = im::node::NetworkInterface {
-                name : iface.name,
-                index : iface.index,
-                mac : iface.mac,
-                ips : iface.ips,
-                flags : iface.flags,
+                name: iface.name,
+                index: iface.index,
+                mac: iface.mac,
+                ips: iface.ips,
+                flags: iface.flags,
             };
 
             ifaces.push(face);
@@ -249,10 +256,11 @@ impl Agent {
             cpu: processors,
             ram: mem,
             disks,
-            interfaces : ifaces,
+            interfaces: ifaces,
             io: Vec::new(),
             accelerators: Vec::new(),
             position: None,
+            agent_service_uuid: AgentOrchestratorInterface::instance_uuid(self),
         };
 
         trace!("Node Info: {:?}", ni);
@@ -575,6 +583,8 @@ impl OS for Agent {
 #[zserver(uuid = "00000000-0000-0000-0000-000000000001")]
 impl AgentOrchestratorInterface for Agent {
     async fn check_fdu_compatibility(&self, fdu_uuid: Uuid) -> FResult<bool> {
+        trace!("FDU Compatibility check for {}", fdu_uuid);
+
         let descriptor = self.connector.global.get_fdu(fdu_uuid).await?;
         let node_info = self.connector.global.get_node_info(self.node_uuid).await?;
         let node_status = self
@@ -606,7 +616,7 @@ impl AgentOrchestratorInterface for Agent {
             * 1024.0)
             >= (descriptor.computation_requirements.storage_size_mb as f64);
 
-        let image = match descriptor.image {
+        let image = match descriptor.clone().image {
             None => true,
             Some(img) => {
                 if img.uri.as_str().starts_with("file://") {
@@ -618,42 +628,171 @@ impl AgentOrchestratorInterface for Agent {
             }
         };
 
-        // let interfaces = descriptor.interfaces.iter().filter(|x|
-        //     match x.virtual_interface.vif_kind {
-        //         im::fdu::VirtualInterfaceKind::BRIDGED | im::fdu::VirtualInterfaceKind::PHYSICAL => true,
-        //         _ => false
-        //     });
-        // let faces = interfaces.iter().fold(
-        //     true, |res, x| {
-        //         match
-        //     }
-        // )
+        let fdu_interfaces: Vec<im::fdu::Interface> = descriptor
+            .interfaces
+            .iter()
+            .filter(|x| {
+                matches!(
+                    x.virtual_interface.vif_kind,
+                    im::fdu::VirtualInterfaceKind::BRIDGED
+                        | im::fdu::VirtualInterfaceKind::PHYSICAL
+                )
+            })
+            .cloned()
+            .collect();
+        let node_interfaces: Vec<String> = node_status
+            .interfaces
+            .iter()
+            .map(|x| x.name.clone())
+            .collect();
 
+        let faces = match fdu_interfaces.len() {
+            0 => true,
+            _ => fdu_interfaces.iter().fold(true, |res, x| {
+                node_interfaces.iter().any(|y| {
+                    let default = String::from(y);
+                    let fdu_face = x.virtual_interface.parent.as_ref().unwrap_or(&default);
+                    **y == *fdu_face
+                })
+            }),
+        };
 
+        let compatible = has_plugin
+            && cpu_arch
+            && cpu_number
+            && cpu_freq
+            && ram_size
+            && disk_size
+            && image
+            && faces;
 
-        let compatible = has_plugin && cpu_arch && cpu_number && cpu_freq && ram_size && disk_size && image;
+        trace!("Plugin check: {}", has_plugin);
+        trace!("CPU Arch check: {}", cpu_arch);
+        trace!("CPU Number check: {}", cpu_number);
+        trace!("RAM Size check: {}", ram_size);
+        trace!("Disk Size check: {}", disk_size);
+        trace!("Image check: {}", image);
+        trace!("Interfaces check: {}", faces);
+
+        info!(
+            "FDU compatibility checks for {:?} is {}",
+            descriptor, compatible
+        );
 
         Ok(compatible)
     }
 
     async fn schedule_fdu(&self, fdu_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
-        Err(FError::Unimplemented)
+        trace!("FDU Scheduling for {}", fdu_uuid);
+        let my_uuid = AgentOrchestratorInterface::instance_uuid(self);
+        let nodes = self.connector.global.get_all_nodes().await?;
+        let mut clients: Vec<AgentOrchestratorInterfaceClient> = Vec::new();
+
+        for node in nodes {
+            if node.uuid == my_uuid {
+                let client =
+                    AgentOrchestratorInterfaceClient::new(self.z.clone(), node.agent_service_uuid);
+                clients.push(client);
+            }
+        }
+
+        let results_futures = clients.iter().map(|c| async move {
+            // this is a trick to have the Node UUID in the results list
+            let check_res = c.check_fdu_compatibility(fdu_uuid).await;
+            (check_res, c.get_server_uuid())
+        });
+
+        let mut results = futures::future::join_all(results_futures).await;
+
+        // Self check
+        let self_check = self.check_fdu_compatibility(fdu_uuid);
+        results.push((Ok(self_check), self.node_uuid));
+
+        let compatibles = results
+            .iter()
+            .filter_map(|r| {
+                trace!("FDU Scheduling check result: {:?}", r);
+                let (check_res, node_uuid) = r;
+                match check_res {
+                    Ok(outer_res) => match outer_res {
+                        Ok(inner_res) => Some((*node_uuid, *inner_res)),
+                        Err(err) => None,
+                    },
+                    Err(err) => None,
+                }
+            })
+            .collect::<Vec<(Uuid, bool)>>();
+
+        trace!("FDU scheduling compatible nodes {:?}", compatibles);
+
+        let (selected, _) = compatibles.choose(&mut rand::thread_rng()).unwrap();
+
+        info!("FDU Scheduling node {} is random picked", selected);
+
+        if *selected == self.node_uuid {
+            Ok(self.define_fdu(fdu_uuid)?)
+        } else {
+            let client = AgentOrchestratorInterfaceClient::new(self.z.clone(), *selected);
+            Ok(client.define_fdu(fdu_uuid).await??)
+        }
+
+        // Err(FError::Unimplemented)
     }
 
     async fn onboard_fdu(&self, fdu: im::fdu::FDUDescriptor) -> FResult<Uuid> {
-        Err(FError::Unimplemented)
+        info!("FDU Onboard {:?}", fdu);
+        match fdu.uuid {
+            None => {
+                let fdu_uuid = Uuid::new_v4();
+                trace!("FDU Onboard adding UUID: {}", fdu_uuid);
+                self.connector.global.add_fdu(fdu).await?;
+                Ok(fdu_uuid)
+            }
+            Some(fdu_uuid) => {
+                self.connector.global.add_fdu(fdu).await?;
+                Ok(fdu_uuid)
+            }
+        }
     }
 
     async fn define_fdu(&self, fdu_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
-        Err(FError::Unimplemented)
+        info!("FDU Define {}", fdu_uuid);
+        let guard = self.agent.read().await;
+        let descriptor = self.connector.global.get_fdu(fdu_uuid).await?;
+        let plugin = guard
+            .hypervisors
+            .get(&descriptor.hypervisor)
+            .ok_or(FError::NotFound)?;
+
+        plugin.define_fdu(descriptor).await?
     }
 
     async fn configure_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
-        Err(FError::Unimplemented)
+        info!("FDU Define {}", instance_uuid);
+        let guard = self.agent.read().await;
+        let instance = self.connector.global.get_instance(instance_uuid).await?;
+        let descriptor = self.connector.global.get_fdu(instance.fdu_uuid).await?;
+        let plugin = guard
+            .hypervisors
+            .get(&descriptor.hypervisor)
+            .ok_or(FError::NotFound)?;
+
+        plugin.configure_fdu(instance_uuid).await??;
+        self.connector.global.get_instance(instance_uuid).await
     }
 
     async fn start_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
-        Err(FError::Unimplemented)
+        info!("FDU Start {}", instance_uuid);
+        let guard = self.agent.read().await;
+        let instance = self.connector.global.get_instance(instance_uuid).await?;
+        let descriptor = self.connector.global.get_fdu(instance.fdu_uuid).await?;
+        let plugin = guard
+            .hypervisors
+            .get(&descriptor.hypervisor)
+            .ok_or(FError::NotFound)?;
+
+        plugin.start_fdu(instance_uuid).await??;
+        self.connector.global.get_instance(instance_uuid).await
     }
 
     async fn run_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
@@ -673,15 +812,45 @@ impl AgentOrchestratorInterface for Agent {
     }
 
     async fn stop_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
-        Err(FError::Unimplemented)
+        info!("FDU Stop {}", instance_uuid);
+        let guard = self.agent.read().await;
+        let instance = self.connector.global.get_instance(instance_uuid).await?;
+        let descriptor = self.connector.global.get_fdu(instance.fdu_uuid).await?;
+        let plugin = guard
+            .hypervisors
+            .get(&descriptor.hypervisor)
+            .ok_or(FError::NotFound)?;
+
+        plugin.stop_fdu(instance_uuid).await??;
+        self.connector.global.get_instance(instance_uuid).await
     }
 
     async fn clean_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
-        Err(FError::Unimplemented)
+        info!("FDU Clean {}", instance_uuid);
+        let guard = self.agent.read().await;
+        let instance = self.connector.global.get_instance(instance_uuid).await?;
+        let descriptor = self.connector.global.get_fdu(instance.fdu_uuid).await?;
+        let plugin = guard
+            .hypervisors
+            .get(&descriptor.hypervisor)
+            .ok_or(FError::NotFound)?;
+
+        plugin.clean_fdu(instance_uuid).await??;
+        self.connector.global.get_instance(instance_uuid).await
     }
 
     async fn undefine_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
-        Err(FError::Unimplemented)
+        info!("FDU Undefine {}", instance_uuid);
+        let guard = self.agent.read().await;
+        let instance = self.connector.global.get_instance(instance_uuid).await?;
+        let descriptor = self.connector.global.get_fdu(instance.fdu_uuid).await?;
+        let plugin = guard
+            .hypervisors
+            .get(&descriptor.hypervisor)
+            .ok_or(FError::NotFound)?;
+
+        plugin.undefine_fdu(instance_uuid).await??;
+        self.connector.global.get_instance(instance_uuid).await
     }
 
     async fn offload_fdu(&self, fdu_uuid: Uuid) -> FResult<Uuid> {
@@ -689,7 +858,16 @@ impl AgentOrchestratorInterface for Agent {
     }
 
     async fn fdu_status(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
-        Err(FError::Unimplemented)
+        info!("FDU Status {}", instance_uuid);
+        let guard = self.agent.read().await;
+        let instance = self.connector.global.get_instance(instance_uuid).await?;
+        let descriptor = self.connector.global.get_fdu(instance.fdu_uuid).await?;
+        let plugin = guard
+            .hypervisors
+            .get(&descriptor.hypervisor)
+            .ok_or(FError::NotFound)?;
+
+        plugin.get_fdu_status(instance_uuid).await?
     }
 
     async fn create_floating_ip(&self) -> FResult<Uuid> {

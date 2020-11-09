@@ -834,6 +834,7 @@ impl<'a> ZServiceGenerator<'a> {
             #[derive(Clone, Debug)]
             #vis struct #client_ident<C = zrpc::ZClientChannel<#request_ident, #response_ident>>{
                 ch : C,
+                server_uuid : Uuid,
             }
         }
     }
@@ -856,10 +857,14 @@ impl<'a> ZServiceGenerator<'a> {
                         let new_client = zrpc::ZClientChannel::new(z, format!("{}",#eval_path), Some(instance_id));
                         #client_ident{
                             ch : new_client,
+                            server_uuid : instance_id,
                         }
 
                     }
 
+                #vis fn get_server_uuid(&self) -> Uuid {
+                    self.server_uuid
+                }
 
                 #vis fn find_local_servers(
                     z : async_std::sync::Arc<zenoh::Zenoh>

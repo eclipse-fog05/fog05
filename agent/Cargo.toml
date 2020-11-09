@@ -48,6 +48,8 @@ ipnetwork = "0.17.0"
 clap = "2.33"
 structopt = "0.3.13"
 
+rand = "0.7.3"
+
 # logging
 log = "0.4"
 env_logger = "0.7.1"

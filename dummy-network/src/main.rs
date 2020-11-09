@@ -1317,7 +1317,7 @@ impl DummyNetwork {
         let local_agent = AgentPluginInterfaceClient::find_local_servers(self.z.clone())
             .await
             .unwrap();
-        if local_os.is_empty() {
+        if local_agent.is_empty() {
             error!("Unable to find a local Agent interface");
             panic!("No Agent Server");
         }
