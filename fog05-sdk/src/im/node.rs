@@ -18,6 +18,9 @@ extern crate serde_yaml;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+
+//use pnet::datalink::NetworkInterface; Once they support serde use them...
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum NodeStatusEnum {
@@ -37,6 +40,16 @@ impl std::fmt::Display for NodeStatusEnum {
 }
 
 // Node Information
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct NetworkInterface {
+    pub name : String,
+    pub index : u32,
+    pub mac : Option<crate::types::MACAddress>,
+    pub ips : Vec<pnet::ipnetwork::IpNetwork>,
+    pub flags : u32,
+}
+
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CPUSpec {
@@ -107,6 +120,7 @@ pub struct NodeInfo {
     pub disks: Vec<DiskSpec>,
     pub io: Vec<IOSpec>,
     pub accelerators: Vec<AcceleratorSpec>,
+    pub interfaces : Vec<NetworkInterface>,
     pub position: Option<PositionSpec>,
     //pub volatility : Option<VolatilitySpec>
 }
@@ -163,10 +177,28 @@ pub struct HeartbeatInfo {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct NetworkInterfaceStatus {
+    pub name : String,
+    pub index : u32,
+    pub mac : Option<crate::types::MACAddress>,
+    pub ips : Vec<pnet::ipnetwork::IpNetwork>,
+    pub flags : u32,
+    pub is_up : bool,
+    pub mtu : u64,
+    pub speed : u64,
+    pub sent_pkts : u64,
+    pub recv_pkts : u64,
+    pub sent_bytes : u64,
+    pub recv_bytes : u64,
+}
+
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct NodeStatus {
     pub uuid: Uuid,
     pub status: NodeStatusEnum,
     pub supported_hypervisors: Vec<String>,
+    pub interfaces : Vec<NetworkInterfaceStatus>,
     pub ram: RAMStatus,
     pub disk: Vec<DiskStatus>,
     pub neighbors: Vec<Neighbor>,

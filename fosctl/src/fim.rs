@@ -51,15 +51,32 @@ pub fn fim_cli(args: FIMCtl, zlocator: String) -> Result<(), ExitFailure> {
                             "Status",
                             "Hypervisors",
                             "Architecture",
-                            "OS"
+                            "OS",
+                            "Addresses"
                         ]);
+
+                        let mut ips = String::from("");
+
+                        for iface in ns.interfaces {
+                            if iface.name != "lo" {
+                                let mut face = String::from("");
+
+                            for address in iface.ips {
+                                let f = format!("{} {}\n", iface.name, address);
+                                face.push_str(&f);
+                            }
+                            ips.push_str(&face);
+                            }
+                        }
+
                         table.add_row(row![
                             ni.uuid,
                             ni.name,
                             ns.status,
                             ns.supported_hypervisors.join(","),
                             ni.cpu[0].arch,
-                            ni.os
+                            ni.os,
+                            ips,
                         ]);
                         table.printstd();
                         Ok(())

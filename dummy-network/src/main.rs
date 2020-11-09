@@ -229,7 +229,7 @@ impl NetworkingPlugin for DummyNetwork {
                         dev: self.get_dummy_face(),
                     }),
                     addresses: Vec::new(),
-                    phy_address: MACAddress::new([0, 0, 0, 0, 0, 0]),
+                    phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 self.connector
                     .global
@@ -245,7 +245,7 @@ impl NetworkingPlugin for DummyNetwork {
                     parent: None,
                     kind: VirtualInterfaceKind::BRIDGE(BridgeKind { childs: Vec::new() }),
                     addresses: Vec::new(),
-                    phy_address: MACAddress::new([0, 0, 0, 0, 0, 0]),
+                    phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 self.connector
                     .global
@@ -267,7 +267,7 @@ impl NetworkingPlugin for DummyNetwork {
                         internal: true,
                     }),
                     addresses: Vec::new(),
-                    phy_address: MACAddress::new([0, 0, 0, 0, 0, 0]),
+                    phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 let v_iface_external = VirtualInterface {
                     uuid: external_iface_uuid,
@@ -279,7 +279,7 @@ impl NetworkingPlugin for DummyNetwork {
                         internal: false,
                     }),
                     addresses: Vec::new(),
-                    phy_address: MACAddress::new([0, 0, 0, 0, 0, 0]),
+                    phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
 
                 self.connector
@@ -303,7 +303,7 @@ impl NetworkingPlugin for DummyNetwork {
                         dev: self.get_dummy_face(),
                     }),
                     addresses: Vec::new(),
-                    phy_address: MACAddress::new([0, 0, 0, 0, 0, 0]),
+                    phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 self.connector
                     .global
@@ -321,7 +321,7 @@ impl NetworkingPlugin for DummyNetwork {
                         dev: self.get_dummy_face(),
                     }),
                     addresses: Vec::new(),
-                    phy_address: MACAddress::new([0, 0, 0, 0, 0, 0]),
+                    phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 self.connector
                     .global
@@ -341,7 +341,7 @@ impl NetworkingPlugin for DummyNetwork {
                         ttl: conf.ttl,
                     }),
                     addresses: Vec::new(),
-                    phy_address: MACAddress::new([0, 0, 0, 0, 0, 0]),
+                    phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 self.connector
                     .global
@@ -361,7 +361,7 @@ impl NetworkingPlugin for DummyNetwork {
                         ttl: conf.ttl,
                     }),
                     addresses: Vec::new(),
-                    phy_address: MACAddress::new([0, 0, 0, 0, 0, 0]),
+                    phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 self.connector
                     .global
@@ -381,7 +381,7 @@ impl NetworkingPlugin for DummyNetwork {
                         ttl: conf.ttl,
                     }),
                     addresses: Vec::new(),
-                    phy_address: MACAddress::new([0, 0, 0, 0, 0, 0]),
+                    phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 self.connector
                     .global
@@ -401,7 +401,7 @@ impl NetworkingPlugin for DummyNetwork {
                         ttl: conf.ttl,
                     }),
                     addresses: Vec::new(),
-                    phy_address: MACAddress::new([0, 0, 0, 0, 0, 0]),
+                    phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 self.connector
                     .global
@@ -454,7 +454,7 @@ impl NetworkingPlugin for DummyNetwork {
             parent: None,
             kind: VirtualInterfaceKind::BRIDGE(BridgeKind { childs: Vec::new() }),
             addresses: Vec::new(),
-            phy_address: MACAddress::new([0, 0, 0, 0, 0, 0]),
+            phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
         };
         self.connector
             .global
@@ -684,7 +684,7 @@ impl NetworkingPlugin for DummyNetwork {
                 },
             }),
             addresses: Vec::new(),
-            phy_address: MACAddress::new([0, 0, 0, 0, 0, 0]),
+            phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
         };
         self.connector
             .global
@@ -918,7 +918,7 @@ impl NetworkingPlugin for DummyNetwork {
                         dev: self.get_dummy_face(),
                     }),
                     addresses: Vec::new(),
-                    phy_address: MACAddress::new([0, 0, 0, 0, 0, 0]),
+                    phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 netns.interfaces.push(v_iface.uuid);
                 self.connector
@@ -939,7 +939,7 @@ impl NetworkingPlugin for DummyNetwork {
                     parent: None,
                     kind: VirtualInterfaceKind::BRIDGE(BridgeKind { childs: Vec::new() }),
                     addresses: Vec::new(),
-                    phy_address: MACAddress::new([0, 0, 0, 0, 0, 0]),
+                    phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 netns.interfaces.push(v_iface.uuid);
                 self.connector
@@ -966,7 +966,7 @@ impl NetworkingPlugin for DummyNetwork {
                         internal: true,
                     }),
                     addresses: Vec::new(),
-                    phy_address: MACAddress::new([0, 0, 0, 0, 0, 0]),
+                    phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 let v_iface_external = VirtualInterface {
                     uuid: external_iface_uuid,
@@ -978,7 +978,7 @@ impl NetworkingPlugin for DummyNetwork {
                         internal: false,
                     }),
                     addresses: Vec::new(),
-                    phy_address: MACAddress::new([0, 0, 0, 0, 0, 0]),
+                    phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
 
                 netns.interfaces.push(internal_iface_uuid);
@@ -1008,7 +1008,7 @@ impl NetworkingPlugin for DummyNetwork {
                         dev: self.get_dummy_face(),
                     }),
                     addresses: Vec::new(),
-                    phy_address: MACAddress::new([0, 0, 0, 0, 0, 0]),
+                    phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 netns.interfaces.push(v_iface.uuid);
                 self.connector
@@ -1031,7 +1031,7 @@ impl NetworkingPlugin for DummyNetwork {
                         dev: self.get_dummy_face(),
                     }),
                     addresses: Vec::new(),
-                    phy_address: MACAddress::new([0, 0, 0, 0, 0, 0]),
+                    phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 netns.interfaces.push(v_iface.uuid);
                 self.connector
@@ -1056,7 +1056,7 @@ impl NetworkingPlugin for DummyNetwork {
                         ttl: conf.ttl,
                     }),
                     addresses: Vec::new(),
-                    phy_address: MACAddress::new([0, 0, 0, 0, 0, 0]),
+                    phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 netns.interfaces.push(v_iface.uuid);
                 self.connector
@@ -1081,7 +1081,7 @@ impl NetworkingPlugin for DummyNetwork {
                         ttl: conf.ttl,
                     }),
                     addresses: Vec::new(),
-                    phy_address: MACAddress::new([0, 0, 0, 0, 0, 0]),
+                    phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 netns.interfaces.push(v_iface.uuid);
                 self.connector
@@ -1106,7 +1106,7 @@ impl NetworkingPlugin for DummyNetwork {
                         ttl: conf.ttl,
                     }),
                     addresses: Vec::new(),
-                    phy_address: MACAddress::new([0, 0, 0, 0, 0, 0]),
+                    phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 netns.interfaces.push(v_iface.uuid);
                 self.connector
@@ -1131,7 +1131,7 @@ impl NetworkingPlugin for DummyNetwork {
                         ttl: conf.ttl,
                     }),
                     addresses: Vec::new(),
-                    phy_address: MACAddress::new([0, 0, 0, 0, 0, 0]),
+                    phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 netns.interfaces.push(v_iface.uuid);
                 self.connector

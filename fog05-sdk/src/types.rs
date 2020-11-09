@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 pub type IPAddress = std::net::IpAddr; //this is just address, to investigate if we want CIRD notation in address to have the netmask
-pub type MACAddress = mac_address::MacAddress;
+pub type MACAddress = pnet::util::MacAddr; //mac_address::MacAddress;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Display)]
 #[serde(rename_all = "UPPERCASE")]

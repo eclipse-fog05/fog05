@@ -4,6 +4,7 @@ extern crate machine_uid;
 extern crate serde;
 extern crate serde_json;
 extern crate serde_yaml;
+extern crate pnet_datalink;
 
 use std::collections::HashMap;
 use std::convert::TryInto;
@@ -33,7 +34,7 @@ use fog05_sdk::types::{IPAddress, InterfaceKind};
 
 use uuid::Uuid;
 
-use sysinfo::{DiskExt, ProcessorExt, SystemExt};
+use sysinfo::{DiskExt, ProcessorExt, SystemExt, NetworksExt, NetworkExt};
 
 use serde::{Deserialize, Serialize};
 
@@ -101,6 +102,8 @@ impl Agent {
                 let interveal = guard.config.monitoring_interveal;
                 trace!("Monitoring loop, with interveal {}", interveal);
                 let mut disks = Vec::<im::node::DiskStatus>::new();
+                let mut ifaces = Vec::<im::node::NetworkInterfaceStatus>::new();
+
                 system.refresh_all();
                 let mem = im::node::RAMStatus {
                     total: (system.get_total_memory() as f64) / 1024.0,
@@ -113,6 +116,31 @@ impl Agent {
                         free: (disk.get_available_space() as f64) / 1024.0 / 1024.0,
                     };
                     disks.push(disk_status);
+                }
+
+                for iface in pnet::datalink::interfaces() {
+
+
+                    // TODO: psutil-rust is not yet implementing net_if_stats for Linux, macOS and Windows...
+                    //let ps_ifaces = psutil::network::net_if_stats().unwrap();
+                    //let ps_iface = ps_ifaces.get(&iface.name).ok_or(FError::NotFound).unwrap();
+                    let (_, sys_iface) = system.get_networks().iter().find(|(name,_)| **name == iface.name ).ok_or(FError::NotFound).unwrap();
+                    let face = im::node::NetworkInterfaceStatus {
+                        name : iface.name,
+                        index : iface.index,
+                        mac : iface.mac,
+                        ips : iface.ips,
+                        flags : iface.flags,
+                        is_up : true,  //ps_iface.is_up(), //Filling because psutil-rust is not yet working
+                        mtu : 1500,    //ps_iface.mtu(),
+                        speed : 100,   //ps_iface.speed(),
+                        sent_pkts : sys_iface.get_total_packets_transmitted(),
+                        recv_pkts : sys_iface.get_total_packets_received(),
+                        sent_bytes : sys_iface.get_total_transmitted(),
+                        recv_bytes : sys_iface.get_total_received(),
+                    };
+
+                    ifaces.push(face);
                 }
 
                 let hvs: Vec<String> = guard.hypervisors.keys().map(|x| (*x).clone()).collect();
@@ -129,6 +157,7 @@ impl Agent {
                     ram: mem,
                     disk: disks,
                     supported_hypervisors: hvs,
+                    interfaces : ifaces,
                     neighbors: Vec::new(), //not yet...
                 };
 
@@ -160,6 +189,7 @@ impl Agent {
     pub async fn start(&self) -> (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>) {
         let mut processors = Vec::<im::node::CPUSpec>::new();
         let mut disks = Vec::<im::node::DiskSpec>::new();
+        let mut ifaces = Vec::<im::node::NetworkInterface>::new();
         //let disks = Vec::new();
 
         //When starting we first get all node informations
@@ -199,6 +229,19 @@ impl Agent {
 
             disks.push(disk_spec);
         }
+
+        for iface in pnet::datalink::interfaces() {
+            let face = im::node::NetworkInterface {
+                name : iface.name,
+                index : iface.index,
+                mac : iface.mac,
+                ips : iface.ips,
+                flags : iface.flags,
+            };
+
+            ifaces.push(face);
+        }
+
         let ni = im::node::NodeInfo {
             uuid: self.node_uuid,
             name,
@@ -206,6 +249,7 @@ impl Agent {
             cpu: processors,
             ram: mem,
             disks,
+            interfaces : ifaces,
             io: Vec::new(),
             accelerators: Vec::new(),
             position: None,
@@ -562,7 +606,32 @@ impl AgentOrchestratorInterface for Agent {
             * 1024.0)
             >= (descriptor.computation_requirements.storage_size_mb as f64);
 
-        let compatible = has_plugin && cpu_arch && cpu_number && cpu_freq && ram_size && disk_size;
+        let image = match descriptor.image {
+            None => true,
+            Some(img) => {
+                if img.uri.as_str().starts_with("file://") {
+                    let img_path = img.uri.as_str().strip_prefix("file://").unwrap();
+                    Path::new(&img_path).exists().await
+                } else {
+                    true
+                }
+            }
+        };
+
+        // let interfaces = descriptor.interfaces.iter().filter(|x|
+        //     match x.virtual_interface.vif_kind {
+        //         im::fdu::VirtualInterfaceKind::BRIDGED | im::fdu::VirtualInterfaceKind::PHYSICAL => true,
+        //         _ => false
+        //     });
+        // let faces = interfaces.iter().fold(
+        //     true, |res, x| {
+        //         match
+        //     }
+        // )
+
+
+
+        let compatible = has_plugin && cpu_arch && cpu_number && cpu_freq && ram_size && disk_size && image;
 
         Ok(compatible)
     }

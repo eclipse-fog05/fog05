@@ -1,7 +1,7 @@
 ---
     system: 00000000-0000-0000-0000-000000000000
     pid_file : /tmp/fos_agent.pid
-    zlocator : tcp/127.0.0.1:7447
+    zlocator : tcp/gabrielebaldoni.com:7447
     path : /etc/fos
     mgmt_interface : eth0
     monitoring_interveal: 10
