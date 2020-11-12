@@ -7,7 +7,6 @@ extern crate serde_yaml;
 
 use std::collections::HashMap;
 use std::process;
-use std::str::FromStr;
 use std::time::Duration;
 
 use async_std::prelude::*;
@@ -29,6 +28,8 @@ use fog05_sdk::plugins::{HypervisorPlugin, NetworkingPluginClient};
 use fog05_sdk::types::PluginKind;
 use fog05_sdk::zconnector::ZConnector;
 
+use serde::{Deserialize, Serialize};
+
 use async_ctrlc::CtrlC;
 use uuid::Uuid;
 
@@ -41,14 +42,19 @@ struct DummyArgs {
     zenoh: String,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DummyHVSpecificInfo {
+    pub netns: Uuid,
+}
+
 #[derive(Clone)]
 pub struct DummyHVState {
     pub fdus: HashMap<Uuid, FDURecord>,
+    pub uuid: Option<Uuid>,
 }
 
 #[derive(Clone)]
 pub struct DummyHypervisor {
-    pub uuid: Uuid,
     pub z: Arc<zenoh::Zenoh>,
     pub connector: Arc<fog05_sdk::zconnector::ZConnector>,
     pub pid: u32,
@@ -58,12 +64,17 @@ pub struct DummyHypervisor {
     pub fdus: Arc<RwLock<DummyHVState>>,
 }
 
-#[zserver(uuid = "00000000-0000-0000-0000-000000000003")]
+#[zserver]
 impl HypervisorPlugin for DummyHypervisor {
     async fn define_fdu(&mut self, fdu: FDUDescriptor) -> FResult<FDURecord> {
+        log::debug!("Define FDU {:?}", fdu);
+        log::trace!("Get node UUID");
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
+        log::trace!("Get RwLock");
         let mut guard = self.fdus.write().await;
+        log::trace!("Creating instance UUID");
         let instance_uuid = Uuid::new_v4();
+        log::trace!("Creating instance object");
         let instance = FDURecord {
             uuid: instance_uuid,
             fdu_uuid: fdu.uuid.unwrap(), //this is present because it is populated by the agent/orchestrator
@@ -72,12 +83,16 @@ impl HypervisorPlugin for DummyHypervisor {
             connection_points: Vec::new(),
             status: FDUState::DEFINED,
             error: None,
+            hypervisor_specific: None,
         };
+        log::trace!("Add instance to local state");
         guard.fdus.insert(instance_uuid, instance.clone());
+        log::trace!("Add instance in zenoh");
         self.connector
             .global
             .add_node_instance(node_uuid, instance.clone())
             .await?;
+        log::trace!("Instance status {:?}", instance.status);
         Ok(instance)
     }
 
@@ -96,6 +111,7 @@ impl HypervisorPlugin for DummyHypervisor {
                     .global
                     .remove_node_instance(node_uuid, instance_uuid)
                     .await?;
+
                 Ok(instance_uuid)
             }
             _ => Err(FError::TransitionNotAllowed),
@@ -103,12 +119,16 @@ impl HypervisorPlugin for DummyHypervisor {
     }
 
     async fn configure_fdu(&mut self, instance_uuid: Uuid) -> FResult<Uuid> {
+        log::debug!("Configure FDU {:?}", instance_uuid);
+        log::trace!("Get node UUID");
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
+        log::trace!("Get instance");
         let mut instance = self
             .connector
             .global
             .get_node_instance(node_uuid, instance_uuid)
             .await?;
+        log::trace!("Check FDU status: {:?}", instance.status);
         match instance.status {
             FDUState::DEFINED => {
                 let mut guard = self.fdus.write().await; //taking lock
@@ -128,6 +148,15 @@ impl HypervisorPlugin for DummyHypervisor {
                     .unwrap()
                     .create_network_namespace()
                     .await??;
+
+                let hv_specific = DummyHVSpecificInfo { netns: fdu_ns.uuid };
+
+                // Adding hv specific info
+                instance.hypervisor_specific = Some(serde_json::to_string(&hv_specific).unwrap());
+                //
+
+                log::trace!("Created instance network namespace: {:?}", fdu_ns);
+
                 let mut interfaces: Vec<FDURecordInterface> = Vec::new();
                 let mut cps: HashMap<String, FDURecordConnectionPoint> = HashMap::new();
                 for cp in descriptor.connection_points {
@@ -142,6 +171,8 @@ impl HypervisorPlugin for DummyHypervisor {
                         uuid: vcp.uuid,
                         id: cp.id.clone(),
                     };
+
+                    log::trace!("Created connection point {:?} {:?}", vcp, fdu_cp);
 
                     cps.insert(cp.id, fdu_cp);
                     // we should ask the connection of the cp to the virtual network here
@@ -158,6 +189,9 @@ impl HypervisorPlugin for DummyHypervisor {
                         .unwrap()
                         .create_virtual_interface_in_namespace(viface_config, fdu_ns.uuid)
                         .await??;
+
+                    log::trace!("Created virtual interface {:?}", viface);
+
                     let pair = match viface.kind {
                         fog05_sdk::types::VirtualInterfaceKind::VETH(info) => info.pair,
                         _ => return Err(FError::MalformedDescriptor),
@@ -203,7 +237,8 @@ impl HypervisorPlugin for DummyHypervisor {
                     .global
                     .add_node_instance(node_uuid, instance.clone())
                     .await?;
-                guard.fdus.insert(instance_uuid, instance);
+                guard.fdus.insert(instance_uuid, instance.clone());
+                log::trace!("Instance status {:?}", instance.status);
                 Ok(instance_uuid)
             }
             _ => Err(FError::TransitionNotAllowed),
@@ -211,6 +246,7 @@ impl HypervisorPlugin for DummyHypervisor {
     }
 
     async fn clean_fdu(&mut self, instance_uuid: Uuid) -> FResult<Uuid> {
+        log::debug!("Clean FDU {:?}", instance_uuid);
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
         let mut instance = self
             .connector
@@ -221,12 +257,24 @@ impl HypervisorPlugin for DummyHypervisor {
             FDUState::CONFIGURED => {
                 let mut guard = self.fdus.write().await;
 
+                let hv_specific = serde_json::from_str::<DummyHVSpecificInfo>(
+                    &instance.clone().hypervisor_specific.unwrap(),
+                )
+                .unwrap();
+
+                self.net
+                    .as_ref()
+                    .unwrap()
+                    .delete_network_namespace(hv_specific.netns)
+                    .await??;
+
                 for iface in instance.interfaces {
                     self.net
                         .as_ref()
                         .unwrap()
                         .delete_virtual_interface(iface.intf_uuid)
                         .await??;
+                    log::trace!("Deleted virtual interface {:?}", iface);
                 }
 
                 for cp in instance.connection_points {
@@ -235,6 +283,7 @@ impl HypervisorPlugin for DummyHypervisor {
                         .unwrap()
                         .delete_connection_point(cp.uuid)
                         .await??;
+                    log::trace!("Deletted connection point {:?}", cp);
                 }
 
                 instance.interfaces = Vec::new();
@@ -244,7 +293,8 @@ impl HypervisorPlugin for DummyHypervisor {
                     .global
                     .add_node_instance(node_uuid, instance.clone())
                     .await?;
-                guard.fdus.insert(instance_uuid, instance);
+                guard.fdus.insert(instance_uuid, instance.clone());
+                log::trace!("Instance status {:?}", instance.status);
                 Ok(instance_uuid)
             }
             _ => Err(FError::TransitionNotAllowed),
@@ -252,12 +302,14 @@ impl HypervisorPlugin for DummyHypervisor {
     }
 
     async fn start_fdu(&mut self, instance_uuid: Uuid) -> FResult<Uuid> {
+        log::debug!("Start FDU {:?}", instance_uuid);
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
         let mut instance = self
             .connector
             .global
             .get_node_instance(node_uuid, instance_uuid)
             .await?;
+        log::trace!("Instance status {:?}", instance.status);
         match instance.status {
             FDUState::CONFIGURED => {
                 let mut guard = self.fdus.write().await;
@@ -266,7 +318,8 @@ impl HypervisorPlugin for DummyHypervisor {
                     .global
                     .add_node_instance(node_uuid, instance.clone())
                     .await?;
-                guard.fdus.insert(instance_uuid, instance);
+                guard.fdus.insert(instance_uuid, instance.clone());
+                log::trace!("Instance status {:?}", instance.status);
                 Ok(instance_uuid)
             }
             _ => Err(FError::TransitionNotAllowed),
@@ -289,12 +342,14 @@ impl HypervisorPlugin for DummyHypervisor {
     }
 
     async fn stop_fdu(&mut self, instance_uuid: Uuid) -> FResult<Uuid> {
+        log::debug!("Stop instance {:?}", instance_uuid);
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
         let mut instance = self
             .connector
             .global
             .get_node_instance(node_uuid, instance_uuid)
             .await?;
+        log::trace!("Instance status {:?}", instance.status);
         match instance.status {
             FDUState::RUNNING => {
                 let mut guard = self.fdus.write().await;
@@ -303,7 +358,8 @@ impl HypervisorPlugin for DummyHypervisor {
                     .global
                     .add_node_instance(node_uuid, instance.clone())
                     .await?;
-                guard.fdus.insert(instance_uuid, instance);
+                guard.fdus.insert(instance_uuid, instance.clone());
+                log::trace!("Instance status {:?}", instance.status);
                 Ok(instance_uuid)
             }
             _ => Err(FError::TransitionNotAllowed),
@@ -332,10 +388,17 @@ impl DummyHypervisor {
         hv_server.connect();
         hv_server.initialize();
 
+        let mut guard = self.fdus.write().await;
+        guard.uuid = Some(hv_server.instance_uuid());
+        drop(guard);
+
         self.agent
             .clone()
             .unwrap()
-            .register_plugin(self.uuid, PluginKind::HYPERVISOR(String::from("dummy")))
+            .register_plugin(
+                self.fdus.read().await.uuid.unwrap(),
+                PluginKind::HYPERVISOR(String::from("dummy")),
+            )
             .await
             .unwrap()
             .unwrap();
@@ -359,7 +422,7 @@ impl DummyHypervisor {
         self.agent
             .clone()
             .unwrap()
-            .unregister_plugin(self.uuid)
+            .unregister_plugin(self.fdus.read().await.uuid.unwrap())
             .await
             .unwrap()
             .unwrap();
@@ -388,11 +451,21 @@ impl DummyHypervisor {
             panic!("No Agent Server");
         }
 
+        let local_net = NetworkingPluginClient::find_local_servers(self.z.clone())
+            .await
+            .unwrap();
+        if local_net.is_empty() {
+            error!("Unable to find a local Network plugin interface");
+            panic!("No Network Server");
+        }
+
         let os = OSClient::new(self.z.clone(), local_os[0]);
         let agent = AgentPluginInterfaceClient::new(self.z.clone(), local_agent[0]);
+        let net = NetworkingPluginClient::new(self.z.clone(), local_net[0]);
 
         self.agent = Some(agent);
         self.os = Some(os);
+        self.net = Some(net);
 
         // Starting main loop in a task
         let (s, r) = async_std::sync::channel::<()>(1);
@@ -425,7 +498,6 @@ async fn main() {
     let zconnector = Arc::new(ZConnector::new(zenoh.clone(), None, None));
 
     let mut dummy = DummyHypervisor {
-        uuid: Uuid::parse_str("00000000-0000-0000-0000-000000000003").unwrap(),
         z: zenoh.clone(),
         connector: zconnector.clone(),
         pid: my_pid,
@@ -433,6 +505,7 @@ async fn main() {
         os: None,
         net: None,
         fdus: Arc::new(RwLock::new(DummyHVState {
+            uuid: None,
             fdus: HashMap::new(),
         })),
     };

@@ -20,8 +20,12 @@ extern crate exitfailure;
 
 use clap::arg_enum;
 use exitfailure::ExitFailure;
+use git_version::git_version;
 use structopt::StructOpt;
 use uuid::Uuid;
+
+const GIT_VERSION: &str = git_version!(prefix = "v", cargo_prefix = "v");
+
 mod fim;
 mod force;
 mod types;
@@ -141,6 +145,9 @@ pub enum FIMCtl {
 }
 
 fn main() -> Result<(), ExitFailure> {
+    env_logger::init();
+    log::debug!("Eclipse fog05 fosctl {}", GIT_VERSION);
+
     let force_host = match std::env::var("FORCE") {
         Ok(s) => s,
         Err(_) => String::from("127.0.0.1"),
@@ -152,7 +159,7 @@ fn main() -> Result<(), ExitFailure> {
     };
 
     let args = FOSCtl::from_args();
-    println!("{:?}", args);
+    log::debug!("Args: {:?}", args);
     match args {
         FOSCtl::FIM(fim_args) => fim::fim_cli(fim_args, zlocator),
         _ => force::force_cli(args, force_host),

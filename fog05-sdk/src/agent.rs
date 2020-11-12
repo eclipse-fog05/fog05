@@ -39,7 +39,11 @@ use crate::im;
 use crate::types;
 use crate::types::{IPAddress, InterfaceKind};
 
-#[zservice(timeout_s = 10, prefix = "/fos/local")]
+#[zservice(
+    timeout_s = 10,
+    prefix = "/fos/local",
+    service_uuid = "00000000-0000-0000-0000-000000000001"
+)]
 pub trait OS {
     // ex-OS plugin evals, used in agent<->plugin communication
     // std::path::Path doesn't have a size known at compile-time, cannot be serialized, using String instead
@@ -66,7 +70,11 @@ pub trait OS {
     async fn get_local_mgmt_address(&self) -> FResult<IPAddress>;
 }
 
-#[zservice(timeout_s = 10, prefix = "/fos/local")]
+#[zservice(
+    timeout_s = 10,
+    prefix = "/fos/local",
+    service_uuid = "00000000-0000-0000-0000-000000000002"
+)]
 pub trait AgentPluginInterface {
     async fn fdu_info(&self, fdu_uuid: Uuid) -> FResult<im::fdu::FDUDescriptor>;
     async fn image_info(&self, image_uuid: Uuid) -> FResult<im::fdu::Image>;
@@ -118,7 +126,11 @@ pub trait AgentPluginInterface {
     async fn unregister_plugin(&mut self, plugin_uuid: Uuid) -> FResult<Uuid>;
 }
 
-#[zservice(timeout_s = 10, prefix = "/fos/local")]
+#[zservice(
+    timeout_s = 10,
+    prefix = "/fos/local",
+    service_uuid = "00000000-0000-0000-0000-000000000003"
+)]
 pub trait AgentOrchestratorInterface {
     async fn check_fdu_compatibility(&self, fdu_uuid: Uuid) -> FResult<bool>;
 

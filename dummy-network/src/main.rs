@@ -4,11 +4,10 @@ extern crate serde_json;
 extern crate serde_yaml;
 
 use std::process;
-use std::str::FromStr;
 use std::time::Duration;
 
 use async_std::prelude::*;
-use async_std::sync::Arc;
+use async_std::sync::{Arc, RwLock};
 use async_std::task;
 
 use log::{error, info, trace};
@@ -46,15 +45,15 @@ struct DummyArgs {
 
 #[derive(Clone)]
 pub struct DummyNetwork {
-    pub uuid: Uuid,
     pub z: Arc<zenoh::Zenoh>,
     pub connector: Arc<fog05_sdk::zconnector::ZConnector>,
     pub pid: u32,
     pub agent: Option<AgentPluginInterfaceClient>,
     pub os: Option<OSClient>,
+    pub uuid: Arc<RwLock<Option<Uuid>>>,
 }
 
-#[zserver(uuid = "00000000-0000-0000-0000-000000000003")]
+#[zserver]
 impl NetworkingPlugin for DummyNetwork {
     /// Creates the default fosbr0 virtual network
     /// it's UUID is 00000000-0000-0000-0000-000000000000
@@ -1266,10 +1265,14 @@ impl DummyNetwork {
         hv_server.connect();
         hv_server.initialize();
 
+        let mut guard = self.uuid.write().await;
+        *guard = Some(hv_server.instance_uuid());
+        drop(guard);
+
         self.agent
             .clone()
             .unwrap()
-            .register_plugin(self.uuid, PluginKind::NETWORKING)
+            .register_plugin(self.uuid.read().await.unwrap(), PluginKind::NETWORKING)
             .await
             .unwrap()
             .unwrap();
@@ -1293,7 +1296,7 @@ impl DummyNetwork {
         self.agent
             .clone()
             .unwrap()
-            .unregister_plugin(self.uuid)
+            .unregister_plugin(self.uuid.read().await.unwrap())
             .await
             .unwrap()
             .unwrap();
@@ -1378,7 +1381,7 @@ async fn main() {
     let zconnector = Arc::new(ZConnector::new(zenoh.clone(), None, None));
 
     let mut dummy = DummyNetwork {
-        uuid: Uuid::parse_str("00000000-0000-0000-0000-000000000003").unwrap(),
+        uuid: Arc::new(RwLock::new(None)),
         z: zenoh.clone(),
         connector: zconnector.clone(),
         pid: my_pid,

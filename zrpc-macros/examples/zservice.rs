@@ -5,12 +5,11 @@
 extern crate std;
 
 use async_std::prelude::FutureExt;
-use async_std::sync::Arc;
+use async_std::sync::{Arc, Mutex};
 use async_std::task;
 use futures::prelude::*;
 use std::convert::TryFrom;
 use std::str;
-use std::str::FromStr;
 use std::time::Duration;
 use uuid::Uuid;
 use zenoh::*;
@@ -23,15 +22,25 @@ use log::trace;
 #[zservice(timeout_s = 10, prefix = "/lfos")]
 pub trait Hello {
     async fn hello(&self, name: String) -> String;
+    async fn add(&mut self) -> u64;
 }
 
 #[derive(Clone)]
-struct HelloZService(String);
+struct HelloZService {
+    pub ser_name: String,
+    pub counter: Arc<Mutex<u64>>,
+}
 
-#[zserver(uuid = "10000000-0000-0000-0000-000000000001")]
+#[zserver]
 impl Hello for HelloZService {
     async fn hello(&self, name: String) -> String {
-        format!("Hello {}!, you are connected to {}", name, self.0)
+        format!("Hello {}!, you are connected to {}", name, self.ser_name)
+    }
+
+    async fn add(&mut self) -> u64 {
+        let mut guard = self.counter.lock().await;
+        *guard += 1;
+        *guard
     }
 }
 
@@ -44,11 +53,15 @@ async fn main() {
     );
     // let ws = Arc::new(zenoh.workspace(None).await.unwrap());
 
-    let service = HelloZService("test service".to_string());
+    let service = HelloZService {
+        ser_name: "test service".to_string(),
+        counter: Arc::new(Mutex::new(0u64)),
+    };
 
     let z = zenoh.clone();
-    let ser_uuid = service.instance_uuid();
+
     let server = service.get_hello_server(z);
+    let ser_uuid = server.instance_uuid();
     let client = HelloClient::new(zenoh.clone(), ser_uuid);
 
     server.connect();
@@ -77,7 +90,13 @@ async fn main() {
     let hello = client.hello("client".to_string()).await;
     println!("Res is: {:?}", hello);
 
-    let hello = client.hello("client_two".to_string()).await;
+    let hello = client.add().await;
+    println!("Res is: {:?}", hello);
+
+    let hello = client.add().await;
+    println!("Res is: {:?}", hello);
+
+    let hello = client.add().await;
     println!("Res is: {:?}", hello);
 
     server.stop(s);

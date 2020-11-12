@@ -10,7 +10,7 @@ use async_std::path::Path;
 use async_std::prelude::*;
 use async_std::sync::{Arc, RwLock};
 
-use log::{error, info, trace};
+use log::{debug, error, info, trace};
 
 use zenoh::*;
 
@@ -25,8 +25,12 @@ pub mod agent;
 
 use agent::{Agent, AgentConfig, AgentInner};
 
+use git_version::git_version;
+
 static AGENT_PID_FILE: &str = "/tmp/fos_agent.pid";
 static AGENT_CONFIG_FILE: &str = "/etc/fos/agent.yaml";
+
+const GIT_VERSION: &str = git_version!(prefix = "v", cargo_prefix = "v");
 
 #[derive(StructOpt, Debug)]
 struct AgentArgs {
@@ -47,14 +51,16 @@ async fn write_file(path: &Path, content: Vec<u8>) {
 
 #[async_std::main]
 async fn main() {
-    let args = AgentArgs::from_args();
-    let conf_file_path = Path::new(&args.config);
-    let config = serde_yaml::from_str::<AgentConfig>(&(read_file(&conf_file_path).await)).unwrap();
-
     // Init logging
     env_logger::init_from_env(
         env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "info"),
     );
+
+    debug!("Eclipse fog05 Agent {}", GIT_VERSION);
+
+    let args = AgentArgs::from_args();
+    let conf_file_path = Path::new(&args.config);
+    let config = serde_yaml::from_str::<AgentConfig>(&(read_file(&conf_file_path).await)).unwrap();
 
     info!("Eclipse fog05 Agent -- bootstrap");
 
@@ -121,6 +127,7 @@ async fn main() {
             networking: None,
             hypervisors: HashMap::new(),
             config,
+            instance_uuid: None,
         })),
     };
 

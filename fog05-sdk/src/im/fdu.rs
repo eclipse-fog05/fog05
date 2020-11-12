@@ -146,6 +146,7 @@ pub struct ComputationalRequirements {
     pub gpu_min_count: u8, //default 0
     #[serde(default = "default_zero")]
     pub fpga_min_count: u8, //default 0
+    pub operating_system: Option<String>,
     pub ram_size_mb: u32,
     pub storage_size_mb: u32,
 }
@@ -236,6 +237,7 @@ pub struct FDURecord {
     pub connection_points: Vec<FDURecordConnectionPoint>,
     pub status: FDUState,
     pub error: Option<crate::fresult::FError>,
+    pub hypervisor_specific: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

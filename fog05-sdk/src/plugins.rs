@@ -41,7 +41,11 @@ use crate::types::{
     VirtualInterface, VirtualInterfaceConfig, VirtualNetwork, VirtualNetworkConfig,
 };
 
-#[zservice(timeout_s = 10, prefix = "/fos/local")]
+#[zservice(
+    timeout_s = 10,
+    prefix = "/fos/local",
+    service_uuid = "00000000-0000-0000-0000-000000000004"
+)]
 pub trait NetworkingPlugin {
     /// Creates the default fosbr0 virtual network
     /// it's UUID is 00000000-0000-0000-0000-000000000000
@@ -242,7 +246,11 @@ pub trait NetworkingPlugin {
     ) -> FResult<VirtualInterface>;
 }
 
-#[zservice(timeout_s = 10, prefix = "/fos/local")]
+#[zservice(
+    timeout_s = 10,
+    prefix = "/fos/local",
+    service_uuid = "00000000-0000-0000-0000-000000000005"
+)]
 pub trait HypervisorPlugin {
     /// Defines the given FDU in the node
     async fn define_fdu(&mut self, fdu: FDUDescriptor) -> FResult<FDURecord>;

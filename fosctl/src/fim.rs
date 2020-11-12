@@ -39,8 +39,14 @@ pub fn fim_cli(args: FIMCtl, zlocator: String) -> Result<(), ExitFailure> {
                     })?;
                     let nodes = zconnector.global.get_all_nodes().await?;
                     let entry_point = nodes.choose(&mut rand::thread_rng()).unwrap();
-                    let node_client =
-                        AgentOrchestratorInterfaceClient::new(zenoh.clone(), entry_point.uuid);
+                    log::trace!(
+                        "Selected node entry point: {}",
+                        entry_point.agent_service_uuid
+                    );
+                    let node_client = AgentOrchestratorInterfaceClient::new(
+                        zenoh.clone(),
+                        entry_point.agent_service_uuid,
+                    );
                     match node_client.onboard_fdu(fdu).await? {
                         Ok(fdu_uuid) => {
                             println!("{}", fdu_uuid);
@@ -55,8 +61,10 @@ pub fn fim_cli(args: FIMCtl, zlocator: String) -> Result<(), ExitFailure> {
                 AddFIMKind::Instance { fdu_id } => {
                     let nodes = zconnector.global.get_all_nodes().await?;
                     let entry_point = nodes.choose(&mut rand::thread_rng()).unwrap();
-                    let node_client =
-                        AgentOrchestratorInterfaceClient::new(zenoh.clone(), entry_point.uuid);
+                    let node_client = AgentOrchestratorInterfaceClient::new(
+                        zenoh.clone(),
+                        entry_point.agent_service_uuid,
+                    );
 
                     let instance = node_client.schedule_fdu(fdu_id).await??;
                     node_client.configure_fdu(instance.uuid).await??;
@@ -67,16 +75,58 @@ pub fn fim_cli(args: FIMCtl, zlocator: String) -> Result<(), ExitFailure> {
             },
             FIMCtl::Get(gk) => match gk {
                 GetFIMKind::FDU { id } => match id {
-                    Some(fdu_id) => unimplemented!(),
-                    None => unimplemented!(),
+                    Some(fdu_id) => {
+                        let fdu = zconnector.global.get_fdu(fdu_id).await?;
+                        table.add_row(row!["UUID", "ID", "Name", "Hypervisor", "Version",]);
+                        table.add_row(row![
+                            fdu.uuid.unwrap(),
+                            fdu.id,
+                            fdu.name,
+                            fdu.hypervisor,
+                            fdu.fdu_version,
+                        ]);
+                        table.printstd();
+                        Ok(())
+                    }
+                    None => {
+                        let fdus = zconnector.global.get_all_fdu().await?;
+                        table.add_row(row!["UUID", "ID", "Name", "Hypervisor", "Version",]);
+                        for f in fdus {
+                            table.add_row(row![
+                                f.uuid.unwrap(),
+                                f.id,
+                                f.name,
+                                f.hypervisor,
+                                f.fdu_version,
+                            ]);
+                        }
+
+                        table.printstd();
+                        Ok(())
+                    }
                 },
                 GetFIMKind::Network { id } => match id {
                     Some(net_id) => unimplemented!(),
                     None => unimplemented!(),
                 },
                 GetFIMKind::Instance { id } => match id {
-                    Some(instance_id) => unimplemented!(),
-                    None => unimplemented!(),
+                    Some(instance_id) => {
+                        let fdu = zconnector.global.get_instance(instance_id).await?;
+                        table.add_row(row!["UUID", "ID", "Node", "Status"]);
+                        table.add_row(row![fdu.uuid, fdu.fdu_uuid, fdu.node, fdu.status,]);
+                        table.printstd();
+                        Ok(())
+                    }
+                    None => {
+                        let fdus = zconnector.global.get_all_instances().await?;
+                        table.add_row(row!["UUID", "ID", "Node", "Status"]);
+                        for f in fdus {
+                            table.add_row(row![f.uuid, f.fdu_uuid, f.node, f.status]);
+                        }
+
+                        table.printstd();
+                        Ok(())
+                    }
                 },
                 GetFIMKind::Node { id } => match id {
                     Some(node_id) => {
@@ -145,9 +195,42 @@ pub fn fim_cli(args: FIMCtl, zlocator: String) -> Result<(), ExitFailure> {
                 },
             },
             FIMCtl::Delete(dk) => match dk {
-                DeleteFIMKind::FDU { id } => unimplemented!(),
+                DeleteFIMKind::FDU { id } => {
+                    let nodes = zconnector.global.get_all_nodes().await?;
+                    let entry_point = nodes.choose(&mut rand::thread_rng()).unwrap();
+                    log::trace!(
+                        "Selected node entry point: {}",
+                        entry_point.agent_service_uuid
+                    );
+                    let node_client = AgentOrchestratorInterfaceClient::new(
+                        zenoh.clone(),
+                        entry_point.agent_service_uuid,
+                    );
+                    match node_client.offload_fdu(id).await? {
+                        Ok(fdu_uuid) => {
+                            println!("{}", fdu_uuid);
+                            Ok(())
+                        }
+                        Err(e) => {
+                            panic!("Error occured: {}", e);
+                        }
+                    }
+                }
                 DeleteFIMKind::Network { id } => unimplemented!(),
-                DeleteFIMKind::Instance { id } => unimplemented!(),
+                DeleteFIMKind::Instance { id } => {
+                    let nodes = zconnector.global.get_all_nodes().await?;
+                    let entry_point = nodes.choose(&mut rand::thread_rng()).unwrap();
+                    let node_client = AgentOrchestratorInterfaceClient::new(
+                        zenoh.clone(),
+                        entry_point.agent_service_uuid,
+                    );
+
+                    let instance = node_client.stop_fdu(id).await??;
+                    node_client.clean_fdu(instance.uuid).await??;
+                    let instance = node_client.undefine_fdu(instance.uuid).await??;
+                    println!("{}", instance.uuid);
+                    Ok(())
+                }
             },
         }
     })

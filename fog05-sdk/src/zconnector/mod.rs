@@ -786,6 +786,33 @@ impl Global {
         }
     }
 
+    pub async fn get_all_fdu(&self) -> FResult<Vec<crate::im::fdu::FDUDescriptor>> {
+        let selector = zenoh::Selector::try_from(FDU_DESCRIPTOR_SELECTOR!(
+            GLOBAL_ACTUAL_PREFIX,
+            self.system_id,
+            self.tenant_id
+        ))?;
+        let ws = self.z.workspace(None).await?;
+        let mut ds = ws.get(&selector).await?;
+        let mut data = Vec::new();
+        let mut fdus: Vec<crate::im::fdu::FDUDescriptor> = Vec::new();
+        while let Some(d) = ds.next().await {
+            data.push(d)
+        }
+
+        for kv in data {
+            match &kv.value {
+                zenoh::Value::Raw(_, buf) => {
+                    let info =
+                        bincode::deserialize::<crate::im::fdu::FDUDescriptor>(&buf.to_vec())?;
+                    fdus.push(info);
+                }
+                _ => return Err(FError::EncodingError),
+            }
+        }
+        Ok(fdus)
+    }
+
     pub async fn add_fdu(&self, fdu_info: crate::im::fdu::FDUDescriptor) -> FResult<()> {
         let fdu_uuid = fdu_info.uuid.ok_or(FError::MalformedDescriptor)?;
         let path = zenoh::Path::try_from(FDU_DESCRIPTOR_PATH!(
@@ -838,6 +865,70 @@ impl Global {
             }
             _ => Err(FError::TooMuchError),
         }
+    }
+
+    pub async fn get_all_instances(&self) -> FResult<Vec<crate::im::fdu::FDURecord>> {
+        log::debug!("Get all FDU instances");
+        let selector = zenoh::Selector::try_from(FDU_ALL_INSTANCES_SELECTOR!(
+            GLOBAL_ACTUAL_PREFIX,
+            self.system_id,
+            self.tenant_id
+        ))?;
+        log::trace!("Creating workspace");
+        let ws = self.z.workspace(None).await?;
+        log::trace!("Calling get");
+        let mut ds = ws.get(&selector).await?;
+        let mut data = Vec::new();
+        let mut fdus: Vec<crate::im::fdu::FDURecord> = Vec::new();
+        while let Some(d) = ds.next().await {
+            data.push(d)
+        }
+        log::trace!("Got {} values", data.len());
+
+        for kv in data {
+            match &kv.value {
+                zenoh::Value::Raw(_, buf) => {
+                    let info = bincode::deserialize::<crate::im::fdu::FDURecord>(&buf.to_vec())?;
+                    fdus.push(info);
+                }
+                _ => return Err(FError::EncodingError),
+            }
+        }
+        Ok(fdus)
+    }
+
+    pub async fn get_all_fdu_instances(
+        &self,
+        fdu_uuid: Uuid,
+    ) -> FResult<Vec<crate::im::fdu::FDURecord>> {
+        log::debug!("Get all FDU instance for {}", fdu_uuid);
+        let selector = zenoh::Selector::try_from(FDU_INSTANCES_SELECTOR!(
+            GLOBAL_ACTUAL_PREFIX,
+            self.system_id,
+            self.tenant_id,
+            fdu_uuid
+        ))?;
+        log::trace!("Creating workspace");
+        let ws = self.z.workspace(None).await?;
+        log::trace!("Calling get");
+        let mut ds = ws.get(&selector).await?;
+        let mut data = Vec::new();
+        let mut fdus: Vec<crate::im::fdu::FDURecord> = Vec::new();
+        while let Some(d) = ds.next().await {
+            data.push(d)
+        }
+        log::trace!("Got {} values", data.len());
+
+        for kv in data {
+            match &kv.value {
+                zenoh::Value::Raw(_, buf) => {
+                    let info = bincode::deserialize::<crate::im::fdu::FDURecord>(&buf.to_vec())?;
+                    fdus.push(info);
+                }
+                _ => return Err(FError::EncodingError),
+            }
+        }
+        Ok(fdus)
     }
 
     pub async fn add_instance(&self, instance_info: crate::im::fdu::FDURecord) -> FResult<()> {

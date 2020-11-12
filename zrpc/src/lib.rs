@@ -22,6 +22,8 @@ pub trait ZServe<Req>: Sized + Clone {
     /// Type of the response
     type Resp;
 
+    fn instance_uuid(&self) -> uuid::Uuid;
+
     /// Connects to Zenoh, do nothing in this case, state is HALTED
     fn connect(&self);
 
