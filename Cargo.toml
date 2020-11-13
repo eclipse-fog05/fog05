@@ -21,6 +21,7 @@ members = [
   "agent",
   "dummy-hypervisor",
   "dummy-network",
+  "native-hypervisor",
 ]
 
 exclude = []

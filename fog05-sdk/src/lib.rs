@@ -18,3 +18,5 @@ pub mod agent;
 pub mod fresult;
 pub mod plugins;
 pub mod types;
+
+pub mod api;

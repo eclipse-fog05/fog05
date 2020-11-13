@@ -186,7 +186,7 @@ impl Agent {
 
                 self.connector
                     .global
-                    .add_node_status(node_status)
+                    .add_node_status(&node_status)
                     .await
                     .unwrap();
                 drop(guard);
@@ -313,7 +313,7 @@ impl Agent {
 
         trace!("Node Info: {:?}", ni);
 
-        self.connector.global.add_node_info(ni).await.unwrap();
+        self.connector.global.add_node_info(&ni).await.unwrap();
     }
 }
 
@@ -415,7 +415,7 @@ impl AgentPluginInterface for Agent {
                     };
                     self.connector
                         .global
-                        .add_plugin(self.node_uuid, pl_info)
+                        .add_plugin(self.node_uuid, &pl_info)
                         .await?;
                     Ok(plugin_uuid)
                 }
@@ -432,7 +432,7 @@ impl AgentPluginInterface for Agent {
                     };
                     self.connector
                         .global
-                        .add_plugin(self.node_uuid, pl_info)
+                        .add_plugin(self.node_uuid, &pl_info)
                         .await?;
                     Ok(plugin_uuid)
                 }
@@ -776,11 +776,11 @@ impl AgentOrchestratorInterface for Agent {
                 let fdu_uuid = Uuid::new_v4();
                 trace!("FDU Onboard adding UUID: {}", fdu_uuid);
                 fdu.uuid = Some(fdu_uuid);
-                self.connector.global.add_fdu(fdu).await?;
+                self.connector.global.add_fdu(&fdu).await?;
                 Ok(fdu_uuid)
             }
             Some(fdu_uuid) => {
-                self.connector.global.add_fdu(fdu).await?;
+                self.connector.global.add_fdu(&fdu).await?;
                 Ok(fdu_uuid)
             }
         }
@@ -799,7 +799,7 @@ impl AgentOrchestratorInterface for Agent {
         trace!("Calling plugin function");
         let instance = plugin.define_fdu(descriptor).await??;
         trace!("Writing instance {:?}", instance);
-        self.connector.global.add_instance(instance.clone()).await?;
+        self.connector.global.add_instance(&instance).await?;
         Ok(instance)
     }
 
@@ -824,7 +824,7 @@ impl AgentOrchestratorInterface for Agent {
             .get_node_instance(self.node_uuid, instance_uuid)
             .await?;
         trace!("Writing instance {:?}", instance);
-        self.connector.global.add_instance(instance.clone()).await?;
+        self.connector.global.add_instance(&instance).await?;
         Ok(instance)
     }
 
@@ -846,7 +846,7 @@ impl AgentOrchestratorInterface for Agent {
             .get_node_instance(self.node_uuid, instance_uuid)
             .await?;
         trace!("Writing instance {:?}", instance);
-        self.connector.global.add_instance(instance.clone()).await?;
+        self.connector.global.add_instance(&instance).await?;
         Ok(instance)
     }
 
@@ -883,7 +883,7 @@ impl AgentOrchestratorInterface for Agent {
             .get_node_instance(self.node_uuid, instance_uuid)
             .await?;
         trace!("Writing instance {:?}", instance);
-        self.connector.global.add_instance(instance.clone()).await?;
+        self.connector.global.add_instance(&instance).await?;
         Ok(instance)
     }
 
@@ -904,7 +904,7 @@ impl AgentOrchestratorInterface for Agent {
             .get_node_instance(self.node_uuid, instance_uuid)
             .await?;
         trace!("Writing instance {:?}", instance);
-        self.connector.global.add_instance(instance.clone()).await?;
+        self.connector.global.add_instance(&instance).await?;
         Ok(instance)
     }
 

@@ -457,7 +457,7 @@ impl Global {
         Ok(ws.delete(&path).await?)
     }
 
-    pub async fn add_node_info(&self, node_info: crate::im::node::NodeInfo) -> FResult<()> {
+    pub async fn add_node_info(&self, node_info: &crate::im::node::NodeInfo) -> FResult<()> {
         let path = zenoh::Path::try_from(NODE_INFO_PATH!(
             GLOBAL_ACTUAL_PREFIX,
             self.system_id,
@@ -499,7 +499,7 @@ impl Global {
         }
     }
 
-    pub async fn add_node_status(&self, node_status: crate::im::node::NodeStatus) -> FResult<()> {
+    pub async fn add_node_status(&self, node_status: &crate::im::node::NodeStatus) -> FResult<()> {
         let path = zenoh::Path::try_from(NODE_STATUS_PATH!(
             GLOBAL_ACTUAL_PREFIX,
             self.system_id,
@@ -559,7 +559,7 @@ impl Global {
     pub async fn add_plugin(
         &self,
         nodeid: Uuid,
-        plugin_info: crate::types::PluginInfo,
+        plugin_info: &crate::types::PluginInfo,
     ) -> FResult<()> {
         let path = zenoh::Path::try_from(NODE_PLUGIN_PATH!(
             GLOBAL_ACTUAL_PREFIX,
@@ -620,7 +620,7 @@ impl Global {
 
     pub async fn add_virutal_network(
         &self,
-        vnet_info: crate::types::VirtualNetwork,
+        vnet_info: &crate::types::VirtualNetwork,
     ) -> FResult<()> {
         let path = zenoh::Path::try_from(VNET_PATH!(
             GLOBAL_ACTUAL_PREFIX,
@@ -733,7 +733,7 @@ impl Global {
         }
     }
 
-    pub async fn add_interface(&self, iface_info: crate::types::VirtualInterface) -> FResult<()> {
+    pub async fn add_interface(&self, iface_info: &crate::types::VirtualInterface) -> FResult<()> {
         let path = zenoh::Path::try_from(VIFACE_PATH!(
             GLOBAL_ACTUAL_PREFIX,
             self.system_id,
@@ -813,7 +813,7 @@ impl Global {
         Ok(fdus)
     }
 
-    pub async fn add_fdu(&self, fdu_info: crate::im::fdu::FDUDescriptor) -> FResult<()> {
+    pub async fn add_fdu(&self, fdu_info: &crate::im::fdu::FDUDescriptor) -> FResult<()> {
         let fdu_uuid = fdu_info.uuid.ok_or(FError::MalformedDescriptor)?;
         let path = zenoh::Path::try_from(FDU_DESCRIPTOR_PATH!(
             GLOBAL_ACTUAL_PREFIX,
@@ -931,7 +931,7 @@ impl Global {
         Ok(fdus)
     }
 
-    pub async fn add_instance(&self, instance_info: crate::im::fdu::FDURecord) -> FResult<()> {
+    pub async fn add_instance(&self, instance_info: &crate::im::fdu::FDURecord) -> FResult<()> {
         let path = zenoh::Path::try_from(FDU_INSTANCE_PATH!(
             GLOBAL_ACTUAL_PREFIX,
             self.system_id,
@@ -995,7 +995,7 @@ impl Global {
     pub async fn add_node_instance(
         &self,
         node_uuid: Uuid,
-        instance_info: crate::im::fdu::FDURecord,
+        instance_info: &crate::im::fdu::FDURecord,
     ) -> FResult<()> {
         let path = zenoh::Path::try_from(NODE_INSTANCE_PATH!(
             GLOBAL_ACTUAL_PREFIX,
@@ -1062,7 +1062,7 @@ impl Global {
     pub async fn add_node_virutal_network(
         &self,
         node_uuid: Uuid,
-        vnet_info: crate::types::VirtualNetwork,
+        vnet_info: &crate::types::VirtualNetwork,
     ) -> FResult<()> {
         let path = zenoh::Path::try_from(NODE_VNET_PATH!(
             GLOBAL_ACTUAL_PREFIX,
@@ -1130,7 +1130,7 @@ impl Global {
     pub async fn add_node_connection_point(
         &self,
         node_uuid: Uuid,
-        cp_info: crate::types::ConnectionPoint,
+        cp_info: &crate::types::ConnectionPoint,
     ) -> FResult<()> {
         let path = zenoh::Path::try_from(NODE_CP_PATH!(
             GLOBAL_ACTUAL_PREFIX,
@@ -1198,7 +1198,7 @@ impl Global {
     pub async fn add_node_interface(
         &self,
         node_uuid: Uuid,
-        iface_info: crate::types::VirtualInterface,
+        iface_info: &crate::types::VirtualInterface,
     ) -> FResult<()> {
         let path = zenoh::Path::try_from(NODE_VIFACE_PATH!(
             GLOBAL_ACTUAL_PREFIX,
@@ -1262,7 +1262,7 @@ impl Global {
     pub async fn add_node_network_namespace(
         &self,
         node_uuid: Uuid,
-        ns_info: crate::types::NetworkNamespace,
+        ns_info: &crate::types::NetworkNamespace,
     ) -> FResult<()> {
         let path = zenoh::Path::try_from(NODE_NETNS_PATH!(
             GLOBAL_ACTUAL_PREFIX,

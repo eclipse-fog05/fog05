@@ -101,7 +101,7 @@ impl NetworkingPlugin for DummyNetwork {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
         self.connector
             .global
-            .add_node_virutal_network(node_uuid, default_vnet.clone())
+            .add_node_virutal_network(node_uuid, &default_vnet)
             .await?;
         Ok(default_vnet)
     }
@@ -113,7 +113,7 @@ impl NetworkingPlugin for DummyNetwork {
                 let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
                 self.connector
                     .global
-                    .add_node_virutal_network(node_uuid, vnet.clone())
+                    .add_node_virutal_network(node_uuid, &vnet)
                     .await?;
                 Ok(vnet)
             }
@@ -174,7 +174,7 @@ impl NetworkingPlugin for DummyNetwork {
                 };
                 self.connector
                     .global
-                    .add_node_connection_point(node_uuid, cp.clone())
+                    .add_node_connection_point(node_uuid, &cp)
                     .await?;
                 Ok(cp)
             }
@@ -232,7 +232,7 @@ impl NetworkingPlugin for DummyNetwork {
                 };
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, v_iface.clone())
+                    .add_node_interface(node_uuid, &v_iface)
                     .await?;
                 Ok(v_iface)
             }
@@ -248,7 +248,7 @@ impl NetworkingPlugin for DummyNetwork {
                 };
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, v_iface.clone())
+                    .add_node_interface(node_uuid, &v_iface)
                     .await?;
                 Ok(v_iface)
             }
@@ -283,11 +283,11 @@ impl NetworkingPlugin for DummyNetwork {
 
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, v_iface_internal.clone())
+                    .add_node_interface(node_uuid, &v_iface_internal)
                     .await?;
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, v_iface_external)
+                    .add_node_interface(node_uuid, &v_iface_external)
                     .await?;
                 Ok(v_iface_internal)
             }
@@ -306,7 +306,7 @@ impl NetworkingPlugin for DummyNetwork {
                 };
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, v_iface.clone())
+                    .add_node_interface(node_uuid, &v_iface)
                     .await?;
                 Ok(v_iface)
             }
@@ -324,7 +324,7 @@ impl NetworkingPlugin for DummyNetwork {
                 };
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, v_iface.clone())
+                    .add_node_interface(node_uuid, &v_iface)
                     .await?;
                 Ok(v_iface)
             }
@@ -344,7 +344,7 @@ impl NetworkingPlugin for DummyNetwork {
                 };
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, v_iface.clone())
+                    .add_node_interface(node_uuid, &v_iface)
                     .await?;
                 Ok(v_iface)
             }
@@ -364,7 +364,7 @@ impl NetworkingPlugin for DummyNetwork {
                 };
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, v_iface.clone())
+                    .add_node_interface(node_uuid, &v_iface)
                     .await?;
                 Ok(v_iface)
             }
@@ -384,7 +384,7 @@ impl NetworkingPlugin for DummyNetwork {
                 };
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, v_iface.clone())
+                    .add_node_interface(node_uuid, &v_iface)
                     .await?;
                 Ok(v_iface)
             }
@@ -404,7 +404,7 @@ impl NetworkingPlugin for DummyNetwork {
                 };
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, v_iface.clone())
+                    .add_node_interface(node_uuid, &v_iface)
                     .await?;
                 Ok(v_iface)
             }
@@ -457,7 +457,7 @@ impl NetworkingPlugin for DummyNetwork {
         };
         self.connector
             .global
-            .add_node_interface(node_uuid, v_iface.clone())
+            .add_node_interface(node_uuid, &v_iface)
             .await?;
         Ok(v_iface)
     }
@@ -509,7 +509,7 @@ impl NetworkingPlugin for DummyNetwork {
         };
         self.connector
             .global
-            .add_node_network_namespace(node_uuid, netns.clone())
+            .add_node_network_namespace(node_uuid, &netns)
             .await?;
         Ok(netns)
     }
@@ -560,7 +560,7 @@ impl NetworkingPlugin for DummyNetwork {
         iface.net_ns = Some(cp.net_ns);
         self.connector
             .global
-            .add_node_interface(node_uuid, iface.clone())
+            .add_node_interface(node_uuid, &iface)
             .await?;
         Ok(iface)
     }
@@ -587,7 +587,7 @@ impl NetworkingPlugin for DummyNetwork {
                     iface.net_ns = None;
                     self.connector
                         .global
-                        .add_node_interface(node_uuid, iface.clone())
+                        .add_node_interface(node_uuid, &iface)
                         .await?;
                     return Ok(iface);
                 }
@@ -616,7 +616,7 @@ impl NetworkingPlugin for DummyNetwork {
         vnet.connection_points.push(cp.uuid);
         self.connector
             .global
-            .add_node_virutal_network(node_uuid, vnet.clone())
+            .add_node_virutal_network(node_uuid, &vnet)
             .await?;
         Ok(cp)
     }
@@ -642,7 +642,7 @@ impl NetworkingPlugin for DummyNetwork {
                 vnet.connection_points.remove(p);
                 self.connector
                     .global
-                    .add_node_virutal_network(node_uuid, vnet.clone())
+                    .add_node_virutal_network(node_uuid, &vnet)
                     .await?;
                 Ok(cp)
             }
@@ -687,7 +687,7 @@ impl NetworkingPlugin for DummyNetwork {
         };
         self.connector
             .global
-            .add_node_interface(node_uuid, v_iface.clone())
+            .add_node_interface(node_uuid, &v_iface)
             .await?;
         Ok(v_iface)
     }
@@ -735,11 +735,11 @@ impl NetworkingPlugin for DummyNetwork {
 
         self.connector
             .global
-            .add_node_interface(node_uuid, iface.clone())
+            .add_node_interface(node_uuid, &iface)
             .await?;
         self.connector
             .global
-            .add_node_network_namespace(node_uuid, netns.clone())
+            .add_node_network_namespace(node_uuid, &netns)
             .await?;
         Ok(iface)
     }
@@ -759,7 +759,7 @@ impl NetworkingPlugin for DummyNetwork {
                 iface.net_ns = None;
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, iface.clone())
+                    .add_node_interface(node_uuid, &iface)
                     .await?;
                 let mut netns = self
                     .connector
@@ -771,7 +771,7 @@ impl NetworkingPlugin for DummyNetwork {
                         netns.interfaces.remove(p);
                         self.connector
                             .global
-                            .add_node_network_namespace(node_uuid, netns.clone())
+                            .add_node_network_namespace(node_uuid, &netns)
                             .await?;
                         Ok(iface)
                     }
@@ -796,7 +796,7 @@ impl NetworkingPlugin for DummyNetwork {
         iface.if_name = intf_name;
         self.connector
             .global
-            .add_node_interface(node_uuid, iface.clone())
+            .add_node_interface(node_uuid, &iface)
             .await?;
         Ok(iface)
     }
@@ -829,11 +829,11 @@ impl NetworkingPlugin for DummyNetwork {
                 new_bridge.kind = VirtualInterfaceKind::BRIDGE(info);
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, iface.clone())
+                    .add_node_interface(node_uuid, &iface)
                     .await?;
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, new_bridge.clone())
+                    .add_node_interface(node_uuid, &new_bridge)
                     .await?;
                 Ok(iface)
             }
@@ -864,7 +864,7 @@ impl NetworkingPlugin for DummyNetwork {
                         iface.parent = None;
                         self.connector
                             .global
-                            .add_node_interface(node_uuid, iface.clone())
+                            .add_node_interface(node_uuid, &iface)
                             .await?;
                         match info.childs.iter().position(|&x| x == iface.uuid) {
                             Some(p) => {
@@ -877,7 +877,7 @@ impl NetworkingPlugin for DummyNetwork {
                                 new_bridge.kind = VirtualInterfaceKind::BRIDGE(info);
                                 self.connector
                                     .global
-                                    .add_node_interface(node_uuid, new_bridge.clone())
+                                    .add_node_interface(node_uuid, &new_bridge)
                                     .await?;
                                 return Ok(iface);
                             }
@@ -922,11 +922,11 @@ impl NetworkingPlugin for DummyNetwork {
                 netns.interfaces.push(v_iface.uuid);
                 self.connector
                     .global
-                    .add_node_network_namespace(node_uuid, netns.clone())
+                    .add_node_network_namespace(node_uuid, &netns)
                     .await?;
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, v_iface.clone())
+                    .add_node_interface(node_uuid, &v_iface)
                     .await?;
                 Ok(v_iface)
             }
@@ -943,11 +943,11 @@ impl NetworkingPlugin for DummyNetwork {
                 netns.interfaces.push(v_iface.uuid);
                 self.connector
                     .global
-                    .add_node_network_namespace(node_uuid, netns.clone())
+                    .add_node_network_namespace(node_uuid, &netns)
                     .await?;
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, v_iface.clone())
+                    .add_node_interface(node_uuid, &v_iface)
                     .await?;
                 Ok(v_iface)
             }
@@ -984,15 +984,15 @@ impl NetworkingPlugin for DummyNetwork {
                 netns.interfaces.push(external_iface_uuid);
                 self.connector
                     .global
-                    .add_node_network_namespace(node_uuid, netns.clone())
+                    .add_node_network_namespace(node_uuid, &netns)
                     .await?;
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, v_iface_internal.clone())
+                    .add_node_interface(node_uuid, &v_iface_internal)
                     .await?;
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, v_iface_external)
+                    .add_node_interface(node_uuid, &v_iface_external)
                     .await?;
                 Ok(v_iface_internal)
             }
@@ -1012,11 +1012,11 @@ impl NetworkingPlugin for DummyNetwork {
                 netns.interfaces.push(v_iface.uuid);
                 self.connector
                     .global
-                    .add_node_network_namespace(node_uuid, netns.clone())
+                    .add_node_network_namespace(node_uuid, &netns)
                     .await?;
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, v_iface.clone())
+                    .add_node_interface(node_uuid, &v_iface)
                     .await?;
                 Ok(v_iface)
             }
@@ -1035,11 +1035,11 @@ impl NetworkingPlugin for DummyNetwork {
                 netns.interfaces.push(v_iface.uuid);
                 self.connector
                     .global
-                    .add_node_network_namespace(node_uuid, netns.clone())
+                    .add_node_network_namespace(node_uuid, &netns)
                     .await?;
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, v_iface.clone())
+                    .add_node_interface(node_uuid, &v_iface)
                     .await?;
                 Ok(v_iface)
             }
@@ -1060,11 +1060,11 @@ impl NetworkingPlugin for DummyNetwork {
                 netns.interfaces.push(v_iface.uuid);
                 self.connector
                     .global
-                    .add_node_network_namespace(node_uuid, netns.clone())
+                    .add_node_network_namespace(node_uuid, &netns)
                     .await?;
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, v_iface.clone())
+                    .add_node_interface(node_uuid, &v_iface)
                     .await?;
                 Ok(v_iface)
             }
@@ -1085,11 +1085,11 @@ impl NetworkingPlugin for DummyNetwork {
                 netns.interfaces.push(v_iface.uuid);
                 self.connector
                     .global
-                    .add_node_network_namespace(node_uuid, netns.clone())
+                    .add_node_network_namespace(node_uuid, &netns)
                     .await?;
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, v_iface.clone())
+                    .add_node_interface(node_uuid, &v_iface)
                     .await?;
                 Ok(v_iface)
             }
@@ -1110,11 +1110,11 @@ impl NetworkingPlugin for DummyNetwork {
                 netns.interfaces.push(v_iface.uuid);
                 self.connector
                     .global
-                    .add_node_network_namespace(node_uuid, netns.clone())
+                    .add_node_network_namespace(node_uuid, &netns)
                     .await?;
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, v_iface.clone())
+                    .add_node_interface(node_uuid, &v_iface)
                     .await?;
                 Ok(v_iface)
             }
@@ -1135,11 +1135,11 @@ impl NetworkingPlugin for DummyNetwork {
                 netns.interfaces.push(v_iface.uuid);
                 self.connector
                     .global
-                    .add_node_network_namespace(node_uuid, netns.clone())
+                    .add_node_network_namespace(node_uuid, &netns)
                     .await?;
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, v_iface.clone())
+                    .add_node_interface(node_uuid, &v_iface)
                     .await?;
                 Ok(v_iface)
             }
@@ -1177,7 +1177,7 @@ impl NetworkingPlugin for DummyNetwork {
                             }
                             self.connector
                                 .global
-                                .add_node_network_namespace(node_uuid, netns.clone())
+                                .add_node_network_namespace(node_uuid, &netns)
                                 .await?;
                             self.connector
                                 .global
@@ -1207,7 +1207,7 @@ impl NetworkingPlugin for DummyNetwork {
         iface.addresses.push(address);
         self.connector
             .global
-            .add_node_interface(node_uuid, iface.clone())
+            .add_node_interface(node_uuid, &iface)
             .await?;
         Ok(iface)
     }
@@ -1228,7 +1228,7 @@ impl NetworkingPlugin for DummyNetwork {
                 iface.addresses.remove(p);
                 self.connector
                     .global
-                    .add_node_interface(node_uuid, iface.clone())
+                    .add_node_interface(node_uuid, &iface)
                     .await?;
                 Ok(iface)
             }
@@ -1250,7 +1250,7 @@ impl NetworkingPlugin for DummyNetwork {
         iface.phy_address = address;
         self.connector
             .global
-            .add_node_interface(node_uuid, iface.clone())
+            .add_node_interface(node_uuid, &iface)
             .await?;
         Ok(iface)
     }
