@@ -286,8 +286,14 @@ pub fn zserver(_attr: TokenStream, input: TokenStream) -> TokenStream {
                 if method.sig.asyncness.is_some() {
                     // if this function is declared async, transform it into a regular function
                     method.sig.asyncness = None;
-                    // and put the body inside an task::block_on(async {})
+                    // put the body inside an task::block_on(async {})
                     let content = method.block.to_token_stream();
+                    // and add the  #[allow(unused,clippy::manual_async_fn)] attribute
+                    // let new_attr = TokenStream::from(quote!{
+                    //     #[allow(unused,clippy::manual_async_fn)]
+                    // });
+                    // let attrs = new_attr.call(Attribute::parse_outer).unwrap();
+                    // method.attrs.push(attrs);
 
                     let updated_impl = TokenStream::from(quote! {
                         {
@@ -435,8 +441,9 @@ impl<'a> ZServiceGenerator<'a> {
             #(#fns)*
 
             /// Returns the server object
-            fn #service_get_server_ident(self, z : async_std::sync::Arc<zenoh::Zenoh>) -> #server_ident<Self>{
-                #server_ident::new(z,self)
+            fn #service_get_server_ident(self, z : async_std::sync::Arc<zenoh::Zenoh>, id : Option<uuid::Uuid>) -> #server_ident<Self>{
+                log::trace!("getting server object");
+                #server_ident::new(z,self, id.unwrap_or(Uuid::new_v4()))
                 }
             }
 
@@ -458,11 +465,11 @@ impl<'a> ZServiceGenerator<'a> {
             }
 
             impl<S> #server_ident<S> {
-                pub fn new(z : Arc<zenoh::Zenoh>, server : S) -> Self {
+                pub fn new(z : Arc<zenoh::Zenoh>, server : S, id : uuid::Uuid) -> Self {
                     Self {
                         z,
                         server,
-                        instance_id : Uuid::new_v4(),
+                        instance_id : id,
                     }
                 }
             }
@@ -497,41 +504,46 @@ impl<'a> ZServiceGenerator<'a> {
                     self.instance_id
                 }
 
-                fn connect(&self){
-                    task::block_on(
-                        async {
-                            let zsession = self.z.session();
+                #[allow(clippy::type_complexity,clippy::manual_async_fn)]
+                fn connect(&'_ self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()>+ '_>> {
+                    log::trace!("Connect Service {} Instance {}", #service_name, self.instance_uuid());
+                    async fn __connect<S>(_self: &#server_ident<S>)
+                    where
+                        S: #service_ident + Send + 'static,
+                    {
+                            let zsession = _self.z.session();
                             let zinfo = zsession.info().await;
                             let pid = zinfo.get(&zenoh::net::info::ZN_INFO_PID_KEY).unwrap().to_uppercase();
                             let rid = zinfo.get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY).unwrap().split(",").collect::<Vec<_>>()[0].to_uppercase();
-                            let ws = self.z.workspace(None).await.unwrap();
+                            let ws = _self.z.workspace(None).await.unwrap();
 
 
                             let component_info = zrpc::ComponentState{
-                                uuid : self.instance_uuid(),
+                                uuid : _self.instance_uuid(),
                                 name : format!("{}", #service_name),
                                 routerid : rid.clone().to_uppercase(),
                                 peerid : pid.clone().to_uppercase(),
                                 status : zrpc::ComponentStatus::HALTED,
                             };
                             let encoded_ci = bincode::serialize(&component_info).unwrap();
-                            let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.instance_uuid())).unwrap();
+                            let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,_self.instance_uuid())).unwrap();
                             ws.put(&path.into(),encoded_ci.into()).await.unwrap();
-                        }
-                    );
+                    }
+                    Box::pin(__connect(self))
                 }
 
 
-                fn initialize(&self){
-                    task::block_on(
-                        async {
-                            let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,self.instance_uuid())).unwrap();
-                            let ws = self.z.workspace(None).await.unwrap();
-                            let mut ds = ws.get(&selector).await.unwrap();
-                            let mut data = Vec::new();
-                            while let Some(d) = ds.next().await {
-                                data.push(d)
-                            }
+                #[allow(clippy::type_complexity,clippy::manual_async_fn)]
+                fn initialize(&self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>> {
+                    log::trace!("Initialize Service {} Instance {}", #service_name, self.instance_uuid());
+                    async fn __initialize<S>(_self: &#server_ident<S>)
+                    where
+                        S: #service_ident + Send + 'static,
+                    {
+                            let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,_self.instance_uuid())).unwrap();
+                            let ws = _self.z.workspace(None).await.unwrap();
+                            let ds = ws.get(&selector).await.unwrap();
+                            let data : Vec<zenoh::Data> = ds.collect().await;
                             match data.len() {
                                 0 => panic!("This component state is not present in Zenoh!!"),
                                 1 => {
@@ -543,7 +555,7 @@ impl<'a> ZServiceGenerator<'a> {
                                                 zrpc::ComponentStatus::HALTED => {
                                                     ci.status = zrpc::ComponentStatus::INITIALIZING;
                                                     let encoded_ci = bincode::serialize(&ci).unwrap();
-                                                    let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.instance_uuid())).unwrap();
+                                                    let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,_self.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
                                                 },
                                                 _ => panic!("Cannot authenticate a component in a state different than HALTED"),
@@ -554,20 +566,21 @@ impl<'a> ZServiceGenerator<'a> {
                                 },
                                 _ => unreachable!(),
                             }
-                        }
-                    );
+                    }
+                    Box::pin(__initialize(self))
                 }
 
-                fn register(&self){
-                    task::block_on(
-                        async {
-                            let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,self.instance_uuid())).unwrap();
-                            let ws = self.z.workspace(None).await.unwrap();
-                            let mut ds = ws.get(&selector).await.unwrap();
-                            let mut data = Vec::new();
-                            while let Some(d) = ds.next().await {
-                                data.push(d)
-                            }
+                #[allow(clippy::type_complexity,clippy::manual_async_fn)]
+                fn register(&self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>>{
+                    log::trace!("Register Service {} Instance {}", #service_name, self.instance_uuid());
+                    async fn __register<S>(_self: &#server_ident<S>)
+                    where
+                    S: #service_ident + Send + 'static,
+                    {
+                            let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,_self.instance_uuid())).unwrap();
+                            let ws = _self.z.workspace(None).await.unwrap();
+                            let ds = ws.get(&selector).await.unwrap();
+                            let data : Vec<zenoh::Data> = ds.collect().await;
                             match data.len() {
                                 0 => panic!("This component state is not present in Zenoh!!"),
                                 1 => {
@@ -579,7 +592,7 @@ impl<'a> ZServiceGenerator<'a> {
                                                 zrpc::ComponentStatus::INITIALIZING => {
                                                     ci.status = zrpc::ComponentStatus::REGISTERED;
                                                     let encoded_ci = bincode::serialize(&ci).unwrap();
-                                                    let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.instance_uuid())).unwrap();
+                                                    let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,_self.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
                                                 },
                                                 _ => panic!("Cannot register a component in a state different than BUILDING"),
@@ -591,20 +604,31 @@ impl<'a> ZServiceGenerator<'a> {
                                 _ => unreachable!(),
                             }
                         }
-                    );
+                    Box::pin(__register(self))
                 }
 
-                fn start(&self) ->  (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>) {
-                    task::block_on(
-                        async {
+                #[allow(clippy::type_complexity,clippy::manual_async_fn)]
+                fn start(
+                    &self,
+                ) -> ::core::pin::Pin<
+                    Box<
+                        dyn std::future::Future<
+                                Output = (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>),
+                            > + '_,
+                    >,
+                > {
+                    log::trace!("Start Service {} Instance {}", #service_name, self.instance_uuid());
+                    async fn __start<S>(
+                        _self: &#server_ident<S>,
+                    ) -> (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>)
+                    where
+                        S: #service_ident + Send + 'static,
+                    {
                             let (s, r) = async_std::sync::channel::<()>(1);
-                            let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,self.instance_uuid())).unwrap();
-                            let ws = self.z.workspace(None).await.unwrap();
-                            let mut ds = ws.get(&selector).await.unwrap();
-                            let mut data = Vec::new();
-                            while let Some(d) = ds.next().await {
-                                data.push(d)
-                            }
+                            let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,_self.instance_uuid())).unwrap();
+                            let ws = _self.z.workspace(None).await.unwrap();
+                            let ds = ws.get(&selector).await.unwrap();
+                            let data : Vec<zenoh::Data> = ds.collect().await;
                             match data.len() {
                                 0 => panic!("This component state is not present in Zenoh!!"),
                                 1 => {
@@ -616,11 +640,13 @@ impl<'a> ZServiceGenerator<'a> {
                                                 zrpc::ComponentStatus::REGISTERED => {
                                                     ci.status = zrpc::ComponentStatus::SERVING;
                                                     let encoded_ci = bincode::serialize(&ci).unwrap();
-                                                    let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.instance_uuid())).unwrap();
+                                                    let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,_self.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
-                                                    let server = self.clone();
-                                                    let h = async_std::task::spawn( async move {
-                                                        server.serve(r);
+                                                    let server = _self.clone();
+                                                    let h = async_std::task::spawn_blocking(move || {
+                                                        async_std::task::block_on(async {
+                                                            server.serve(r).await;
+                                                        })
                                                     });
                                                     (s,h)
                                                 },
@@ -632,22 +658,24 @@ impl<'a> ZServiceGenerator<'a> {
                                 },
                                 _ => unreachable!(),
                             }
-                        }
-                    )
+                    }
+                    Box::pin(__start(self))
                 }
 
-
-                fn serve(&self, stop : async_std::sync::Receiver<()>) {
-                    task::block_on(async {
-                        let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,self.instance_uuid())).unwrap();
-                        let ws = self.z.workspace(None).await.unwrap();
-                        let mut ds = ws.get(&selector).await.unwrap();
-                        let mut data = Vec::new();
-                        // let mut ser = self.server.clone();
-                        // let arc_to_ser = async_std::sync::Arc::new(ser);
-                        while let Some(d) = ds.next().await {
-                            data.push(d)
-                        }
+                #[allow(clippy::type_complexity,clippy::manual_async_fn)]
+                fn serve(
+                    &self,
+                    stop: async_std::sync::Receiver<()>,
+                ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>> {
+                    log::trace!("Serve Service {} Instance {}", #service_name, self.instance_uuid());
+                    async fn __serve<S>(_self: &#server_ident<S>, _stop: async_std::sync::Receiver<()>)
+                    where
+                        S: #service_ident + Send + 'static,
+                    {
+                        let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,_self.instance_uuid())).unwrap();
+                        let ws = _self.z.workspace(None).await.unwrap();
+                        let ds = ws.get(&selector).await.unwrap();
+                        let data : Vec<zenoh::Data> = ds.collect().await;
                         match data.len() {
                             0 => panic!("This component state is not present in Zenoh!!"),
                             1 => {
@@ -657,10 +685,10 @@ impl<'a> ZServiceGenerator<'a> {
                                         let ci = bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
                                         match ci.status {
                                             zrpc::ComponentStatus::SERVING => {
-                                                let path = zenoh::Path::try_from(format!("{}/{}/eval",#eval_path, self.instance_uuid())).unwrap();
-                                                trace!("Registering eval on {:?}", path);
+                                                let path = zenoh::Path::try_from(format!("{}/{}/eval",#eval_path, _self.instance_uuid())).unwrap();
+                                                log::trace!("Registering eval on {:?}", path);
                                                 let mut rcv = ws.register_eval(&path.clone().into()).await.unwrap();
-                                                trace!("Registered on {:?}", path);
+                                                log::trace!("Registered on {:?}", path);
                                                 let rcv_loop = async {
                                                     loop {
                                                         let get_request = rcv.next().await.unwrap();
@@ -668,36 +696,25 @@ impl<'a> ZServiceGenerator<'a> {
                                                         let b64_bytes = base64::decode(base64_req).unwrap();
                                                         let js_req = str::from_utf8(&b64_bytes).unwrap();
                                                         let req = serde_json::from_str::<#request_ident>(&js_req).unwrap();
-                                                        trace!("Received on {:?} {:?}", path, req);
+                                                        log::trace!("Received on {:?} {:?}", path, req);
 
-                                                        let mut ser = self.server.clone();
+                                                        let mut ser = _self.server.clone();
                                                         let gr = get_request.clone();
                                                         let p = path.clone();
-                                                        trace!("spawning task to respond to {:?}", req);
+                                                        //log::trace!("Spawning task to respond to {:?}", req);
 
-                                                        task::spawn_blocking(
-                                                            move || {
-                                                                task::block_on(
-                                                                    async {
-                                                                        match req {
-                                                                            #(
-                                                                                #request_ident::#camel_case_idents{#(#arg_pats),*} => {
-                                                                                    let resp = #response_ident::#camel_case_idents(ser.#method_idents( #(#arg_pats),*));
-                                                                                    let encoded = bincode::serialize(&resp).unwrap();
-                                                                                    gr.reply(p, encoded.into()).await;
-                                                                                }
-                                                                            )*
-                                                                        }
-                                                                    }
-                                                                )
-                                                            }
-                                                        );
-
-
-
+                                                        match req {
+                                                            #(
+                                                                #request_ident::#camel_case_idents{#(#arg_pats),*} => {
+                                                                    let resp = #response_ident::#camel_case_idents(ser.#method_idents( #(#arg_pats),*));
+                                                                    let encoded = bincode::serialize(&resp).unwrap();
+                                                                    gr.reply(p, encoded.into()).await;
+                                                                }
+                                                            )*
+                                                        }
                                                     }
                                                 };
-                                                rcv_loop.race(stop.recv()).await.unwrap();
+                                                rcv_loop.race(_stop.recv()).await.unwrap();
                                             },
                                             _ => panic!("State is not WORK, serve called directly? serve is called by calling work!"),
                                         }
@@ -707,28 +724,24 @@ impl<'a> ZServiceGenerator<'a> {
                             },
                             _ => unreachable!(),
                         }
-
-
-
-
-                    });
+                    }
+                    Box::pin(__serve(self, stop))
                 }
 
-                fn stop(&self, stop : async_std::sync::Sender<()>){
-                    task::block_on(
-                        async {
-                            log::debug!("Stopping...");
-                            log::trace!("Creating selector");
-                            let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,self.instance_uuid())).unwrap();
-                            log::trace!("Creating workspace");
-                            let ws = self.z.workspace(None).await.unwrap();
-                            log::trace!("performing get");
-                            let mut ds = ws.get(&selector).await.unwrap();
-                            let mut data = Vec::new();
-                            while let Some(d) = ds.next().await {
-                                log::trace!("Got {:?}", d);
-                                data.push(d)
-                            }
+                #[allow(clippy::type_complexity,clippy::manual_async_fn)]
+                fn stop(
+                    &self,
+                    stop: async_std::sync::Sender<()>,
+                ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>> {
+                    log::trace!("Stop Service {} Instance {}", #service_name, self.instance_uuid());
+                    async fn __stop<S>(_self: &#server_ident<S>, _stop: async_std::sync::Sender<()>)
+                    where
+                        S: #service_ident + Send + 'static,
+                    {
+                            let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,_self.instance_uuid())).unwrap();
+                            let ws = _self.z.workspace(None).await.unwrap();
+                            let ds = ws.get(&selector).await.unwrap();
+                            let data : Vec<zenoh::Data> = ds.collect().await;
                             match data.len() {
                                 0 => panic!("This component state is not present in Zenoh!!"),
                                 1 => {
@@ -740,9 +753,9 @@ impl<'a> ZServiceGenerator<'a> {
                                                 zrpc::ComponentStatus::SERVING => {
                                                     ci.status = zrpc::ComponentStatus::REGISTERED;
                                                     let encoded_ci = bincode::serialize(&ci).unwrap();
-                                                    let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.instance_uuid())).unwrap();
+                                                    let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,_self.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
-                                                    stop.send(()).await;
+                                                    _stop.send(()).await;
                                                 },
                                                 _ => panic!("Cannot unwork a component in a state different than WORK"),
                                             }
@@ -753,19 +766,20 @@ impl<'a> ZServiceGenerator<'a> {
                                 _ => unreachable!(),
                             }
                         }
-                    );
+                    Box::pin(__stop(self, stop))
                 }
 
-                fn unregister(&self){
-                    task::block_on(
-                        async {
-                            let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,self.instance_uuid())).unwrap();
-                            let ws = self.z.workspace(None).await.unwrap();
-                            let mut ds = ws.get(&selector).await.unwrap();
-                            let mut data = Vec::new();
-                            while let Some(d) = ds.next().await {
-                                data.push(d)
-                            }
+                #[allow(clippy::type_complexity,clippy::manual_async_fn)]
+                fn unregister(&self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>> {
+                    log::trace!("Unregister Service {} Instance {}", #service_name, self.instance_uuid());
+                    async fn __unregister<S>(_self: &#server_ident<S>)
+                    where
+                        S: #service_ident + Send + 'static,
+                    {
+                            let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,_self.instance_uuid())).unwrap();
+                            let ws = _self.z.workspace(None).await.unwrap();
+                            let ds = ws.get(&selector).await.unwrap();
+                            let data : Vec<zenoh::Data> = ds.collect().await;
                             match data.len() {
                                 0 => panic!("This component state is not present in Zenoh!!"),
                                 1 => {
@@ -777,7 +791,7 @@ impl<'a> ZServiceGenerator<'a> {
                                                 zrpc::ComponentStatus::REGISTERED => {
                                                     ci.status = zrpc::ComponentStatus::HALTED;
                                                     let encoded_ci = bincode::serialize(&ci).unwrap();
-                                                    let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.instance_uuid())).unwrap();
+                                                    let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,_self.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
                                                 },
                                                 _ => panic!("Cannot unregister a component in a state different than UNANNOUNCED"),
@@ -789,18 +803,22 @@ impl<'a> ZServiceGenerator<'a> {
                                 _ => unreachable!(),
                             }
                         }
-                    );
+                    Box::pin(__unregister(self))
                 }
 
-                fn disconnect(self){
-                    task::block_on(
-                        async {
-                            let ws = self.z.workspace(None).await.unwrap();
-                            let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,self.instance_uuid())).unwrap();
+                #[allow(clippy::type_complexity,clippy::manual_async_fn)]
+                fn disconnect(self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()>>> {
+                    log::trace!("Disconnect Service {} Instance {}", #service_name, self.instance_uuid());
+                    async fn __disconnect<S>(_self: #server_ident<S>)
+                    where
+                        S: #service_ident + Send + 'static,
+                        {
+                            let ws = _self.z.workspace(None).await.unwrap();
+                            let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,_self.instance_uuid())).unwrap();
                             ws.delete(&path).await.unwrap();
 
                         }
-                    );
+                    Box::pin(__disconnect(self))
                 }
 
             }
@@ -974,12 +992,12 @@ impl<'a> ZServiceGenerator<'a> {
             impl #client_ident {
 
                 #(
-                    #[allow(unused)]
+                    #[allow(unused,clippy::manual_async_fn)]
                     #( #method_attrs )*
                     #vis fn #method_idents(&self, #( #args ),*)
                         -> impl std::future::Future<Output = std::io::Result<#return_types>> + '_ {
                         let request = #request_ident::#camel_case_idents { #( #arg_pats ),* };
-                        trace!("Sending {:?}", request);
+                        log::trace!("Sending {:?}", request);
                         async move {
                             match self.ch.verify_server().await {
                                 Ok(b) => {

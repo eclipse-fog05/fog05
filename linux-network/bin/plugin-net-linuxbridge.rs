@@ -29,10 +29,7 @@ use async_ctrlc::CtrlC;
 
 use structopt::StructOpt;
 
-mod networking;
-mod types;
-
-use types::LinuxNetwork;
+use linux_network::types::LinuxNetwork;
 
 #[derive(StructOpt, Debug)]
 struct LinuxNetArgs {

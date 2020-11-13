@@ -17,8 +17,6 @@ use zrpc::ZServe;
 //importing the macros
 use zrpc_macros::{zserver, zservice};
 
-use log::trace;
-
 #[zservice(timeout_s = 10, prefix = "/lfos")]
 pub trait Hello {
     async fn hello(&self, name: String) -> String;
@@ -60,13 +58,13 @@ async fn main() {
 
     let z = zenoh.clone();
 
-    let server = service.get_hello_server(z);
+    let server = service.get_hello_server(z, None);
     let ser_uuid = server.instance_uuid();
     let client = HelloClient::new(zenoh.clone(), ser_uuid);
 
-    server.connect();
-    server.initialize();
-    server.register();
+    server.connect().await;
+    server.initialize().await;
+    server.register().await;
 
     let local_servers = HelloClient::find_local_servers(zenoh.clone()).await;
     println!("local_servers: {:?}", local_servers);
@@ -78,7 +76,7 @@ async fn main() {
     let hello = client.hello("client".to_string()).await;
     println!("Res is: {:?}", hello);
 
-    let (s, handle) = server.start();
+    let (s, handle) = server.start().await;
 
     let local_servers = HelloClient::find_local_servers(zenoh.clone()).await;
     println!("local_servers: {:?}", local_servers);
@@ -107,8 +105,8 @@ async fn main() {
     let servers = HelloClient::find_servers(zenoh.clone()).await;
     println!("servers found: {:?}", servers);
 
-    server.unregister();
-    server.disconnect();
+    server.unregister().await;
+    server.disconnect().await;
 
     handle.await;
 

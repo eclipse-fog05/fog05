@@ -5,6 +5,7 @@
 #![feature(fmt_internals)]
 #![feature(prelude_import)]
 #![feature(async_closure)]
+#![feature(associated_type_bounds)]
 #[prelude_import]
 #[macro_use]
 extern crate std;
@@ -61,9 +62,13 @@ where
         self.instance_id
     }
 
-    fn connect(&mut self) {
-        task::block_on(async {
-            let zsession = self.z.session();
+    fn connect(&'_ self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>> {
+        log::trace!("server connect");
+        async fn __connect<S>(_self: &ServeHello<S>)
+        where
+            S: Hello + Send + 'static,
+        {
+            let zsession = _self.z.session();
             let zinfo = zsession.info().await;
             let pid = zinfo
                 .get(&zenoh::net::info::ZN_INFO_PID_KEY)
@@ -75,10 +80,10 @@ where
                 .split(',')
                 .collect::<Vec<_>>()[0]
                 .to_uppercase();
-            let ws = self.z.workspace(None).await.unwrap();
+            let ws = _self.z.workspace(None).await.unwrap();
 
             let component_info = zrpc::ComponentState {
-                uuid: self.instance_uuid(),
+                uuid: _self.instance_uuid(),
                 name: "Hello".to_string(),
                 routerid: rid.clone().to_uppercase(),
                 peerid: pid.clone().to_uppercase(),
@@ -87,21 +92,26 @@ where
             let encoded_ci = bincode::serialize(&component_info).unwrap();
             let path = zenoh::Path::try_from(format!(
                 "/this/is/generated/Hello/instance/{}/state",
-                self.instance_uuid()
+                _self.instance_uuid()
             ))
             .unwrap();
             ws.put(&path, encoded_ci.into()).await.unwrap();
-        })
+        }
+        Box::pin(__connect(self))
     }
 
-    fn initialize(&self) {
-        task::block_on(async {
+    fn initialize(&self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>> {
+        log::trace!("server initialize");
+        async fn __initialize<S>(_self: &ServeHello<S>)
+        where
+            S: Hello + Send + 'static,
+        {
             let selector = zenoh::Selector::try_from(format!(
                 "/this/is/generated/Hello/instance/{}/state",
-                self.instance_uuid()
+                _self.instance_uuid()
             ))
             .unwrap();
-            let ws = self.z.workspace(None).await.unwrap();
+            let ws = _self.z.workspace(None).await.unwrap();
             let mut ds = ws.get(&selector).await.unwrap();
             let mut data = Vec::new();
             while let Some(d) = ds.next().await {
@@ -121,7 +131,7 @@ where
                                         ci.status = zrpc::ComponentStatus::INITIALIZING;
                                         let encoded_ci = bincode::serialize(&ci).unwrap();
                                         let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state",
-                                        self.instance_uuid())).unwrap();
+                                        _self.instance_uuid())).unwrap();
                                         ws.put(&path,encoded_ci.into()).await.unwrap();
                                     },
                                     _ => panic!("Cannot authenticate a component in a state different than HALTED"),
@@ -132,17 +142,22 @@ where
                 }
                 _ => unreachable!(),
             }
-        })
+        }
+        Box::pin(__initialize(self))
     }
 
-    fn register(&self) {
-        task::block_on(async {
+    fn register(&self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>> {
+        log::trace!("server register");
+        async fn __register<S>(_self: &ServeHello<S>)
+        where
+            S: Hello + Send + 'static,
+        {
             let selector = zenoh::Selector::try_from(format!(
                 "/this/is/generated/Hello/instance/{}/state",
-                self.instance_uuid()
+                _self.instance_uuid()
             ))
             .unwrap();
-            let ws = self.z.workspace(None).await.unwrap();
+            let ws = _self.z.workspace(None).await.unwrap();
             let mut ds = ws.get(&selector).await.unwrap();
             let mut data = Vec::new();
             while let Some(d) = ds.next().await {
@@ -162,7 +177,7 @@ where
                                         ci.status = zrpc::ComponentStatus::REGISTERED;
                                         let encoded_ci = bincode::serialize(&ci).unwrap();
                                         let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state",
-                                        self.instance_uuid())).unwrap();
+                                        _self.instance_uuid())).unwrap();
                                         ws.put(&path,encoded_ci.into()).await.unwrap();
                                     },
                                     _ => panic!("Cannot register a component in a state different than BUILDING"),
@@ -173,18 +188,33 @@ where
                 }
                 _ => unreachable!(),
             }
-        })
+        }
+        Box::pin(__register(self))
     }
 
-    fn start(&self) -> (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>) {
-        task::block_on(async {
+    fn start(
+        &self,
+    ) -> ::core::pin::Pin<
+        Box<
+            dyn std::future::Future<
+                    Output = (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>),
+                > + '_,
+        >,
+    > {
+        log::trace!("server start");
+        async fn __start<S>(
+            _self: &ServeHello<S>,
+        ) -> (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>)
+        where
+            S: Hello + Send + 'static,
+        {
             let (s, r) = async_std::sync::channel::<()>(1);
             let selector = zenoh::Selector::try_from(format!(
                 "/this/is/generated/Hello/instance/{}/state",
-                self.instance_uuid()
+                _self.instance_uuid()
             ))
             .unwrap();
-            let ws = self.z.workspace(None).await.unwrap();
+            let ws = _self.z.workspace(None).await.unwrap();
             let mut ds = ws.get(&selector).await.unwrap();
             let mut data = Vec::new();
             while let Some(d) = ds.next().await {
@@ -205,13 +235,15 @@ where
                                     let encoded_ci = bincode::serialize(&ci).unwrap();
                                     let path = zenoh::Path::try_from(format!(
                                         "/this/is/generated/Hello/instance/{}/state",
-                                        self.instance_uuid()
+                                        _self.instance_uuid()
                                     ))
                                     .unwrap();
                                     ws.put(&path, encoded_ci.into()).await.unwrap();
-                                    let server = self.clone();
-                                    let h = async_std::task::spawn(async move {
-                                        server.serve(r);
+                                    let server = _self.clone();
+                                    let h = async_std::task::spawn_blocking(move || {
+                                        async_std::task::block_on(async {
+                                            server.serve(r).await;
+                                        })
                                     });
                                     (s, h)
                                 }
@@ -225,24 +257,27 @@ where
                 }
                 _ => unreachable!(),
             }
-        })
+        }
+        Box::pin(__start(self))
     }
 
-    fn serve(&self, stop: async_std::sync::Receiver<()>) {
-        task::block_on(async {
+    fn serve(
+        &self,
+        stop: async_std::sync::Receiver<()>,
+    ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>> {
+        log::trace!("server serve");
+        async fn __serve<S>(_self: &ServeHello<S>, _stop: async_std::sync::Receiver<()>)
+        where
+            S: Hello + Send + 'static,
+        {
             let selector = zenoh::Selector::try_from(format!(
                 "/this/is/generated/Hello/instance/{}/state",
-                self.instance_uuid()
+                _self.instance_uuid()
             ))
             .unwrap();
-            let ws = self.z.workspace(None).await.unwrap();
-            let mut ds = ws.get(&selector).await.unwrap();
-            let mut data = Vec::new();
-            // let mut ser = &self.server;
-            // let arc_ser = Arc::new(ser);
-            while let Some(d) = ds.next().await {
-                data.push(d)
-            }
+            let ws = _self.z.workspace(None).await.unwrap();
+            let ds = ws.get(&selector).await.unwrap();
+            let data: Vec<zenoh::Data> = ds.collect().await;
             match data.len() {
                 0 => panic!("This component state is not present in Zenoh!!"),
                 1 => {
@@ -255,11 +290,13 @@ where
                                 zrpc::ComponentStatus::SERVING => {
                                     let path = zenoh::Path::try_from(format!(
                                         "/this/is/generated/Hello/instance/{}/eval",
-                                        self.instance_uuid()
+                                        _self.instance_uuid()
                                     ))
                                     .unwrap();
+                                    log::trace!("eval registering");
                                     let mut rcv =
                                         ws.register_eval(&path.clone().into()).await.unwrap();
+                                    log::trace!("eval registered");
                                     let rcv_loop = async {
                                         loop {
                                             let get_request = rcv.next().await.unwrap();
@@ -276,30 +313,45 @@ where
 
                                             let gr = get_request.clone();
                                             // let inner_ser = arc_ser.clone();
-                                            let mut ser = self.server.clone();
+                                            let mut ser = _self.server.clone();
                                             let p = path.clone();
 
-                                            task::spawn(async move {
-                                                match req {
-                                                    HelloRequest::Hello { name } => {
-                                                        //let ser = self.server.clone();
-                                                        let resp =
-                                                            HelloResponse::Hello(ser.hello(name));
-                                                        let encoded =
-                                                            bincode::serialize(&resp).unwrap();
-                                                        gr.reply(p, encoded.into()).await;
-                                                    }
-                                                    HelloRequest::Add => {
-                                                        let resp = HelloResponse::Add(ser.add());
-                                                        let encoded =
-                                                            bincode::serialize(&resp).unwrap();
-                                                        gr.reply(p, encoded.into()).await;
-                                                    }
+                                            match req {
+                                                HelloRequest::Hello { name } => {
+                                                    let resp =
+                                                        HelloResponse::Hello(ser.hello(name));
+                                                    let encoded =
+                                                        bincode::serialize(&resp).unwrap();
+                                                    gr.reply(p, encoded.into()).await;
                                                 }
-                                            });
+                                                HelloRequest::Add => {
+                                                    let resp = HelloResponse::Add(ser.add());
+                                                    let encoded =
+                                                        bincode::serialize(&resp).unwrap();
+                                                    gr.reply(p, encoded.into()).await;
+                                                }
+                                            }
+
+                                            // async_std::task::spawn(async move {
+                                            //     match req {
+                                            //         HelloRequest::Hello { name } => {
+                                            //             let resp =
+                                            //                 HelloResponse::Hello(ser.hello(name));
+                                            //             let encoded =
+                                            //                 bincode::serialize(&resp).unwrap();
+                                            //             gr.reply(p, encoded.into()).await;
+                                            //         }
+                                            //         HelloRequest::Add => {
+                                            //             let resp = HelloResponse::Add(ser.add());
+                                            //             let encoded =
+                                            //                 bincode::serialize(&resp).unwrap();
+                                            //             gr.reply(p, encoded.into()).await;
+                                            //         }
+                                            //     }
+                                            // });
                                         }
                                     };
-                                    rcv_loop.race(stop.recv()).await.unwrap();
+                                    rcv_loop.race(_stop.recv()).await.unwrap();
                                 }
                                 _ => panic!("State is not WORK, serve called directly?"),
                             }
@@ -309,17 +361,25 @@ where
                 }
                 _ => unreachable!(),
             }
-        });
+        }
+        Box::pin(__serve(self, stop))
     }
 
-    fn stop(&self, stop: async_std::sync::Sender<()>) {
-        task::block_on(async {
+    fn stop(
+        &self,
+        stop: async_std::sync::Sender<()>,
+    ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>> {
+        log::trace!("server stop");
+        async fn __stop<S>(_self: &ServeHello<S>, _stop: async_std::sync::Sender<()>)
+        where
+            S: Hello + Send + 'static,
+        {
             let selector = zenoh::Selector::try_from(format!(
                 "/this/is/generated/Hello/instance/{}/state",
-                self.instance_uuid()
+                _self.instance_uuid()
             ))
             .unwrap();
-            let ws = self.z.workspace(None).await.unwrap();
+            let ws = _self.z.workspace(None).await.unwrap();
             let mut ds = ws.get(&selector).await.unwrap();
             let mut data = Vec::new();
             while let Some(d) = ds.next().await {
@@ -340,12 +400,12 @@ where
                                     let encoded_ci = bincode::serialize(&ci).unwrap();
                                     let path = zenoh::Path::try_from(format!(
                                         "/this/is/generated/Hello/instance/{}/state",
-                                        self.instance_uuid()
+                                        _self.instance_uuid()
                                     ))
                                     .unwrap();
                                     ws.put(&path, encoded_ci.into()).await.unwrap();
                                     // Here we stop the serve
-                                    stop.send(()).await;
+                                    _stop.send(()).await;
                                 }
                                 _ => panic!(
                                     "Cannot unwork a component in a state different than WORK"
@@ -357,17 +417,22 @@ where
                 }
                 _ => unreachable!(),
             }
-        })
+        }
+        Box::pin(__stop(self, stop))
     }
 
-    fn unregister(&self) {
-        task::block_on(async {
+    fn unregister(&self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>> {
+        log::trace!("server unregister");
+        async fn __unregister<S>(_self: &ServeHello<S>)
+        where
+            S: Hello + Send + 'static,
+        {
             let selector = zenoh::Selector::try_from(format!(
                 "/this/is/generated/Hello/instance/{}/state",
-                self.instance_uuid()
+                _self.instance_uuid()
             ))
             .unwrap();
-            let ws = self.z.workspace(None).await.unwrap();
+            let ws = _self.z.workspace(None).await.unwrap();
             let mut ds = ws.get(&selector).await.unwrap();
             let mut data = Vec::new();
             while let Some(d) = ds.next().await {
@@ -388,7 +453,7 @@ where
                                         let encoded_ci = bincode::serialize(&ci).unwrap();
                                         let path = zenoh::Path::try_from(format!(
                                             "/this/is/generated/Hello/instance/{}/state",
-                                            self.instance_uuid())).unwrap();
+                                            _self.instance_uuid())).unwrap();
                                         ws.put(&path,encoded_ci.into()).await.unwrap();
                                         // Here we should stop the serve
                                     },
@@ -400,19 +465,25 @@ where
                 }
                 _ => unreachable!(),
             }
-        })
+        }
+        Box::pin(__unregister(self))
     }
 
-    fn disconnect(self) {
-        task::block_on(async {
-            let ws = self.z.workspace(None).await.unwrap();
+    fn disconnect(self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()>>> {
+        async fn __disconnect<S>(_self: ServeHello<S>)
+        where
+            S: Hello + Send + 'static,
+        {
+            let ws = _self.z.workspace(None).await.unwrap();
             let path = zenoh::Path::try_from(format!(
                 "/this/is/generated/Hello/instance/{}/state",
-                self.instance_uuid()
+                _self.instance_uuid()
             ))
             .unwrap();
             ws.delete(&path).await.unwrap();
-        })
+        }
+
+        Box::pin(__disconnect(self))
     }
 }
 
@@ -631,7 +702,7 @@ impl HelloClient {
 
 #[async_std::main]
 async fn main() {
-    println!("HelloWorld!");
+    env_logger::init();
 
     let zenoh = Arc::new(
         Zenoh::new(Properties::from("mode=client;peer=tcp/127.0.0.1:7447").into())
@@ -646,14 +717,14 @@ async fn main() {
     };
 
     let z = zenoh.clone();
-    let mut server = service.get_hello_server(z);
+    let server = service.get_hello_server(z);
     let instance_id = server.instance_uuid();
     let client = HelloClient::new(zenoh.clone(), instance_id);
 
-    server.connect(); //instance UUID is generated at this point
+    server.connect().await; //instance UUID is generated at this point
 
-    server.initialize();
-    server.register();
+    server.initialize().await;
+    server.register().await;
 
     let local_servers = HelloClient::find_local_servers(zenoh.clone()).await;
     println!("local_servers: {:?}", local_servers);
@@ -665,7 +736,7 @@ async fn main() {
     let hello = client.hello("client".to_string()).await;
     println!("Res is: {:?}", hello);
 
-    let (s, handle) = server.start();
+    let (s, handle) = server.start().await;
 
     let local_servers = HelloClient::find_local_servers(zenoh.clone()).await;
     println!("local_servers: {:?}", local_servers);
@@ -689,7 +760,7 @@ async fn main() {
     let hello = client.add().await;
     println!("Res is: {:?}", hello);
 
-    server.stop(s);
+    server.stop(s).await;
 
     let local_servers = HelloClient::find_local_servers(zenoh.clone()).await;
     println!("local_servers: {:?}", local_servers);
@@ -697,8 +768,8 @@ async fn main() {
     let servers = HelloClient::find_servers(zenoh.clone()).await;
     println!("servers found: {:?}", servers);
 
-    server.unregister();
-    server.disconnect();
+    server.unregister().await;
+    server.disconnect().await;
 
     handle.await;
 

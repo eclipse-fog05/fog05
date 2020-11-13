@@ -483,9 +483,11 @@ impl NativeHypervisor {
         log::info!("NativeHypervisor main loop starting...");
 
         //starting the Agent-Plugin Server
-        let hv_server = self.clone().get_hypervisor_plugin_server(self.z.clone());
-        hv_server.connect();
-        hv_server.initialize();
+        let hv_server = self
+            .clone()
+            .get_hypervisor_plugin_server(self.z.clone(), None);
+        hv_server.connect().await;
+        hv_server.initialize().await;
 
         let mut guard = self.fdus.write().await;
         guard.uuid = Some(hv_server.instance_uuid());
@@ -502,9 +504,9 @@ impl NativeHypervisor {
             .unwrap()
             .unwrap();
 
-        hv_server.register();
+        hv_server.register().await;
 
-        let (shv, hhv) = hv_server.start();
+        let (shv, hhv) = hv_server.start().await;
 
         let monitoring = async {
             loop {
@@ -526,9 +528,9 @@ impl NativeHypervisor {
             .unwrap()
             .unwrap();
 
-        hv_server.stop(shv);
-        hv_server.unregister();
-        hv_server.disconnect();
+        hv_server.stop(shv).await;
+        hv_server.unregister().await;
+        hv_server.disconnect().await;
 
         log::info!("DummyHypervisor main loop exiting")
     }
@@ -569,8 +571,10 @@ impl NativeHypervisor {
         // Starting main loop in a task
         let (s, r) = async_std::sync::channel::<()>(1);
         let plugin = self.clone();
-        let h = async_std::task::spawn(async move {
-            plugin.run(r).await;
+        let h = async_std::task::spawn_blocking(move || {
+            async_std::task::block_on(async {
+                plugin.run(r).await;
+            })
         });
         (s, h)
     }

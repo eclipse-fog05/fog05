@@ -10,6 +10,7 @@
 * Contributors:
 *   ADLINK fog05 team, <fog05@adlink-labs.tech>
 *********************************************************************************/
+#![feature(associated_type_bounds)]
 
 pub mod zchannel;
 pub use zchannel::ZClientChannel;
@@ -25,29 +26,51 @@ pub trait ZServe<Req>: Sized + Clone {
     fn instance_uuid(&self) -> uuid::Uuid;
 
     /// Connects to Zenoh, do nothing in this case, state is HALTED
-    fn connect(&self);
+    #[allow(clippy::type_complexity)]
+    fn connect(&self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>>;
 
     /// Authenticates to Zenoh, state changes to INITIALIZING
-    fn initialize(&self);
+    #[allow(clippy::type_complexity)]
+    fn initialize(&self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>>;
 
     // Registers, state changes to REGISTERED
-    fn register(&self);
+    #[allow(clippy::type_complexity)]
+    fn register(&self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>>;
 
-    // Announce, state changes to ANNOUNCED
-    //fn announce(&self);
+    // // Announce, state changes to ANNOUNCED
+    // //fn announce(&self);
 
     /// State changes to SERVING, calls serve on a task::spawn, returns a stop sender and the serve task handle
-    fn start(&self) -> (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>);
+    #[allow(clippy::type_complexity)]
+    fn start(
+        &self,
+    ) -> ::core::pin::Pin<
+        Box<
+            dyn std::future::Future<
+                    Output = (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>),
+                > + '_,
+        >,
+    >;
 
     /// Starts serving all requests
-    fn serve(&self, stop: async_std::sync::Receiver<()>);
+    #[allow(clippy::type_complexity)]
+    fn serve(
+        &self,
+        stop: async_std::sync::Receiver<()>,
+    ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>>;
 
     /// State changes to REGISTERED, will stop serve/work
-    fn stop(&self, stop: async_std::sync::Sender<()>);
+    #[allow(clippy::type_complexity)]
+    fn stop(
+        &self,
+        stop: async_std::sync::Sender<()>,
+    ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>>;
 
     // state changes to HALTED
-    fn unregister(&self);
+    #[allow(clippy::type_complexity)]
+    fn unregister(&self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>>;
 
     /// removes state from Zenoh
-    fn disconnect(self);
+    #[allow(clippy::type_complexity)]
+    fn disconnect(self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()>>>;
 }
