@@ -82,6 +82,7 @@ impl NetworkingPlugin for DummyNetwork {
             ip_version: IPVersion::IPV4,
             ip_configuration: None,
             connection_points: Vec::new(),
+            interfaces: Vec::new(),
         };
         if dhcp {
             let ip_conf = IPConfiguration {

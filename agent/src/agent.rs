@@ -1,3 +1,16 @@
+/*********************************************************************************
+* Copyright (c) 2018,2020 ADLINK Technology Inc.
+*
+* This program and the accompanying materials are made available under the
+* terms of the Eclipse Public License 2.0 which is available at
+* http://www.eclipse.org/legal/epl-2.0, or the Apache Software License 2.0
+* which is available at https://www.apache.org/licenses/LICENSE-2.0.
+*
+* SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
+* Contributors:
+*   ADLINK fog05 team, <fog05@adlink-labs.tech>
+*********************************************************************************/
+
 #![allow(unused_variables)]
 
 extern crate machine_uid;
@@ -142,12 +155,16 @@ impl Agent {
                     // TODO: psutil-rust is not yet implementing net_if_stats for Linux, macOS and Windows...
                     //let ps_ifaces = psutil::network::net_if_stats().unwrap();
                     //let ps_iface = ps_ifaces.get(&iface.name).ok_or(FError::NotFound).unwrap();
-                    let (_, sys_iface) = system
+                    let (_, sys_iface) = match system
                         .get_networks()
                         .iter()
                         .find(|(name, _)| **name == iface.name)
                         .ok_or(FError::NotFound)
-                        .unwrap();
+                    {
+                        Err(_) => continue,
+                        Ok((name, face)) => (name, face),
+                    };
+
                     let face = im::node::NetworkInterfaceStatus {
                         name: iface.name,
                         index: iface.index,
@@ -423,8 +440,20 @@ impl AgentPluginInterface for Agent {
             types::PluginKind::NETWORKING => match guard.networking {
                 Some(_) => Err(FError::AlreadyPresent),
                 None => {
+                    trace!("Adding Networking plugin {}", plugin_uuid);
                     let nw_client = NetworkingPluginClient::new(self.z.clone(), plugin_uuid);
+
+                    let n_client = nw_client.clone();
+                    task::spawn(async move {
+                        task::sleep(Duration::from_secs(5)).await;
+                        n_client
+                            .create_default_virtual_network(true)
+                            .await
+                            .unwrap()
+                            .unwrap();
+                    });
                     guard.networking = Some(nw_client);
+                    trace!("Added Networking plugin {}", plugin_uuid);
                     let pl_info = types::PluginInfo {
                         uuid: plugin_uuid,
                         kind: kind.clone(),

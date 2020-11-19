@@ -22,6 +22,7 @@ members = [
   "dummy-hypervisor",
   "dummy-network",
   "native-hypervisor",
+  "linux-network",
 ]
 
 exclude = []

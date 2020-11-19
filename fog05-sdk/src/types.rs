@@ -242,6 +242,7 @@ pub struct VirtualNetwork {
     pub ip_version: IPVersion,
     pub ip_configuration: Option<IPConfiguration>,
     pub connection_points: Vec<Uuid>,
+    pub interfaces: Vec<Uuid>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

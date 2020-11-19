@@ -34,6 +34,8 @@ pub enum FError {
     BincodeError(String),
     ZError(String),
     UnknownError(String),
+    NetworkingError(String),
+    HypervisorError(String),
 }
 
 impl fmt::Display for FError {
@@ -55,6 +57,8 @@ impl fmt::Display for FError {
             FError::ZError(err) => write!(f, "{}", err),
             FError::BincodeError(err) => write!(f, "{}", err),
             FError::UnknownError(err) => write!(f, "Error {}", err),
+            FError::NetworkingError(err) => write!(f, "NetworkingError {}", err),
+            FError::HypervisorError(err) => write!(f, "HypervisorError {}", err),
         }
     }
 }
