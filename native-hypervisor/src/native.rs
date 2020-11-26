@@ -14,11 +14,6 @@
 #![allow(unused_variables)]
 #![allow(unused_mut)]
 
-extern crate machine_uid;
-extern crate serde;
-extern crate serde_json;
-extern crate serde_yaml;
-
 use std::collections::HashMap;
 use std::fs::File;
 use std::process::{Command, Stdio};

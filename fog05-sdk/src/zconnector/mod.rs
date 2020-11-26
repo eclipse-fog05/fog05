@@ -14,7 +14,6 @@
 #![allow(unused)]
 
 extern crate bincode;
-extern crate hex;
 extern crate serde;
 
 use super::im::data::*;

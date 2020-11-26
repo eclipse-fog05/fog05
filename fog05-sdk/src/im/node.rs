@@ -12,8 +12,6 @@
 *********************************************************************************/
 
 extern crate serde;
-extern crate serde_json;
-extern crate serde_yaml;
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;

@@ -10,6 +10,8 @@
 * Contributors:
 *   ADLINK fog05 team, <fog05@adlink-labs.tech>
 *********************************************************************************/
+#![allow(clippy::manual_async_fn)]
+#![allow(clippy::large_enum_variant)]
 
 use async_std::prelude::FutureExt;
 use async_std::sync::{Arc, RwLock};

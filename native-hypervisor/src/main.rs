@@ -10,13 +10,7 @@
 * Contributors:
 *   ADLINK fog05 team, <fog05@adlink-labs.tech>
 *********************************************************************************/
-
 #![allow(unused_variables)]
-
-extern crate machine_uid;
-extern crate serde;
-extern crate serde_json;
-extern crate serde_yaml;
 
 use std::collections::HashMap;
 use std::process;

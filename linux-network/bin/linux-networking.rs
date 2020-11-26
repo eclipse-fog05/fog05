@@ -11,11 +11,6 @@
 *   ADLINK fog05 team, <fog05@adlink-labs.tech>
 *********************************************************************************/
 
-extern crate machine_uid;
-extern crate serde;
-extern crate serde_json;
-extern crate serde_yaml;
-
 use std::process;
 
 use async_std::prelude::*;

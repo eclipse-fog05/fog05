@@ -12,9 +12,7 @@
 *********************************************************************************/
 
 extern crate base64;
-extern crate bincode;
 extern crate serde;
-extern crate serde_json;
 
 use async_std::sync::Arc;
 use futures::prelude::*;
@@ -25,6 +23,8 @@ use uuid::Uuid;
 use serde::{de::DeserializeOwned, Serialize};
 
 use log::trace;
+
+use crate::serialize;
 
 #[derive(Clone)]
 pub struct ZClientChannel<Req, Resp> {
@@ -59,7 +59,7 @@ where
     /// the request is first serialized as json and then encoded in base64 and
     /// passed as a property named req
     async fn send(&self, ws: zenoh::Workspace<'_>, request: &Req) -> zenoh::DataStream {
-        let req = serde_json::to_string(&request).unwrap(); //those are to be passed to the eval selector
+        let req = serialize::serialize_request(&request).unwrap();
         let selector = zenoh::Selector::try_from(format!(
             "{}/{}/eval?(req={})",
             self.path,
@@ -84,7 +84,7 @@ where
             match value {
                 zenoh::Value::Raw(_size, rbuf) => {
                     let raw_data = rbuf.to_vec();
-                    Ok(bincode::deserialize::<Resp>(&raw_data).unwrap())
+                    Ok(serialize::deserialize_response(&raw_data).unwrap())
                 }
                 _ => Err(std::io::Error::new(
                     std::io::ErrorKind::Other,

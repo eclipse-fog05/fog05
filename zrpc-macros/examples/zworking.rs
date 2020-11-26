@@ -11,7 +11,6 @@
 extern crate std;
 extern crate base64;
 extern crate bincode;
-extern crate hex;
 extern crate serde;
 extern crate serde_json;
 

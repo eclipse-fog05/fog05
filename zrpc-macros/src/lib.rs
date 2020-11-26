@@ -14,13 +14,11 @@
 #![recursion_limit = "512"]
 
 extern crate base64;
-extern crate bincode;
 extern crate darling;
 extern crate proc_macro;
 extern crate proc_macro2;
 extern crate quote;
 extern crate serde;
-extern crate serde_json;
 extern crate syn;
 
 use darling::FromMeta;
@@ -525,7 +523,7 @@ impl<'a> ZServiceGenerator<'a> {
                                 peerid : pid.clone().to_uppercase(),
                                 status : zrpc::ComponentStatus::HALTED,
                             };
-                            let encoded_ci = bincode::serialize(&component_info).unwrap();
+                            let encoded_ci = zrpc::serialize::serialize_state(&component_info).unwrap();
                             let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,_self.instance_uuid())).unwrap();
                             ws.put(&path.into(),encoded_ci.into()).await.unwrap();
                     }
@@ -550,11 +548,11 @@ impl<'a> ZServiceGenerator<'a> {
                                     let kv = &data[0];
                                     match &kv.value {
                                         zenoh::Value::Raw(_,buf) => {
-                                            let mut ci = bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
+                                            let mut ci = zrpc::serialize::deserialize_state::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
                                             match ci.status {
                                                 zrpc::ComponentStatus::HALTED => {
                                                     ci.status = zrpc::ComponentStatus::INITIALIZING;
-                                                    let encoded_ci = bincode::serialize(&ci).unwrap();
+                                                    let encoded_ci = zrpc::serialize::serialize_state(&ci).unwrap();
                                                     let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,_self.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
                                                 },
@@ -587,11 +585,11 @@ impl<'a> ZServiceGenerator<'a> {
                                     let kv = &data[0];
                                     match &kv.value {
                                         zenoh::Value::Raw(_,buf) => {
-                                            let mut ci = bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
+                                            let mut ci = zrpc::serialize::deserialize_state::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
                                             match ci.status {
                                                 zrpc::ComponentStatus::INITIALIZING => {
                                                     ci.status = zrpc::ComponentStatus::REGISTERED;
-                                                    let encoded_ci = bincode::serialize(&ci).unwrap();
+                                                    let encoded_ci = zrpc::serialize::serialize_state(&ci).unwrap();
                                                     let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,_self.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
                                                 },
@@ -635,11 +633,11 @@ impl<'a> ZServiceGenerator<'a> {
                                     let kv = &data[0];
                                     match &kv.value {
                                         zenoh::Value::Raw(_,buf) => {
-                                            let mut ci = bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
+                                            let mut ci = zrpc::serialize::deserialize_state::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
                                             match ci.status {
                                                 zrpc::ComponentStatus::REGISTERED => {
                                                     ci.status = zrpc::ComponentStatus::SERVING;
-                                                    let encoded_ci = bincode::serialize(&ci).unwrap();
+                                                    let encoded_ci = zrpc::serialize::serialize_state(&ci).unwrap();
                                                     let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,_self.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
                                                     let server = _self.clone();
@@ -682,7 +680,7 @@ impl<'a> ZServiceGenerator<'a> {
                                 let kv = &data[0];
                                 match &kv.value {
                                     zenoh::Value::Raw(_,buf) => {
-                                        let ci = bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
+                                        let ci = zrpc::serialize::deserialize_state::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
                                         match ci.status {
                                             zrpc::ComponentStatus::SERVING => {
                                                 let path = zenoh::Path::try_from(format!("{}/{}/eval",#eval_path, _self.instance_uuid())).unwrap();
@@ -694,8 +692,7 @@ impl<'a> ZServiceGenerator<'a> {
                                                         let get_request = rcv.next().await.unwrap();
                                                         let base64_req = get_request.selector.properties.get("req").cloned().unwrap();
                                                         let b64_bytes = base64::decode(base64_req).unwrap();
-                                                        let js_req = str::from_utf8(&b64_bytes).unwrap();
-                                                        let req = serde_json::from_str::<#request_ident>(&js_req).unwrap();
+                                                        let req = zrpc::serialize::deserialize_request::<#request_ident>(&b64_bytes).unwrap();
                                                         log::trace!("Received on {:?} {:?}", path, req);
 
                                                         let mut ser = _self.server.clone();
@@ -707,7 +704,7 @@ impl<'a> ZServiceGenerator<'a> {
                                                             #(
                                                                 #request_ident::#camel_case_idents{#(#arg_pats),*} => {
                                                                     let resp = #response_ident::#camel_case_idents(ser.#method_idents( #(#arg_pats),*));
-                                                                    let encoded = bincode::serialize(&resp).unwrap();
+                                                                    let encoded =  zrpc::serialize::serialize_response(&resp).unwrap();
                                                                     gr.reply(p, encoded.into()).await;
                                                                 }
                                                             )*
@@ -748,11 +745,11 @@ impl<'a> ZServiceGenerator<'a> {
                                     let kv = &data[0];
                                     match &kv.value {
                                         zenoh::Value::Raw(_,buf) => {
-                                            let mut ci = bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
+                                            let mut ci = zrpc::serialize::deserialize_state::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
                                             match ci.status {
                                                 zrpc::ComponentStatus::SERVING => {
                                                     ci.status = zrpc::ComponentStatus::REGISTERED;
-                                                    let encoded_ci = bincode::serialize(&ci).unwrap();
+                                                    let encoded_ci = zrpc::serialize::serialize_state(&ci).unwrap();
                                                     let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,_self.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
                                                     _stop.send(()).await;
@@ -786,11 +783,11 @@ impl<'a> ZServiceGenerator<'a> {
                                     let kv = &data[0];
                                     match &kv.value {
                                         zenoh::Value::Raw(_,buf) => {
-                                            let mut ci = bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
+                                            let mut ci = zrpc::serialize::deserialize_state::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
                                             match ci.status {
                                                 zrpc::ComponentStatus::REGISTERED => {
                                                     ci.status = zrpc::ComponentStatus::HALTED;
-                                                    let encoded_ci = bincode::serialize(&ci).unwrap();
+                                                    let encoded_ci = zrpc::serialize::serialize_state(&ci).unwrap();
                                                     let path = zenoh::Path::try_from(format!("/{}/{}/state",#eval_path,_self.instance_uuid())).unwrap();
                                                     ws.put(&path.into(),encoded_ci.into()).await.unwrap();
                                                 },
@@ -927,7 +924,7 @@ impl<'a> ZServiceGenerator<'a> {
                         while let Some(d) = ds.next().await {
                             match d.value {
                                 zenoh::Value::Raw(_,buf) => {
-                                    let ca = bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
+                                    let ca = zrpc::serialize::deserialize_state::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
                                     if ca.routerid == rid {
                                         servers.push(ca.uuid);
                                     }
@@ -954,7 +951,7 @@ impl<'a> ZServiceGenerator<'a> {
                         while let Some(d) = ds.next().await {
                             match d.value {
                                 zenoh::Value::Raw(_,buf) => {
-                                    let ca = bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
+                                    let ca = zrpc::serialize::deserialize_state::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
                                     servers.push(ca.uuid);
                                 },
                                 _ => return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Component State is not encoded in RAW".to_string())),

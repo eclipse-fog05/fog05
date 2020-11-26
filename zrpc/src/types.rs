@@ -12,8 +12,10 @@
 *********************************************************************************/
 
 extern crate serde;
+
+#[cfg(feature = "send_json")]
 extern crate serde_json;
-extern crate serde_yaml;
+//extern crate serde_yaml;
 
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;

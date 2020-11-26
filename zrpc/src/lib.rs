@@ -18,6 +18,8 @@ pub use zchannel::ZClientChannel;
 pub mod types;
 pub use types::*;
 
+pub mod serialize;
+
 /// Trait to be implemented by services
 pub trait ZServe<Req>: Sized + Clone {
     /// Type of the response
