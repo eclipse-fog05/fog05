@@ -1,9 +1,0 @@
-(executable
- (name meao)
- (public_name meao)
- (package meao)
- (link_flags (-linkall))
- (modules me_core meao mm1 yconnector)
- (libraries lwt apero-core lwt.unix re yaks-common yaks-ocaml httpaf httpaf-lwt-unix faraday str cmdliner uuidm yojson fos-im fos-mm5 ppx_deriving.show fos-meao-plugins dynlink findlib.dynload)
- (preprocess (pps lwt_ppx ppx_cstruct ppx_deriving.show ))
- )

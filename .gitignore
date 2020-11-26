@@ -18,3 +18,5 @@ _build
 .vscode/
 */_build/*
 .coverage
+target/
+Cargo.lock
