@@ -1,8 +1,3 @@
-extern crate machine_uid;
-extern crate serde;
-extern crate serde_json;
-extern crate serde_yaml;
-
 use std::process;
 use std::time::Duration;
 
