@@ -11,7 +11,7 @@
 # Contributors:
 #   ADLINK fog05 team, <fog05@adlink-labs.tech>
 #
-name: rust
+name: Rust
 
 on:
   push:
