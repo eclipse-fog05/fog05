@@ -1260,8 +1260,8 @@ impl DummyNetwork {
         let hv_server = self
             .clone()
             .get_networking_plugin_server(self.z.clone(), None);
-        hv_server.connect().await;
-        hv_server.initialize().await;
+        hv_server.connect().await.unwrap();
+        hv_server.initialize().await.unwrap();
 
         let mut guard = self.uuid.write().await;
         *guard = Some(hv_server.instance_uuid());
@@ -1275,9 +1275,9 @@ impl DummyNetwork {
             .unwrap()
             .unwrap();
 
-        hv_server.register().await;
+        hv_server.register().await.unwrap();
 
-        let (shv, _hhv) = hv_server.start().await;
+        let (shv, _hhv) = hv_server.start().await.unwrap();
 
         let monitoring = async {
             loop {
@@ -1299,9 +1299,9 @@ impl DummyNetwork {
             .unwrap()
             .unwrap();
 
-        hv_server.stop(shv).await;
-        hv_server.unregister().await;
-        hv_server.disconnect().await;
+        hv_server.stop(shv).await.unwrap();
+        hv_server.unregister().await.unwrap();
+        hv_server.disconnect().await.unwrap();
 
         info!("DummyNetwork main loop exiting")
     }

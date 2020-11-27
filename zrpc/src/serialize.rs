@@ -23,47 +23,9 @@ extern crate bincode;
 #[cfg(any(feature = "send_json", feature = "state_json", feature = "resp_json"))]
 extern crate serde_json;
 
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::fmt;
-use thiserror::Error;
+use serde::{de::DeserializeOwned, Serialize};
 
-#[derive(Error, Debug, Serialize, Deserialize, Clone)]
-pub enum ZRPCError {
-    DeserializationError(String),
-    SerializationError(String),
-}
-
-impl fmt::Display for ZRPCError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            ZRPCError::DeserializationError(err) => write!(f, "{}", err),
-            ZRPCError::SerializationError(err) => write!(f, "{}", err),
-        }
-    }
-}
-
-#[cfg(feature = "resp_bincode")]
-impl From<Box<bincode::ErrorKind>> for ZRPCError {
-    fn from(err: Box<bincode::ErrorKind>) -> Self {
-        ZRPCError::SerializationError(err.to_string())
-    }
-}
-
-#[cfg(feature = "send_json")]
-impl From<serde_json::Error> for ZRPCError {
-    fn from(err: serde_json::Error) -> Self {
-        ZRPCError::SerializationError(err.to_string())
-    }
-}
-
-#[cfg(feature = "send_json")]
-impl From<std::str::Utf8Error> for ZRPCError {
-    fn from(err: std::str::Utf8Error) -> Self {
-        ZRPCError::DeserializationError(err.to_string())
-    }
-}
-
-pub type ZRPCResult<T> = Result<T, ZRPCError>;
+use crate::zrpcresult::ZRPCResult;
 
 pub fn serialize_response<T>(data: &T) -> ZRPCResult<Vec<u8>>
 where

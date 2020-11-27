@@ -11,6 +11,7 @@
 *   ADLINK fog05 team, <fog05@adlink-labs.tech>
 *********************************************************************************/
 #![feature(associated_type_bounds)]
+#![feature(try_trait)]
 
 pub mod zchannel;
 pub use zchannel::ZClientChannel;
@@ -19,7 +20,9 @@ pub mod types;
 pub use types::*;
 
 pub mod serialize;
+pub mod zrpcresult;
 
+use zrpcresult::ZRPCResult;
 /// Trait to be implemented by services
 pub trait ZServe<Req>: Sized + Clone {
     /// Type of the response
@@ -29,15 +32,21 @@ pub trait ZServe<Req>: Sized + Clone {
 
     /// Connects to Zenoh, do nothing in this case, state is HALTED
     #[allow(clippy::type_complexity)]
-    fn connect(&self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>>;
+    fn connect(
+        &self,
+    ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>>;
 
     /// Authenticates to Zenoh, state changes to INITIALIZING
     #[allow(clippy::type_complexity)]
-    fn initialize(&self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>>;
+    fn initialize(
+        &self,
+    ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>>;
 
     // Registers, state changes to REGISTERED
     #[allow(clippy::type_complexity)]
-    fn register(&self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>>;
+    fn register(
+        &self,
+    ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>>;
 
     // // Announce, state changes to ANNOUNCED
     // //fn announce(&self);
@@ -49,7 +58,10 @@ pub trait ZServe<Req>: Sized + Clone {
     ) -> ::core::pin::Pin<
         Box<
             dyn std::future::Future<
-                    Output = (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>),
+                    Output = ZRPCResult<(
+                        async_std::sync::Sender<()>,
+                        async_std::task::JoinHandle<ZRPCResult<()>>,
+                    )>,
                 > + '_,
         >,
     >;
@@ -59,20 +71,22 @@ pub trait ZServe<Req>: Sized + Clone {
     fn serve(
         &self,
         stop: async_std::sync::Receiver<()>,
-    ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>>;
+    ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>>;
 
     /// State changes to REGISTERED, will stop serve/work
     #[allow(clippy::type_complexity)]
     fn stop(
         &self,
         stop: async_std::sync::Sender<()>,
-    ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>>;
+    ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>>;
 
     // state changes to HALTED
     #[allow(clippy::type_complexity)]
-    fn unregister(&self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>>;
+    fn unregister(
+        &self,
+    ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>>;
 
     /// removes state from Zenoh
     #[allow(clippy::type_complexity)]
-    fn disconnect(self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()>>>;
+    fn disconnect(self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>>>>;
 }

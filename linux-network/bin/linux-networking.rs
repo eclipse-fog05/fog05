@@ -64,7 +64,7 @@ async fn main() {
     net.stop(s).await.unwrap();
 
     //wait for the futures to ends
-    h.await;
+    h.await.unwrap();
 
     //zconnector.close();
     //zenoh.close();

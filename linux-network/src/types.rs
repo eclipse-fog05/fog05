@@ -24,6 +24,7 @@ use fog05_sdk::agent::{AgentPluginInterfaceClient, OSClient};
 use fog05_sdk::fresult::FResult;
 use fog05_sdk::types::IPAddress;
 
+use zrpc::zrpcresult::{ZRPCError, ZRPCResult};
 use zrpc_macros::zservice;
 
 use uuid::Uuid;

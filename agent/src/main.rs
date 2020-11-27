@@ -164,7 +164,7 @@ async fn main() {
     agent.stop(s).await;
 
     //wait for the futures to ends
-    h.await;
+    h.await.unwrap();
 
     //zconnector.close();
     //zenoh.close();

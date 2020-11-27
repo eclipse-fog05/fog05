@@ -24,6 +24,7 @@ use std::str;
 use std::time::Duration;
 use uuid::Uuid;
 use zenoh::*;
+use zrpc::zrpcresult::{ZRPCError, ZRPCResult};
 use zrpc::ZServe;
 
 pub trait Hello: Clone {
@@ -61,25 +62,25 @@ where
         self.instance_id
     }
 
-    fn connect(&'_ self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>> {
+    fn connect(
+        &'_ self,
+    ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>> {
         log::trace!("server connect");
-        async fn __connect<S>(_self: &ServeHello<S>)
+        async fn __connect<S>(_self: &ServeHello<S>) -> ZRPCResult<()>
         where
             S: Hello + Send + 'static,
         {
             let zsession = _self.z.session();
             let zinfo = zsession.info().await;
             let pid = zinfo
-                .get(&zenoh::net::info::ZN_INFO_PID_KEY)
-                .unwrap()
+                .get(&zenoh::net::info::ZN_INFO_PID_KEY)?
                 .to_uppercase();
             let rid = zinfo
-                .get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY)
-                .unwrap()
+                .get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY)?
                 .split(',')
                 .collect::<Vec<_>>()[0]
                 .to_uppercase();
-            let ws = _self.z.workspace(None).await.unwrap();
+            let ws = _self.z.workspace(None).await?;
 
             let component_info = zrpc::ComponentState {
                 uuid: _self.instance_uuid(),
@@ -88,104 +89,103 @@ where
                 peerid: pid.clone().to_uppercase(),
                 status: zrpc::ComponentStatus::HALTED,
             };
-            let encoded_ci = bincode::serialize(&component_info).unwrap();
+            let encoded_ci = zrpc::serialize::serialize_state(&component_info)?;
             let path = zenoh::Path::try_from(format!(
                 "/this/is/generated/Hello/instance/{}/state",
                 _self.instance_uuid()
-            ))
-            .unwrap();
-            ws.put(&path, encoded_ci.into()).await.unwrap();
+            ))?;
+            Ok(ws.put(&path, encoded_ci.into()).await?)
         }
         Box::pin(__connect(self))
     }
 
-    fn initialize(&self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>> {
+    fn initialize(
+        &self,
+    ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>> {
         log::trace!("server initialize");
-        async fn __initialize<S>(_self: &ServeHello<S>)
+        async fn __initialize<S>(_self: &ServeHello<S>) -> ZRPCResult<()>
         where
             S: Hello + Send + 'static,
         {
             let selector = zenoh::Selector::try_from(format!(
                 "/this/is/generated/Hello/instance/{}/state",
                 _self.instance_uuid()
-            ))
-            .unwrap();
-            let ws = _self.z.workspace(None).await.unwrap();
-            let mut ds = ws.get(&selector).await.unwrap();
-            let mut data = Vec::new();
-            while let Some(d) = ds.next().await {
-                data.push(d)
-            }
+            ))?;
+            let ws = _self.z.workspace(None).await?;
+            let ds = ws.get(&selector).await?;
+            let data: Vec<zenoh::Data> = ds.collect().await;
             match data.len() {
-                0 => panic!("This component state is not present in Zenoh!!"),
+                0 => Err(ZRPCError::NotFound),
                 1 => {
                     let kv = &data[0];
                     match &kv.value {
                         zenoh::Value::Raw(_, buf) => {
-                            let mut ci =
-                                bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec())
-                                    .unwrap();
+                            let mut ci = zrpc::serialize::deserialize_state::<zrpc::ComponentState>(
+                                &buf.to_vec(),
+                            )?;
                             match ci.status {
                                     zrpc::ComponentStatus::HALTED => {
                                         ci.status = zrpc::ComponentStatus::INITIALIZING;
-                                        let encoded_ci = bincode::serialize(&ci).unwrap();
+                                        let encoded_ci = zrpc::serialize::serialize_state(&ci)?;
                                         let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state",
-                                        _self.instance_uuid())).unwrap();
-                                        ws.put(&path,encoded_ci.into()).await.unwrap();
+                                        _self.instance_uuid()))?;
+                                        Ok(ws.put(&path,encoded_ci.into()).await?)
                                     },
-                                    _ => panic!("Cannot authenticate a component in a state different than HALTED"),
+                                    _ => Err(ZRPCError::StateTransitionNotAllowed("Cannot authenticate a component in a state different than HALTED".to_string())),
                                 }
                         }
-                        _ => panic!("Component state is expected to be RAW in Zenoh!!"),
+                        _ => Err(ZRPCError::ZenohError(
+                            "Component state is expected to be RAW in Zenoh!!".to_string(),
+                        )),
                     }
                 }
-                _ => unreachable!(),
+                _ => Err(ZRPCError::Unreachable),
             }
         }
         Box::pin(__initialize(self))
     }
 
-    fn register(&self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>> {
+    fn register(
+        &self,
+    ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>> {
         log::trace!("server register");
-        async fn __register<S>(_self: &ServeHello<S>)
+        async fn __register<S>(_self: &ServeHello<S>) -> ZRPCResult<()>
         where
             S: Hello + Send + 'static,
         {
             let selector = zenoh::Selector::try_from(format!(
                 "/this/is/generated/Hello/instance/{}/state",
                 _self.instance_uuid()
-            ))
-            .unwrap();
-            let ws = _self.z.workspace(None).await.unwrap();
-            let mut ds = ws.get(&selector).await.unwrap();
-            let mut data = Vec::new();
-            while let Some(d) = ds.next().await {
-                data.push(d)
-            }
+            ))?;
+            let ws = _self.z.workspace(None).await?;
+            let ds = ws.get(&selector).await?;
+            let data: Vec<zenoh::Data> = ds.collect().await;
             match data.len() {
-                0 => panic!("This component state is not present in Zenoh!!"),
+                0 => Err(ZRPCError::NotFound),
                 1 => {
                     let kv = &data[0];
                     match &kv.value {
                         zenoh::Value::Raw(_, buf) => {
-                            let mut ci =
-                                bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec())
-                                    .unwrap();
+                            let mut ci = zrpc::serialize::deserialize_state::<zrpc::ComponentState>(
+                                &buf.to_vec(),
+                            )?;
                             match ci.status {
                                     zrpc::ComponentStatus::INITIALIZING => {
                                         ci.status = zrpc::ComponentStatus::REGISTERED;
-                                        let encoded_ci = bincode::serialize(&ci).unwrap();
+                                        let encoded_ci = zrpc::serialize::serialize_state(&ci)?;
                                         let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state",
-                                        _self.instance_uuid())).unwrap();
-                                        ws.put(&path,encoded_ci.into()).await.unwrap();
+                                        _self.instance_uuid()))?;
+                                        Ok(ws.put(&path,encoded_ci.into()).await?)
                                     },
-                                    _ => panic!("Cannot register a component in a state different than BUILDING"),
+                                    _ => Err(ZRPCError::StateTransitionNotAllowed("Cannot authenticate a component in a state different than BUILDING".to_string())),
                                 }
                         }
-                        _ => panic!("Component state is expected to be RAW in Zenoh!!"),
+                        _ => Err(ZRPCError::ZenohError(
+                            "Component state is expected to be RAW in Zenoh!!".to_string(),
+                        )),
                     }
                 }
-                _ => unreachable!(),
+                _ => Err(ZRPCError::Unreachable),
             }
         }
         Box::pin(__register(self))
@@ -196,14 +196,20 @@ where
     ) -> ::core::pin::Pin<
         Box<
             dyn std::future::Future<
-                    Output = (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>),
+                    Output = ZRPCResult<(
+                        async_std::sync::Sender<()>,
+                        async_std::task::JoinHandle<ZRPCResult<()>>,
+                    )>,
                 > + '_,
         >,
     > {
         log::trace!("server start");
         async fn __start<S>(
             _self: &ServeHello<S>,
-        ) -> (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>)
+        ) -> ZRPCResult<(
+            async_std::sync::Sender<()>,
+            async_std::task::JoinHandle<ZRPCResult<()>>,
+        )>
         where
             S: Hello + Send + 'static,
         {
@@ -211,50 +217,46 @@ where
             let selector = zenoh::Selector::try_from(format!(
                 "/this/is/generated/Hello/instance/{}/state",
                 _self.instance_uuid()
-            ))
-            .unwrap();
-            let ws = _self.z.workspace(None).await.unwrap();
-            let mut ds = ws.get(&selector).await.unwrap();
-            let mut data = Vec::new();
-            while let Some(d) = ds.next().await {
-                data.push(d)
-            }
+            ))?;
+            let ws = _self.z.workspace(None).await?;
+            let ds = ws.get(&selector).await?;
+            let data: Vec<zenoh::Data> = ds.collect().await;
             match data.len() {
-                0 => panic!("This component state is not present in Zenoh!!"),
+                0 => Err(ZRPCError::NotFound),
                 1 => {
                     let kv = &data[0];
                     match &kv.value {
                         zenoh::Value::Raw(_, buf) => {
-                            let mut ci =
-                                bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec())
-                                    .unwrap();
+                            let mut ci = zrpc::serialize::deserialize_state::<zrpc::ComponentState>(
+                                &buf.to_vec(),
+                            )?;
                             match ci.status {
                                 zrpc::ComponentStatus::REGISTERED => {
                                     ci.status = zrpc::ComponentStatus::SERVING;
-                                    let encoded_ci = bincode::serialize(&ci).unwrap();
+                                    let encoded_ci = bincode::serialize(&ci)?;
                                     let path = zenoh::Path::try_from(format!(
                                         "/this/is/generated/Hello/instance/{}/state",
                                         _self.instance_uuid()
-                                    ))
-                                    .unwrap();
-                                    ws.put(&path, encoded_ci.into()).await.unwrap();
+                                    ))?;
+                                    ws.put(&path, encoded_ci.into()).await?;
                                     let server = _self.clone();
                                     let h = async_std::task::spawn_blocking(move || {
                                         async_std::task::block_on(async {
-                                            server.serve(r).await;
+                                            server.serve(r).await
                                         })
                                     });
-                                    (s, h)
+                                    Ok((s, h))
                                 }
-                                _ => panic!(
-                                    "Cannot work a component in a state different than ANNOUNCED"
-                                ),
+                                _ =>
+                                Err(ZRPCError::StateTransitionNotAllowed("Cannot authenticate a component in a state different than REGISTERED".to_string())),
                             }
                         }
-                        _ => panic!("Component state is expected to be RAW in Zenoh!!"),
+                        _ => Err(ZRPCError::ZenohError(
+                            "Component state is expected to be RAW in Zenoh!!".to_string(),
+                        )),
                     }
                 }
-                _ => unreachable!(),
+                _ => Err(ZRPCError::Unreachable),
             }
         }
         Box::pin(__start(self))
@@ -263,52 +265,61 @@ where
     fn serve(
         &self,
         stop: async_std::sync::Receiver<()>,
-    ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>> {
+    ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>> {
         log::trace!("server serve");
-        async fn __serve<S>(_self: &ServeHello<S>, _stop: async_std::sync::Receiver<()>)
+        async fn __serve<S>(
+            _self: &ServeHello<S>,
+            _stop: async_std::sync::Receiver<()>,
+        ) -> ZRPCResult<()>
         where
             S: Hello + Send + 'static,
         {
             let selector = zenoh::Selector::try_from(format!(
                 "/this/is/generated/Hello/instance/{}/state",
                 _self.instance_uuid()
-            ))
-            .unwrap();
-            let ws = _self.z.workspace(None).await.unwrap();
-            let ds = ws.get(&selector).await.unwrap();
+            ))?;
+            let ws = _self.z.workspace(None).await?;
+            let ds = ws.get(&selector).await?;
             let data: Vec<zenoh::Data> = ds.collect().await;
             match data.len() {
-                0 => panic!("This component state is not present in Zenoh!!"),
+                0 => Err(ZRPCError::NotFound),
                 1 => {
                     let kv = &data[0];
                     match &kv.value {
                         zenoh::Value::Raw(_, buf) => {
-                            let ci = bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec())
-                                .unwrap();
+                            let ci = zrpc::serialize::deserialize_state::<zrpc::ComponentState>(
+                                &buf.to_vec(),
+                            )?;
                             match ci.status {
                                 zrpc::ComponentStatus::SERVING => {
                                     let path = zenoh::Path::try_from(format!(
                                         "/this/is/generated/Hello/instance/{}/eval",
                                         _self.instance_uuid()
-                                    ))
-                                    .unwrap();
+                                    ))?;
                                     log::trace!("eval registering");
-                                    let mut rcv =
-                                        ws.register_eval(&path.clone().into()).await.unwrap();
+                                    let mut rcv = ws.register_eval(&path.clone().into()).await?;
                                     log::trace!("eval registered");
+
                                     let rcv_loop = async {
                                         loop {
-                                            let get_request = rcv.next().await.unwrap();
+                                            let get_request = rcv
+                                                .next()
+                                                .await
+                                                .ok_or_else(|| async_std::sync::RecvError)?;
                                             let base64_req = get_request
                                                 .selector
                                                 .properties
                                                 .get("req")
                                                 .cloned()
-                                                .unwrap();
-                                            let b64_bytes = base64::decode(base64_req).unwrap();
-                                            let js_req = str::from_utf8(&b64_bytes).unwrap();
-                                            let req = serde_json::from_str::<HelloRequest>(&js_req)
-                                                .unwrap();
+                                                .ok_or_else(|| async_std::sync::RecvError)?;
+                                            let b64_bytes = base64::decode(base64_req)
+                                                .map_err(|_| async_std::sync::RecvError)?;
+                                            let req = zrpc::serialize::deserialize_request::<
+                                                HelloRequest,
+                                            >(
+                                                &b64_bytes
+                                            )
+                                            .map_err(|_| async_std::sync::RecvError)?;
 
                                             let gr = get_request.clone();
                                             // let inner_ser = arc_ser.clone();
@@ -320,45 +331,40 @@ where
                                                     let resp =
                                                         HelloResponse::Hello(ser.hello(name));
                                                     let encoded =
-                                                        bincode::serialize(&resp).unwrap();
+                                                        zrpc::serialize::serialize_response(&resp)
+                                                            .map_err(|_| {
+                                                                async_std::sync::RecvError
+                                                            })?;
                                                     gr.reply(p, encoded.into()).await;
                                                 }
                                                 HelloRequest::Add => {
                                                     let resp = HelloResponse::Add(ser.add());
                                                     let encoded =
-                                                        bincode::serialize(&resp).unwrap();
+                                                        zrpc::serialize::serialize_response(&resp)
+                                                            .map_err(|_| {
+                                                                async_std::sync::RecvError
+                                                            })?;
                                                     gr.reply(p, encoded.into()).await;
                                                 }
                                             }
-
-                                            // async_std::task::spawn(async move {
-                                            //     match req {
-                                            //         HelloRequest::Hello { name } => {
-                                            //             let resp =
-                                            //                 HelloResponse::Hello(ser.hello(name));
-                                            //             let encoded =
-                                            //                 bincode::serialize(&resp).unwrap();
-                                            //             gr.reply(p, encoded.into()).await;
-                                            //         }
-                                            //         HelloRequest::Add => {
-                                            //             let resp = HelloResponse::Add(ser.add());
-                                            //             let encoded =
-                                            //                 bincode::serialize(&resp).unwrap();
-                                            //             gr.reply(p, encoded.into()).await;
-                                            //         }
-                                            //     }
-                                            // });
                                         }
                                     };
-                                    rcv_loop.race(_stop.recv()).await.unwrap();
+                                    Ok(rcv_loop
+                                        .race(_stop.recv())
+                                        .await
+                                        .map_err(|e| ZRPCError::Error(format!("{}", e)))?)
                                 }
-                                _ => panic!("State is not WORK, serve called directly?"),
+                                _ => Err(ZRPCError::StateTransitionNotAllowed(
+                                    "State is not WORK, serve called directly?".to_string(),
+                                )),
                             }
                         }
-                        _ => panic!("Component state is expected to be RAW in Zenoh!!"),
+                        _ => Err(ZRPCError::ZenohError(
+                            "Component state is expected to be RAW in Zenoh!!".to_string(),
+                        )),
                     }
                 }
-                _ => unreachable!(),
+                _ => Err(ZRPCError::Unreachable),
             }
         }
         Box::pin(__serve(self, stop))
@@ -367,119 +373,119 @@ where
     fn stop(
         &self,
         stop: async_std::sync::Sender<()>,
-    ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>> {
+    ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>> {
         log::trace!("server stop");
-        async fn __stop<S>(_self: &ServeHello<S>, _stop: async_std::sync::Sender<()>)
+        async fn __stop<S>(
+            _self: &ServeHello<S>,
+            _stop: async_std::sync::Sender<()>,
+        ) -> ZRPCResult<()>
         where
             S: Hello + Send + 'static,
         {
             let selector = zenoh::Selector::try_from(format!(
                 "/this/is/generated/Hello/instance/{}/state",
                 _self.instance_uuid()
-            ))
-            .unwrap();
-            let ws = _self.z.workspace(None).await.unwrap();
-            let mut ds = ws.get(&selector).await.unwrap();
-            let mut data = Vec::new();
-            while let Some(d) = ds.next().await {
-                data.push(d)
-            }
+            ))?;
+            let ws = _self.z.workspace(None).await?;
+            let ds = ws.get(&selector).await?;
+            let data: Vec<zenoh::Data> = ds.collect().await;
             match data.len() {
-                0 => panic!("This component state is not present in Zenoh!!"),
+                0 => Err(ZRPCError::NotFound),
                 1 => {
                     let kv = &data[0];
                     match &kv.value {
                         zenoh::Value::Raw(_, buf) => {
-                            let mut ci =
-                                bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec())
-                                    .unwrap();
+                            let mut ci = zrpc::serialize::deserialize_state::<zrpc::ComponentState>(
+                                &buf.to_vec(),
+                            )?;
                             match ci.status {
                                 zrpc::ComponentStatus::SERVING => {
                                     ci.status = zrpc::ComponentStatus::REGISTERED;
-                                    let encoded_ci = bincode::serialize(&ci).unwrap();
+                                    let encoded_ci = zrpc::serialize::serialize_state(&ci)?;
                                     let path = zenoh::Path::try_from(format!(
                                         "/this/is/generated/Hello/instance/{}/state",
                                         _self.instance_uuid()
-                                    ))
-                                    .unwrap();
-                                    ws.put(&path, encoded_ci.into()).await.unwrap();
+                                    ))?;
+                                    ws.put(&path, encoded_ci.into()).await?;
                                     // Here we stop the serve
-                                    _stop.send(()).await;
+                                    Ok(_stop.send(()).await)
                                 }
-                                _ => panic!(
+                                _ => Err(ZRPCError::StateTransitionNotAllowed(
                                     "Cannot unwork a component in a state different than WORK"
-                                ),
+                                        .to_string(),
+                                )),
                             }
                         }
-                        _ => panic!("Component state is expected to be RAW in Zenoh!!"),
+                        _ => Err(ZRPCError::ZenohError(
+                            "Component state is expected to be RAW in Zenoh!!".to_string(),
+                        )),
                     }
                 }
-                _ => unreachable!(),
+                _ => Err(ZRPCError::Unreachable),
             }
         }
         Box::pin(__stop(self, stop))
     }
 
-    fn unregister(&self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()> + '_>> {
+    fn unregister(
+        &self,
+    ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>> {
         log::trace!("server unregister");
-        async fn __unregister<S>(_self: &ServeHello<S>)
+        async fn __unregister<S>(_self: &ServeHello<S>) -> ZRPCResult<()>
         where
             S: Hello + Send + 'static,
         {
             let selector = zenoh::Selector::try_from(format!(
                 "/this/is/generated/Hello/instance/{}/state",
                 _self.instance_uuid()
-            ))
-            .unwrap();
-            let ws = _self.z.workspace(None).await.unwrap();
-            let mut ds = ws.get(&selector).await.unwrap();
-            let mut data = Vec::new();
-            while let Some(d) = ds.next().await {
-                data.push(d)
-            }
+            ))?;
+            let ws = _self.z.workspace(None).await?;
+            let ds = ws.get(&selector).await?;
+            let data: Vec<zenoh::Data> = ds.collect().await;
             match data.len() {
-                0 => panic!("This component state is not present in Zenoh!!"),
+                0 => Err(ZRPCError::NotFound),
                 1 => {
                     let kv = &data[0];
                     match &kv.value {
                         zenoh::Value::Raw(_, buf) => {
-                            let mut ci =
-                                bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec())
-                                    .unwrap();
+                            let mut ci = zrpc::serialize::deserialize_state::<zrpc::ComponentState>(
+                                &buf.to_vec(),
+                            )?;
                             match ci.status {
                                     zrpc::ComponentStatus::REGISTERED => {
                                         ci.status = zrpc::ComponentStatus::HALTED;
-                                        let encoded_ci = bincode::serialize(&ci).unwrap();
+                                        let encoded_ci = zrpc::serialize::serialize_state(&ci)?;
                                         let path = zenoh::Path::try_from(format!(
                                             "/this/is/generated/Hello/instance/{}/state",
-                                            _self.instance_uuid())).unwrap();
-                                        ws.put(&path,encoded_ci.into()).await.unwrap();
+                                            _self.instance_uuid()))?;
+                                        Ok(ws.put(&path,encoded_ci.into()).await?)
                                         // Here we should stop the serve
                                     },
-                                    _ => panic!("Cannot unregister a component in a state different than UNANNOUNCED"),
+                                    _ => Err(ZRPCError::StateTransitionNotAllowed("Cannot unregister a component in a state different than UNANNOUNCED".to_string())),
                                 }
                         }
-                        _ => panic!("Component state is expected to be RAW in Zenoh!!"),
+                        _ => Err(ZRPCError::ZenohError(
+                            "Component state is expected to be RAW in Zenoh!!".to_string(),
+                        )),
                     }
                 }
-                _ => unreachable!(),
+                _ => Err(ZRPCError::Unreachable),
             }
         }
         Box::pin(__unregister(self))
     }
 
-    fn disconnect(self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ()>>> {
-        async fn __disconnect<S>(_self: ServeHello<S>)
+    fn disconnect(self) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>>>> {
+        async fn __disconnect<S>(_self: ServeHello<S>) -> ZRPCResult<()>
         where
             S: Hello + Send + 'static,
         {
-            let ws = _self.z.workspace(None).await.unwrap();
+            let ws = _self.z.workspace(None).await?;
             let path = zenoh::Path::try_from(format!(
                 "/this/is/generated/Hello/instance/{}/state",
                 _self.instance_uuid()
-            ))
-            .unwrap();
-            ws.delete(&path).await.unwrap();
+            ))?;
+            Ok(ws.delete(&path).await?)
         }
 
         Box::pin(__disconnect(self))
@@ -552,72 +558,69 @@ impl HelloClient {
 
     pub fn find_local_servers(
         z: Arc<zenoh::Zenoh>,
-    ) -> impl std::future::Future<Output = std::io::Result<Vec<Uuid>>> + 'static {
+    ) -> impl std::future::Future<Output = ZRPCResult<Vec<Uuid>>> + 'static {
         async move {
-            let ws = z.workspace(None).await.unwrap();
+            let ws = z.workspace(None).await?;
             let zsession = z.session();
             let zinfo = zsession.info().await;
             let rid = zinfo
-                .get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY)
-                .unwrap()
+                .get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY)?
                 .split(',')
                 .collect::<Vec<_>>()[0]
                 .to_uppercase();
 
             let selector =
-                zenoh::Selector::try_from("/this/is/generated/Hello/instance/*/state".to_string())
-                    .unwrap();
-            let mut ds = ws.get(&selector).await.unwrap();
+                zenoh::Selector::try_from("/this/is/generated/Hello/instance/*/state".to_string())?;
+            let mut ds = ws.get(&selector).await?;
             let mut servers = Vec::new();
 
             while let Some(d) = ds.next().await {
                 match d.value {
                     zenoh::Value::Raw(_, buf) => {
-                        let ca =
-                            bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
+                        let ca = zrpc::serialize::deserialize_state::<zrpc::ComponentState>(
+                            &buf.to_vec(),
+                        )?;
                         if ca.routerid == rid {
                             servers.push(ca.uuid);
                         }
                     }
                     _ => {
-                        return Err(std::io::Error::new(
-                            std::io::ErrorKind::InvalidData,
-                            "Component Advertisement is not encoded in RAW".to_string(),
+                        return Err(ZRPCError::ZenohError(
+                            "Component state is expected to be RAW in Zenoh!!".to_string(),
                         ))
                     }
                 }
             }
-            std::result::Result::Ok(servers)
+            Ok(servers)
         }
     }
 
     pub fn find_servers(
         z: Arc<zenoh::Zenoh>,
-    ) -> impl std::future::Future<Output = std::io::Result<Vec<Uuid>>> + 'static {
+    ) -> impl std::future::Future<Output = ZRPCResult<Vec<Uuid>>> + 'static {
         async move {
-            let ws = z.workspace(None).await.unwrap();
+            let ws = z.workspace(None).await?;
             let selector =
-                zenoh::Selector::try_from("/this/is/generated/Hello/instance/*/state".to_string())
-                    .unwrap();
-            let mut ds = ws.get(&selector).await.unwrap();
+                zenoh::Selector::try_from("/this/is/generated/Hello/instance/*/state".to_string())?;
+            let mut ds = ws.get(&selector).await?;
             let mut servers = Vec::new();
 
             while let Some(d) = ds.next().await {
                 match d.value {
                     zenoh::Value::Raw(_, buf) => {
-                        let ca =
-                            bincode::deserialize::<zrpc::ComponentState>(&buf.to_vec()).unwrap();
+                        let ca = zrpc::serialize::deserialize_state::<zrpc::ComponentState>(
+                            &buf.to_vec(),
+                        )?;
                         servers.push(ca.uuid);
                     }
                     _ => {
-                        return Err(std::io::Error::new(
-                            std::io::ErrorKind::InvalidData,
-                            "Component Advertisement is not encoded in RAW".to_string(),
+                        return Err(ZRPCError::ZenohError(
+                            "Component state is expected to be RAW in Zenoh!!".to_string(),
                         ))
                     }
                 }
             }
-            std::result::Result::Ok(servers)
+            Ok(servers)
         }
     }
 }
@@ -627,33 +630,27 @@ impl HelloClient {
     pub fn hello(
         &self,
         name: String,
-    ) -> impl std::future::Future<Output = std::io::Result<String>> + '_ {
+    ) -> impl std::future::Future<Output = ZRPCResult<String>> + '_ {
         let request = HelloRequest::Hello { name };
         // Timeout is implemented here
         async move {
             match self.ch.verify_server().await {
                 Ok(b) => match b {
-                    false => Err(std::io::Error::new(
-                        std::io::ErrorKind::PermissionDenied,
-                        "Server is not available".to_string(),
-                    )),
+                    false => Err(ZRPCError::Unavailable),
                     true => {
                         let resp = self.ch.call_fun(request);
                         let dur = Duration::from_secs(10);
                         match async_std::future::timeout(dur, resp).await {
                             Ok(r) => match r {
                                 Ok(zr) => match zr {
-                                    HelloResponse::Hello(msg) => std::result::Result::Ok(msg),
+                                    HelloResponse::Hello(msg) => Ok(msg),
                                     _ => ::std::rt::begin_panic(
                                         "internal error: entered unreachable code",
                                     ),
                                 },
                                 Err(e) => Err(e),
                             },
-                            Err(e) => Err(std::io::Error::new(
-                                std::io::ErrorKind::TimedOut,
-                                format!("{}", e),
-                            )),
+                            Err(e) => Err(ZRPCError::TimedOut),
                         }
                     }
                 },
@@ -663,33 +660,27 @@ impl HelloClient {
     }
 
     #[allow(unused)]
-    pub fn add(&self) -> impl std::future::Future<Output = std::io::Result<u64>> + '_ {
+    pub fn add(&self) -> impl std::future::Future<Output = ZRPCResult<u64>> + '_ {
         let request = HelloRequest::Add;
         // Timeout is implemented here
         async move {
             match self.ch.verify_server().await {
                 Ok(b) => match b {
-                    false => Err(std::io::Error::new(
-                        std::io::ErrorKind::PermissionDenied,
-                        "Server is not available".to_string(),
-                    )),
+                    false => Err(ZRPCError::Unavailable),
                     true => {
                         let resp = self.ch.call_fun(request);
                         let dur = Duration::from_secs(10);
                         match async_std::future::timeout(dur, resp).await {
                             Ok(r) => match r {
                                 Ok(zr) => match zr {
-                                    HelloResponse::Add(msg) => std::result::Result::Ok(msg),
+                                    HelloResponse::Add(msg) => Ok(msg),
                                     _ => ::std::rt::begin_panic(
                                         "internal error: entered unreachable code",
                                     ),
                                 },
                                 Err(e) => Err(e),
                             },
-                            Err(e) => Err(std::io::Error::new(
-                                std::io::ErrorKind::TimedOut,
-                                format!("{}", e),
-                            )),
+                            Err(e) => Err(ZRPCError::TimedOut),
                         }
                     }
                 },
@@ -720,10 +711,10 @@ async fn main() {
     let instance_id = server.instance_uuid();
     let client = HelloClient::new(zenoh.clone(), instance_id);
 
-    server.connect().await; //instance UUID is generated at this point
+    server.connect().await.unwrap(); //instance UUID is generated at this point
 
-    server.initialize().await;
-    server.register().await;
+    server.initialize().await.unwrap();
+    server.register().await.unwrap();
 
     let local_servers = HelloClient::find_local_servers(zenoh.clone()).await;
     println!("local_servers: {:?}", local_servers);
@@ -735,7 +726,7 @@ async fn main() {
     let hello = client.hello("client".to_string()).await;
     println!("Res is: {:?}", hello);
 
-    let (s, handle) = server.start().await;
+    let (s, handle) = server.start().await.unwrap();
 
     let local_servers = HelloClient::find_local_servers(zenoh.clone()).await;
     println!("local_servers: {:?}", local_servers);
@@ -759,7 +750,7 @@ async fn main() {
     let hello = client.add().await;
     println!("Res is: {:?}", hello);
 
-    server.stop(s).await;
+    server.stop(s).await.unwrap();
 
     let local_servers = HelloClient::find_local_servers(zenoh.clone()).await;
     println!("local_servers: {:?}", local_servers);
@@ -767,10 +758,10 @@ async fn main() {
     let servers = HelloClient::find_servers(zenoh.clone()).await;
     println!("servers found: {:?}", servers);
 
-    server.unregister().await;
-    server.disconnect().await;
+    server.unregister().await.unwrap();
+    server.disconnect().await.unwrap();
 
-    handle.await;
+    handle.await.unwrap();
 
     // this returns an error as the server is not there
     let hello = client.hello("client".to_string()).await;

@@ -25,6 +25,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use log::trace;
 
 use crate::serialize;
+use crate::zrpcresult::{ZRPCError, ZRPCResult};
 
 #[derive(Clone)]
 pub struct ZClientChannel<Req, Resp> {
@@ -58,25 +59,24 @@ where
     /// it serialized the request on the as properties in the selector
     /// the request is first serialized as json and then encoded in base64 and
     /// passed as a property named req
-    async fn send(&self, ws: zenoh::Workspace<'_>, request: &Req) -> zenoh::DataStream {
-        let req = serialize::serialize_request(&request).unwrap();
+    async fn send(&self, ws: zenoh::Workspace<'_>, request: &Req) -> ZRPCResult<zenoh::DataStream> {
+        let req = serialize::serialize_request(&request)?;
         let selector = zenoh::Selector::try_from(format!(
             "{}/{}/eval?(req={})",
             self.path,
             self.server_uuid.unwrap(),
             base64::encode(req)
-        ))
-        .unwrap();
+        ))?;
         //Should create the appropriate Error type and the conversions form ZError
         trace!("Sending {:?} to  {:?}", request, selector);
-        ws.get(&selector).await.unwrap()
+        Ok(ws.get(&selector).await?)
     }
 
     /// This function calls the eval on the server and deserialized the result
     /// if the value is not deserializable or the eval returns none it returns an IOError
-    pub async fn call_fun(&self, request: Req) -> std::io::Result<Resp> {
-        let ws = self.z.workspace(None).await.unwrap();
-        let mut data_stream = self.send(ws, &request).await;
+    pub async fn call_fun(&self, request: Req) -> ZRPCResult<Resp> {
+        let ws = self.z.workspace(None).await?;
+        let mut data_stream = self.send(ws, &request).await?;
         //takes only one, eval goes to only one
         let resp = data_stream.next().await;
         if let Some(data) = resp {
@@ -84,40 +84,38 @@ where
             match value {
                 zenoh::Value::Raw(_size, rbuf) => {
                     let raw_data = rbuf.to_vec();
-                    Ok(serialize::deserialize_response(&raw_data).unwrap())
+                    Ok(serialize::deserialize_response(&raw_data)?)
                 }
-                _ => Err(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "Value is not Raw!",
+                _ => Err(ZRPCError::ZenohError(
+                    "Response data is expected to be RAW in Zenoh!!".to_string(),
                 )),
             }
         } else {
-            Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("No data from call_fun for Request {:?}", request),
-            ))
+            Err(ZRPCError::ZenohError(format!(
+                "No data from call_fun for Request {:?}",
+                request
+            )))
         }
     }
 
     /// This function verifies is the server is still available to reply at requests
     /// it first verifies that it is register in Zenoh, then it verifies if the peer is still connected,
     /// and then verifies the state, it returns an std::io::Result, the Err case describe the error.
-    pub async fn verify_server(&self) -> std::io::Result<bool> {
+    pub async fn verify_server(&self) -> ZRPCResult<bool> {
         if self.server_uuid.is_none() {
             return Ok(false);
         }
 
-        let ws = self.z.workspace(None).await.unwrap();
+        let ws = self.z.workspace(None).await?;
 
-        let selector =
-            zenoh::Selector::try_from(format!("{}/{}/state", self.path, self.server_uuid.unwrap()))
-                .unwrap();
-        let mut ds = ws.get(&selector).await.unwrap();
-        let mut idata = Vec::new();
+        let selector = zenoh::Selector::try_from(format!(
+            "{}/{}/state",
+            self.path,
+            self.server_uuid.unwrap()
+        ))?;
 
-        while let Some(d) = ds.next().await {
-            idata.push(d)
-        }
+        let ds = ws.get(&selector).await?;
+        let idata: Vec<zenoh::Data> = ds.collect().await;
 
         if idata.is_empty() {
             return Ok(false);
@@ -126,11 +124,10 @@ where
         let iv = &idata[0];
         match &iv.value {
             zenoh::Value::Raw(_, buf) => {
-                let cs = bincode::deserialize::<super::ComponentState>(&buf.to_vec()).unwrap();
+                let cs = serialize::deserialize_state::<super::ComponentState>(&buf.to_vec())?;
                 let selector =
-                    zenoh::Selector::try_from(format!("/@/router/{}", String::from(&cs.routerid)))
-                        .unwrap();
-                let mut ds = ws.get(&selector).await.unwrap();
+                    zenoh::Selector::try_from(format!("/@/router/{}", String::from(&cs.routerid)))?;
+                let mut ds = ws.get(&selector).await?;
                 let mut rdata = Vec::new();
 
                 while let Some(d) = ds.next().await {
@@ -138,16 +135,13 @@ where
                 }
 
                 if rdata.len() != 1 {
-                    return Err(std::io::Error::new(
-                        std::io::ErrorKind::NotFound,
-                        "Zenoh Router not found!".to_string(),
-                    ));
+                    return Err(ZRPCError::NotFound);
                 }
 
                 let rv = &rdata[0];
                 match &rv.value {
                     zenoh::Value::Json(sv) => {
-                        let ri = serde_json::from_str::<super::types::ZRouterInfo>(&sv).unwrap();
+                        let ri = serde_json::from_str::<super::types::ZRouterInfo>(&sv)?;
                         let mut it = ri.sessions.iter();
                         let f = it.find(|&x| x.peer == String::from(&cs.peerid).to_uppercase());
 
@@ -161,18 +155,16 @@ where
                         }
                     }
                     _ => {
-                        return Err(std::io::Error::new(
-                            std::io::ErrorKind::InvalidData,
+                        return Err(ZRPCError::ZenohError(
                             "Router information is not encoded in JSON".to_string(),
-                        ))
+                        ));
                     }
                 }
             }
             _ => {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
-                    "Component Advertisement is not encoded in RAW".to_string(),
-                ))
+                return Err(ZRPCError::ZenohError(
+                    "Component state is expected to be RAW in Zenoh!!".to_string(),
+                ));
             }
         }
     }

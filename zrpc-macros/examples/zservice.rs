@@ -15,6 +15,7 @@ use uuid::Uuid;
 use zenoh::*;
 use zrpc::ZServe;
 //importing the macros
+use zrpc::zrpcresult::{ZRPCError, ZRPCResult};
 use zrpc_macros::{zserver, zservice};
 
 #[zservice(timeout_s = 10, prefix = "/lfos")]
@@ -62,9 +63,9 @@ async fn main() {
     let ser_uuid = server.instance_uuid();
     let client = HelloClient::new(zenoh.clone(), ser_uuid);
 
-    server.connect().await;
-    server.initialize().await;
-    server.register().await;
+    server.connect().await.unwrap();
+    server.initialize().await.unwrap();
+    server.register().await.unwrap();
 
     let local_servers = HelloClient::find_local_servers(zenoh.clone()).await;
     println!("local_servers: {:?}", local_servers);
@@ -76,7 +77,7 @@ async fn main() {
     let hello = client.hello("client".to_string()).await;
     println!("Res is: {:?}", hello);
 
-    let (s, handle) = server.start().await;
+    let (s, handle) = server.start().await.unwrap();
 
     let local_servers = HelloClient::find_local_servers(zenoh.clone()).await;
     println!("local_servers: {:?}", local_servers);
@@ -97,7 +98,7 @@ async fn main() {
     let hello = client.add().await;
     println!("Res is: {:?}", hello);
 
-    server.stop(s);
+    server.stop(s).await.unwrap();
 
     let local_servers = HelloClient::find_local_servers(zenoh.clone()).await;
     println!("local_servers: {:?}", local_servers);
@@ -105,10 +106,10 @@ async fn main() {
     let servers = HelloClient::find_servers(zenoh.clone()).await;
     println!("servers found: {:?}", servers);
 
-    server.unregister().await;
-    server.disconnect().await;
+    server.unregister().await.unwrap();
+    server.disconnect().await.unwrap();
 
-    handle.await;
+    handle.await.unwrap();
 
     // this should return an error as the server is not there
     let hello = client.hello("client".to_string()).await;

@@ -84,7 +84,7 @@ pub struct Agent {
 }
 
 impl Agent {
-    async fn run(&self, stop: async_std::sync::Receiver<()>) {
+    async fn run(&self, stop: async_std::sync::Receiver<()>) -> FResult<()> {
         info!("Agent main loop starting...");
         //this should return a channel to send the stop and a task handler to wait for
 
@@ -92,23 +92,23 @@ impl Agent {
         let a2p_server = self
             .clone()
             .get_agent_plugin_interface_server(self.z.clone(), None);
-        a2p_server.connect().await;
-        a2p_server.initialize().await;
-        a2p_server.register().await;
+        a2p_server.connect().await?;
+        a2p_server.initialize().await?;
+        a2p_server.register().await?;
 
         //starting the OS Server
         let os_server = self.clone().get_os_server(self.z.clone(), None);
-        os_server.connect().await;
-        os_server.initialize().await;
-        os_server.register().await;
+        os_server.connect().await?;
+        os_server.initialize().await?;
+        os_server.register().await?;
 
         //starting the Agent-Orchestrator Server
         let a2o_server = self
             .clone()
             .get_agent_orchestrator_interface_server(self.z.clone(), None);
-        a2o_server.connect().await;
-        a2o_server.initialize().await;
-        a2o_server.register().await;
+        a2o_server.connect().await?;
+        a2o_server.initialize().await?;
+        a2o_server.register().await?;
 
         log::trace!("taking guard for updating instance id");
         let mut guard = self.agent.write().await;
@@ -116,11 +116,11 @@ impl Agent {
         drop(guard);
 
         log::trace!("staring servers...");
-        let (sa2p, ha2p) = a2p_server.start().await;
+        let (sa2p, ha2p) = a2p_server.start().await?;
 
-        let (sos, hos) = os_server.start().await;
+        let (sos, hos) = os_server.start().await?;
 
-        let (sa2o, ha2o) = a2o_server.start().await;
+        let (sa2o, ha2o) = a2o_server.start().await?;
 
         self.advertise().await;
 
@@ -217,29 +217,33 @@ impl Agent {
             Err(e) => trace!("Monitoring ending got error: {}", e),
         }
 
-        a2p_server.stop(sa2p).await;
-        a2p_server.unregister().await;
-        a2p_server.disconnect().await;
+        a2p_server.stop(sa2p).await?;
+        a2p_server.unregister().await?;
+        a2p_server.disconnect().await?;
 
-        os_server.stop(sos).await;
-        os_server.unregister().await;
-        os_server.disconnect().await;
+        os_server.stop(sos).await?;
+        os_server.unregister().await?;
+        os_server.disconnect().await?;
 
-        a2o_server.stop(sa2o).await;
-        a2o_server.unregister().await;
-        a2o_server.disconnect().await;
+        a2o_server.stop(sa2o).await?;
+        a2o_server.unregister().await?;
+        a2o_server.disconnect().await?;
 
         info!("Agent main loop exiting...");
+        Ok(())
     }
 
-    pub async fn start(&self) -> (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>) {
+    pub async fn start(
+        &self,
+    ) -> (
+        async_std::sync::Sender<()>,
+        async_std::task::JoinHandle<FResult<()>>,
+    ) {
         // Starting main loop in a task
         let (s, r) = async_std::sync::channel::<()>(1);
         let agent = self.clone();
         let h = async_std::task::spawn_blocking(move || {
-            async_std::task::block_on(async {
-                agent.run(r).await;
-            })
+            async_std::task::block_on(async { agent.run(r).await })
         });
         (s, h)
     }

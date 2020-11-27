@@ -1485,15 +1485,15 @@ impl LinuxNetwork {
         })
     }
 
-    async fn run(&self, stop: async_std::sync::Receiver<()>) {
+    async fn run(&self, stop: async_std::sync::Receiver<()>) -> FResult<()> {
         info!("LinuxNetwork main loop starting...");
 
         //starting the Agent-Plugin Server
         let hv_server = self
             .clone()
             .get_networking_plugin_server(self.z.clone(), None);
-        hv_server.connect().await;
-        hv_server.initialize().await;
+        hv_server.connect().await?;
+        hv_server.initialize().await?;
 
         let mut guard = self.state.write().await;
         guard.uuid = Some(hv_server.instance_uuid());
@@ -1503,13 +1503,11 @@ impl LinuxNetwork {
             .clone()
             .unwrap()
             .register_plugin(hv_server.instance_uuid(), PluginKind::NETWORKING)
-            .await
-            .unwrap()
-            .unwrap();
+            .await??;
 
-        hv_server.register().await;
+        hv_server.register().await?;
 
-        let (shv, _hhv) = hv_server.start().await;
+        let (shv, _hhv) = hv_server.start().await?;
 
         let monitoring = async {
             loop {
@@ -1527,20 +1525,22 @@ impl LinuxNetwork {
             .clone()
             .unwrap()
             .unregister_plugin(hv_server.instance_uuid())
-            .await
-            .unwrap()
-            .unwrap();
+            .await??;
 
-        hv_server.stop(shv).await;
-        hv_server.unregister().await;
-        hv_server.disconnect().await;
+        hv_server.stop(shv).await?;
+        hv_server.unregister().await?;
+        hv_server.disconnect().await?;
 
-        info!("LinuxNetwork main loop exiting")
+        info!("LinuxNetwork main loop exiting");
+        Ok(())
     }
 
     pub async fn start(
         &mut self,
-    ) -> (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>) {
+    ) -> (
+        async_std::sync::Sender<()>,
+        async_std::task::JoinHandle<FResult<()>>,
+    ) {
         let local_os = OSClient::find_local_servers(self.z.clone()).await.unwrap();
         if local_os.is_empty() {
             error!("Unable to find a local OS interface");
@@ -1565,9 +1565,7 @@ impl LinuxNetwork {
         let (s, r) = async_std::sync::channel::<()>(1);
         let plugin = self.clone();
         let h = async_std::task::spawn_blocking(move || {
-            async_std::task::block_on(async {
-                plugin.run(r).await;
-            });
+            async_std::task::block_on(async { plugin.run(r).await })
         });
         (s, h)
     }

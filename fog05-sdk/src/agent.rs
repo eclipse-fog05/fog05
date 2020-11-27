@@ -32,6 +32,7 @@ use zenoh::*;
 use log::trace;
 
 //importing the macros
+use zrpc::zrpcresult::{ZRPCError, ZRPCResult};
 use zrpc_macros::{zserver, zservice};
 
 use crate::fresult::FResult;

@@ -93,4 +93,10 @@ impl From<reqwest::Error> for FError {
     }
 }
 
+impl From<zrpc::zrpcresult::ZRPCError> for FError {
+    fn from(err: zrpc::zrpcresult::ZRPCError) -> Self {
+        FError::ZError(err.to_string())
+    }
+}
+
 pub type FResult<T> = Result<T, FError>;
