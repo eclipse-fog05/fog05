@@ -160,9 +160,16 @@ impl NetworkingPlugin for LinuxNetwork {
             .await?;
 
         log::trace!("VXLAN creation res: {:?}", res);
-        self.set_iface_master(default_vxl_name.clone(), default_br_name)
+        self.set_iface_master(default_vxl_name.clone(), default_br_name.clone())
             .await?;
         self.set_iface_up(default_vxl_name).await?;
+
+        self.add_iface_address(
+            default_br_name,
+            IPAddress::V4(std::net::Ipv4Addr::new(10, 240, 0, 1)),
+            16,
+        )
+        .await?;
 
         self.connector
             .global

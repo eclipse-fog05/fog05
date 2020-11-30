@@ -71,7 +71,7 @@ struct NSManagerArgs {
 
 #[derive(Clone)]
 pub struct NSManager {
-    // pub z: Arc<zenoh::Zenoh>,
+    pub z: Arc<zenoh::Zenoh>,
     pub pid: u32,
     pub uuid: Uuid,
     pub rt: Arc<RwLock<tokio::runtime::Runtime>>,
@@ -153,7 +153,7 @@ fn main() {
             let sys_fs = Path::new(&SYS_FS);
             mount_flags = nix::mount::MsFlags::empty();
             if let Err(e) = nix::mount::mount(
-                Some(Path::new("ns0")),
+                Some(Path::new(&args.netns)),
                 Path::new("/sys"),
                 Some(sys_fs),
                 mount_flags,
@@ -169,7 +169,11 @@ fn main() {
                 log::trace!("Creating Tokio runtime");
                 let rt = tokio::runtime::Runtime::new().unwrap();
 
-                let mut manager = match NSManager::new(my_pid, args.id, rt) {
+                let properties = format!("mode=client;peer={}", args.locator.clone());
+                let zproperties = Properties::from(properties);
+                let zenoh = Arc::new(Zenoh::new(zproperties.into()).await.unwrap());
+
+                let mut manager = match NSManager::new(zenoh, my_pid, args.id, rt) {
                     Ok(m) => m,
                     Err(e) => {
                         log::error!("Error when creating manager: {}", e);
@@ -178,7 +182,7 @@ fn main() {
                 };
                 let (s, handle) = manager.start().await;
 
-                handle.await;
+                handle.await.unwrap();
             }
             async_std::task::block_on(async { __main(args).await })
         }
@@ -186,25 +190,29 @@ fn main() {
 }
 
 impl NSManager {
-    // z: Arc<zenoh::Zenoh>
-    pub fn new(pid: u32, uuid: Uuid, rt: tokio::runtime::Runtime) -> FResult<Self> {
+    pub fn new(
+        z: Arc<zenoh::Zenoh>,
+        pid: u32,
+        uuid: Uuid,
+        rt: tokio::runtime::Runtime,
+    ) -> FResult<Self> {
         Ok(Self {
-            // z,
+            z,
             pid,
             uuid,
             rt: Arc::new(RwLock::new(rt)),
         })
     }
 
-    async fn run(&self, stop: async_std::sync::Receiver<()>) {
+    async fn run(&self, stop: async_std::sync::Receiver<()>) -> FResult<()> {
         log::info!("Network Namespace Manager main loop starting...");
-        //let ns_manager_server = self
-        //    .clone()
-        //    .get_namespace_manager_server(self.z.clone(), Some(self.uuid.clone()));
+        let ns_manager_server = self
+            .clone()
+            .get_namespace_manager_server(self.z.clone(), Some(self.uuid));
 
-        //ns_manager_server.connect().await;
-        //ns_manager_server.initialize().await;
-        //ns_manager_server.register().await;
+        ns_manager_server.connect().await?;
+        ns_manager_server.initialize().await?;
+        ns_manager_server.register().await?;
 
         log::info!("Interfaces in namespace {:?}", self.dump_links().await);
         loop {
@@ -212,25 +220,27 @@ impl NSManager {
             task::sleep(Duration::from_secs(600)).await;
         }
 
-        //let (sender, handle) = ns_manager_server.start();
+        let (sender, handle) = ns_manager_server.start().await?;
         stop.recv().await;
 
-        //ns_manager_server.stop(sender).await;
-        //ns_manager_server.unregister().await;
-        //ns_manager_server.disconnect().await;
+        ns_manager_server.stop(sender).await?;
+        ns_manager_server.unregister().await?;
+        ns_manager_server.disconnect().await?;
 
         log::info!("Network Namespace Manager main loop exiting");
+        Ok(())
     }
 
     pub async fn start(
         &mut self,
-    ) -> (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>) {
+    ) -> (
+        async_std::sync::Sender<()>,
+        async_std::task::JoinHandle<FResult<()>>,
+    ) {
         let (s, r) = async_std::sync::channel::<()>(1);
         let plugin = self.clone();
         let h = async_std::task::spawn_blocking(move || {
-            async_std::task::block_on(async {
-                plugin.run(r).await;
-            })
+            async_std::task::block_on(async { plugin.run(r).await })
         });
         (s, h)
     }
@@ -777,5 +787,9 @@ impl NamespaceManager for NSManager {
     }
     async fn add_virtual_interface_bridge(&self, br_name: String) -> FResult<()> {
         self.create_bridge(br_name).await
+    }
+
+    async fn list_interfaces(&self) -> FResult<Vec<String>> {
+        self.dump_links().await
     }
 }

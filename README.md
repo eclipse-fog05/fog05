@@ -4,8 +4,8 @@
 [![Gitter](https://badges.gitter.im/atolab/fog05.svg)](https://gitter.im/atolab/fog05?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 [![License](https://img.shields.io/badge/License-EPL%202.0-blue)](https://choosealicense.com/licenses/epl-2.0/)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Documentation Status](https://readthedocs.org/projects/eclipse-fog05-python3-client-api/badge/?version=latest)](https://eclipse-fog05-python3-client-api.readthedocs.io/en/latest/?badge=latest)
-[![GoDoc](https://godoc.org/github.com/eclipse-fog05/api-go/fog05?status.svg)](https://godoc.org/github.com/eclipse-fog05/api-go/fog05)
+<!-- [![Documentation Status](https://readthedocs.org/projects/eclipse-fog05-python3-client-api/badge/?version=latest)](https://eclipse-fog05-python3-client-api.readthedocs.io/en/latest/?badge=latest)
+[![GoDoc](https://godoc.org/github.com/eclipse-fog05/api-go/fog05?status.svg)](https://godoc.org/github.com/eclipse-fog05/api-go/fog05) -->
 
 # Eclipse fog05
 The End-to-End Compute, Storage and Networking Virtualisation solution.

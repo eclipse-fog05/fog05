@@ -10,8 +10,6 @@
 * Contributors:
 *   ADLINK fog05 team, <fog05@adlink-labs.tech>
 *********************************************************************************/
-#![allow(unused_variables)]
-
 use std::collections::HashMap;
 use std::process;
 
@@ -26,10 +24,7 @@ use async_ctrlc::CtrlC;
 
 use structopt::StructOpt;
 
-pub mod native;
-pub mod types;
-
-use types::{NativeHVState, NativeHypervisor};
+use native_hypervisor::types::{NativeHVState, NativeHypervisor};
 
 #[derive(StructOpt, Debug)]
 struct DummyArgs {

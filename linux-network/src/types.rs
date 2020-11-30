@@ -82,4 +82,5 @@ pub trait NamespaceManager {
         -> FResult<()>;
     async fn add_virtual_interface_veth(&self, iface_i: String, iface_e: String) -> FResult<()>;
     async fn add_virtual_interface_bridge(&self, br_name: String) -> FResult<()>;
+    async fn list_interfaces(&self) -> FResult<Vec<String>>;
 }

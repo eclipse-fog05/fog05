@@ -440,8 +440,9 @@ impl<'a> ZServiceGenerator<'a> {
 
             /// Returns the server object
             fn #service_get_server_ident(self, z : async_std::sync::Arc<zenoh::Zenoh>, id : Option<uuid::Uuid>) -> #server_ident<Self>{
-                log::trace!("getting server object");
-                #server_ident::new(z,self, id.unwrap_or(Uuid::new_v4()))
+                let id = id.unwrap_or(Uuid::new_v4());
+                log::trace!("Getting Server with ID {}", id);
+                #server_ident::new(z,self, id)
                 }
             }
 

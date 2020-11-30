@@ -153,13 +153,6 @@ async fn main() {
     stream.next().await;
     trace!("Received Ctrl-C start teardown");
 
-    // while let Some((_, _)) = stream.next().await {
-    //     trace!("Received Ctrl-C start teardown");
-    //     break;
-    // }
-
-    //ctrlc.race(h).await;
-
     //Here we send the stop signal to the agent object and waits that it ends
     agent.stop(s).await;
 

@@ -26,6 +26,25 @@ clap = "2.33"
 structopt = "0.3.13"
 log = "0.4"
 env_logger = "0.7.1"
+git-version = "0.3.4"
+
+nix = {version = "0.19.0", optional = true}
+
+[features]
+isolation = ["nix"]
+default = []
+
+[[bin]]
+name = "native-hypervisor"
+path = "bin/native-hypervisor.rs"
+test = false
+bench = false
+
+[[bin]]
+name = "native-isolate"
+path = "bin/native-isolate.rs"
+test = false
+bench = false
 
 [dependencies.async-std]
 version = "~1.6.5"
