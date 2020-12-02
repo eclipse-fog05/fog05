@@ -1193,20 +1193,23 @@ impl NetworkingPlugin for DummyNetwork {
     async fn assing_address_to_interface(
         &self,
         intf_uuid: Uuid,
-        address: ipnetwork::IpNetwork,
+        address: Option<ipnetwork::IpNetwork>,
     ) -> FResult<VirtualInterface> {
-        let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        let mut iface = self
-            .connector
-            .global
-            .get_node_interface(node_uuid, intf_uuid)
-            .await?;
-        iface.addresses.push(address.ip());
-        self.connector
-            .global
-            .add_node_interface(node_uuid, &iface)
-            .await?;
-        Ok(iface)
+        if let Some(adddress) = address {
+            let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
+            let mut iface = self
+                .connector
+                .global
+                .get_node_interface(node_uuid, intf_uuid)
+                .await?;
+            iface.addresses.push(address.ip());
+            self.connector
+                .global
+                .add_node_interface(node_uuid, &iface)
+                .await?;
+            Ok(iface)
+        }
+        Err(FError::Unimplemented)
     }
 
     async fn remove_address_from_interface(

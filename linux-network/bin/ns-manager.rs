@@ -15,6 +15,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 use std::process;
+use std::process::Command;
 use std::str;
 use std::time::Duration;
 
@@ -47,6 +48,8 @@ use linux_network::types::NamespaceManager;
 use netlink_packet_route::rtnl::address::nlas::Nla;
 use rtnetlink::new_connection;
 use rtnetlink::packet::rtnl::link::nlas::Nla as LinkNla;
+
+use ipnetwork::IpNetwork;
 
 use nix::fcntl::OFlag;
 use nix::sched::CloneFlags;
@@ -489,6 +492,62 @@ impl NSManager {
         })
     }
 
+    async fn get_iface_addresses(&self, iface: String) -> FResult<Vec<IPAddress>> {
+        log::trace!("get_iface_addresses {}", iface);
+        let mut tokio_rt = self.rt.write().await;
+        use netlink_packet_route::rtnl::address::nlas::Nla;
+        use netlink_packet_route::rtnl::address::AddressMessage;
+        tokio_rt.block_on(async {
+            let (connection, handle, _) = new_connection().unwrap();
+            tokio::spawn(connection);
+
+            let mut nl_addresses = Vec::new();
+            let mut f_addresses: Vec<IPAddress> = Vec::new();
+            let mut links = handle.link().get().set_name_filter(iface.clone()).execute();
+            if let Some(link) = links
+                .try_next()
+                .await
+                .map_err(|e| FError::NetworkingError(format!("{}", e)))?
+            {
+                let mut addresses = handle
+                    .address()
+                    .get()
+                    .set_link_index_filter(link.header.index)
+                    .execute();
+                while let Some(msg) = addresses
+                    .try_next()
+                    .await
+                    .map_err(|e| FError::NetworkingError(format!("{}", e)))?
+                {
+                    for nla in &msg.nlas {
+                        match nla {
+                            Nla::Address(nl_addr) => {
+                                nl_addresses.push((msg.header.clone(), nl_addr.clone()))
+                            }
+                            _ => continue,
+                        }
+                    }
+                }
+                for (_, x) in nl_addresses {
+                    if x.len() == 4 {
+                        let octects: [u8; 4] = [x[0], x[1], x[2], x[3]];
+                        f_addresses.push(IPAddress::from(octects))
+                    }
+                    if x.len() == 16 {
+                        let octects: [u8; 16] = [
+                            x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9], x[10],
+                            x[11], x[12], x[13], x[14], x[15],
+                        ];
+                        f_addresses.push(IPAddress::from(octects))
+                    }
+                }
+                Ok(f_addresses)
+            } else {
+                Err(FError::NotFound)
+            }
+        })
+    }
+
     async fn del_iface_address(&self, iface: String, addr: IPAddress) -> FResult<()> {
         let mut tokio_rt = self.rt.write().await;
         use netlink_packet_route::rtnl::address::nlas::Nla;
@@ -737,13 +796,36 @@ impl NamespaceManager for NSManager {
     async fn del_virtual_interface_address(&self, iface: String, addr: IPAddress) -> FResult<()> {
         self.del_iface_address(iface, addr).await
     }
+
+    async fn get_virtual_interface_addresses(&self, iface: String) -> FResult<Vec<IPAddress>> {
+        self.get_iface_addresses(iface).await
+    }
+
     async fn add_virtual_interface_address(
         &self,
         iface: String,
-        addr: IPAddress,
-        prefix: u8,
-    ) -> FResult<()> {
-        self.add_iface_address(iface, addr, prefix).await
+        addr: Option<IpNetwork>,
+    ) -> FResult<Vec<IPAddress>> {
+        match addr {
+            Some(addr) => {
+                self.add_iface_address(iface.clone(), addr.ip(), addr.prefix())
+                    .await?;
+                self.get_iface_addresses(iface).await
+            }
+            None => {
+                // If the address is None we spawn a DHCP client
+                // and then we the the address from netlink
+                let mut child = Command::new("dhclient")
+                    .arg("-i")
+                    .arg(iface.clone())
+                    .spawn()
+                    .map_err(|e| FError::NetworkingError(format!("{}", e)))?;
+                child
+                    .wait()
+                    .map_err(|e| FError::NetworkingError(format!("{}", e)))?;
+                self.get_iface_addresses(iface).await
+            }
+        }
     }
     async fn set_virtual_interface_master(&self, iface: String, master: String) -> FResult<()> {
         self.set_iface_master(iface, master).await

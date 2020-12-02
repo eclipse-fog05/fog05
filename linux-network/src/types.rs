@@ -35,6 +35,8 @@ use zrpc_macros::zservice;
 
 use uuid::Uuid;
 
+use ipnetwork::IpNetwork;
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LinuxNetworkConfig {
     pub pid_file: Box<std::path::Path>,
@@ -68,6 +70,7 @@ pub struct VNetDHCP {
     pub leases_file: String,
     pub pid_file: String,
     pub conf: String,
+    pub log_file: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -113,12 +116,12 @@ pub trait NamespaceManager {
     async fn set_virtual_interface_mac(&self, iface: String, address: Vec<u8>) -> FResult<()>;
     async fn set_virtual_interface_name(&self, iface: String, name: String) -> FResult<()>;
     async fn del_virtual_interface_address(&self, iface: String, addr: IPAddress) -> FResult<()>;
+    async fn get_virtual_interface_addresses(&self, iface: String) -> FResult<Vec<IPAddress>>;
     async fn add_virtual_interface_address(
         &self,
         iface: String,
-        addr: IPAddress,
-        prefix: u8,
-    ) -> FResult<()>;
+        addr: Option<IpNetwork>,
+    ) -> FResult<Vec<IPAddress>>;
     async fn set_virtual_interface_master(&self, iface: String, master: String) -> FResult<()>;
     async fn del_virtual_interface(&self, iface: String) -> FResult<()>;
     async fn add_virtual_interface_ptp_vxlan(

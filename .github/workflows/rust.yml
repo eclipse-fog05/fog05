@@ -39,6 +39,9 @@ jobs:
           override: true
           components: rustfmt, clippy
 
+    - name: Install dependencies
+      run: sudo apt-get install nftables libnftnl-dev libnfnetlink-dev libmnl-dev
+
     - name: Code format check
       uses: actions-rs/cargo@v1
       with:

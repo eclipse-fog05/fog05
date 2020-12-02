@@ -16,6 +16,7 @@
 extern crate tera;
 
 use std::collections::HashMap;
+use std::convert::From;
 use std::error::Error;
 use std::ffi::{self, CString};
 use std::os::unix::io::IntoRawFd;
@@ -217,15 +218,6 @@ impl NetworkingPlugin for LinuxNetwork {
         // Creating dnsmasq config
         let dhcp_internal = if dhcp {
             // TODO paths are temporary
-            // here also firewall has to be set
-            // using so add as dependencies:
-            // nftables libnftnl-dev libnfnetlink-dev libmnl-dev
-            // table ip nat { # handle 3
-            // 	chain postrouting { # handle 1
-            // 		type nat hook postrouting priority srcnat; policy accept;
-            // 		ip saddr 10.240.0.0/16 oif "eno0" masquerade # handle 4
-            // 	}
-            // }
             let config = self
                 .create_dnsmasq_config(
                     default_br_name.clone(),
@@ -255,6 +247,7 @@ impl NetworkingPlugin for LinuxNetwork {
                 leases_file: "/tmp/fosbr0.leases".to_string(),
                 pid_file: "/tmp/fosbr0.pid".to_string(),
                 conf: "/tmp/fosbr0.conf".to_string(),
+                log_file: "/tmp/fosbr0.log".to_string(),
             })
         } else {
             None
@@ -323,6 +316,16 @@ impl NetworkingPlugin for LinuxNetwork {
             .await?;
         log::trace!("veth ext netns set res: {:?}", res);
 
+        // Setting the firewall to NAT
+        // using nftables so add as dependencies:
+        // nftables libnftnl-dev libnfnetlink-dev libmnl-dev
+        // rule is similar to
+        // table ip nat { # handle 3
+        // 	chain postrouting { # handle 1
+        // 		type nat hook postrouting priority srcnat; policy accept;
+        // 		ip saddr 10.240.0.0/16 oif "eno0" masquerade # handle 4
+        // 	}
+        // }
         let nat_table = self
             .configure_nat(
                 IpNetwork::V4(
@@ -764,7 +767,27 @@ impl NetworkingPlugin for LinuxNetwork {
         {
             Err(_) => Err(FError::NotFound),
             Ok(intf) => match intf.net_ns {
-                Some(_) => Err(FError::Unimplemented),
+                Some(ns_uuid) => {
+                    let netns = self
+                        .connector
+                        .global
+                        .get_node_network_namespace(node_uuid, ns_uuid)
+                        .await?;
+                    let guard = self.state.read().await;
+                    let (_, ns_manager) = guard
+                        .ns_managers
+                        .get(&ns_uuid)
+                        .ok_or_else(|| FError::NetworkingError("Manager not found".to_string()))?;
+                    let addresses = ns_manager
+                        .del_virtual_interface(intf.if_name.clone())
+                        .await??;
+                    drop(guard);
+                    self.connector
+                        .global
+                        .remove_node_interface(node_uuid, intf_uuid)
+                        .await?;
+                    Ok(intf)
+                }
                 None => {
                     if let VirtualInterfaceKind::VETH(ref info) = intf.kind {
                         let pair = self
@@ -837,7 +860,27 @@ impl NetworkingPlugin for LinuxNetwork {
         {
             Err(err) => Err(err),
             Ok(i) => match i.net_ns {
-                Some(_) => Err(FError::Unimplemented),
+                Some(ns_uuid) => {
+                    let netns = self
+                        .connector
+                        .global
+                        .get_node_network_namespace(node_uuid, ns_uuid)
+                        .await?;
+                    let guard = self.state.read().await;
+                    let (_, ns_manager) = guard
+                        .ns_managers
+                        .get(&ns_uuid)
+                        .ok_or_else(|| FError::NetworkingError("Manager not found".to_string()))?;
+                    let addresses = ns_manager
+                        .del_virtual_interface(i.if_name.clone())
+                        .await??;
+                    drop(guard);
+                    self.connector
+                        .global
+                        .remove_node_interface(node_uuid, br_uuid)
+                        .await?;
+                    Ok(i)
+                }
                 None => match i.kind {
                     VirtualInterfaceKind::BRIDGE(_) => {
                         self.del_iface(i.if_name.clone()).await?;
@@ -1027,7 +1070,7 @@ impl NetworkingPlugin for LinuxNetwork {
         Ok(self.get_overlay_face_from_config().if_name)
     }
     async fn get_vlan_face(&self) -> FResult<String> {
-        Ok(self.get_dummy_face().if_name)
+        Ok(self.get_overlay_face_from_config().if_name)
     }
 
     async fn create_macvlan_interface(&self, master_intf: String) -> FResult<VirtualInterface> {
@@ -1066,7 +1109,27 @@ impl NetworkingPlugin for LinuxNetwork {
         {
             Err(err) => Err(err),
             Ok(i) => match i.net_ns {
-                Some(_) => Err(FError::Unimplemented),
+                Some(ns_uuid) => {
+                    let netns = self
+                        .connector
+                        .global
+                        .get_node_network_namespace(node_uuid, ns_uuid)
+                        .await?;
+                    let guard = self.state.read().await;
+                    let (_, ns_manager) = guard
+                        .ns_managers
+                        .get(&ns_uuid)
+                        .ok_or_else(|| FError::NetworkingError("Manager not found".to_string()))?;
+                    let addresses = ns_manager
+                        .del_virtual_interface(i.if_name.clone())
+                        .await??;
+                    drop(guard);
+                    self.connector
+                        .global
+                        .remove_node_interface(node_uuid, intf_uuid)
+                        .await?;
+                    Ok(i)
+                }
                 None => match i.kind {
                     VirtualInterfaceKind::MACVLAN(_) => {
                         self.del_iface(i.if_name.clone()).await?;
@@ -1132,33 +1195,41 @@ impl NetworkingPlugin for LinuxNetwork {
             .global
             .get_node_interface(node_uuid, intf_uuid)
             .await?;
-        Err(FError::Unimplemented)
-        // match iface.net_ns {
-        //     Some(netns_uuid) => {
-        //         iface.net_ns = None;
-        //         self.connector
-        //             .global
-        //             .add_node_interface(node_uuid, &iface)
-        //             .await?;
-        //         let mut netns = self
-        //             .connector
-        //             .global
-        //             .get_node_network_namespace(node_uuid, netns_uuid)
-        //             .await?;
-        //         match netns.interfaces.iter().position(|&x| x == iface.uuid) {
-        //             Some(p) => {
-        //                 netns.interfaces.remove(p);
-        //                 self.connector
-        //                     .global
-        //                     .add_node_network_namespace(node_uuid, &netns)
-        //                     .await?;
-        //                 Ok(iface)
-        //             }
-        //             None => Err(FError::NotConnected),
-        //         }
-        //     }
-        //     None => Ok(iface),
-        // }
+        match iface.net_ns {
+            Some(netns_uuid) => {
+                let mut netns = self
+                    .connector
+                    .global
+                    .get_node_network_namespace(node_uuid, netns_uuid)
+                    .await?;
+                let guard = self.state.read().await;
+                let (_, ns_manager) = guard
+                    .ns_managers
+                    .get(&netns_uuid)
+                    .ok_or_else(|| FError::NetworkingError("Manager not found".to_string()))?;
+                ns_manager
+                    .move_virtual_interface_into_default_ns(iface.if_name.clone())
+                    .await??;
+                drop(guard);
+                iface.net_ns = None;
+                self.connector
+                    .global
+                    .add_node_interface(node_uuid, &iface)
+                    .await?;
+                match netns.interfaces.iter().position(|&x| x == iface.uuid) {
+                    Some(p) => {
+                        netns.interfaces.remove(p);
+                        self.connector
+                            .global
+                            .add_node_network_namespace(node_uuid, &netns)
+                            .await?;
+                        Ok(iface)
+                    }
+                    None => Err(FError::NotConnected),
+                }
+            }
+            None => Ok(iface),
+        }
     }
 
     async fn rename_virtual_interface(
@@ -1173,7 +1244,28 @@ impl NetworkingPlugin for LinuxNetwork {
             .get_node_interface(node_uuid, intf_uuid)
             .await?;
         match iface.net_ns {
-            Some(_) => Err(FError::Unimplemented),
+            Some(ns_uuid) => {
+                let netns = self
+                    .connector
+                    .global
+                    .get_node_network_namespace(node_uuid, ns_uuid)
+                    .await?;
+                let guard = self.state.read().await;
+                let (_, ns_manager) = guard
+                    .ns_managers
+                    .get(&ns_uuid)
+                    .ok_or_else(|| FError::NetworkingError("Manager not found".to_string()))?;
+                ns_manager
+                    .set_virtual_interface_name(iface.if_name.clone(), intf_name.clone())
+                    .await??;
+                drop(guard);
+                iface.if_name = intf_name;
+                self.connector
+                    .global
+                    .add_node_interface(node_uuid, &iface)
+                    .await?;
+                Ok(iface)
+            }
             None => {
                 self.set_iface_name(iface.if_name.clone(), intf_name.clone())
                     .await?;
@@ -1205,7 +1297,39 @@ impl NetworkingPlugin for LinuxNetwork {
             .await?;
         match bridge.kind {
             VirtualInterfaceKind::BRIDGE(mut info) => match (iface.net_ns, bridge.net_ns) {
-                (Some(_), Some(_)) => Err(FError::Unimplemented),
+                (Some(ns_uuid), Some(_)) => {
+                    let netns = self
+                        .connector
+                        .global
+                        .get_node_network_namespace(node_uuid, ns_uuid)
+                        .await?;
+                    let guard = self.state.read().await;
+                    let (_, ns_manager) = guard
+                        .ns_managers
+                        .get(&ns_uuid)
+                        .ok_or_else(|| FError::NetworkingError("Manager not found".to_string()))?;
+                    let addresses = ns_manager
+                        .set_virtual_interface_master(iface.if_name.clone(), bridge.if_name.clone())
+                        .await??;
+                    drop(guard);
+                    iface.parent = Some(bridge.uuid);
+                    info.childs.push(iface.uuid);
+                    let mut new_bridge = self
+                        .connector
+                        .global
+                        .get_node_interface(node_uuid, br_uuid)
+                        .await?;
+                    new_bridge.kind = VirtualInterfaceKind::BRIDGE(info);
+                    self.connector
+                        .global
+                        .add_node_interface(node_uuid, &iface)
+                        .await?;
+                    self.connector
+                        .global
+                        .add_node_interface(node_uuid, &new_bridge)
+                        .await?;
+                    Ok(iface)
+                }
                 (Some(_), None) | (None, Some(_)) => Err(FError::NetworkingError(String::from(
                     "Interface in different namespaces",
                 ))),
@@ -1559,42 +1683,51 @@ impl NetworkingPlugin for LinuxNetwork {
             .global
             .get_node_interface(node_uuid, intf_uuid)
             .await?;
-        Err(FError::Unimplemented)
-        // match iface.net_ns {
-        //     None => Err(FError::NotConnected),
-        //     Some(nid) => {
-        //         if nid == netns.uuid {
-        //             match netns.interfaces.iter().position(|&x| x == iface.uuid) {
-        //                 Some(p) => {
-        //                     netns.interfaces.remove(p);
-        //                     if let VirtualInterfaceKind::VETH(ref info) = iface.kind {
-        //                         self.connector
-        //                             .global
-        //                             .remove_node_interface(node_uuid, info.pair)
-        //                             .await?;
-        //                     }
-        //                     self.connector
-        //                         .global
-        //                         .add_node_network_namespace(node_uuid, &netns)
-        //                         .await?;
-        //                     self.connector
-        //                         .global
-        //                         .remove_node_interface(node_uuid, intf_uuid)
-        //                         .await?;
-        //                     return Ok(iface);
-        //                 }
-        //                 None => return Err(FError::NotConnected),
-        //             }
-        //         }
-        //         Err(FError::NotConnected)
-        //     }
-        // }
+        match iface.net_ns {
+            None => Err(FError::NotConnected),
+            Some(nid) => {
+                if nid == netns.uuid {
+                    let guard = self.state.read().await;
+                    let (_, ns_manager) = guard
+                        .ns_managers
+                        .get(&nid)
+                        .ok_or_else(|| FError::NetworkingError("Manager not found".to_string()))?;
+                    let addresses = ns_manager
+                        .del_virtual_interface(iface.if_name.clone())
+                        .await??;
+                    drop(guard);
+
+                    match netns.interfaces.iter().position(|&x| x == iface.uuid) {
+                        Some(p) => {
+                            netns.interfaces.remove(p);
+                            if let VirtualInterfaceKind::VETH(ref info) = iface.kind {
+                                self.connector
+                                    .global
+                                    .remove_node_interface(node_uuid, info.pair)
+                                    .await?;
+                            }
+                            self.connector
+                                .global
+                                .add_node_network_namespace(node_uuid, &netns)
+                                .await?;
+                            self.connector
+                                .global
+                                .remove_node_interface(node_uuid, intf_uuid)
+                                .await?;
+                            return Ok(iface);
+                        }
+                        None => return Err(FError::NotConnected),
+                    }
+                }
+                Err(FError::NotConnected)
+            }
+        }
     }
 
     async fn assing_address_to_interface(
         &self,
         intf_uuid: Uuid,
-        address: IpNetwork,
+        address: Option<IpNetwork>,
     ) -> FResult<VirtualInterface> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
         let mut iface = self
@@ -1603,17 +1736,59 @@ impl NetworkingPlugin for LinuxNetwork {
             .get_node_interface(node_uuid, intf_uuid)
             .await?;
         match iface.net_ns {
-            Some(_) => Err(FError::Unimplemented),
-            None => {
-                self.add_iface_address(iface.if_name.clone(), address.ip(), address.prefix())
+            Some(ns_uuid) => {
+                let netns = self
+                    .connector
+                    .global
+                    .get_node_network_namespace(node_uuid, ns_uuid)
                     .await?;
-                iface.addresses.push(address.ip());
+                let guard = self.state.read().await;
+                let (_, ns_manager) = guard
+                    .ns_managers
+                    .get(&ns_uuid)
+                    .ok_or_else(|| FError::NetworkingError("Manager not found".to_string()))?;
+                let addresses = ns_manager
+                    .add_virtual_interface_address(iface.if_name.clone(), address)
+                    .await??;
+                drop(guard);
+                iface.addresses = addresses;
                 self.connector
                     .global
                     .add_node_interface(node_uuid, &iface)
                     .await?;
                 Ok(iface)
             }
+            None => match address {
+                Some(address) => {
+                    self.add_iface_address(iface.if_name.clone(), address.ip(), address.prefix())
+                        .await?;
+                    iface.addresses.push(address.ip());
+                    self.connector
+                        .global
+                        .add_node_interface(node_uuid, &iface)
+                        .await?;
+                    Ok(iface)
+                }
+                None => {
+                    // If the address is None we spawn a DHCP client
+                    // and then we the the address from netlink
+                    let mut child = Command::new("dhclient")
+                        .arg("-i")
+                        .arg(&iface.if_name.clone())
+                        .spawn()
+                        .map_err(|e| FError::NetworkingError(format!("{}", e)))?;
+                    child
+                        .wait()
+                        .map_err(|e| FError::NetworkingError(format!("{}", e)))?;
+                    let addresses = self.get_iface_addresses(iface.if_name.clone()).await?;
+                    iface.addresses = addresses;
+                    self.connector
+                        .global
+                        .add_node_interface(node_uuid, &iface)
+                        .await?;
+                    Ok(iface)
+                }
+            },
         }
     }
 
@@ -1629,7 +1804,31 @@ impl NetworkingPlugin for LinuxNetwork {
             .get_node_interface(node_uuid, intf_uuid)
             .await?;
         match iface.net_ns {
-            Some(_) => Err(FError::Unimplemented),
+            Some(ns_uuid) => match iface.addresses.iter().position(|&x| x == address) {
+                Some(p) => {
+                    let netns = self
+                        .connector
+                        .global
+                        .get_node_network_namespace(node_uuid, ns_uuid)
+                        .await?;
+                    let guard = self.state.read().await;
+                    let (_, ns_manager) = guard
+                        .ns_managers
+                        .get(&ns_uuid)
+                        .ok_or_else(|| FError::NetworkingError("Manager not found".to_string()))?;
+                    let addresses = ns_manager
+                        .del_virtual_interface_address(iface.if_name.clone(), address)
+                        .await??;
+                    drop(guard);
+                    iface.addresses.remove(p);
+                    self.connector
+                        .global
+                        .add_node_interface(node_uuid, &iface)
+                        .await?;
+                    Ok(iface)
+                }
+                None => Err(FError::NotConnected),
+            },
             None => match iface.addresses.iter().position(|&x| x == address) {
                 Some(p) => {
                     self.del_iface_address(iface.if_name.clone(), address)
@@ -1662,7 +1861,28 @@ impl NetworkingPlugin for LinuxNetwork {
             address.0, address.1, address.2, address.3, address.4, address.5,
         ];
         match iface.net_ns {
-            Some(_) => Err(FError::Unimplemented),
+            Some(ns_uuid) => {
+                let netns = self
+                    .connector
+                    .global
+                    .get_node_network_namespace(node_uuid, ns_uuid)
+                    .await?;
+                let guard = self.state.read().await;
+                let (_, ns_manager) = guard
+                    .ns_managers
+                    .get(&ns_uuid)
+                    .ok_or_else(|| FError::NetworkingError("Manager not found".to_string()))?;
+                let addresses = ns_manager
+                    .set_virtual_interface_mac(iface.if_name.clone(), vec_addr)
+                    .await??;
+                drop(guard);
+                iface.phy_address = address;
+                self.connector
+                    .global
+                    .add_node_interface(node_uuid, &iface)
+                    .await?;
+                Ok(iface)
+            }
             None => {
                 self.set_iface_mac(iface.if_name.clone(), vec_addr).await?;
                 iface.phy_address = address;
@@ -1868,6 +2088,8 @@ impl LinuxNetwork {
                 async_std::fs::remove_file(async_std::path::Path::new(&dhcp_internal.leases_file))
                     .await?;
                 async_std::fs::remove_file(async_std::path::Path::new(&dhcp_internal.conf)).await?;
+                async_std::fs::remove_file(async_std::path::Path::new(&dhcp_internal.log_file))
+                    .await?;
             }
 
             for table in internals.associated_tables {
@@ -2246,6 +2468,62 @@ impl LinuxNetwork {
                     }
                     None => Err(FError::NotFound),
                 }
+            } else {
+                Err(FError::NotFound)
+            }
+        })
+    }
+
+    async fn get_iface_addresses(&self, iface: String) -> FResult<Vec<IPAddress>> {
+        log::trace!("get_iface_addresses {}", iface);
+        let mut state = self.state.write().await;
+        use netlink_packet_route::rtnl::address::nlas::Nla;
+        use netlink_packet_route::rtnl::address::AddressMessage;
+        state.tokio_rt.block_on(async {
+            let (connection, handle, _) = new_connection().unwrap();
+            tokio::spawn(connection);
+
+            let mut nl_addresses = Vec::new();
+            let mut f_addresses: Vec<IPAddress> = Vec::new();
+            let mut links = handle.link().get().set_name_filter(iface.clone()).execute();
+            if let Some(link) = links
+                .try_next()
+                .await
+                .map_err(|e| FError::NetworkingError(format!("{}", e)))?
+            {
+                let mut addresses = handle
+                    .address()
+                    .get()
+                    .set_link_index_filter(link.header.index)
+                    .execute();
+                while let Some(msg) = addresses
+                    .try_next()
+                    .await
+                    .map_err(|e| FError::NetworkingError(format!("{}", e)))?
+                {
+                    for nla in &msg.nlas {
+                        match nla {
+                            Nla::Address(nl_addr) => {
+                                nl_addresses.push((msg.header.clone(), nl_addr.clone()))
+                            }
+                            _ => continue,
+                        }
+                    }
+                }
+                for (_, x) in nl_addresses {
+                    if x.len() == 4 {
+                        let octects: [u8; 4] = [x[0], x[1], x[2], x[3]];
+                        f_addresses.push(IPAddress::from(octects))
+                    }
+                    if x.len() == 16 {
+                        let octects: [u8; 16] = [
+                            x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], x[8], x[9], x[10],
+                            x[11], x[12], x[13], x[14], x[15],
+                        ];
+                        f_addresses.push(IPAddress::from(octects))
+                    }
+                }
+                Ok(f_addresses)
             } else {
                 Err(FError::NotFound)
             }

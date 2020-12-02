@@ -231,7 +231,7 @@ pub trait NetworkingPlugin {
     async fn assing_address_to_interface(
         &self,
         intf_uuid: Uuid,
-        address: IpNetwork,
+        address: Option<IpNetwork>,
     ) -> FResult<VirtualInterface>;
 
     /// Retains the given address from the given interface

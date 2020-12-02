@@ -7,6 +7,6 @@ matrix:
   allow_failures:
     - rust: nightly
 before_install:
-  - sudo apt-get install protobuf-compiler
+  - sudo apt-get install protobuf-compiler nftables libnftnl-dev libnfnetlink-dev libmnl-dev
 script:
   - cargo build
