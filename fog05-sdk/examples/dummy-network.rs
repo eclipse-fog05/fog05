@@ -78,6 +78,7 @@ impl NetworkingPlugin for DummyNetwork {
             ip_configuration: None,
             connection_points: Vec::new(),
             interfaces: Vec::new(),
+            plugin_internals: None,
         };
         if dhcp {
             let ip_conf = IPConfiguration {
@@ -1192,7 +1193,7 @@ impl NetworkingPlugin for DummyNetwork {
     async fn assing_address_to_interface(
         &self,
         intf_uuid: Uuid,
-        address: IPAddress,
+        address: ipnetwork::IpNetwork,
     ) -> FResult<VirtualInterface> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
         let mut iface = self
@@ -1200,7 +1201,7 @@ impl NetworkingPlugin for DummyNetwork {
             .global
             .get_node_interface(node_uuid, intf_uuid)
             .await?;
-        iface.addresses.push(address);
+        iface.addresses.push(address.ip());
         self.connector
             .global
             .add_node_interface(node_uuid, &iface)

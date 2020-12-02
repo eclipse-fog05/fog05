@@ -13,6 +13,8 @@
 
 use std::process;
 
+use async_std::fs;
+use async_std::path::Path;
 use async_std::prelude::*;
 use async_std::sync::Arc;
 
@@ -24,13 +26,19 @@ use async_ctrlc::CtrlC;
 
 use structopt::StructOpt;
 
-use linux_network::types::LinuxNetwork;
+use linux_network::types::{deserialize_plugin_config, LinuxNetwork};
+
+static CONFIG_FILE: &str = "/etc/fos/linux-network/config.yaml";
 
 #[derive(StructOpt, Debug)]
 struct LinuxNetArgs {
     /// Config file
-    #[structopt(short, long, default_value = "tcp/127.0.0.1:7447")]
-    zenoh: String,
+    #[structopt(short, long, default_value = CONFIG_FILE)]
+    config: String,
+}
+
+async fn read_file(path: &Path) -> String {
+    fs::read_to_string(path).await.unwrap()
 }
 
 #[async_std::main]
@@ -40,16 +48,21 @@ async fn main() {
     );
 
     let args = LinuxNetArgs::from_args();
-    log::info!("Dummy Network Plugin -- bootstrap");
+    log::info!("Linux Network Plugin -- bootstrap");
     let my_pid = process::id();
     log::info!("PID is {}", my_pid);
 
-    let properties = format!("mode=client;peer={}", args.zenoh.clone());
+    let conf_file_path = Path::new(&args.config);
+    let config =
+        deserialize_plugin_config(&(read_file(&conf_file_path).await.into_bytes().as_slice()))
+            .unwrap();
+
+    let properties = format!("mode=client;peer={}", config.zlocator.clone());
     let zproperties = Properties::from(properties);
     let zenoh = Arc::new(Zenoh::new(zproperties.into()).await.unwrap());
     let zconnector = Arc::new(ZConnector::new(zenoh.clone(), None, None));
 
-    let mut net = LinuxNetwork::new(zenoh.clone(), zconnector.clone(), my_pid).unwrap();
+    let mut net = LinuxNetwork::new(zenoh.clone(), zconnector.clone(), my_pid, config).unwrap();
 
     let (s, h) = net.start().await;
 

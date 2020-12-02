@@ -30,6 +30,7 @@ log = "0.4"
 pnet = { version = "0.26.0", features = ["serde"]}
 reqwest = { version = "0.10", features = ["blocking", "json"] }
 rand = "0.7.3"
+ipnetwork = "0.17.0"
 
 [dependencies.async-std]
 version = "~1.6.5"

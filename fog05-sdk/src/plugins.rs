@@ -14,24 +14,26 @@
 #![allow(clippy::manual_async_fn)]
 #![allow(clippy::large_enum_variant)]
 
+use std::convert::TryFrom;
 use std::fmt;
+use std::str;
+use std::str::FromStr;
+use std::time::Duration;
+
 use thiserror::Error;
-use zenoh::*;
 
 use async_std::prelude::FutureExt;
 use async_std::sync::Arc;
 use async_std::task;
 use futures::prelude::*;
-use std::convert::TryFrom;
-use std::str;
-use std::str::FromStr;
-use std::time::Duration;
+
 use uuid::Uuid;
 use zenoh::*;
 
 use log::trace;
 
-//importing the macros
+use ipnetwork::IpNetwork;
+
 use zrpc::zrpcresult::{ZRPCError, ZRPCResult};
 use zrpc_macros::{zserver, zservice};
 
@@ -229,7 +231,7 @@ pub trait NetworkingPlugin {
     async fn assing_address_to_interface(
         &self,
         intf_uuid: Uuid,
-        address: IPAddress,
+        address: IpNetwork,
     ) -> FResult<VirtualInterface>;
 
     /// Retains the given address from the given interface

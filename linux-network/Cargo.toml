@@ -17,14 +17,12 @@ futures = "0.3.5"
 thiserror = "1.0"
 serde_derive = "1.0.55"
 serde = { version = "1.0.55", features = ["derive"] }
+serde_json = { version = "1.0.55"}
+serde_yaml = "0.8.13"
 bincode = "1.3.1"
-
 rtnetlink = { git = "https://github.com/gabrik/netlink", branch = "feature-ns-add-remove" }
 netlink-packet-route = { git = "https://github.com/gabrik/netlink", branch = "feature-ns-add-remove" }
-
-#rtnetlink = "0.5.0"
 tokio = { version = "0.2.6", features = ["macros", "rt-core"] }
-
 derive_more = "0.99.10"
 semver = { version = "0.11.0", features = ["serde"]}
 uuid = { version = "0.8.1", features = ["serde", "v4"] }
@@ -43,6 +41,10 @@ structopt = "0.3.13"
 log = "0.4"
 env_logger = "0.7.1"
 git-version = "0.3.4"
+tera = "1.5.0"
+nftnl = "0.6.0"
+ipnetwork = "0.17.0"
+mnl = "0.2"
 
 [dependencies.async-std]
 version = "~1.6.5"

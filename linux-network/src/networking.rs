@@ -11,7 +11,15 @@
 *   ADLINK fog05 team, <fog05@adlink-labs.tech>
 *********************************************************************************/
 #![allow(unused)]
+#![allow(unused)]
+#![allow(clippy::too_many_arguments)]
+extern crate tera;
 
+use std::collections::HashMap;
+use std::error::Error;
+use std::ffi::{self, CString};
+use std::os::unix::io::IntoRawFd;
+use std::process::{Command, Stdio};
 use std::time::Duration;
 
 use async_std::prelude::*;
@@ -44,9 +52,19 @@ use netlink_packet_route::rtnl::address::nlas::Nla;
 use rtnetlink::new_connection;
 use rtnetlink::NetworkNamespace as NetlinkNetworkNamespace;
 
-use std::os::unix::io::IntoRawFd;
+use nix::sys::signal::{kill, Signal};
+use nix::unistd::Pid;
 
-use crate::types::{LinuxNetwork, LinuxNetworkState};
+use ipnetwork::IpNetwork;
+
+use nftnl::{nft_expr, nftnl_sys::libc, Batch, Chain, FinalizedBatch, ProtoFamily, Rule, Table};
+
+use tera::{Context, Result, Tera};
+
+use crate::types::{
+    deserialize_network_internals, serialize_network_internals, LinuxNetwork, LinuxNetworkConfig,
+    LinuxNetworkState, NamespaceManagerClient, VNetDHCP, VirtualNetworkInternals,
+};
 
 #[zserver]
 impl NetworkingPlugin for LinuxNetwork {
@@ -76,6 +94,16 @@ impl NetworkingPlugin for LinuxNetwork {
 
         let default_vxl_uuid = Uuid::new_v4();
         let default_vxl_name = String::from("fosvxl0");
+
+        let default_netns_uuid = Uuid::nil();
+        let default_netns_name = String::from("fos-default");
+
+        let default_veth_i_uuid = Uuid::new_v4();
+        let default_veth_i_name = String::from("fveth-default-i");
+
+        let default_veth_e_uuid = Uuid::new_v4();
+        let default_veth_e_name = String::from("fveth-default-e");
+
         let default_vni: u32 = 3845;
         let default_mcast_addr = IPAddress::V4(std::net::Ipv4Addr::new(239, 15, 5, 0));
         let default_port: u16 = 3845;
@@ -95,8 +123,21 @@ impl NetworkingPlugin for LinuxNetwork {
             ip_version: IPVersion::IPV4,
             ip_configuration: None,
             connection_points: Vec::new(),
-            interfaces: vec![default_br_uuid, default_vxl_uuid],
+            interfaces: vec![
+                default_br_uuid,
+                default_vxl_uuid,
+                default_veth_i_uuid,
+                default_veth_e_uuid,
+            ],
+            plugin_internals: None,
         };
+
+        let mut default_netns = NetworkNamespace {
+            uuid: default_netns_uuid,
+            ns_name: String::from("fos-default"),
+            interfaces: vec![default_veth_e_uuid],
+        };
+
         if dhcp {
             let ip_conf = IPConfiguration {
                 subnet: Some((IPAddress::V4(std::net::Ipv4Addr::new(10, 240, 0, 0)), 16)),
@@ -107,7 +148,7 @@ impl NetworkingPlugin for LinuxNetwork {
                 )),
                 dns: Some(vec![
                     IPAddress::V4(std::net::Ipv4Addr::new(208, 67, 222, 222)),
-                    IPAddress::V4(std::net::Ipv4Addr::new(208, 67, 222, 220)),
+                    // IPAddress::V4(std::net::Ipv4Addr::new(208, 67, 222, 220)),
                 ]),
             };
             default_vnet.ip_configuration = Some(ip_conf);
@@ -160,16 +201,137 @@ impl NetworkingPlugin for LinuxNetwork {
             .await?;
 
         log::trace!("VXLAN creation res: {:?}", res);
+        // Setting master for VXLAN interface and setting interface up
         self.set_iface_master(default_vxl_name.clone(), default_br_name.clone())
             .await?;
         self.set_iface_up(default_vxl_name).await?;
 
+        // Adding address to bridge interface
         self.add_iface_address(
-            default_br_name,
+            default_br_name.clone(),
             IPAddress::V4(std::net::Ipv4Addr::new(10, 240, 0, 1)),
             16,
         )
         .await?;
+
+        // Creating dnsmasq config
+        let dhcp_internal = if dhcp {
+            // TODO paths are temporary
+            // here also firewall has to be set
+            // using so add as dependencies:
+            // nftables libnftnl-dev libnfnetlink-dev libmnl-dev
+            // table ip nat { # handle 3
+            // 	chain postrouting { # handle 1
+            // 		type nat hook postrouting priority srcnat; policy accept;
+            // 		ip saddr 10.240.0.0/16 oif "eno0" masquerade # handle 4
+            // 	}
+            // }
+            let config = self
+                .create_dnsmasq_config(
+                    default_br_name.clone(),
+                    "/tmp/fosbr0.pid".to_string(),
+                    "/tmp/fosbr0.leases".to_string(),
+                    "/tmp/fosbr0.log".to_string(),
+                    IPAddress::V4(std::net::Ipv4Addr::new(10, 240, 0, 2)),
+                    IPAddress::V4(std::net::Ipv4Addr::new(10, 240, 255, 254)),
+                    IPAddress::V4(std::net::Ipv4Addr::new(10, 240, 0, 1)),
+                    IPAddress::V4(std::net::Ipv4Addr::new(208, 67, 222, 222)),
+                )
+                .await?;
+            log::trace!("dnsmasq config: {}", config);
+            self.os
+                .as_ref()
+                .unwrap()
+                .store_file(config.into_bytes(), "/tmp/fosbr0.conf".to_string())
+                .await??;
+            let child = Command::new("dnsmasq")
+                .arg("-C")
+                .arg("/tmp/fosbr0.conf")
+                .stdin(Stdio::null())
+                .spawn()
+                .map_err(|e| FError::NetworkingError(format!("{}", e)))?;
+            log::debug!("DHCP Process running PID: {}", child.id());
+            Some(VNetDHCP {
+                leases_file: "/tmp/fosbr0.leases".to_string(),
+                pid_file: "/tmp/fosbr0.pid".to_string(),
+                conf: "/tmp/fosbr0.conf".to_string(),
+            })
+        } else {
+            None
+        };
+
+        let v_veth_i = VirtualInterface {
+            uuid: default_veth_i_uuid,
+            if_name: default_veth_i_name.clone(),
+            net_ns: None,
+            parent: Some(default_br_uuid),
+            kind: VirtualInterfaceKind::VETH(VETHKind {
+                pair: default_veth_e_uuid,
+                internal: true,
+            }),
+            addresses: Vec::new(),
+            phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
+        };
+
+        let v_veth_e = VirtualInterface {
+            uuid: default_veth_e_uuid,
+            if_name: default_veth_e_name.clone(),
+            net_ns: Some(default_netns_uuid),
+            parent: None,
+            kind: VirtualInterfaceKind::VETH(VETHKind {
+                pair: default_veth_i_uuid,
+                internal: false,
+            }),
+            addresses: Vec::new(),
+            phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
+        };
+
+        let res = self
+            .create_veth(default_veth_i_name.clone(), default_veth_e_name.clone())
+            .await?;
+        log::trace!("VEth Pair creation res: {:?}", res);
+
+        self.set_iface_master(default_veth_i_name.clone(), default_br_name.clone())
+            .await?;
+        self.set_iface_up(default_veth_i_name).await?;
+
+        let res = self.add_netns(default_netns_name.clone()).await?;
+        log::trace!("Netns creation res: {:?}", res);
+
+        // Here we spawn the manager for the just created Namespace and
+        // we add it to the map of managers
+        let mut guard = self.state.write().await;
+        let child = Command::new("ns-manager")
+            .arg("--netns")
+            .arg(&default_netns_name)
+            .arg("--id")
+            .arg(format!("{}", default_netns_uuid))
+            .arg("--locator")
+            .arg("unixsock-stream//tmp/zenoh.sock")
+            .spawn()
+            .map_err(|e| FError::NetworkingError(format!("{}", e)))?;
+        let ns_manager_client = NamespaceManagerClient::new(self.z.clone(), default_netns_uuid);
+        guard
+            .ns_managers
+            .insert(default_netns_uuid, (child.id(), ns_manager_client));
+        drop(guard);
+
+        let res = self.set_iface_up(default_veth_e_name.clone()).await?;
+        log::trace!("veth ext face up res: {:?}", res);
+        let res = self
+            .set_iface_ns(default_veth_e_name.clone(), default_netns_name.clone())
+            .await?;
+        log::trace!("veth ext netns set res: {:?}", res);
+
+        let nat_table = self
+            .configure_nat(
+                IpNetwork::V4(
+                    ipnetwork::Ipv4Network::new(std::net::Ipv4Addr::new(10, 240, 0, 0), 16)
+                        .map_err(|e| FError::NetworkingError(format!("{}", e)))?,
+                ),
+                "eno0",
+            )
+            .await?;
 
         self.connector
             .global
@@ -180,6 +342,30 @@ impl NetworkingPlugin for LinuxNetwork {
             .global
             .add_node_interface(node_uuid, &v_vxl)
             .await?;
+
+        self.connector
+            .global
+            .add_node_interface(node_uuid, &v_veth_e)
+            .await?;
+
+        self.connector
+            .global
+            .add_node_interface(node_uuid, &v_veth_i)
+            .await?;
+
+        self.connector
+            .global
+            .add_node_network_namespace(node_uuid, &default_netns)
+            .await?;
+
+        let internals = VirtualNetworkInternals {
+            associated_netns_name: default_netns_name,
+            associated_netns_uuid: default_netns_uuid,
+            dhcp: dhcp_internal,
+            associated_tables: vec![nat_table],
+        };
+
+        default_vnet.plugin_internals = Some(serialize_network_internals(&internals)?);
 
         self.connector
             .global
@@ -195,25 +381,46 @@ impl NetworkingPlugin for LinuxNetwork {
 
     async fn create_virtual_network(&self, vnet_uuid: Uuid) -> FResult<VirtualNetwork> {
         // this function is never called directly from API/Orchestrator
-        Err(FError::Unimplemented)
-        // match self.connector.global.get_virtual_network(vnet_uuid).await {
-        //     Ok(vnet) => {
-        //         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        //         self.connector
-        //             .global
-        //             .add_node_virutal_network(node_uuid, &vnet)
-        //             .await?;
-        //         Ok(vnet)
-        //     }
-        //     Err(FError::NotFound) => {
-        //         // a virtual network with this UUID does not exists
-        //         Err(FError::NotFound)
-        //     }
-        //     Err(err) => {
-        //         //any other error just return the error
-        //         Err(err)
-        //     }
-        // }
+
+        match self.connector.global.get_virtual_network(vnet_uuid).await {
+            Ok(mut vnet) => match &vnet.link_kind {
+                LinkKind::L2(link_kind_info) => {
+                    let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
+                    let mut associated_ns = NetworkNamespace {
+                        uuid: vnet.uuid,
+                        ns_name: self.generate_random_netns_name(),
+                        interfaces: vec![],
+                    };
+                    let dhcp_internal = match &vnet.ip_configuration {
+                        Some(conf) => None,
+                        None => None,
+                    };
+
+                    let internals = VirtualNetworkInternals {
+                        associated_netns_name: associated_ns.ns_name.clone(),
+                        associated_netns_uuid: associated_ns.uuid,
+                        dhcp: dhcp_internal,
+                        associated_tables: vec![],
+                    };
+
+                    vnet.plugin_internals = Some(serialize_network_internals(&internals)?);
+                    self.connector
+                        .global
+                        .add_node_virutal_network(node_uuid, &vnet)
+                        .await?;
+                    Ok(vnet)
+                }
+                _ => Err(FError::Unimplemented),
+            },
+            Err(FError::NotFound) => {
+                // a virtual network with this UUID does not exists
+                Err(FError::NotFound)
+            }
+            Err(err) => {
+                //any other error just return the error
+                Err(err)
+            }
+        }
     }
 
     async fn get_virtual_network(&self, vnet_uuid: Uuid) -> FResult<VirtualNetwork> {
@@ -1387,7 +1594,7 @@ impl NetworkingPlugin for LinuxNetwork {
     async fn assing_address_to_interface(
         &self,
         intf_uuid: Uuid,
-        address: IPAddress,
+        address: IpNetwork,
     ) -> FResult<VirtualInterface> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
         let mut iface = self
@@ -1398,11 +1605,9 @@ impl NetworkingPlugin for LinuxNetwork {
         match iface.net_ns {
             Some(_) => Err(FError::Unimplemented),
             None => {
-                // TODO we should move to ipnetwork instead of IPAddress to have
-                // visibility of the prefix, leaving 24 for the time being.address
-                self.add_iface_address(iface.if_name.clone(), address, 24)
+                self.add_iface_address(iface.if_name.clone(), address.ip(), address.prefix())
                     .await?;
-                iface.addresses.push(address);
+                iface.addresses.push(address.ip());
                 self.connector
                     .global
                     .add_node_interface(node_uuid, &iface)
@@ -1476,10 +1681,12 @@ impl LinuxNetwork {
         z: Arc<zenoh::Zenoh>,
         connector: Arc<fog05_sdk::zconnector::ZConnector>,
         pid: u32,
+        config: LinuxNetworkConfig,
     ) -> FResult<Self> {
         let state = LinuxNetworkState {
             uuid: None,
             tokio_rt: tokio::runtime::Runtime::new()?,
+            ns_managers: HashMap::new(),
         };
 
         Ok(Self {
@@ -1488,6 +1695,7 @@ impl LinuxNetwork {
             pid,
             agent: None,
             os: None,
+            config,
             state: Arc::new(RwLock::new(state)),
         })
     }
@@ -1578,6 +1786,7 @@ impl LinuxNetwork {
     }
 
     pub async fn stop(&self, stop: async_std::sync::Sender<()>) -> FResult<()> {
+        log::debug!("Linux Network Stopping");
         stop.send(()).await;
 
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
@@ -1593,16 +1802,85 @@ impl LinuxNetwork {
                 .global
                 .get_node_interface(node_uuid, iface_uuid)
                 .await?;
-            self.del_iface(iface.if_name.clone()).await?;
+            match iface.net_ns {
+                None => {
+                    self.del_iface(iface.if_name.clone()).await?;
+                    self.connector
+                        .global
+                        .remove_node_interface(node_uuid, iface_uuid)
+                        .await?;
+                }
+                Some(_) => continue,
+            }
+        }
+
+        if let Some(internals) = default_vnet.plugin_internals {
+            let internals = deserialize_network_internals(internals.as_slice())?;
+            let default_ns = self
+                .connector
+                .global
+                .get_node_network_namespace(node_uuid, internals.associated_netns_uuid)
+                .await?;
+            self.del_netns(default_ns.ns_name).await?;
+
+            log::trace!("Taking guard to remove ns-manager");
+            let mut guard = self.state.write().await;
+            let (pid, ns_manager) = guard
+                .ns_managers
+                .remove(&internals.associated_netns_uuid)
+                .ok_or_else(|| FError::NetworkingError("Manager not found".to_string()))?;
+            drop(guard);
+            log::trace!(
+                "Killing ns_manager {} {}",
+                pid,
+                internals.associated_netns_uuid
+            );
+            kill(Pid::from_raw(pid as i32), Signal::SIGKILL)
+                .map_err(|e| FError::NetworkingError(format!("{}", e)))?;
+
             self.connector
                 .global
-                .remove_node_interface(node_uuid, iface_uuid)
+                .remove_node_network_namespace(node_uuid, internals.associated_netns_uuid)
                 .await?;
+
+            //Killing dhcp if present
+            if let Some(dhcp_internal) = internals.dhcp {
+                let str_pid = String::from_utf8(
+                    self.os
+                        .as_ref()
+                        .unwrap()
+                        .read_file(dhcp_internal.pid_file.clone())
+                        .await??,
+                )
+                .map_err(|e| FError::NetworkingError(format!("{}", e)))?;
+                let pid = str_pid
+                    .trim()
+                    .parse::<i32>()
+                    .map_err(|e| FError::NetworkingError(format!("{}", e)))?;
+
+                log::trace!("Killing dnsmasq {}", pid);
+
+                kill(Pid::from_raw(pid), Signal::SIGKILL)
+                    .map_err(|e| FError::NetworkingError(format!("{}", e)))?;
+
+                async_std::fs::remove_file(async_std::path::Path::new(&dhcp_internal.pid_file))
+                    .await?;
+                async_std::fs::remove_file(async_std::path::Path::new(&dhcp_internal.leases_file))
+                    .await?;
+                async_std::fs::remove_file(async_std::path::Path::new(&dhcp_internal.conf)).await?;
+            }
+
+            for table in internals.associated_tables {
+                self.clean_nat(table).await?;
+            }
         }
+
         self.connector
             .global
             .remove_node_virtual_network(node_uuid, Uuid::nil())
             .await?;
+
+        // Here we should remove and kill all the others ns-managers and clean-up
 
         Ok(())
     }
@@ -1633,6 +1911,11 @@ impl LinuxNetwork {
     fn generate_random_netns_name(&self) -> String {
         let ns: String = thread_rng().sample_iter(&Alphanumeric).take(8).collect();
         format!("ns-{}", ns)
+    }
+
+    fn generate_random_nft_table_name(&self) -> String {
+        let ns: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+        format!("table{}", ns)
     }
 
     async fn add_netns(&self, ns_name: String) -> FResult<()> {
@@ -1675,6 +1958,7 @@ impl LinuxNetwork {
     }
 
     async fn create_veth(&self, iface_i: String, iface_e: String) -> FResult<()> {
+        log::trace!("create_veth {} {}", iface_i, iface_e);
         let mut state = self.state.write().await;
         state
             .tokio_rt
@@ -1688,6 +1972,7 @@ impl LinuxNetwork {
 
     async fn create_vlan(&self, iface: String, dev: String, tag: u16) -> FResult<()> {
         let mut state = self.state.write().await;
+        log::trace!("create_vlan {} {} {}", iface, dev, tag);
         state
             .tokio_rt
             .block_on(async {
@@ -1883,6 +2168,7 @@ impl LinuxNetwork {
     }
 
     async fn add_iface_address(&self, iface: String, addr: IPAddress, prefix: u8) -> FResult<()> {
+        log::trace!("add_iface_address {} {} {}", iface, addr, prefix);
         let mut state = self.state.write().await;
         state.tokio_rt.block_on(async {
             let (connection, handle, _) = new_connection().unwrap();
@@ -1906,6 +2192,7 @@ impl LinuxNetwork {
     }
 
     async fn del_iface_address(&self, iface: String, addr: IPAddress) -> FResult<()> {
+        log::trace!("del_iface_address {} {}", iface, addr);
         let mut state = self.state.write().await;
         use netlink_packet_route::rtnl::address::nlas::Nla;
         use netlink_packet_route::rtnl::address::AddressMessage;
@@ -1966,6 +2253,7 @@ impl LinuxNetwork {
     }
 
     async fn set_iface_name(&self, iface: String, new_name: String) -> FResult<()> {
+        log::trace!("set_iface_name {} {}", iface, new_name);
         let mut state = self.state.write().await;
         state.tokio_rt.block_on(async {
             let (connection, handle, _) = new_connection().unwrap();
@@ -1990,6 +2278,7 @@ impl LinuxNetwork {
     }
 
     async fn set_iface_mac(&self, iface: String, address: Vec<u8>) -> FResult<()> {
+        log::trace!("set_iface_mac {} {:?}", iface, address);
         let mut state = self.state.write().await;
         state.tokio_rt.block_on(async {
             let (connection, handle, _) = new_connection().unwrap();
@@ -2014,6 +2303,9 @@ impl LinuxNetwork {
     }
 
     async fn set_iface_ns(&self, iface: String, netns: String) -> FResult<()> {
+        log::trace!("set_iface_ns {} {}", iface, netns);
+        const NETNS_PATH: &str = "/run/netns/";
+        let netns = format!("{}{}", NETNS_PATH, netns);
         let mut state = self.state.write().await;
         let nsfile = std::fs::File::open(netns)?;
         state.tokio_rt.block_on(async {
@@ -2039,6 +2331,7 @@ impl LinuxNetwork {
     }
 
     async fn set_iface_default_ns(&self, iface: String) -> FResult<()> {
+        log::trace!("set_iface_default_ns {}", iface);
         let mut state = self.state.write().await;
         state.tokio_rt.block_on(async {
             let (connection, handle, _) = new_connection().unwrap();
@@ -2088,6 +2381,7 @@ impl LinuxNetwork {
     }
 
     async fn set_iface_down(&self, iface: String) -> FResult<()> {
+        log::trace!("set_iface_down {}", iface);
         let mut state = self.state.write().await;
         state.tokio_rt.block_on(async {
             let (connection, handle, _) = new_connection().unwrap();
@@ -2128,5 +2422,219 @@ impl LinuxNetwork {
                 Ok(false)
             }
         })
+    }
+
+    async fn create_dnsmasq_config(
+        &self,
+        iface: String,
+        pid_file: String,
+        lease_file: String,
+        log_file: String,
+        dhcp_start: IPAddress,
+        dhcp_end: IPAddress,
+        default_gw: IPAddress,
+        default_dns: IPAddress,
+    ) -> FResult<String> {
+        log::trace!(
+            "create_dnsmasq_config {} {} {} {} {} {} {}",
+            iface,
+            pid_file,
+            lease_file,
+            dhcp_start,
+            dhcp_end,
+            default_gw,
+            default_dns,
+        );
+        let mut context = Context::new();
+        let templates = Tera::new("linux-network/etc/*.conf")
+            .map_err(|e| FError::NetworkingError(format!("{}", e)))?;
+        context.insert("dhcp_interface", &iface);
+        context.insert("lease_file", &lease_file);
+        context.insert("dhcp_pid", &pid_file);
+        context.insert("dhcp_log", &log_file);
+        context.insert("dhcp_start", &format!("{}", dhcp_start));
+        context.insert("dhcp_end", &format!("{}", dhcp_end));
+        context.insert("default_gw", &format!("{}", default_gw));
+        context.insert("default_dns", &format!("{}", default_dns));
+
+        match templates.render("dnsmasq.conf", &context) {
+            Ok(t) => Ok(t),
+            Err(e) => {
+                log::error!("Parsing error(s): {} {}", e, e.source().unwrap());
+                Err(FError::NetworkingError(format!(
+                    "{} {}",
+                    e,
+                    e.source().unwrap()
+                )))
+            }
+        }
+    }
+
+    async fn configure_nat(&self, net: IpNetwork, iface: &str) -> FResult<String> {
+        let table_name = self.generate_random_nft_table_name();
+        let chain_name = String::from("postrouting");
+        // Create a batch. This is used to store all the netlink messages we will later send.
+        // Creating a new batch also automatically writes the initial batch begin message needed
+        // to tell netlink this is a single transaction that might arrive over multiple netlink packets.
+        let mut batch = Batch::new();
+        // Create a netfilter table operating on both IPv4 and IPv6 (ProtoFamily::Inet)
+        let table = Table::new(
+            &CString::new(table_name.clone())
+                .map_err(|e| FError::NetworkingError(format!("{}", e)))?,
+            ProtoFamily::Inet,
+        );
+        // Add the table to the batch with the `MsgType::Add` type, thus instructing netfilter to add
+        // this table under its `ProtoFamily::Inet` ruleset.
+        batch.add(&table, nftnl::MsgType::Add);
+
+        // Create a chain under the table we created above.
+        let mut chain = Chain::new(
+            &CString::new(chain_name).map_err(|e| FError::NetworkingError(format!("{}", e)))?,
+            &table,
+        );
+
+        // Hook the chains to the input and output event hooks, with highest priority (priority zero).
+        // See the `Chain::set_hook` documentation for details.
+        chain.set_hook(nftnl::Hook::PostRouting, 0);
+        // Set the chain type.
+        // See the `Chain::set_type` documentation for details.
+        chain.set_type(nftnl::ChainType::Nat);
+
+        // Add the two chains to the batch with the `MsgType` to tell netfilter to create the chains
+        // under the table.
+        batch.add(&chain, nftnl::MsgType::Add);
+
+        // Create a new rule object under the input chain.
+        let mut natting_rule = Rule::new(&chain);
+
+        // Lookup the interface index of the default gw interface.
+        let iface_index = iface_index(iface)?;
+        //Type of payload is source address
+        natting_rule.add_expr(&nft_expr!(payload ipv4 saddr));
+
+        //netmask of the network
+        natting_rule.add_expr(&nft_expr!(bitwise mask net.mask(), xor 0u32));
+
+        //comparing ip portion of the address
+        natting_rule.add_expr(&nft_expr!(cmp == net.ip()));
+
+        // passing the index of output interface oif
+        natting_rule.add_expr(&nft_expr!(meta oif));
+
+        //use interface with this index
+        natting_rule.add_expr(&nft_expr!(cmp == iface_index));
+
+        // Add masquerading
+        natting_rule.add_expr(&nft_expr!(masquerade));
+
+        // Add the rule to the batch.
+        batch.add(&natting_rule, nftnl::MsgType::Add);
+
+        // === FINALIZE THE TRANSACTION AND SEND THE DATA TO NETFILTER ===
+
+        // Finalize the batch. This means the batch end message is written into the batch, telling
+        // netfilter the we reached the end of the transaction message. It's also converted to a type
+        // that implements `IntoIterator<Item = &'a [u8]>`, thus allowing us to get the raw netlink data
+        // out so it can be sent over a netlink socket to netfilter.
+        let finalized_batch = batch.finalize();
+
+        fn send_and_process(batch: &FinalizedBatch) -> FResult<()> {
+            // Create a netlink socket to netfilter.
+            let socket = mnl::Socket::new(mnl::Bus::Netfilter)?;
+            // Send all the bytes in the batch.
+            socket.send_all(batch)?;
+            // Try to parse the messages coming back from netfilter. This part is still very unclear.
+            let portid = socket.portid();
+            let mut buffer = vec![0; nftnl::nft_nlmsg_maxsize() as usize];
+            let very_unclear_what_this_is_for = 2;
+            while let Some(message) = socket_recv(&socket, &mut buffer[..])? {
+                match mnl::cb_run(message, very_unclear_what_this_is_for, portid)? {
+                    mnl::CbResult::Stop => {
+                        break;
+                    }
+                    mnl::CbResult::Ok => (),
+                }
+            }
+            Ok(())
+        }
+
+        fn socket_recv<'a>(socket: &mnl::Socket, buf: &'a mut [u8]) -> FResult<Option<&'a [u8]>> {
+            let ret = socket.recv(buf)?;
+            if ret > 0 {
+                Ok(Some(&buf[..ret]))
+            } else {
+                Ok(None)
+            }
+        }
+
+        // Look up the interface index for a given interface name.
+        fn iface_index(name: &str) -> FResult<libc::c_uint> {
+            let c_name =
+                CString::new(name).map_err(|e| FError::NetworkingError(format!("{}", e)))?;
+            let index = unsafe { libc::if_nametoindex(c_name.as_ptr()) };
+            if index == 0 {
+                Err(FError::from(std::io::Error::last_os_error()))
+            } else {
+                Ok(index)
+            }
+        }
+
+        send_and_process(&finalized_batch)?;
+        Ok(table_name)
+    }
+
+    async fn clean_nat(&self, table_name: String) -> FResult<()> {
+        // Create a batch. This is used to store all the netlink messages we will later send.
+        // Creating a new batch also automatically writes the initial batch begin message needed
+        // to tell netlink this is a single transaction that might arrive over multiple netlink packets.
+        let mut batch = Batch::new();
+        // Create a netfilter table operating on both IPv4 and IPv6 (ProtoFamily::Inet)
+        let table = Table::new(
+            &CString::new(table_name).map_err(|e| FError::NetworkingError(format!("{}", e)))?,
+            ProtoFamily::Inet,
+        );
+        // Add the table to the batch with the `MsgType::Del` type, thus instructing netfilter to remove
+        // this table under its `ProtoFamily::Inet` ruleset.
+        batch.add(&table, nftnl::MsgType::Del);
+
+        // === FINALIZE THE TRANSACTION AND SEND THE DATA TO NETFILTER ===
+
+        // Finalize the batch. This means the batch end message is written into the batch, telling
+        // netfilter the we reached the end of the transaction message. It's also converted to a type
+        // that implements `IntoIterator<Item = &'a [u8]>`, thus allowing us to get the raw netlink data
+        // out so it can be sent over a netlink socket to netfilter.
+        let finalized_batch = batch.finalize();
+
+        fn send_and_process(batch: &FinalizedBatch) -> FResult<()> {
+            // Create a netlink socket to netfilter.
+            let socket = mnl::Socket::new(mnl::Bus::Netfilter)?;
+            // Send all the bytes in the batch.
+            socket.send_all(batch)?;
+            // Try to parse the messages coming back from netfilter. This part is still very unclear.
+            let portid = socket.portid();
+            let mut buffer = vec![0; nftnl::nft_nlmsg_maxsize() as usize];
+            let very_unclear_what_this_is_for = 2;
+            while let Some(message) = socket_recv(&socket, &mut buffer[..])? {
+                match mnl::cb_run(message, very_unclear_what_this_is_for, portid)? {
+                    mnl::CbResult::Stop => {
+                        break;
+                    }
+                    mnl::CbResult::Ok => (),
+                }
+            }
+            Ok(())
+        }
+
+        fn socket_recv<'a>(socket: &mnl::Socket, buf: &'a mut [u8]) -> FResult<Option<&'a [u8]>> {
+            let ret = socket.recv(buf)?;
+            if ret > 0 {
+                Ok(Some(&buf[..ret]))
+            } else {
+                Ok(None)
+            }
+        }
+
+        send_and_process(&finalized_batch)?;
+        Ok(())
     }
 }

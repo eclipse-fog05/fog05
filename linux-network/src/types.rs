@@ -13,15 +13,21 @@
 #![allow(clippy::manual_async_fn)]
 #![allow(clippy::large_enum_variant)]
 
+extern crate serde;
+extern crate serde_json;
+
+use serde::{Deserialize, Serialize};
+
 use async_std::prelude::FutureExt;
 use async_std::sync::{Arc, RwLock};
 
 use futures::prelude::*;
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::str;
 
 use fog05_sdk::agent::{AgentPluginInterfaceClient, OSClient};
-use fog05_sdk::fresult::FResult;
+use fog05_sdk::fresult::{FError, FResult};
 use fog05_sdk::types::IPAddress;
 
 use zrpc::zrpcresult::{ZRPCError, ZRPCResult};
@@ -29,9 +35,21 @@ use zrpc_macros::zservice;
 
 use uuid::Uuid;
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct LinuxNetworkConfig {
+    pub pid_file: Box<std::path::Path>,
+    pub zlocator: String,
+    pub zfilelocator: String,
+    pub path: Box<std::path::Path>,
+    pub monitoring_interveal: u64,
+    pub overlay_iface: Option<String>,
+    pub dataplane_iface: Option<String>,
+}
+
 pub struct LinuxNetworkState {
     pub uuid: Option<Uuid>,
     pub tokio_rt: tokio::runtime::Runtime,
+    pub ns_managers: HashMap<Uuid, (u32, NamespaceManagerClient)>,
 }
 
 #[derive(Clone)]
@@ -41,7 +59,49 @@ pub struct LinuxNetwork {
     pub pid: u32,
     pub agent: Option<AgentPluginInterfaceClient>,
     pub os: Option<OSClient>,
+    pub config: LinuxNetworkConfig,
     pub state: Arc<RwLock<LinuxNetworkState>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct VNetDHCP {
+    pub leases_file: String,
+    pub pid_file: String,
+    pub conf: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct VirtualNetworkInternals {
+    pub dhcp: Option<VNetDHCP>,
+    pub associated_netns_name: String,
+    pub associated_netns_uuid: Uuid,
+    pub associated_tables: Vec<String>,
+}
+
+pub fn serialize_network_internals(data: &VirtualNetworkInternals) -> FResult<Vec<u8>> {
+    Ok(serde_json::to_string(data)
+        .map_err(|e| FError::NetworkingError(format!("{}", e)))?
+        .into_bytes())
+}
+
+pub fn deserialize_network_internals(raw_data: &[u8]) -> FResult<VirtualNetworkInternals> {
+    Ok(serde_json::from_str::<VirtualNetworkInternals>(
+        std::str::from_utf8(raw_data).map_err(|e| FError::NetworkingError(format!("{}", e)))?,
+    )
+    .map_err(|e| FError::NetworkingError(format!("{}", e)))?)
+}
+
+pub fn serialize_plugin_config(data: &LinuxNetworkConfig) -> FResult<Vec<u8>> {
+    Ok(serde_yaml::to_string(data)
+        .map_err(|e| FError::NetworkingError(format!("{}", e)))?
+        .into_bytes())
+}
+
+pub fn deserialize_plugin_config(raw_data: &[u8]) -> FResult<LinuxNetworkConfig> {
+    Ok(serde_yaml::from_str::<LinuxNetworkConfig>(
+        std::str::from_utf8(raw_data).map_err(|e| FError::NetworkingError(format!("{}", e)))?,
+    )
+    .map_err(|e| FError::NetworkingError(format!("{}", e)))?)
 }
 
 #[zservice(timeout_s = 10, prefix = "/fos/local")]

@@ -577,6 +577,12 @@ impl OS for Agent {
     }
 
     async fn store_file(&self, content: Vec<u8>, file_path: String) -> FResult<bool> {
+        let path = Path::new(&file_path);
+        if !path.exists().await {
+            let file = fs::File::create(path).await?;
+            file.sync_all().await?;
+        }
+        fs::write(path, content).await?;
         Ok(true)
     }
 
