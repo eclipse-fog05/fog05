@@ -11,6 +11,7 @@
 *   ADLINK fog05 team, <fog05@adlink-labs.tech>
 *********************************************************************************/
 #![allow(unused)]
+#![feature(async_closure)]
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -36,7 +37,8 @@ use fog05_sdk::zconnector::ZConnector;
 use zrpc::ZServe;
 use zrpc_macros::zserver;
 
-//use async_ctrlc::CtrlC;
+use signal_hook_async_std::Signals;
+
 use uuid::Uuid;
 
 use structopt::StructOpt;
@@ -83,7 +85,7 @@ pub struct NSManager {
 fn main() {
     // Init logging
     env_logger::init_from_env(
-        env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "info"),
+        env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "trace"),
     );
     let args = NSManagerArgs::from_args();
 
@@ -185,9 +187,53 @@ fn main() {
                 };
                 let (s, handle) = manager.start().await;
 
+                let signals = Signals::new(&[
+                    signal_hook::SIGTERM,
+                    signal_hook::SIGINT,
+                    signal_hook::SIGQUIT,
+                ])
+                .unwrap();
+                let sig_handle = signals.handle();
+
+                let mut signals = signals.fuse();
+                if let Some(signal) = signals.next().await {
+                    match signal {
+                        signal_hook::SIGTERM | signal_hook::SIGINT | signal_hook::SIGQUIT => {
+                            log::trace!("Received stop signal closing...");
+                            manager.stop(s).await.unwrap();
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+
+                // let ctrlc = CtrlC::new().expect("Unable to create Ctrl-C handler");
+                // let mut stream = ctrlc.enumerate().take(1);
+                // stream.next().await;
+                // log::trace!("Received Ctrl-C start teardown");
+
                 handle.await.unwrap();
+
+                // Terminate the signal stream.
+                sig_handle.close();
+
+                log::trace!("Unmounting /sys ...");
+                if let Err(e) =
+                    nix::mount::umount2(Path::new("/sys"), nix::mount::MntFlags::MNT_DETACH)
+                {
+                    log::error!("umount2 error {}", e);
+                    process::exit(-1);
+                }
+
+                log::trace!("Unmounting {} ...", NETNS_PATH);
+                if let Err(e) =
+                    nix::mount::umount2(Path::new(NETNS_PATH), nix::mount::MntFlags::MNT_DETACH)
+                {
+                    log::error!("umount2 error {}", e);
+                    process::exit(-1);
+                }
             }
-            async_std::task::block_on(async { __main(args).await })
+            async_std::task::block_on(async { __main(args).await });
+            log::info!("Bye!");
         }
     }
 }
@@ -217,13 +263,14 @@ impl NSManager {
         ns_manager_server.initialize().await?;
         ns_manager_server.register().await?;
 
-        log::info!("Interfaces in namespace {:?}", self.dump_links().await);
-        loop {
-            log::info!("Doing nothing...");
-            task::sleep(Duration::from_secs(600)).await;
-        }
-
         let (sender, handle) = ns_manager_server.start().await?;
+
+        log::trace!("Interfaces in namespace {:?}", self.dump_links().await);
+        // loop {
+        //     //log::info!("Doing nothing...");
+        //     task::sleep(Duration::from_secs(600)).await;
+        // }
+
         stop.recv().await;
 
         ns_manager_server.stop(sender).await?;
@@ -249,7 +296,9 @@ impl NSManager {
     }
 
     pub async fn stop(&self, stop: async_std::sync::Sender<()>) -> FResult<()> {
+        log::info!("Stopping...");
         stop.send(()).await;
+        log::info!("Stopped");
         Ok(())
     }
 
@@ -670,7 +719,7 @@ impl NSManager {
                 handle
                     .link()
                     .set(link.header.index)
-                    .setns_by_pid(0)
+                    .setns_by_pid(1)
                     .execute()
                     .await
                     .map_err(|e| FError::NetworkingError(format!("{}", e)))
@@ -806,6 +855,7 @@ impl NamespaceManager for NSManager {
         iface: String,
         addr: Option<IpNetwork>,
     ) -> FResult<Vec<IPAddress>> {
+        log::trace!("add_virtual_interface_address {} {:?}", iface, addr);
         match addr {
             Some(addr) => {
                 self.add_iface_address(iface.clone(), addr.ip(), addr.prefix())
@@ -813,6 +863,7 @@ impl NamespaceManager for NSManager {
                 self.get_iface_addresses(iface).await
             }
             None => {
+                log::trace!("Using DHCP");
                 // If the address is None we spawn a DHCP client
                 // and then we the the address from netlink
                 let mut child = Command::new("dhclient")
@@ -820,9 +871,11 @@ impl NamespaceManager for NSManager {
                     .arg(iface.clone())
                     .spawn()
                     .map_err(|e| FError::NetworkingError(format!("{}", e)))?;
-                child
+                log::trace!("DHCP Client running {}", child.id());
+                let res = child
                     .wait()
                     .map_err(|e| FError::NetworkingError(format!("{}", e)))?;
+                log::trace!("DHCP Client exited with {:?}", res);
                 self.get_iface_addresses(iface).await
             }
         }
@@ -853,8 +906,9 @@ impl NamespaceManager for NSManager {
         mcast_addr: IPAddress,
         port: u16,
     ) -> FResult<()> {
-        self.create_mcast_vxlan(iface, dev, vni, mcast_addr, port)
-            .await
+        self.create_mcast_vxlan(iface.clone(), dev, vni, mcast_addr, port)
+            .await?;
+        self.set_iface_up(iface).await
     }
     async fn add_virtual_interface_vlan(
         &self,
@@ -862,13 +916,17 @@ impl NamespaceManager for NSManager {
         dev: String,
         tag: u16,
     ) -> FResult<()> {
-        self.create_vlan(iface, dev, tag).await
+        self.create_vlan(iface.clone(), dev, tag).await?;
+        self.set_iface_up(iface).await
     }
     async fn add_virtual_interface_veth(&self, iface_i: String, iface_e: String) -> FResult<()> {
-        self.create_veth(iface_i, iface_e).await
+        self.create_veth(iface_i.clone(), iface_e.clone()).await?;
+        self.set_iface_up(iface_i).await?;
+        self.set_iface_up(iface_e).await
     }
     async fn add_virtual_interface_bridge(&self, br_name: String) -> FResult<()> {
-        self.create_bridge(br_name).await
+        self.create_bridge(br_name.clone()).await?;
+        self.set_iface_up(br_name).await
     }
 
     async fn list_interfaces(&self) -> FResult<Vec<String>> {

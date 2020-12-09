@@ -43,6 +43,7 @@ pub struct LinuxNetworkConfig {
     pub zlocator: String,
     pub zfilelocator: String,
     pub path: Box<std::path::Path>,
+    pub run_path: Box<std::path::Path>,
     pub monitoring_interveal: u64,
     pub overlay_iface: Option<String>,
     pub dataplane_iface: Option<String>,
@@ -74,10 +75,15 @@ pub struct VNetDHCP {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct VNetNetns {
+    pub ns_name: String,
+    pub ns_uuid: Uuid,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct VirtualNetworkInternals {
     pub dhcp: Option<VNetDHCP>,
-    pub associated_netns_name: String,
-    pub associated_netns_uuid: Uuid,
+    pub associated_netns: Option<VNetNetns>,
     pub associated_tables: Vec<String>,
 }
 
@@ -107,7 +113,7 @@ pub fn deserialize_plugin_config(raw_data: &[u8]) -> FResult<LinuxNetworkConfig>
     .map_err(|e| FError::NetworkingError(format!("{}", e)))?)
 }
 
-#[zservice(timeout_s = 10, prefix = "/fos/local")]
+#[zservice(timeout_s = 60, prefix = "/fos/local")]
 pub trait NamespaceManager {
     async fn set_virtual_interface_up(&self, iface: String) -> FResult<()>;
     async fn set_virtual_interface_down(&self, iface: String) -> FResult<()>;

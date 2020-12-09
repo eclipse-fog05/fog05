@@ -13,6 +13,7 @@
 #![allow(unused)]
 
 use std::collections::HashMap;
+use std::env;
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::path::Path;
@@ -37,7 +38,8 @@ use fog05_sdk::zconnector::ZConnector;
 use zrpc::ZServe;
 use zrpc_macros::zserver;
 
-//use async_ctrlc::CtrlC;
+use signal_hook_async_std::Signals;
+
 use uuid::Uuid;
 
 use structopt::StructOpt;
@@ -48,7 +50,7 @@ use git_version::git_version;
 use nix::{
     fcntl::OFlag,
     sched::CloneFlags,
-    sys::{signal::kill, stat::Mode, wait::waitpid},
+    sys::{signal::kill, signal::Signal, stat::Mode, wait::waitpid},
     unistd::{execvp, fork, ForkResult},
 };
 
@@ -58,24 +60,23 @@ pub const SYS_FS: &str = "sysfs";
 
 const GIT_VERSION: &str = git_version!(prefix = "v", cargo_prefix = "v");
 
-#[derive(StructOpt, Debug)]
-struct IsolateArgs {
-    /// Config file
-    #[structopt(short, long)]
-    netns: String,
-    #[structopt(short, long)]
-    cmd: String,
-}
-
 fn main() {
     // Init logging
     env_logger::init_from_env(
         env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "info"),
     );
-    let args = IsolateArgs::from_args();
+    let mut args: Vec<String> = env::args().collect();
+    log::trace!("Args: {:?}", args);
+
+    let bin_name = args.remove(0);
+    if args.len() < 3 {
+        eprintln!("Usage {} namespace binary [args...]", bin_name);
+        std::process::exit(-1);
+    }
+
+    let netns = args.remove(0);
 
     log::debug!("Eclipse fog05 Native Hypervisor Isolation {}", GIT_VERSION);
-    log::trace!("Args: {:?}", args);
 
     #[cfg(feature = "isolation")]
     {
@@ -87,11 +88,13 @@ fn main() {
         let mut mount_flags = nix::mount::MsFlags::empty();
         let none_p4: Option<&Path> = None;
 
-        unshare_flags.insert(CloneFlags::CLONE_NEWNS);
+        unshare_flags.insert(CloneFlags::CLONE_NEWNET);
+        unshare_flags.insert(CloneFlags::CLONE_NEWUSER);
+
 
         let mut netns_path = String::new();
         netns_path.push_str(NETNS_PATH);
-        netns_path.push_str(&args.netns);
+        netns_path.push_str(&netns);
 
         open_flags.insert(OFlag::O_RDONLY);
         open_flags.insert(OFlag::O_CLOEXEC);
@@ -143,7 +146,7 @@ fn main() {
                 let sys_fs = Path::new(&SYS_FS);
                 mount_flags = nix::mount::MsFlags::empty();
                 if let Err(e) = nix::mount::mount(
-                    Some(Path::new(&args.netns)),
+                    Some(Path::new(&netns)),
                     Path::new("/sys"),
                     Some(sys_fs),
                     mount_flags,
@@ -155,16 +158,35 @@ fn main() {
 
                 match unsafe { fork() } {
                     Ok(ForkResult::Parent { child, .. }) => {
-                        async fn __main(args: IsolateArgs, child: nix::unistd::Pid) {
-                            log::info!("Running on namespace {} child is {}", args.netns, child);
+                        async fn __main(netns: String, child: nix::unistd::Pid) {
+                            log::info!("Running on namespace {} child is {}", netns, child);
                             let my_pid = process::id();
 
-                            // let ctrlc = CtrlC::new().expect("Unable to create Ctrl-C handler");
-                            // let mut stream = ctrlc.enumerate().take(1);
-                            // stream.next().await;
-                            // log::trace!("Received Ctrl-C start teardown");
+                            let signals = Signals::new(&[
+                                signal_hook::SIGTERM,
+                                signal_hook::SIGINT,
+                                signal_hook::SIGQUIT,
+                            ])
+                            .unwrap();
 
-                            // kill(child, 2);
+                            let sig_handle = signals.handle();
+
+                            let mut signals = signals.fuse();
+                            if let Some(signal) = signals.next().await {
+                                match signal {
+                                    signal_hook::SIGTERM
+                                    | signal_hook::SIGINT
+                                    | signal_hook::SIGQUIT => {
+                                        log::trace!("Received stop signal closing...");
+                                    }
+                                    _ => unreachable!(),
+                                }
+                            }
+
+                            match kill(child, Some(Signal::SIGINT)) {
+                                Ok(_) => log::trace!("Sending signal success"),
+                                Err(e) => log::error!("Sending signal error {}", e),
+                            }
 
                             match waitpid(child, None) {
                                 Ok(_) => {
@@ -174,21 +196,35 @@ fn main() {
                                     log::error!("Error when waiting! {}", e);
                                 }
                             }
+
+                            if let Err(e) = nix::mount::umount2(
+                                Path::new("/sys"),
+                                nix::mount::MntFlags::MNT_DETACH,
+                            ) {
+                                log::error!("umount2 error {}", e);
+                                process::exit(-1);
+                            }
+
+                            if let Err(e) = nix::mount::umount2(
+                                Path::new(NETNS_PATH),
+                                nix::mount::MntFlags::MNT_DETACH,
+                            ) {
+                                log::error!("umount2 error {}", e);
+                                process::exit(-1);
+                            }
                         }
-                        async_std::task::block_on(async move { __main(args, child).await })
+                        async_std::task::block_on(async move { __main(netns, child).await })
                     }
                     Ok(ForkResult::Child) => {
-                        let mut cmd_arg: Vec<&str> = args.cmd.split(' ').collect();
-                        let cmd = cmd_arg.remove(0);
-                        log::trace!("Child will start: {:?} with args {:?}", cmd, cmd_arg);
+                        let cmd = args[0].clone();
+                        log::trace!("Child will start: {:?} with args {:?}", cmd, args);
 
                         let cmd_cstring = CString::new(cmd.as_bytes()).unwrap();
                         log::trace!("Child will start: {:p}", cmd_cstring.as_ptr());
 
-                        let mut c_args: Vec<CString> = cmd_arg
+                        let mut c_args: Vec<CString> = args
                             .into_iter()
                             .map(|x| CString::new(x.as_bytes()).unwrap())
-                            .rev()
                             .collect();
 
                         // Starting process

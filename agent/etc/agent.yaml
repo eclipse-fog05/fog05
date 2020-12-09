@@ -3,5 +3,5 @@
     pid_file : /tmp/fos_agent.pid
     zlocator : tcp/127.0.0.1:7447
     path : /etc/fos
-    mgmt_interface : eth0
+    mgmt_interface : eno0
     monitoring_interveal: 10

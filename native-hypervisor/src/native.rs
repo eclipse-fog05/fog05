@@ -10,7 +10,7 @@
 * Contributors:
 *   ADLINK fog05 team, <fog05@adlink-labs.tech>
 *********************************************************************************/
-
+#![allow(unused)]
 #![allow(unused_variables)]
 #![allow(unused_mut)]
 
@@ -22,6 +22,9 @@ use std::time::Duration;
 use async_std::prelude::*;
 use async_std::sync::{Arc, Mutex};
 use async_std::task;
+
+use nix::sys::signal::{kill, Signal};
+use nix::unistd::Pid;
 
 use zrpc::ZServe;
 use zrpc_macros::zserver;
@@ -35,7 +38,10 @@ use fog05_sdk::types::PluginKind;
 
 use uuid::Uuid;
 
-use crate::types::{NativeHVSpecificDescriptor, NativeHVSpecificInfo, NativeHypervisor};
+use crate::types::{
+    deserialize_native_specific_descriptor, deserialize_native_specific_info,
+    serialize_native_specific_info, NativeHVSpecificInfo, NativeHypervisor,
+};
 
 #[zserver]
 impl HypervisorPlugin for NativeHypervisor {
@@ -70,7 +76,7 @@ impl HypervisorPlugin for NativeHypervisor {
             .global
             .add_node_instance(node_uuid, &instance)
             .await?;
-        log::trace!("Instance status {:?}", instance.status);
+        log::debug!("Instance status {:?}", instance.status);
         Ok(instance)
     }
 
@@ -90,7 +96,7 @@ impl HypervisorPlugin for NativeHypervisor {
                     .global
                     .remove_node_instance(node_uuid, instance_uuid)
                     .await?;
-
+                log::debug!("Instance status {} undefined", instance_uuid);
                 Ok(instance_uuid)
             }
             _ => Err(FError::TransitionNotAllowed),
@@ -122,25 +128,40 @@ impl HypervisorPlugin for NativeHypervisor {
                     .fdu_info(instance.fdu_uuid)
                     .await??;
 
-                let hv_info = serde_json::from_str::<NativeHVSpecificDescriptor>(
-                    &descriptor.hypervisor_specific.unwrap(),
-                )
-                .unwrap();
+                let hv_info = deserialize_native_specific_descriptor(
+                    &descriptor
+                        .hypervisor_specific
+                        .unwrap()
+                        .into_bytes()
+                        .as_slice(),
+                )?;
 
-                // Not creating any network namespace for the time being
-                // let fdu_ns = self
-                //     .net
-                //     .as_ref()
-                //     .unwrap()
-                //     .create_network_namespace()
-                //     .await??;
+                // Creating network namespace only if isolation feature is enabled
+                let fdu_ns: Option<Uuid> = if cfg!(feature = "isolation") {
+                    let ns = self
+                        .net
+                        .as_ref()
+                        .unwrap()
+                        .create_network_namespace()
+                        .await??;
+                    Some(ns.uuid)
+                } else {
+                    None
+                };
 
+                let instance_path = self
+                    .get_run_path()
+                    .join(format!("{}", instance_uuid))
+                    .to_str()
+                    .ok_or(FError::EncodingError)?
+                    .to_string();
                 let hv_specific = NativeHVSpecificInfo {
                     pid: 0,
                     env: hv_info.env.clone(),
                     // the base path need to be configurable from a configuration file
-                    instance_path: format!("/tmp/{}", instance_uuid),
+                    instance_path,
                     instance_files: Vec::new(),
+                    netns: fdu_ns,
                 };
 
                 //creating instance path
@@ -152,14 +173,75 @@ impl HypervisorPlugin for NativeHypervisor {
                     .await??;
 
                 // Adding hv specific info
-                instance.hypervisor_specific = Some(serde_json::to_string(&hv_specific).unwrap());
+                instance.hypervisor_specific = Some(serialize_native_specific_info(&hv_specific)?);
                 //
 
                 log::trace!("Created instance info {:?}", hv_specific);
 
                 let mut interfaces: Vec<FDURecordInterface> = Vec::new();
+
+                // This is to be sure the ns-manager is already up on the networking
+                //TODO the zrpc should check with a timeout if the service is up,
+                // and return error only if it is not present
+                task::sleep(Duration::from_millis(1000)).await;
+
                 let mut cps: HashMap<String, FDURecordConnectionPoint> = HashMap::new();
 
+                //Creating just an interface to be attached to the default vnet
+
+                if cfg!(feature = "isolation") {
+                    let viface_config = fog05_sdk::types::VirtualInterfaceConfig {
+                        if_name: "eth0".to_string(),
+                        kind: fog05_sdk::types::VirtualInterfaceConfigKind::VETH,
+                    };
+                    let viface = self
+                        .net
+                        .as_ref()
+                        .unwrap()
+                        .create_virtual_interface_in_namespace(viface_config, fdu_ns.unwrap())
+                        .await??;
+
+                    log::trace!("Created virtual interface {:?}", viface);
+
+                    let pair = match viface.kind {
+                        fog05_sdk::types::VirtualInterfaceKind::VETH(info) => info.pair,
+                        _ => return Err(FError::MalformedDescriptor),
+                    };
+
+                    // Moving pair interface into default network namespace
+                    self.net
+                        .as_ref()
+                        .unwrap()
+                        .move_interface_into_default_namespace(pair)
+                        .await??;
+
+                    // Attaching interface to default network virtual bridge
+                    self.net
+                        .as_ref()
+                        .unwrap()
+                        .attach_interface_to_bridge(pair, Uuid::nil())
+                        .await??;
+
+                    // Getting address with DHCP
+                    self.net
+                        .as_ref()
+                        .unwrap()
+                        .assing_address_to_interface(viface.uuid, None)
+                        .await??;
+
+                    let fdu_intf = FDURecordInterface {
+                        name: "eth0".to_string(),
+                        kind: fog05_sdk::im::fdu::InterfaceKind::VIRTUAL,
+                        mac_address: None,
+                        cp_uuid: None,
+                        intf_uuid: viface.uuid,
+                        virtual_interface: FDURecordVirtualInterface {
+                            vif_kind: VirtualInterfaceKind::E1000,
+                            bandwidht: None,
+                        },
+                    };
+                    interfaces.push(fdu_intf)
+                }
                 // Not creating any connection point or interface
                 // for cp in descriptor.connection_points {
                 //     let vcp = self
@@ -240,7 +322,7 @@ impl HypervisorPlugin for NativeHypervisor {
                     .global
                     .add_node_instance(node_uuid, &instance)
                     .await?;
-                log::trace!("Instance status {:?}", instance.status);
+                log::debug!("Instance status {:?}", instance.status);
                 guard.fdus.insert(instance_uuid, instance);
                 Ok(instance_uuid)
             }
@@ -260,26 +342,24 @@ impl HypervisorPlugin for NativeHypervisor {
             FDUState::CONFIGURED => {
                 let mut guard = self.fdus.write().await;
 
-                let mut hv_specific = serde_json::from_str::<NativeHVSpecificInfo>(
-                    &instance.clone().hypervisor_specific.unwrap(),
-                )
-                .unwrap();
+                let mut hv_specific = deserialize_native_specific_info(
+                    &instance.clone().hypervisor_specific.unwrap().as_slice(),
+                )?;
 
-                // Not removing interface
-                // self.net
-                //     .as_ref()
-                //     .unwrap()
-                //     .delete_network_namespace(hv_specific.netns)
-                //     .await??;
+                for iface in instance.interfaces {
+                    self.net
+                        .as_ref()
+                        .unwrap()
+                        .delete_virtual_interface(iface.intf_uuid)
+                        .await??;
+                    log::trace!("Deleted virtual interface {:?}", iface);
+                }
 
-                // for iface in instance.interfaces {
-                //     self.net
-                //         .as_ref()
-                //         .unwrap()
-                //         .delete_virtual_interface(iface.intf_uuid)
-                //         .await??;
-                //     log::trace!("Deleted virtual interface {:?}", iface);
-                // }
+                self.net
+                    .as_ref()
+                    .unwrap()
+                    .delete_network_namespace(hv_specific.netns.unwrap())
+                    .await??;
 
                 // for cp in instance.connection_points {
                 //     self.net
@@ -309,7 +389,7 @@ impl HypervisorPlugin for NativeHypervisor {
                 hv_specific.instance_files = Vec::new();
                 hv_specific.env = HashMap::new();
 
-                instance.hypervisor_specific = Some(serde_json::to_string(&hv_specific).unwrap());
+                instance.hypervisor_specific = Some(serialize_native_specific_info(&hv_specific)?);
                 instance.interfaces = Vec::new();
                 instance.connection_points = Vec::new();
                 instance.status = FDUState::DEFINED;
@@ -317,7 +397,7 @@ impl HypervisorPlugin for NativeHypervisor {
                     .global
                     .add_node_instance(node_uuid, &instance)
                     .await?;
-                log::trace!("Instance status {:?}", instance.status);
+                log::debug!("Instance status {:?}", instance.status);
                 guard.fdus.insert(instance_uuid, instance);
 
                 Ok(instance_uuid)
@@ -346,21 +426,37 @@ impl HypervisorPlugin for NativeHypervisor {
                     .fdu_info(instance.fdu_uuid)
                     .await??;
 
-                let hv_info = serde_json::from_str::<NativeHVSpecificDescriptor>(
-                    &descriptor.hypervisor_specific.unwrap(),
-                )
-                .unwrap();
+                let hv_info = deserialize_native_specific_descriptor(
+                    &descriptor.hypervisor_specific.unwrap().into_bytes(),
+                )?;
 
-                let mut hv_specific = serde_json::from_str::<NativeHVSpecificInfo>(
-                    &instance.clone().hypervisor_specific.unwrap(),
-                )
-                .unwrap();
+                let mut hv_specific = deserialize_native_specific_info(
+                    &instance.clone().hypervisor_specific.unwrap().as_slice(),
+                )?;
 
-                //just using cmd for the time being
-                let mut cmd = Command::new(hv_info.cmd);
-                for arg in hv_info.args {
-                    cmd.arg(arg);
-                }
+                let mut cmd = if cfg!(feature = "isolation") {
+                    let ns = self
+                        .net
+                        .as_ref()
+                        .unwrap()
+                        .get_network_namespace(hv_specific.netns.unwrap())
+                        .await??;
+
+                    let mut cmd = Command::new("native-isolate");
+                    cmd.arg(ns.ns_name);
+                    cmd.arg(hv_info.cmd);
+                    for arg in hv_info.args {
+                        cmd.arg(arg);
+                    }
+                    cmd
+                } else {
+                    let mut cmd = Command::new(hv_info.cmd);
+                    for arg in hv_info.args {
+                        cmd.arg(arg);
+                    }
+                    cmd
+                };
+
                 cmd.envs(hv_specific.env.clone());
 
                 // rearranging stdin,stdout, stderr
@@ -379,12 +475,13 @@ impl HypervisorPlugin for NativeHypervisor {
                 cmd.stdout(Stdio::from(out));
                 cmd.stderr(Stdio::from(err));
 
+                log::trace!("Native CMD is : {:?}", cmd);
                 let child = cmd.spawn()?;
                 log::debug!("Child PID {}", child.id());
 
                 hv_specific.pid = child.id();
 
-                instance.hypervisor_specific = Some(serde_json::to_string(&hv_specific).unwrap());
+                instance.hypervisor_specific = Some(serialize_native_specific_info(&hv_specific)?);
 
                 instance.status = FDUState::RUNNING;
                 self.connector
@@ -394,7 +491,7 @@ impl HypervisorPlugin for NativeHypervisor {
                 guard
                     .childs
                     .insert(instance_uuid, Arc::new(Mutex::new(child)));
-                log::trace!("Instance status {:?}", instance.status);
+                log::debug!("Instance status {:?}", instance.status);
                 guard.fdus.insert(instance_uuid, instance);
                 Ok(instance_uuid)
             }
@@ -431,20 +528,33 @@ impl HypervisorPlugin for NativeHypervisor {
                 let mut guard = self.fdus.write().await;
                 instance.status = FDUState::CONFIGURED;
 
-                let mut hv_specific = serde_json::from_str::<NativeHVSpecificInfo>(
+                let mut hv_specific = deserialize_native_specific_info(
                     &instance.clone().hypervisor_specific.unwrap(),
-                )
-                .unwrap();
+                )?;
+
                 let c = guard
                     .childs
                     .remove(&instance_uuid)
                     .ok_or(FError::NotFound)?;
                 let mut child = c.lock().await;
                 log::trace!("Child PID {:?}", child.id());
-                child.kill()?;
+                if cfg!(feature = "isolation") {
+                    log::trace!(
+                        "Isolation is active sending kill with sudo to PID {:?}",
+                        child.id()
+                    );
+                    let pid = child.id();
+                    kill(Pid::from_raw(pid as i32), Signal::SIGINT)
+                        .map_err(|e| FError::HypervisorError(format!("{}", e)))?;
+                    log::trace!("Waiting child to exit...");
+                    child.wait()?;
+                } else {
+                    child.kill()?;
+                }
+
                 hv_specific.pid = 0;
 
-                instance.hypervisor_specific = Some(serde_json::to_string(&hv_specific).unwrap());
+                instance.hypervisor_specific = Some(serialize_native_specific_info(&hv_specific)?);
 
                 self.connector
                     .global
@@ -574,5 +684,13 @@ impl NativeHypervisor {
 
     pub async fn stop(&self, stop: async_std::sync::Sender<()>) {
         stop.send(()).await;
+    }
+
+    fn get_path(&self) -> Box<std::path::Path> {
+        self.config.path.clone()
+    }
+
+    fn get_run_path(&self) -> Box<std::path::Path> {
+        self.config.run_path.clone()
     }
 }

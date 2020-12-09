@@ -11,8 +11,11 @@
 *   ADLINK fog05 team, <fog05@adlink-labs.tech>
 *********************************************************************************/
 use std::collections::HashMap;
+use std::env;
 use std::process;
 
+use async_std::fs;
+use async_std::path::Path;
 use async_std::prelude::*;
 use async_std::sync::{Arc, RwLock};
 
@@ -24,13 +27,26 @@ use async_ctrlc::CtrlC;
 
 use structopt::StructOpt;
 
-use native_hypervisor::types::{NativeHVState, NativeHypervisor};
+use native_hypervisor::types::{deserialize_plugin_config, NativeHVState, NativeHypervisor};
+
+static CONFIG_FILE: &str = "/etc/fos/native-hypervisor/config.yaml";
 
 #[derive(StructOpt, Debug)]
 struct DummyArgs {
     /// Config file
-    #[structopt(short, long, default_value = "tcp/127.0.0.1:7447")]
-    zenoh: String,
+    #[structopt(short, long, default_value = CONFIG_FILE)]
+    config: String,
+}
+
+fn am_root() -> bool {
+    match env::var("USER") {
+        Ok(val) => val == "root",
+        Err(_) => false,
+    }
+}
+
+async fn read_file(path: &Path) -> String {
+    fs::read_to_string(path).await.unwrap()
 }
 
 #[async_std::main]
@@ -44,7 +60,17 @@ async fn main() {
     let my_pid = process::id();
     log::info!("PID is {}", my_pid);
 
-    let properties = format!("mode=client;peer={}", args.zenoh.clone());
+    if cfg!(feature = "isolation") && !am_root() {
+        log::error!("Isolation require the plugin to run as root!");
+        process::exit(-1);
+    }
+
+    let conf_file_path = Path::new(&args.config);
+    let config =
+        deserialize_plugin_config(&(read_file(&conf_file_path).await.into_bytes().as_slice()))
+            .unwrap();
+
+    let properties = format!("mode=client;peer={}", config.zlocator.clone());
     let zproperties = Properties::from(properties);
     let zenoh = Arc::new(Zenoh::new(zproperties.into()).await.unwrap());
     let zconnector = Arc::new(ZConnector::new(zenoh.clone(), None, None));
@@ -53,6 +79,7 @@ async fn main() {
         z: zenoh.clone(),
         connector: zconnector.clone(),
         pid: my_pid,
+        config,
         agent: None,
         os: None,
         net: None,

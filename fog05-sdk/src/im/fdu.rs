@@ -234,7 +234,7 @@ pub struct FDURecord {
     pub connection_points: Vec<FDURecordConnectionPoint>,
     pub status: FDUState,
     pub error: Option<crate::fresult::FError>,
-    pub hypervisor_specific: Option<String>,
+    pub hypervisor_specific: Option<Vec<u8>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

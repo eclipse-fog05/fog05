@@ -45,7 +45,7 @@ use crate::types::{
 };
 
 #[zservice(
-    timeout_s = 10,
+    timeout_s = 60,
     prefix = "/fos/local",
     service_uuid = "00000000-0000-0000-0000-000000000004"
 )]
@@ -250,7 +250,7 @@ pub trait NetworkingPlugin {
 }
 
 #[zservice(
-    timeout_s = 10,
+    timeout_s = 60,
     prefix = "/fos/local",
     service_uuid = "00000000-0000-0000-0000-000000000005"
 )]

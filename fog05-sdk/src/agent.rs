@@ -41,7 +41,7 @@ use crate::types;
 use crate::types::{IPAddress, InterfaceKind};
 
 #[zservice(
-    timeout_s = 10,
+    timeout_s = 60,
     prefix = "/fos/local",
     service_uuid = "00000000-0000-0000-0000-000000000001"
 )]
@@ -69,10 +69,11 @@ pub trait OS {
     async fn set_interface_unavailable(&self, iface: String) -> FResult<bool>;
     async fn set_interface_available(&self, iface: String) -> FResult<bool>;
     async fn get_local_mgmt_address(&self) -> FResult<IPAddress>;
+    async fn get_local_mgmt_interface(&self) -> FResult<String>;
 }
 
 #[zservice(
-    timeout_s = 10,
+    timeout_s = 60,
     prefix = "/fos/local",
     service_uuid = "00000000-0000-0000-0000-000000000002"
 )]
@@ -128,7 +129,7 @@ pub trait AgentPluginInterface {
 }
 
 #[zservice(
-    timeout_s = 10,
+    timeout_s = 60,
     prefix = "/fos/local",
     service_uuid = "00000000-0000-0000-0000-000000000003"
 )]

@@ -79,11 +79,13 @@ where
         let mut data_stream = self.send(ws, &request).await?;
         //takes only one, eval goes to only one
         let resp = data_stream.next().await;
+        log::trace!("Response from zenoh is {:?}", resp);
         if let Some(data) = resp {
             let value = data.value;
             match value {
                 zenoh::Value::Raw(_size, rbuf) => {
                     let raw_data = rbuf.to_vec();
+                    log::trace!("Size of response is {}", raw_data.len());
                     Ok(serialize::deserialize_response(&raw_data)?)
                 }
                 _ => Err(ZRPCError::ZenohError(
@@ -91,6 +93,7 @@ where
                 )),
             }
         } else {
+            log::error!("No data from server");
             Err(ZRPCError::ZenohError(format!(
                 "No data from call_fun for Request {:?}",
                 request
@@ -124,7 +127,9 @@ where
         let iv = &idata[0];
         match &iv.value {
             zenoh::Value::Raw(_, buf) => {
-                let cs = serialize::deserialize_state::<super::ComponentState>(&buf.to_vec())?;
+                let raw_data = buf.to_vec();
+                log::trace!("Size of state is {}", raw_data.len());
+                let cs = serialize::deserialize_state::<super::ComponentState>(&raw_data)?;
                 let selector =
                     zenoh::Selector::try_from(format!("/@/router/{}", String::from(&cs.routerid)))?;
                 let mut ds = ws.get(&selector).await?;
@@ -141,6 +146,7 @@ where
                 let rv = &rdata[0];
                 match &rv.value {
                     zenoh::Value::Json(sv) => {
+                        log::trace!("Size of Zenoh router state is {}", sv.len());
                         let ri = serde_json::from_str::<super::types::ZRouterInfo>(&sv)?;
                         let mut it = ri.sessions.iter();
                         let f = it.find(|&x| x.peer == String::from(&cs.peerid).to_uppercase());

@@ -147,7 +147,8 @@ impl HypervisorPlugin for DummyHypervisor {
                 let hv_specific = DummyHVSpecificInfo { netns: fdu_ns.uuid };
 
                 // Adding hv specific info
-                instance.hypervisor_specific = Some(serde_json::to_string(&hv_specific).unwrap());
+                instance.hypervisor_specific =
+                    Some(serde_json::to_string(&hv_specific).unwrap().into_bytes());
                 //
 
                 log::trace!("Created instance network namespace: {:?}", fdu_ns);
@@ -253,7 +254,7 @@ impl HypervisorPlugin for DummyHypervisor {
                 let mut guard = self.fdus.write().await;
 
                 let hv_specific = serde_json::from_str::<DummyHVSpecificInfo>(
-                    &instance.clone().hypervisor_specific.unwrap(),
+                    &String::from_utf8(instance.clone().hypervisor_specific.unwrap()).unwrap(),
                 )
                 .unwrap();
 

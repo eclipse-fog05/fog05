@@ -11,7 +11,6 @@
 *   ADLINK fog05 team, <fog05@adlink-labs.tech>
 *********************************************************************************/
 #![allow(unused)]
-#![allow(unused)]
 #![allow(clippy::too_many_arguments)]
 extern crate tera;
 
@@ -64,7 +63,7 @@ use tera::{Context, Result, Tera};
 
 use crate::types::{
     deserialize_network_internals, serialize_network_internals, LinuxNetwork, LinuxNetworkConfig,
-    LinuxNetworkState, NamespaceManagerClient, VNetDHCP, VirtualNetworkInternals,
+    LinuxNetworkState, NamespaceManagerClient, VNetDHCP, VNetNetns, VirtualNetworkInternals,
 };
 
 #[zserver]
@@ -90,20 +89,20 @@ impl NetworkingPlugin for LinuxNetwork {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
         let default_net_uuid = Uuid::nil();
 
-        let default_br_uuid = Uuid::new_v4();
+        let default_br_uuid = Uuid::nil();
         let default_br_name = String::from("fosbr0");
 
         let default_vxl_uuid = Uuid::new_v4();
         let default_vxl_name = String::from("fosvxl0");
 
-        let default_netns_uuid = Uuid::nil();
-        let default_netns_name = String::from("fos-default");
+        // let default_netns_uuid = Uuid::nil();
+        // let default_netns_name = String::from("fos-default");
 
-        let default_veth_i_uuid = Uuid::new_v4();
-        let default_veth_i_name = String::from("fveth-default-i");
+        // let default_veth_i_uuid = Uuid::new_v4();
+        // let default_veth_i_name = String::from("fveth-default-i");
 
-        let default_veth_e_uuid = Uuid::new_v4();
-        let default_veth_e_name = String::from("fveth-default-e");
+        // let default_veth_e_uuid = Uuid::new_v4();
+        // let default_veth_e_name = String::from("fveth-default-e");
 
         let default_vni: u32 = 3845;
         let default_mcast_addr = IPAddress::V4(std::net::Ipv4Addr::new(239, 15, 5, 0));
@@ -127,17 +126,17 @@ impl NetworkingPlugin for LinuxNetwork {
             interfaces: vec![
                 default_br_uuid,
                 default_vxl_uuid,
-                default_veth_i_uuid,
-                default_veth_e_uuid,
+                // default_veth_i_uuid,
+                // default_veth_e_uuid,
             ],
             plugin_internals: None,
         };
 
-        let mut default_netns = NetworkNamespace {
-            uuid: default_netns_uuid,
-            ns_name: String::from("fos-default"),
-            interfaces: vec![default_veth_e_uuid],
-        };
+        // let mut default_netns = NetworkNamespace {
+        //     uuid: default_netns_uuid,
+        //     ns_name: String::from("fos-default"),
+        //     interfaces: vec![default_veth_e_uuid],
+        // };
 
         if dhcp {
             let ip_conf = IPConfiguration {
@@ -217,13 +216,37 @@ impl NetworkingPlugin for LinuxNetwork {
 
         // Creating dnsmasq config
         let dhcp_internal = if dhcp {
-            // TODO paths are temporary
+            let lease_file_path = self
+                .get_run_path()
+                .join("fosbr0.leases")
+                .to_str()
+                .ok_or(FError::EncodingError)?
+                .to_string();
+            let pid_file_path = self
+                .get_run_path()
+                .join("fosbr0.pid")
+                .to_str()
+                .ok_or(FError::EncodingError)?
+                .to_string();
+            let log_file_path = self
+                .get_run_path()
+                .join("fosbr0.log")
+                .to_str()
+                .ok_or(FError::EncodingError)?
+                .to_string();
+            let conf_file_path = self
+                .get_run_path()
+                .join("fosbr0.conf")
+                .to_str()
+                .ok_or(FError::EncodingError)?
+                .to_string();
+
             let config = self
                 .create_dnsmasq_config(
-                    default_br_name.clone(),
-                    "/tmp/fosbr0.pid".to_string(),
-                    "/tmp/fosbr0.leases".to_string(),
-                    "/tmp/fosbr0.log".to_string(),
+                    &default_br_name,
+                    &pid_file_path,
+                    &lease_file_path,
+                    &log_file_path,
                     IPAddress::V4(std::net::Ipv4Addr::new(10, 240, 0, 2)),
                     IPAddress::V4(std::net::Ipv4Addr::new(10, 240, 255, 254)),
                     IPAddress::V4(std::net::Ipv4Addr::new(10, 240, 0, 1)),
@@ -234,87 +257,87 @@ impl NetworkingPlugin for LinuxNetwork {
             self.os
                 .as_ref()
                 .unwrap()
-                .store_file(config.into_bytes(), "/tmp/fosbr0.conf".to_string())
+                .store_file(config.into_bytes(), conf_file_path.clone())
                 .await??;
             let child = Command::new("dnsmasq")
                 .arg("-C")
-                .arg("/tmp/fosbr0.conf")
+                .arg(conf_file_path.clone())
                 .stdin(Stdio::null())
                 .spawn()
                 .map_err(|e| FError::NetworkingError(format!("{}", e)))?;
             log::debug!("DHCP Process running PID: {}", child.id());
             Some(VNetDHCP {
-                leases_file: "/tmp/fosbr0.leases".to_string(),
-                pid_file: "/tmp/fosbr0.pid".to_string(),
-                conf: "/tmp/fosbr0.conf".to_string(),
-                log_file: "/tmp/fosbr0.log".to_string(),
+                leases_file: lease_file_path,
+                pid_file: pid_file_path,
+                conf: conf_file_path,
+                log_file: log_file_path,
             })
         } else {
             None
         };
 
-        let v_veth_i = VirtualInterface {
-            uuid: default_veth_i_uuid,
-            if_name: default_veth_i_name.clone(),
-            net_ns: None,
-            parent: Some(default_br_uuid),
-            kind: VirtualInterfaceKind::VETH(VETHKind {
-                pair: default_veth_e_uuid,
-                internal: true,
-            }),
-            addresses: Vec::new(),
-            phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
-        };
+        // let v_veth_i = VirtualInterface {
+        //     uuid: default_veth_i_uuid,
+        //     if_name: default_veth_i_name.clone(),
+        //     net_ns: None,
+        //     parent: Some(default_br_uuid),
+        //     kind: VirtualInterfaceKind::VETH(VETHKind {
+        //         pair: default_veth_e_uuid,
+        //         internal: true,
+        //     }),
+        //     addresses: Vec::new(),
+        //     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
+        // };
 
-        let v_veth_e = VirtualInterface {
-            uuid: default_veth_e_uuid,
-            if_name: default_veth_e_name.clone(),
-            net_ns: Some(default_netns_uuid),
-            parent: None,
-            kind: VirtualInterfaceKind::VETH(VETHKind {
-                pair: default_veth_i_uuid,
-                internal: false,
-            }),
-            addresses: Vec::new(),
-            phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
-        };
+        // let v_veth_e = VirtualInterface {
+        //     uuid: default_veth_e_uuid,
+        //     if_name: default_veth_e_name.clone(),
+        //     net_ns: Some(default_netns_uuid),
+        //     parent: None,
+        //     kind: VirtualInterfaceKind::VETH(VETHKind {
+        //         pair: default_veth_i_uuid,
+        //         internal: false,
+        //     }),
+        //     addresses: Vec::new(),
+        //     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
+        // };
 
-        let res = self
-            .create_veth(default_veth_i_name.clone(), default_veth_e_name.clone())
-            .await?;
-        log::trace!("VEth Pair creation res: {:?}", res);
+        // let res = self
+        //     .create_veth(default_veth_i_name.clone(), default_veth_e_name.clone())
+        //     .await?;
+        // log::trace!("VEth Pair creation res: {:?}", res);
 
-        self.set_iface_master(default_veth_i_name.clone(), default_br_name.clone())
-            .await?;
-        self.set_iface_up(default_veth_i_name).await?;
+        // self.set_iface_master(default_veth_i_name.clone(), default_br_name.clone())
+        //     .await?;
+        // self.set_iface_up(default_veth_i_name).await?;
 
-        let res = self.add_netns(default_netns_name.clone()).await?;
-        log::trace!("Netns creation res: {:?}", res);
+        // let res = self.add_netns(default_netns_name.clone()).await?;
+        // log::trace!("Netns creation res: {:?}", res);
 
         // Here we spawn the manager for the just created Namespace and
         // we add it to the map of managers
-        let mut guard = self.state.write().await;
-        let child = Command::new("ns-manager")
-            .arg("--netns")
-            .arg(&default_netns_name)
-            .arg("--id")
-            .arg(format!("{}", default_netns_uuid))
-            .arg("--locator")
-            .arg("unixsock-stream//tmp/zenoh.sock")
-            .spawn()
-            .map_err(|e| FError::NetworkingError(format!("{}", e)))?;
-        let ns_manager_client = NamespaceManagerClient::new(self.z.clone(), default_netns_uuid);
-        guard
-            .ns_managers
-            .insert(default_netns_uuid, (child.id(), ns_manager_client));
-        drop(guard);
+        // let mut guard = self.state.write().await;
+        // let child = Command::new("ns-manager")
+        //     .arg("--netns")
+        //     .arg(&default_netns_name)
+        //     .arg("--id")
+        //     .arg(format!("{}", default_netns_uuid))
+        //     .arg("--locator")
+        //     .arg("unixsock-stream//tmp/zenoh.sock")
+        //     .spawn()
+        //     .map_err(|e| FError::NetworkingError(format!("{}", e)))?;
+        // let ns_manager_client = NamespaceManagerClient::new(self.z.clone(), default_netns_uuid);
+        // guard
+        //     .ns_managers
+        //     .insert(default_netns_uuid, (child.id(), ns_manager_client));
+        // drop(guard);
 
-        let res = self.set_iface_up(default_veth_e_name.clone()).await?;
-        log::trace!("veth ext face up res: {:?}", res);
-        let res = self
-            .set_iface_ns(default_veth_e_name.clone(), default_netns_name.clone())
-            .await?;
-        log::trace!("veth ext netns set res: {:?}", res);
+        // let res = self.set_iface_up(default_veth_e_name.clone()).await?;
+        // log::trace!("veth ext face up res: {:?}", res);
+        // let res = self
+        //     .set_iface_ns(default_veth_e_name.clone(), default_netns_name.clone())
+        //     .await?;
+        // log::trace!("veth ext netns set res: {:?}", res);
 
         // Setting the firewall to NAT
         // using nftables so add as dependencies:
@@ -346,24 +369,24 @@ impl NetworkingPlugin for LinuxNetwork {
             .add_node_interface(node_uuid, &v_vxl)
             .await?;
 
-        self.connector
-            .global
-            .add_node_interface(node_uuid, &v_veth_e)
-            .await?;
+        // self.connector
+        //     .global
+        //     .add_node_interface(node_uuid, &v_veth_e)
+        //     .await?;
 
-        self.connector
-            .global
-            .add_node_interface(node_uuid, &v_veth_i)
-            .await?;
+        // self.connector
+        //     .global
+        //     .add_node_interface(node_uuid, &v_veth_i)
+        //     .await?;
 
-        self.connector
-            .global
-            .add_node_network_namespace(node_uuid, &default_netns)
-            .await?;
+        // self.connector
+        //     .global
+        //     .add_node_network_namespace(node_uuid, &default_netns)
+        //     .await?;
 
         let internals = VirtualNetworkInternals {
-            associated_netns_name: default_netns_name,
-            associated_netns_uuid: default_netns_uuid,
+            // associated_netns_name: default_netns_name,
+            associated_netns: None,
             dhcp: dhcp_internal,
             associated_tables: vec![nat_table],
         };
@@ -399,9 +422,13 @@ impl NetworkingPlugin for LinuxNetwork {
                         None => None,
                     };
 
+                    let ns_info = Some(VNetNetns {
+                        ns_name: associated_ns.ns_name.clone(),
+                        ns_uuid: associated_ns.uuid,
+                    });
+
                     let internals = VirtualNetworkInternals {
-                        associated_netns_name: associated_ns.ns_name.clone(),
-                        associated_netns_uuid: associated_ns.uuid,
+                        associated_netns: ns_info,
                         dhcp: dhcp_internal,
                         associated_tables: vec![],
                     };
@@ -528,7 +555,7 @@ impl NetworkingPlugin for LinuxNetwork {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
         match intf.kind {
             VirtualInterfaceConfigKind::VXLAN(conf) => {
-                let ext_face = self.get_dummy_face();
+                let ext_face = self.get_overlay_face_from_config().await?;
                 let v_iface = VirtualInterface {
                     uuid: Uuid::new_v4(),
                     if_name: intf.if_name.clone(),
@@ -620,7 +647,7 @@ impl NetworkingPlugin for LinuxNetwork {
                 Ok(v_iface_internal)
             }
             VirtualInterfaceConfigKind::VLAN(conf) => {
-                let ext_face = self.get_dummy_face();
+                let ext_face = self.get_dataplane_from_config().await?;
                 let v_iface = VirtualInterface {
                     uuid: Uuid::new_v4(),
                     if_name: intf.if_name.clone(),
@@ -650,7 +677,7 @@ impl NetworkingPlugin for LinuxNetwork {
                     net_ns: None,
                     parent: None,
                     kind: VirtualInterfaceKind::MACVLAN(MACVLANKind {
-                        dev: self.get_dummy_face(),
+                        dev: self.get_dataplane_from_config().await?,
                     }),
                     addresses: Vec::new(),
                     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
@@ -904,7 +931,24 @@ impl NetworkingPlugin for LinuxNetwork {
             ns_name: ns_name.clone(),
             interfaces: Vec::new(),
         };
-        self.add_netns(ns_name).await?;
+        self.add_netns(ns_name.clone()).await?;
+
+        let mut guard = self.state.write().await;
+        let child = Command::new("ns-manager")
+            .arg("--netns")
+            .arg(&ns_name.clone())
+            .arg("--id")
+            .arg(format!("{}", netns.uuid))
+            .arg("--locator")
+            .arg(self.get_domain_socket_locator())
+            .spawn()
+            .map_err(|e| FError::NetworkingError(format!("{}", e)))?;
+        let ns_manager_client = NamespaceManagerClient::new(self.z.clone(), netns.uuid);
+        guard
+            .ns_managers
+            .insert(netns.uuid, (child.id(), ns_manager_client));
+        drop(guard);
+
         self.connector
             .global
             .add_node_network_namespace(node_uuid, &netns)
@@ -931,6 +975,16 @@ impl NetworkingPlugin for LinuxNetwork {
             Err(_) => Err(FError::NotFound),
             Ok(netns) => {
                 self.del_netns(netns.ns_name.clone()).await?;
+                log::trace!("Taking guard to remove ns-manager");
+                let mut guard = self.state.write().await;
+                let (pid, ns_manager) = guard
+                    .ns_managers
+                    .remove(&netns.uuid)
+                    .ok_or_else(|| FError::NetworkingError("Manager not found".to_string()))?;
+                drop(guard);
+                log::trace!("Killing ns_manager {} {}", pid, netns.uuid);
+                kill(Pid::from_raw(pid as i32), Signal::SIGTERM)
+                    .map_err(|e| FError::NetworkingError(format!("{}", e)))?;
                 self.connector
                     .global
                     .remove_node_network_namespace(node_uuid, ns_uuid)
@@ -1067,10 +1121,10 @@ impl NetworkingPlugin for LinuxNetwork {
     }
 
     async fn get_overlay_iface(&self) -> FResult<String> {
-        Ok(self.get_overlay_face_from_config().if_name)
+        Ok(self.get_overlay_face_from_config().await?.if_name)
     }
     async fn get_vlan_face(&self) -> FResult<String> {
-        Ok(self.get_overlay_face_from_config().if_name)
+        Ok(self.get_dataplane_from_config().await?.if_name)
     }
 
     async fn create_macvlan_interface(&self, master_intf: String) -> FResult<VirtualInterface> {
@@ -1158,7 +1212,50 @@ impl NetworkingPlugin for LinuxNetwork {
             .await?;
 
         match iface.net_ns {
-            Some(_) => Err(FError::Unimplemented),
+            Some(old_ns_uuid) => {
+                let mut netns = self
+                    .connector
+                    .global
+                    .get_node_network_namespace(node_uuid, old_ns_uuid)
+                    .await?;
+                let mut newns = self
+                    .connector
+                    .global
+                    .get_node_network_namespace(node_uuid, ns_uuid)
+                    .await?;
+
+                match netns.interfaces.iter().position(|&x| x == intf_uuid) {
+                    Some(p) => {
+                        let guard = self.state.read().await;
+                        let (_, ns_manager) =
+                            guard.ns_managers.get(&old_ns_uuid).ok_or_else(|| {
+                                FError::NetworkingError("Manager not found".to_string())
+                            })?;
+                        ns_manager
+                            .move_virtual_interface_into_default_ns(iface.if_name.clone())
+                            .await??;
+                        drop(guard);
+                        netns.interfaces.remove(p);
+
+                        self.set_iface_ns(iface.if_name.clone(), newns.ns_name.clone())
+                            .await?;
+
+                        iface.net_ns = Some(newns.uuid);
+                        newns.interfaces.push(iface.uuid);
+
+                        self.connector
+                            .global
+                            .add_node_interface(node_uuid, &iface)
+                            .await?;
+                        self.connector
+                            .global
+                            .add_node_network_namespace(node_uuid, &netns)
+                            .await?;
+                        Ok(iface)
+                    }
+                    None => Err(FError::NotConnected),
+                }
+            }
             None => {
                 let mut netns = self
                     .connector
@@ -1311,9 +1408,16 @@ impl NetworkingPlugin for LinuxNetwork {
                     let addresses = ns_manager
                         .set_virtual_interface_master(iface.if_name.clone(), bridge.if_name.clone())
                         .await??;
-                    drop(guard);
+
                     iface.parent = Some(bridge.uuid);
                     info.childs.push(iface.uuid);
+
+                    ns_manager
+                        .set_virtual_interface_up(iface.if_name.clone())
+                        .await??;
+
+                    drop(guard);
+
                     let mut new_bridge = self
                         .connector
                         .global
@@ -1339,6 +1443,9 @@ impl NetworkingPlugin for LinuxNetwork {
 
                     iface.parent = Some(bridge.uuid);
                     info.childs.push(iface.uuid);
+
+                    self.set_iface_up(iface.if_name.clone()).await?;
+
                     let mut new_bridge = self
                         .connector
                         .global
@@ -1423,248 +1530,268 @@ impl NetworkingPlugin for LinuxNetwork {
             .global
             .get_node_network_namespace(node_uuid, ns_uuid)
             .await?;
-        Err(FError::Unimplemented)
-        // match intf.kind {
-        //     VirtualInterfaceConfigKind::VXLAN(conf) => {
-        //         let v_iface = VirtualInterface {
-        //             uuid: Uuid::new_v4(),
-        //             if_name: intf.if_name,
-        //             net_ns: Some(netns.uuid),
-        //             parent: None,
-        //             kind: VirtualInterfaceKind::VXLAN(VXLANKind {
-        //                 vni: conf.vni,
-        //                 mcast_addr: conf.mcast_addr,
-        //                 port: conf.port,
-        //                 dev: self.get_dummy_face(),
-        //             }),
-        //             addresses: Vec::new(),
-        //             phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
-        //         };
-        //         netns.interfaces.push(v_iface.uuid);
-        //         self.connector
-        //             .global
-        //             .add_node_network_namespace(node_uuid, &netns)
-        //             .await?;
-        //         self.connector
-        //             .global
-        //             .add_node_interface(node_uuid, &v_iface)
-        //             .await?;
-        //         Ok(v_iface)
-        //     }
-        //     VirtualInterfaceConfigKind::BRIDGE => {
-        //         let v_iface = VirtualInterface {
-        //             uuid: Uuid::new_v4(),
-        //             if_name: intf.if_name,
-        //             net_ns: Some(netns.uuid),
-        //             parent: None,
-        //             kind: VirtualInterfaceKind::BRIDGE(BridgeKind { childs: Vec::new() }),
-        //             addresses: Vec::new(),
-        //             phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
-        //         };
-        //         netns.interfaces.push(v_iface.uuid);
-        //         self.connector
-        //             .global
-        //             .add_node_network_namespace(node_uuid, &netns)
-        //             .await?;
-        //         self.connector
-        //             .global
-        //             .add_node_interface(node_uuid, &v_iface)
-        //             .await?;
-        //         Ok(v_iface)
-        //     }
-        //     VirtualInterfaceConfigKind::VETH => {
-        //         let external_face_name = self.generate_random_interface_name();
-        //         let internal_iface_uuid = Uuid::new_v4();
-        //         let external_iface_uuid = Uuid::new_v4();
-        //         let v_iface_internal = VirtualInterface {
-        //             uuid: internal_iface_uuid,
-        //             if_name: intf.if_name,
-        //             net_ns: Some(netns.uuid),
-        //             parent: None,
-        //             kind: VirtualInterfaceKind::VETH(VETHKind {
-        //                 pair: external_iface_uuid,
-        //                 internal: true,
-        //             }),
-        //             addresses: Vec::new(),
-        //             phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
-        //         };
-        //         let v_iface_external = VirtualInterface {
-        //             uuid: external_iface_uuid,
-        //             if_name: external_face_name,
-        //             net_ns: Some(netns.uuid),
-        //             parent: None,
-        //             kind: VirtualInterfaceKind::VETH(VETHKind {
-        //                 pair: internal_iface_uuid,
-        //                 internal: false,
-        //             }),
-        //             addresses: Vec::new(),
-        //             phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
-        //         };
+        //Err(FError::Unimplemented)
+        match intf.kind {
+            VirtualInterfaceConfigKind::VXLAN(conf) => {
+                // let v_iface = VirtualInterface {
+                //     uuid: Uuid::new_v4(),
+                //     if_name: intf.if_name,
+                //     net_ns: Some(netns.uuid),
+                //     parent: None,
+                //     kind: VirtualInterfaceKind::VXLAN(VXLANKind {
+                //         vni: conf.vni,
+                //         mcast_addr: conf.mcast_addr,
+                //         port: conf.port,
+                //         dev: self.get_overlay_face_from_config().await?,
+                //     }),
+                //     addresses: Vec::new(),
+                //     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
+                // };
+                // netns.interfaces.push(v_iface.uuid);
+                // self.connector
+                //     .global
+                //     .add_node_network_namespace(node_uuid, &netns)
+                //     .await?;
+                // self.connector
+                //     .global
+                //     .add_node_interface(node_uuid, &v_iface)
+                //     .await?;
+                // Ok(v_iface)
+                Err(FError::Unimplemented)
+            }
+            VirtualInterfaceConfigKind::BRIDGE => {
+                // let v_iface = VirtualInterface {
+                //     uuid: Uuid::new_v4(),
+                //     if_name: intf.if_name,
+                //     net_ns: Some(netns.uuid),
+                //     parent: None,
+                //     kind: VirtualInterfaceKind::BRIDGE(BridgeKind { childs: Vec::new() }),
+                //     addresses: Vec::new(),
+                //     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
+                // };
+                // netns.interfaces.push(v_iface.uuid);
+                // self.connector
+                //     .global
+                //     .add_node_network_namespace(node_uuid, &netns)
+                //     .await?;
+                // self.connector
+                //     .global
+                //     .add_node_interface(node_uuid, &v_iface)
+                //     .await?;
+                // Ok(v_iface)
+                Err(FError::Unimplemented)
+            }
+            VirtualInterfaceConfigKind::VETH => {
+                let external_face_name = self.generate_random_interface_name();
+                let internal_iface_uuid = Uuid::new_v4();
+                let external_iface_uuid = Uuid::new_v4();
+                let v_iface_internal = VirtualInterface {
+                    uuid: internal_iface_uuid,
+                    if_name: intf.if_name,
+                    net_ns: Some(netns.uuid),
+                    parent: None,
+                    kind: VirtualInterfaceKind::VETH(VETHKind {
+                        pair: external_iface_uuid,
+                        internal: true,
+                    }),
+                    addresses: Vec::new(),
+                    phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
+                };
+                let v_iface_external = VirtualInterface {
+                    uuid: external_iface_uuid,
+                    if_name: external_face_name.clone(),
+                    net_ns: Some(netns.uuid),
+                    parent: None,
+                    kind: VirtualInterfaceKind::VETH(VETHKind {
+                        pair: internal_iface_uuid,
+                        internal: false,
+                    }),
+                    addresses: Vec::new(),
+                    phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
+                };
+                let guard = self.state.read().await;
+                let (_, ns_manager) = guard
+                    .ns_managers
+                    .get(&ns_uuid)
+                    .ok_or_else(|| FError::NetworkingError("Manager not found".to_string()))?;
+                let addresses = ns_manager
+                    .add_virtual_interface_veth(
+                        v_iface_internal.if_name.clone(),
+                        external_face_name.clone(),
+                    )
+                    .await??;
+                drop(guard);
 
-        //         netns.interfaces.push(internal_iface_uuid);
-        //         netns.interfaces.push(external_iface_uuid);
-        //         self.connector
-        //             .global
-        //             .add_node_network_namespace(node_uuid, &netns)
-        //             .await?;
-        //         self.connector
-        //             .global
-        //             .add_node_interface(node_uuid, &v_iface_internal)
-        //             .await?;
-        //         self.connector
-        //             .global
-        //             .add_node_interface(node_uuid, &v_iface_external)
-        //             .await?;
-        //         Ok(v_iface_internal)
-        //     }
-        //     VirtualInterfaceConfigKind::VLAN(conf) => {
-        //         let v_iface = VirtualInterface {
-        //             uuid: Uuid::new_v4(),
-        //             if_name: intf.if_name,
-        //             net_ns: Some(netns.uuid),
-        //             parent: None,
-        //             kind: VirtualInterfaceKind::VLAN(VLANKind {
-        //                 tag: conf.tag,
-        //                 dev: self.get_dummy_face(),
-        //             }),
-        //             addresses: Vec::new(),
-        //             phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
-        //         };
-        //         netns.interfaces.push(v_iface.uuid);
-        //         self.connector
-        //             .global
-        //             .add_node_network_namespace(node_uuid, &netns)
-        //             .await?;
-        //         self.connector
-        //             .global
-        //             .add_node_interface(node_uuid, &v_iface)
-        //             .await?;
-        //         Ok(v_iface)
-        //     }
-        //     VirtualInterfaceConfigKind::MACVLAN => {
-        //         let v_iface = VirtualInterface {
-        //             uuid: Uuid::new_v4(),
-        //             if_name: intf.if_name,
-        //             net_ns: Some(netns.uuid),
-        //             parent: None,
-        //             kind: VirtualInterfaceKind::MACVLAN(MACVLANKind {
-        //                 dev: self.get_dummy_face(),
-        //             }),
-        //             addresses: Vec::new(),
-        //             phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
-        //         };
-        //         netns.interfaces.push(v_iface.uuid);
-        //         self.connector
-        //             .global
-        //             .add_node_network_namespace(node_uuid, &netns)
-        //             .await?;
-        //         self.connector
-        //             .global
-        //             .add_node_interface(node_uuid, &v_iface)
-        //             .await?;
-        //         Ok(v_iface)
-        //     }
-        //     VirtualInterfaceConfigKind::GRE(conf) => {
-        //         let v_iface = VirtualInterface {
-        //             uuid: Uuid::new_v4(),
-        //             if_name: intf.if_name,
-        //             net_ns: Some(netns.uuid),
-        //             parent: None,
-        //             kind: VirtualInterfaceKind::GRE(GREKind {
-        //                 local_addr: conf.local_addr,
-        //                 remote_addr: conf.remote_addr,
-        //                 ttl: conf.ttl,
-        //             }),
-        //             addresses: Vec::new(),
-        //             phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
-        //         };
-        //         netns.interfaces.push(v_iface.uuid);
-        //         self.connector
-        //             .global
-        //             .add_node_network_namespace(node_uuid, &netns)
-        //             .await?;
-        //         self.connector
-        //             .global
-        //             .add_node_interface(node_uuid, &v_iface)
-        //             .await?;
-        //         Ok(v_iface)
-        //     }
-        //     VirtualInterfaceConfigKind::GRETAP(conf) => {
-        //         let v_iface = VirtualInterface {
-        //             uuid: Uuid::new_v4(),
-        //             if_name: intf.if_name,
-        //             net_ns: Some(netns.uuid),
-        //             parent: None,
-        //             kind: VirtualInterfaceKind::GRETAP(GREKind {
-        //                 local_addr: conf.local_addr,
-        //                 remote_addr: conf.remote_addr,
-        //                 ttl: conf.ttl,
-        //             }),
-        //             addresses: Vec::new(),
-        //             phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
-        //         };
-        //         netns.interfaces.push(v_iface.uuid);
-        //         self.connector
-        //             .global
-        //             .add_node_network_namespace(node_uuid, &netns)
-        //             .await?;
-        //         self.connector
-        //             .global
-        //             .add_node_interface(node_uuid, &v_iface)
-        //             .await?;
-        //         Ok(v_iface)
-        //     }
-        //     VirtualInterfaceConfigKind::IP6GRE(conf) => {
-        //         let v_iface = VirtualInterface {
-        //             uuid: Uuid::new_v4(),
-        //             if_name: intf.if_name,
-        //             net_ns: Some(netns.uuid),
-        //             parent: None,
-        //             kind: VirtualInterfaceKind::IP6GRE(GREKind {
-        //                 local_addr: conf.local_addr,
-        //                 remote_addr: conf.remote_addr,
-        //                 ttl: conf.ttl,
-        //             }),
-        //             addresses: Vec::new(),
-        //             phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
-        //         };
-        //         netns.interfaces.push(v_iface.uuid);
-        //         self.connector
-        //             .global
-        //             .add_node_network_namespace(node_uuid, &netns)
-        //             .await?;
-        //         self.connector
-        //             .global
-        //             .add_node_interface(node_uuid, &v_iface)
-        //             .await?;
-        //         Ok(v_iface)
-        //     }
-        //     VirtualInterfaceConfigKind::IP6GRETAP(conf) => {
-        //         let v_iface = VirtualInterface {
-        //             uuid: Uuid::new_v4(),
-        //             if_name: intf.if_name,
-        //             net_ns: Some(netns.uuid),
-        //             parent: None,
-        //             kind: VirtualInterfaceKind::IP6GRETAP(GREKind {
-        //                 local_addr: conf.local_addr,
-        //                 remote_addr: conf.remote_addr,
-        //                 ttl: conf.ttl,
-        //             }),
-        //             addresses: Vec::new(),
-        //             phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
-        //         };
-        //         netns.interfaces.push(v_iface.uuid);
-        //         self.connector
-        //             .global
-        //             .add_node_network_namespace(node_uuid, &netns)
-        //             .await?;
-        //         self.connector
-        //             .global
-        //             .add_node_interface(node_uuid, &v_iface)
-        //             .await?;
-        //         Ok(v_iface)
-        //     }
-        // }
+                netns.interfaces.push(internal_iface_uuid);
+                netns.interfaces.push(external_iface_uuid);
+                self.connector
+                    .global
+                    .add_node_network_namespace(node_uuid, &netns)
+                    .await?;
+                self.connector
+                    .global
+                    .add_node_interface(node_uuid, &v_iface_internal)
+                    .await?;
+                self.connector
+                    .global
+                    .add_node_interface(node_uuid, &v_iface_external)
+                    .await?;
+                Ok(v_iface_internal)
+            }
+            VirtualInterfaceConfigKind::VLAN(conf) => {
+                // let v_iface = VirtualInterface {
+                //     uuid: Uuid::new_v4(),
+                //     if_name: intf.if_name,
+                //     net_ns: Some(netns.uuid),
+                //     parent: None,
+                //     kind: VirtualInterfaceKind::VLAN(VLANKind {
+                //         tag: conf.tag,
+                //         dev: self.get_dataplane_from_config().await?,
+                //     }),
+                //     addresses: Vec::new(),
+                //     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
+                // };
+                // netns.interfaces.push(v_iface.uuid);
+                // self.connector
+                //     .global
+                //     .add_node_network_namespace(node_uuid, &netns)
+                //     .await?;
+                // self.connector
+                //     .global
+                //     .add_node_interface(node_uuid, &v_iface)
+                //     .await?;
+                // Ok(v_iface)
+                Err(FError::Unimplemented)
+            }
+            VirtualInterfaceConfigKind::MACVLAN => {
+                // let v_iface = VirtualInterface {
+                //     uuid: Uuid::new_v4(),
+                //     if_name: intf.if_name,
+                //     net_ns: Some(netns.uuid),
+                //     parent: None,
+                //     kind: VirtualInterfaceKind::MACVLAN(MACVLANKind {
+                //         dev: self.get_dataplane_from_config().await?,
+                //     }),
+                //     addresses: Vec::new(),
+                //     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
+                // };
+                // netns.interfaces.push(v_iface.uuid);
+                // self.connector
+                //     .global
+                //     .add_node_network_namespace(node_uuid, &netns)
+                //     .await?;
+                // self.connector
+                //     .global
+                //     .add_node_interface(node_uuid, &v_iface)
+                //     .await?;
+                // Ok(v_iface)
+                Err(FError::Unimplemented)
+            }
+            VirtualInterfaceConfigKind::GRE(conf) => {
+                Err(FError::Unimplemented)
+                // let v_iface = VirtualInterface {
+                //     uuid: Uuid::new_v4(),
+                //     if_name: intf.if_name,
+                //     net_ns: Some(netns.uuid),
+                //     parent: None,
+                //     kind: VirtualInterfaceKind::GRE(GREKind {
+                //         local_addr: conf.local_addr,
+                //         remote_addr: conf.remote_addr,
+                //         ttl: conf.ttl,
+                //     }),
+                //     addresses: Vec::new(),
+                //     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
+                // };
+                // netns.interfaces.push(v_iface.uuid);
+                // self.connector
+                //     .global
+                //     .add_node_network_namespace(node_uuid, &netns)
+                //     .await?;
+                // self.connector
+                //     .global
+                //     .add_node_interface(node_uuid, &v_iface)
+                //     .await?;
+                // Ok(v_iface)
+            }
+            VirtualInterfaceConfigKind::GRETAP(conf) => {
+                Err(FError::Unimplemented)
+                // let v_iface = VirtualInterface {
+                //     uuid: Uuid::new_v4(),
+                //     if_name: intf.if_name,
+                //     net_ns: Some(netns.uuid),
+                //     parent: None,
+                //     kind: VirtualInterfaceKind::GRETAP(GREKind {
+                //         local_addr: conf.local_addr,
+                //         remote_addr: conf.remote_addr,
+                //         ttl: conf.ttl,
+                //     }),
+                //     addresses: Vec::new(),
+                //     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
+                // };
+                // netns.interfaces.push(v_iface.uuid);
+                // self.connector
+                //     .global
+                //     .add_node_network_namespace(node_uuid, &netns)
+                //     .await?;
+                // self.connector
+                //     .global
+                //     .add_node_interface(node_uuid, &v_iface)
+                //     .await?;
+                // Ok(v_iface)
+            }
+            VirtualInterfaceConfigKind::IP6GRE(conf) => {
+                Err(FError::Unimplemented)
+                // let v_iface = VirtualInterface {
+                //     uuid: Uuid::new_v4(),
+                //     if_name: intf.if_name,
+                //     net_ns: Some(netns.uuid),
+                //     parent: None,
+                //     kind: VirtualInterfaceKind::IP6GRE(GREKind {
+                //         local_addr: conf.local_addr,
+                //         remote_addr: conf.remote_addr,
+                //         ttl: conf.ttl,
+                //     }),
+                //     addresses: Vec::new(),
+                //     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
+                // };
+                // netns.interfaces.push(v_iface.uuid);
+                // self.connector
+                //     .global
+                //     .add_node_network_namespace(node_uuid, &netns)
+                //     .await?;
+                // self.connector
+                //     .global
+                //     .add_node_interface(node_uuid, &v_iface)
+                //     .await?;
+                // Ok(v_iface)
+            }
+            VirtualInterfaceConfigKind::IP6GRETAP(conf) => {
+                Err(FError::Unimplemented)
+                // let v_iface = VirtualInterface {
+                //     uuid: Uuid::new_v4(),
+                //     if_name: intf.if_name,
+                //     net_ns: Some(netns.uuid),
+                //     parent: None,
+                //     kind: VirtualInterfaceKind::IP6GRETAP(GREKind {
+                //         local_addr: conf.local_addr,
+                //         remote_addr: conf.remote_addr,
+                //         ttl: conf.ttl,
+                //     }),
+                //     addresses: Vec::new(),
+                //     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
+                // };
+                // netns.interfaces.push(v_iface.uuid);
+                // self.connector
+                //     .global
+                //     .add_node_network_namespace(node_uuid, &netns)
+                //     .await?;
+                // self.connector
+                //     .global
+                //     .add_node_interface(node_uuid, &v_iface)
+                //     .await?;
+                // Ok(v_iface)
+            }
+        }
     }
 
     async fn delete_virtual_interface_in_namespace(
@@ -1729,6 +1856,7 @@ impl NetworkingPlugin for LinuxNetwork {
         intf_uuid: Uuid,
         address: Option<IpNetwork>,
     ) -> FResult<VirtualInterface> {
+        log::trace!("assing_address_to_interface {} {:?}", intf_uuid, address);
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
         let mut iface = self
             .connector
@@ -2036,34 +2164,34 @@ impl LinuxNetwork {
 
         if let Some(internals) = default_vnet.plugin_internals {
             let internals = deserialize_network_internals(internals.as_slice())?;
-            let default_ns = self
-                .connector
-                .global
-                .get_node_network_namespace(node_uuid, internals.associated_netns_uuid)
-                .await?;
-            self.del_netns(default_ns.ns_name).await?;
 
-            log::trace!("Taking guard to remove ns-manager");
-            let mut guard = self.state.write().await;
-            let (pid, ns_manager) = guard
-                .ns_managers
-                .remove(&internals.associated_netns_uuid)
-                .ok_or_else(|| FError::NetworkingError("Manager not found".to_string()))?;
-            drop(guard);
-            log::trace!(
-                "Killing ns_manager {} {}",
-                pid,
-                internals.associated_netns_uuid
-            );
-            kill(Pid::from_raw(pid as i32), Signal::SIGKILL)
-                .map_err(|e| FError::NetworkingError(format!("{}", e)))?;
+            // Removing namespace if present
+            if let Some(ns_internals) = internals.associated_netns {
+                self.connector
+                    .global
+                    .get_node_network_namespace(node_uuid, ns_internals.ns_uuid)
+                    .await?;
 
-            self.connector
-                .global
-                .remove_node_network_namespace(node_uuid, internals.associated_netns_uuid)
-                .await?;
+                self.del_netns(ns_internals.ns_name).await?;
 
-            //Killing dhcp if present
+                log::trace!("Taking guard to remove ns-manager");
+                let mut guard = self.state.write().await;
+                let (pid, ns_manager) = guard
+                    .ns_managers
+                    .remove(&ns_internals.ns_uuid)
+                    .ok_or_else(|| FError::NetworkingError("Manager not found".to_string()))?;
+                drop(guard);
+                log::trace!("Killing ns_manager {} {}", pid, ns_internals.ns_uuid);
+                kill(Pid::from_raw(pid as i32), Signal::SIGINT)
+                    .map_err(|e| FError::NetworkingError(format!("{}", e)))?;
+
+                self.connector
+                    .global
+                    .remove_node_network_namespace(node_uuid, ns_internals.ns_uuid)
+                    .await?;
+            }
+
+            // Killing dhcp if present
             if let Some(dhcp_internal) = internals.dhcp {
                 let str_pid = String::from_utf8(
                     self.os
@@ -2107,22 +2235,42 @@ impl LinuxNetwork {
         Ok(())
     }
 
-    fn get_overlay_face_from_config(&self) -> Interface {
-        Interface {
-            if_name: String::from("eno0"),
+    async fn get_overlay_face_from_config(&self) -> FResult<Interface> {
+        let iface = self.config.overlay_iface.as_ref().ok_or(FError::NotFound)?;
+        let addresses = self.get_iface_addresses(iface.clone()).await?;
+        Ok(Interface {
+            if_name: iface.to_string(),
             kind: InterfaceKind::ETHERNET,
-            addresses: Vec::new(),
+            addresses,
             phy_address: None,
-        }
+        })
     }
 
-    fn get_dummy_face(&self) -> Interface {
-        Interface {
-            if_name: String::from("dummy"),
+    async fn get_dataplane_from_config(&self) -> FResult<Interface> {
+        let iface = self
+            .config
+            .dataplane_iface
+            .as_ref()
+            .ok_or(FError::NotFound)?;
+        let addresses = self.get_iface_addresses(iface.clone()).await?;
+        Ok(Interface {
+            if_name: iface.to_string(),
             kind: InterfaceKind::ETHERNET,
-            addresses: Vec::new(),
+            addresses,
             phy_address: None,
-        }
+        })
+    }
+
+    fn get_domain_socket_locator(&self) -> String {
+        self.config.zfilelocator.clone()
+    }
+
+    fn get_path(&self) -> Box<std::path::Path> {
+        self.config.path.clone()
+    }
+
+    fn get_run_path(&self) -> Box<std::path::Path> {
+        self.config.run_path.clone()
     }
 
     fn generate_random_interface_name(&self) -> String {
@@ -2704,10 +2852,10 @@ impl LinuxNetwork {
 
     async fn create_dnsmasq_config(
         &self,
-        iface: String,
-        pid_file: String,
-        lease_file: String,
-        log_file: String,
+        iface: &str,
+        pid_file: &str,
+        lease_file: &str,
+        log_file: &str,
         dhcp_start: IPAddress,
         dhcp_end: IPAddress,
         default_gw: IPAddress,
@@ -2724,12 +2872,18 @@ impl LinuxNetwork {
             default_dns,
         );
         let mut context = Context::new();
-        let templates = Tera::new("linux-network/etc/*.conf")
-            .map_err(|e| FError::NetworkingError(format!("{}", e)))?;
-        context.insert("dhcp_interface", &iface);
-        context.insert("lease_file", &lease_file);
-        context.insert("dhcp_pid", &pid_file);
-        context.insert("dhcp_log", &log_file);
+        let template_path = self
+            .get_path()
+            .join("*.conf")
+            .to_str()
+            .ok_or(FError::EncodingError)?
+            .to_string();
+        let templates =
+            Tera::new(&template_path).map_err(|e| FError::NetworkingError(format!("{}", e)))?;
+        context.insert("dhcp_interface", iface);
+        context.insert("lease_file", lease_file);
+        context.insert("dhcp_pid", pid_file);
+        context.insert("dhcp_log", log_file);
         context.insert("dhcp_start", &format!("{}", dhcp_start));
         context.insert("dhcp_end", &format!("{}", dhcp_end));
         context.insert("default_gw", &format!("{}", default_gw));

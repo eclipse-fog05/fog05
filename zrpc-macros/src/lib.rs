@@ -910,6 +910,9 @@ impl<'a> ZServiceGenerator<'a> {
                     self.server_uuid
                 }
 
+
+
+
                 #vis fn find_local_servers(
                     z : async_std::sync::Arc<zenoh::Zenoh>
                 ) -> impl std::future::Future<Output = ZRPCResult<Vec<uuid::Uuid>>> + 'static
@@ -990,6 +993,14 @@ impl<'a> ZServiceGenerator<'a> {
 
         quote! {
             impl #client_ident {
+
+
+                #vis fn verify_server(&self
+                ) -> impl std::future::Future<Output = ZRPCResult<bool>> + '_ {
+                    async move {
+                        self.ch.verify_server().await
+                    }
+                }
 
                 #(
                     #[allow(unused,clippy::manual_async_fn)]

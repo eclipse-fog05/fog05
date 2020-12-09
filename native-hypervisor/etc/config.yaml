@@ -1,0 +1,6 @@
+---
+    pid_file : /tmp/fos-native.pid
+    zlocator : tcp/127.0.0.1:7447
+    path : /etc/fos/native-hypervisor
+    run_path : /var/fos/native-hypervisor
+    monitoring_interveal: 10

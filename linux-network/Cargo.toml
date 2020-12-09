@@ -45,6 +45,8 @@ tera = "1.5.0"
 nftnl = "0.6.0"
 ipnetwork = "0.17.0"
 mnl = "0.2"
+signal-hook = "0.2.1"
+signal-hook-async-std = "0.1.0"
 
 [dependencies.async-std]
 version = "~1.6.5"

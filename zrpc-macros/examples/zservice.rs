@@ -18,7 +18,7 @@ use zrpc::ZServe;
 use zrpc::zrpcresult::{ZRPCError, ZRPCResult};
 use zrpc_macros::{zserver, zservice};
 
-#[zservice(timeout_s = 10, prefix = "/lfos")]
+#[zservice(timeout_s = 60, prefix = "/lfos")]
 pub trait Hello {
     async fn hello(&self, name: String) -> String;
     async fn add(&mut self) -> u64;

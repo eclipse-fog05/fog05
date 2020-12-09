@@ -647,6 +647,13 @@ impl OS for Agent {
     async fn get_local_mgmt_address(&self) -> FResult<IPAddress> {
         Err(FError::Unimplemented)
     }
+
+    async fn get_local_mgmt_interface(&self) -> FResult<String> {
+        log::trace!("get_local_mgmt_interface");
+        let guard = self.agent.read().await;
+        let iface = &guard.config.mgmt_interface;
+        Ok(iface.to_string())
+    }
 }
 
 #[zserver]

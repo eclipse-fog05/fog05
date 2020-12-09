@@ -1195,7 +1195,7 @@ impl NetworkingPlugin for DummyNetwork {
         intf_uuid: Uuid,
         address: Option<ipnetwork::IpNetwork>,
     ) -> FResult<VirtualInterface> {
-        if let Some(adddress) = address {
+        if let Some(address) = address {
             let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
             let mut iface = self
                 .connector
@@ -1207,7 +1207,7 @@ impl NetworkingPlugin for DummyNetwork {
                 .global
                 .add_node_interface(node_uuid, &iface)
                 .await?;
-            Ok(iface)
+            return Ok(iface);
         }
         Err(FError::Unimplemented)
     }
