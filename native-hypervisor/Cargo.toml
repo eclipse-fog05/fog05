@@ -31,10 +31,10 @@ git-version = "0.3.4"
 nix = {version = "0.19.0", optional = true}
 signal-hook = "0.2.1"
 signal-hook-async-std = "0.1.0"
-
+caps = {version = "0.5.0", optional = true}
 
 [features]
-isolation = ["nix"]
+isolation = ["nix","caps"]
 default = ["isolation"]
 
 [[bin]]
@@ -53,3 +53,22 @@ bench = false
 version = "~1.6.5"
 features = ["unstable","attributes"]
 
+
+
+
+
+[package.metadata.deb]
+maintainer = "ADLINK fog05 team <fog05@adlink-labs.tech>"
+copyright = "2020, ADLINK Technology Inc"
+extended-description = "Eclipse fog05 Linux Binaries Plugin"
+depends = "$auto"
+section = "utils"
+priority = "optional"
+assets = [
+    # binary
+    ["target/release/native-hypervisor", "usr/bin/", "755"],
+    ["target/release/native-isolate", "usr/bin/", "755"],
+    # assets
+    ["etc/*", "etc/fos/native-hypervisor", "644"],
+    ["etc/*", "var/fos/native-hypervisor", "644"],
+]

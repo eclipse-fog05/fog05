@@ -64,3 +64,20 @@ name = "ns-manager"
 path = "bin/ns-manager.rs"
 test = false
 bench = false
+
+
+[package.metadata.deb]
+maintainer = "ADLINK fog05 team <fog05@adlink-labs.tech>"
+copyright = "2020, ADLINK Technology Inc"
+extended-description = "Eclipse fog05 Linux Networking Plugin"
+depends = "$auto"
+section = "utils"
+priority = "optional"
+assets = [
+    # binary
+    ["target/release/linux-networking", "usr/bin/", "755"],
+    ["target/release/ns-manager", "usr/bin/", "755"],
+    # assets
+    ["etc/*", "etc/fos/linux-network", "644"],
+    ["etc/*", "var/fos/linux-network", "644"],
+]
