@@ -21,4 +21,6 @@ _build
 target/
 Cargo.lock
 results/
+results-*/
 *.pdf
+.Rhistory

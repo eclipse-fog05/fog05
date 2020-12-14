@@ -1,7 +1,9 @@
+#![feature(integer_atomics)]
+
 use async_std::sync::Arc;
 use async_std::task;
 use futures::prelude::*;
-use std::convert::TryFrom;
+use std::convert::TryInto;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 use structopt::StructOpt;
@@ -34,23 +36,35 @@ async fn main() {
     let rtts = Arc::new(AtomicU64::new(0));
     let count: Arc<AtomicU64> = Arc::new(AtomicU64::new(0));
 
-    println!("MSGS,SIZE,THR,INTERVEAL,RTT_US,KIND");
     let properties = match args.peer {
         Some(peer) => format!("mode={};peer={}", args.mode, peer),
         None => format!("mode={}", args.mode),
     };
     let zproperties = Properties::from(properties);
+    let session = zenoh::net::open(zproperties.clone().into()).await.unwrap();
+
     let zenoh = Zenoh::new(zproperties.into()).await.unwrap();
     let ws = zenoh.workspace(None).await.unwrap();
+    let path = format!("/test/{}", args.size);
+    let data = vec![0; args.size as usize];
+    ws.put(&path.try_into().unwrap(), data.into())
+        .await
+        .unwrap();
+    zenoh.close().await.unwrap();
 
-    let path = Selector::try_from(format!("/test/{}", args.size)).unwrap();
+    let reskey = net::ResKey::RId(
+        session
+            .declare_resource(&net::ResKey::RName(format!("/test/{}", args.size)))
+            .await
+            .unwrap(),
+    );
 
+    println!("MSGS,SIZE,THR,INTERVEAL,RTT_US,KIND");
     let kind = if args.mode == "peer" {
-        "P2P-GET"
+        "P2P-QUERY"
     } else {
-        "GET"
+        "QUERY"
     };
-
     let c = count.clone();
     let s = args.size;
     let i = args.interveal;
@@ -67,15 +81,25 @@ async fn main() {
         }
     });
 
-    let start = Instant::now();
+    let d = args.duration;
+    task::spawn(async move {
+        task::sleep(Duration::from_secs(d)).await;
+        std::process::exit(0);
+    });
 
-    while start.elapsed() < Duration::from_secs(args.duration) {
+    loop {
         let now_q = Instant::now();
-        let mut data_stream = ws.get(&path).await.unwrap();
-        while data_stream.next().await.is_some() {}
+        let mut replies = session
+            .query(
+                &reskey,
+                "",
+                net::QueryTarget::default(),
+                net::QueryConsolidation::default(),
+            )
+            .await
+            .unwrap();
+        while replies.next().await.is_some() {}
         count.fetch_add(1, Ordering::AcqRel);
         rtts.fetch_add(now_q.elapsed().as_micros() as u64, Ordering::AcqRel);
     }
-
-    zenoh.close().await.unwrap();
 }

@@ -24,6 +24,7 @@ use zrpc_macros::{zserver, zservice};
 static DEFAULT_MODE: &str = "client";
 static DEFAULT_ROUTER: &str = "tcp/127.0.0.1:7447";
 static DEFAULT_INT: &str = "5";
+static DEFAULT_SIZE: &str = "8";
 static DEFAULT_DURATION: &str = "60";
 
 #[derive(StructOpt, Debug)]
@@ -33,30 +34,34 @@ struct CallArgs {
     mode: String,
     #[structopt(short, long, default_value = DEFAULT_ROUTER)]
     router: String,
+    #[structopt(short, long, default_value = DEFAULT_SIZE)]
+    size: u64,
     #[structopt(short, long, default_value = DEFAULT_INT)]
     interveal: u64,
     #[structopt(short, long, default_value = DEFAULT_DURATION)]
     duration: u64,
+    #[structopt(short, long)]
+    nocheck: bool,
 }
 
 #[zservice(
     timeout_s = 60,
-    prefix = "/lfos",
+    prefix = "/test",
     service_uuid = "00000000-0000-0000-0000-000000000001"
 )]
 pub trait Bench {
-    async fn bench(&self, name: String) -> String;
+    async fn bench(&self) -> Vec<u8>;
 }
 
 #[derive(Clone)]
 struct BenchZService {
-    pub ser_name: String,
+    pub data: Vec<u8>,
 }
 
 #[zserver]
 impl Bench for BenchZService {
-    async fn bench(&self, name: String) -> String {
-        format!("Hello {}!, you are connected to {}", name, self.ser_name)
+    async fn bench(&self) -> Vec<u8> {
+        self.data.clone()
     }
 }
 
@@ -80,26 +85,29 @@ async fn client(args: CallArgs) {
     let rtts = Arc::new(AtomicU64::new(0));
     let count: Arc<AtomicU64> = Arc::new(AtomicU64::new(0));
 
-    println!("MSGS,SIZE,THR,INTERVEAL,RTT_US,KIND");
     let properties = format!("mode=client;peer={}", args.router);
 
     let zproperties = Properties::from(properties);
     let zenoh = Arc::new(Zenoh::new(zproperties.into()).await.unwrap());
 
-    //let ws = zenoh.workspace(None).await.unwrap();
-
     let local_servers = BenchClient::find_local_servers(zenoh.clone())
         .await
         .unwrap();
-    //println!("local_servers: {:?}", local_servers);
+    log::trace!("Local servers: {:?}", local_servers);
 
     let client = BenchClient::new(zenoh.clone(), local_servers[0]);
-    // let path = Selector::try_from(format!("/test/{}", args.size)).unwrap() ;
+
+    let kind = if !args.nocheck {
+        "ZRPC_CALL"
+    } else {
+        "ZRPC_CALL_NOCHECK"
+    };
 
     let c = count.clone();
-    let s = 60;
+    let s = args.size;
     let i = args.interveal;
     let rt = rtts.clone();
+    println!("MSGS,SIZE,THR,INTERVEAL,RTT_US,KIND");
     task::spawn(async move {
         loop {
             task::sleep(Duration::from_secs(i)).await;
@@ -108,19 +116,26 @@ async fn client(args: CallArgs) {
             let msgs = n / i;
             let thr = (n * s * 8) / i;
             let rtt = if n > 0 { r / n } else { std::u64::MAX };
-            println!("{},{},{},{},{},{}", msgs, s, thr, i, rtt, "ZRPC-CALL");
+            println!("{},{},{},{},{},{}", msgs, s, thr, i, rtt, kind);
         }
     });
 
     let start = Instant::now();
 
-    let par = "Bench".to_string();
-
-    while start.elapsed() < Duration::from_secs(args.duration) {
-        let now_q = Instant::now();
-        client.bench(par.clone()).await.unwrap();
-        count.fetch_add(1, Ordering::AcqRel);
-        rtts.fetch_add(now_q.elapsed().as_micros() as u64, Ordering::AcqRel);
+    if !args.nocheck {
+        while start.elapsed() < Duration::from_secs(args.duration) {
+            let now_q = Instant::now();
+            client.bench().await.unwrap();
+            count.fetch_add(1, Ordering::AcqRel);
+            rtts.fetch_add(now_q.elapsed().as_micros() as u64, Ordering::AcqRel);
+        }
+    } else {
+        while start.elapsed() < Duration::from_secs(args.duration) {
+            let now_q = Instant::now();
+            client.bench_nochk().await.unwrap();
+            count.fetch_add(1, Ordering::AcqRel);
+            rtts.fetch_add(now_q.elapsed().as_micros() as u64, Ordering::AcqRel);
+        }
     }
 
     //zenoh.close().await.unwrap();
@@ -131,9 +146,9 @@ async fn server(args: CallArgs) {
     let zproperties = Properties::from(properties);
     let zenoh = Arc::new(Zenoh::new(zproperties.into()).await.unwrap());
 
-    let service = BenchZService {
-        ser_name: "bench service".to_string(),
-    };
+    let data = vec![0; args.size as usize];
+
+    let service = BenchZService { data };
 
     let server = service.get_bench_server(zenoh.clone(), None);
 

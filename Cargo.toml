@@ -16,6 +16,7 @@
 members = [
   "zrpc",
   "zrpc-macros",
+  "zrpc-perf",
   "fog05-sdk",
   "fosctl",
   "agent",
@@ -25,9 +26,16 @@ members = [
 
 exclude = []
 
+#[profile.release]
+#debug=false
+#lto="fat"
+#codegen-units=1
+#opt-level=3
+#panic="abort"
+
+
 [profile.release]
 debug=false
-lto="fat"
-codegen-units=1
-opt-level=3
-panic="abort"
+lto = true
+codegen-units = 1
+opt-level = 3

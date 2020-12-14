@@ -115,6 +115,7 @@ impl Parse for ZService {
 struct EvalMethod {
     attrs: Vec<Attribute>,
     ident: Ident,
+    nochk: Ident,
     receiver: Receiver,
     args: Vec<PatType>,
     output: ReturnType,
@@ -126,6 +127,7 @@ impl Parse for EvalMethod {
         input.parse::<Token![async]>()?;
         input.parse::<Token![fn]>()?;
         let ident = input.parse()?;
+        let nochk = format_ident!("{}_nochk", ident);
         let content;
         let mut recv: Option<Receiver> = None;
         parenthesized!(content in input);
@@ -171,6 +173,7 @@ impl Parse for EvalMethod {
         Ok(Self {
             attrs,
             ident,
+            nochk,
             receiver,
             args,
             output,
@@ -239,6 +242,7 @@ pub fn zservice(_attr: TokenStream, input: TokenStream) -> TokenStream {
         args,
         method_attrs: &evals.iter().map(|eval| &*eval.attrs).collect::<Vec<_>>(), //getting evals attributes
         method_idents: &evals.iter().map(|eval| &eval.ident).collect::<Vec<_>>(), //getting evals names
+        method_idents_nocheck: &evals.iter().map(|eval| &eval.nochk).collect::<Vec<_>>(), //getting evals names no check [TESTING]
         attrs,
         evals,
         return_types: &evals //getting evals return type, if non present using unit
@@ -380,24 +384,25 @@ fn verify_types_were_provided(
 
 /// Generator for the ZService
 struct ZServiceGenerator<'a> {
-    service_ident: &'a Ident,            //service type
-    server_ident: &'a Ident,             //server type
-    client_ident: &'a Ident,             //client type
-    request_ident: &'a Ident,            //request type
-    response_ident: &'a Ident,           //response type
-    vis: &'a Visibility,                 //visibility
-    attrs: &'a [Attribute],              //attributes
-    evals: &'a [EvalMethod],             //functions to be exposed via evals
-    camel_case_idents: &'a [Ident],      //camel case conversion of all names
-    method_idents: &'a [&'a Ident],      //type of the methods
-    method_attrs: &'a [&'a [Attribute]], //attributes of the methods
-    args: &'a [&'a [PatType]],           // types description pattern
-    return_types: &'a [&'a Type],        // return types of functions
-    arg_pats: &'a [Vec<&'a Pat>],        // patterns for args
-    timeout: &'a u16,                    //eval timeout
-    eval_path: &'a String,               //path for evals
-    service_name: &'a String,            //service name on zenoh
-    service_get_server_ident: &'a Ident, //the ident for the get_<trait>_server
+    service_ident: &'a Ident,               //service type
+    server_ident: &'a Ident,                //server type
+    client_ident: &'a Ident,                //client type
+    request_ident: &'a Ident,               //request type
+    response_ident: &'a Ident,              //response type
+    vis: &'a Visibility,                    //visibility
+    attrs: &'a [Attribute],                 //attributes
+    evals: &'a [EvalMethod],                //functions to be exposed via evals
+    camel_case_idents: &'a [Ident],         //camel case conversion of all names
+    method_idents: &'a [&'a Ident],         //type of the methods
+    method_idents_nocheck: &'a [&'a Ident], //type of the methods without check of the server [TESTING POURPOSE]
+    method_attrs: &'a [&'a [Attribute]],    //attributes of the methods
+    args: &'a [&'a [PatType]],              // types description pattern
+    return_types: &'a [&'a Type],           // return types of functions
+    arg_pats: &'a [Vec<&'a Pat>],           // patterns for args
+    timeout: &'a u16,                       //eval timeout
+    eval_path: &'a String,                  //path for evals
+    service_name: &'a String,               //service name on zenoh
+    service_get_server_ident: &'a Ident,    //the ident for the get_<trait>_server
 }
 
 impl<'a> ZServiceGenerator<'a> {
@@ -983,6 +988,7 @@ impl<'a> ZServiceGenerator<'a> {
             method_attrs,
             vis,
             method_idents,
+            method_idents_nocheck,
             args,
             return_types,
             arg_pats,
@@ -1031,6 +1037,28 @@ impl<'a> ZServiceGenerator<'a> {
                                     }
                                 },
                                 Err(e) => Err(e),
+                            }
+                        }
+                    }
+
+                    #[allow(unused,clippy::manual_async_fn)]
+                    #( #method_attrs )*
+                    #vis fn #method_idents_nocheck(&self, #( #args ),*)
+                        -> impl std::future::Future<Output = ZRPCResult<#return_types>> + '_ {
+                        let request = #request_ident::#camel_case_idents { #( #arg_pats ),* };
+                        log::trace!("Sending {:?}", request);
+                        async move {
+                            let resp = self.ch.call_fun(request);
+                            let dur = std::time::Duration::from_secs(#timeout as u64);
+                            match async_std::future::timeout(dur, resp).await {
+                                Ok(r) => match r {
+                                    Ok(zr) => match zr {
+                                            #response_ident::#camel_case_idents(msg) => std::result::Result::Ok(msg),
+                                            _ => Err(ZRPCError::Unreachable),
+                                        },
+                                    Err(e) => Err(e),
+                                },
+                                Err(e) => Err(ZRPCError::TimedOut),
                             }
                         }
                     }
