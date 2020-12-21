@@ -141,14 +141,17 @@ pub trait ZNServe<Req>: Sized + Clone {
                 Output = ZRPCResult<(
                     async_std::sync::Sender<()>,
                     async_std::task::JoinHandle<ZRPCResult<()>>,
-                )>> + '_>>;
+                )>,
+            > + '_,
+        >,
+    >;
 
     /// Starts serving all requests
     #[allow(clippy::type_complexity)]
     fn serve(
         &self,
         stop: async_std::sync::Receiver<()>,
-    ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>> ;
+    ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>>;
 
     /// State changes to REGISTERED, will stop serve/work
     #[allow(clippy::type_complexity)]

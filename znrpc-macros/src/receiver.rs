@@ -2,11 +2,10 @@
 * Copyright (c) 2020 David Tolnay, async-trait
 *
 * This program and the accompanying materials are made available under the
-* terms of the Eclipse Public License 2.0 which is available at
-* http://www.eclipse.org/legal/epl-2.0, or the Apache Software License 2.0
+* terms of the Apache Software License 2.0
 * which is available at https://www.apache.org/licenses/LICENSE-2.0.
 *
-* SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
+* SPDX-License-Identifier: Apache-2.0
 * Contributors:
 *   David Tolnay, <dtolnay@gmail.com>
 *********************************************************************************/
@@ -18,9 +17,9 @@ use std::mem;
 use syn::punctuated::Punctuated;
 use syn::visit_mut::{self, VisitMut};
 use syn::{
-    parse::Parse, parse_quote, /*Block,*/ Error, ExprPath, ExprStruct, Ident, Item, Macro, PatPath,
-    PatStruct, PatTupleStruct, Path, PathArguments, QSelf, Receiver, /*Signature,*/ Token, Type,
-    TypePath, /*WherePredicate,*/
+    parse::Parse, parse_quote, /*Block,*/ Error, ExprPath, ExprStruct, Ident, Item, Macro,
+    PatPath, PatStruct, PatTupleStruct, Path, PathArguments, QSelf, Receiver,
+    /*Signature,*/ Token, Type, TypePath, /*WherePredicate,*/
 };
 
 // pub fn has_self_in_sig(sig: &mut Signature) -> bool {
