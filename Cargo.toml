@@ -16,7 +16,7 @@
 members = [
   "zrpc",
   "zrpc-macros",
-  "zrpc-perf",
+  "znrpc-macros",
   "fog05-sdk",
   "fosctl",
   "agent",
@@ -24,7 +24,9 @@ members = [
   "linux-network",
 ]
 
-exclude = []
+exclude = [
+  "zrpc-perf"
+]
 
 #[profile.release]
 #debug=false

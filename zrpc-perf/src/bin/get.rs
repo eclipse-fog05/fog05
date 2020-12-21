@@ -46,9 +46,9 @@ async fn main() {
     let selector = Selector::try_from(format!("/test/{}", args.size)).unwrap();
 
     let kind = if args.mode == "peer" {
-        "P2P-GET"
+        "PR-GET"
     } else {
-        "GET"
+        "CR-GET"
     };
 
     let path = format!("/test/{}", args.size);
@@ -69,7 +69,7 @@ async fn main() {
             let r = rt.swap(0, Ordering::AcqRel);
             let msgs = n / i;
             let thr = (n * s * 8) / i;
-            let rtt = r / n;
+            let rtt = if n == 0 { 0 } else { r / n };
             println!("{},{},{},{},{},{}", msgs, s, thr, i, rtt, kind);
         }
     });

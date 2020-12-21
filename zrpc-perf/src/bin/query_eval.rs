@@ -51,9 +51,9 @@ async fn main() {
 
     println!("MSGS,SIZE,THR,INTERVEAL,RTT_US,KIND");
     let kind = if args.mode == "peer" {
-        "P2P-NET-EVAL"
+        "PP-QUERY-EVAL"
     } else {
-        "NET-EVAL"
+        "CRC-QUERY-EVAL"
     };
     let c = count.clone();
     let s = args.size;
@@ -66,7 +66,7 @@ async fn main() {
             let r = rt.swap(0, Ordering::AcqRel);
             let msgs = n / i;
             let thr = (n * s * 8) / i;
-            let rtt = r / n;
+            let rtt = if n == 0 { 0 } else { r / n };
             println!("{},{},{},{},{},{}", msgs, s, thr, i, rtt, kind);
         }
     });

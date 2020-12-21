@@ -19,8 +19,10 @@ proc-macro2 = "1.0.6"
 serde_derive = "1.0.55"
 serde = { version = "1.0.55", features = ["derive"] }
 zenoh = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "master" }
+zenoh-protocol = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "master" }
 zrpc = {path = "../zrpc"}
 zrpc-macros = {path = "../zrpc-macros"}
+znrpc-macros = {path = "../znrpc-macros"}
 base64 = "0.12.3"
 log = "0.4.11"
 uuid = { version = "0.8.1", features = ["serde", "v4"] }
@@ -31,49 +33,16 @@ serde_json = "1.0.55"
 env_logger = "0.7.1"
 clap = "2.33"
 structopt = "0.3.13"
-
+uhlc = "0.2"
 
 
 [dependencies.async-std]
 version = "~1.6.5"
 features = ["attributes"]
 
-[[bin]]
-name = "eval"
-test = false
-bench = false
-
-[[bin]]
-name = "get_eval"
-test = false
-bench = false
-
-[[bin]]
-name = "zrpc_call"
-test = false
-bench = false
-
-[[bin]]
-name = "zrpc_get_zenoh"
-test = false
-bench = false
-
-[[bin]]
-name = "zrpc_state"
-test = false
-bench = false
-
-[[bin]]
-name = "net_eval"
-test = false
-bench = false
-
-[[bin]]
-name = "query"
-test = false
-bench = false
-
-[[bin]]
-name = "query_eval"
-test = false
-bench = false
+[profile.release]
+debug=false
+lto="fat"
+codegen-units=1
+opt-level=3
+panic="abort"

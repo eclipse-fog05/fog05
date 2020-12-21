@@ -196,11 +196,11 @@ where
     ) -> ::core::pin::Pin<
         Box<
             dyn std::future::Future<
-                    Output = ZRPCResult<(
-                        async_std::sync::Sender<()>,
-                        async_std::task::JoinHandle<ZRPCResult<()>>,
-                    )>,
-                > + '_,
+                Output = ZRPCResult<(
+                    async_std::sync::Sender<()>,
+                    async_std::task::JoinHandle<ZRPCResult<()>>,
+                )>,
+            > + '_,
         >,
     > {
         log::trace!("server start");

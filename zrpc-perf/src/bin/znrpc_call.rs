@@ -16,13 +16,12 @@ use async_std::prelude::FutureExt;
 
 use std::str;
 use uuid::Uuid;
-use zrpc::ZServe;
-//importing the macros
+use zrpc::ZNServe;
 use zrpc::zrpcresult::{ZRPCError, ZRPCResult};
-use zrpc_macros::{zserver, zservice};
+use znrpc_macros::{znserver, znservice};
 
 static DEFAULT_MODE: &str = "client";
-static DEFAULT_ZMODE: &str = "client";
+static DEFAULT_ZMODE: &str = "peer";
 static DEFAULT_ROUTER: &str = "tcp/127.0.0.1:7447";
 static DEFAULT_INT: &str = "5";
 static DEFAULT_SIZE: &str = "8";
@@ -43,11 +42,9 @@ struct CallArgs {
     interveal: u64,
     #[structopt(short, long, default_value = DEFAULT_DURATION)]
     duration: u64,
-    #[structopt(short, long)]
-    nocheck: bool,
 }
 
-#[zservice(
+#[znservice(
     timeout_s = 60,
     prefix = "/test",
     service_uuid = "00000000-0000-0000-0000-000000000001"
@@ -61,7 +58,7 @@ struct BenchZService {
     pub data: Vec<u8>,
 }
 
-#[zserver]
+#[znserver]
 impl Bench for BenchZService {
     async fn bench(&self) -> Vec<u8> {
         self.data.clone()
@@ -95,27 +92,26 @@ async fn client(args: CallArgs) {
     };
 
     let zproperties = Properties::from(properties);
-    let zenoh = Arc::new(Zenoh::new(zproperties.into()).await.unwrap());
+    let zenoh = Arc::new(zenoh::net::open(zproperties.clone().into()).await.unwrap());
 
-    let local_servers = BenchClient::find_local_servers(zenoh.clone())
+    task::sleep(std::time::Duration::from_secs(1)).await;
+
+    let info: zenoh::Properties = zenoh.info().await.into();
+    for (key, value) in info.iter() {
+        log::trace!("{} : {}", key, value);
+    }
+
+    let local_servers = BenchClient::find_servers(zenoh.clone())
         .await
         .unwrap();
-    log::trace!("Local servers: {:?}", local_servers);
+    log::trace!("Servers: {:?}", local_servers);
 
     let client = BenchClient::new(zenoh.clone(), local_servers[0]);
 
-    let kind = if !args.nocheck {
-        if args.zenoh_mode == "client" {
-            "CRC-ZRPC"
-        } else {
-            "PP-ZRPC"
-        }
+    let kind = if args.zenoh_mode == "client" {
+        "CRC-ZNRPC"
     } else {
-        if args.zenoh_mode == "client" {
-            "CRC-ZRPC-NOCHK"
-        } else {
-            "PP-ZRPC-NOCHK"
-        }
+        "PP-ZNRPC"
     };
 
     let c = count.clone();
@@ -137,33 +133,28 @@ async fn client(args: CallArgs) {
 
     let start = Instant::now();
 
-    if !args.nocheck {
-        while start.elapsed() < Duration::from_secs(args.duration) {
+
+     while start.elapsed() < Duration::from_secs(args.duration) {
             let now_q = Instant::now();
             let _r = client.bench().await;
             count.fetch_add(1, Ordering::AcqRel);
             rtts.fetch_add(now_q.elapsed().as_micros() as u64, Ordering::AcqRel);
-        }
-    } else {
-        while start.elapsed() < Duration::from_secs(args.duration) {
-            let now_q = Instant::now();
-            let _r = client.bench_nochk().await;
-            count.fetch_add(1, Ordering::AcqRel);
-            rtts.fetch_add(now_q.elapsed().as_micros() as u64, Ordering::AcqRel);
-        }
     }
+
 
     //zenoh.close().await.unwrap();
 }
 
 async fn server(args: CallArgs) {
+
     let properties = if args.zenoh_mode == "peer" {
         format!("mode={}", args.zenoh_mode)
     } else {
         format!("mode={};peer={}", args.zenoh_mode, args.router)
     };
+
     let zproperties = Properties::from(properties);
-    let zenoh = Arc::new(Zenoh::new(zproperties.into()).await.unwrap());
+    let zenoh = Arc::new(zenoh::net::open(zproperties.clone().into()).await.unwrap());
 
     let data = vec![0; args.size as usize];
 
@@ -172,7 +163,7 @@ async fn server(args: CallArgs) {
     let server = service.get_bench_server(zenoh.clone(), None);
 
     println!("Instance ID {}", server.instance_uuid());
-    server.connect().await.unwrap();
+    let (_ss, _h) = server.connect().await.unwrap();
     server.initialize().await.unwrap();
     server.register().await.unwrap();
     let (_s, handle) = server.start().await.unwrap();

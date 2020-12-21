@@ -15,7 +15,7 @@ serde_derive = "1.0.55"
 serde = { version = "1.0.55", features = ["derive"] }
 thiserror = "1.0"
 log = "0.4"
-
+#async-std = { version = "=1.8.0", features = ["unstable"] }
 bincode = { version = "1.3.1", optional = true}
 serde_yaml = {version = "0.8.13", optional = true}
 serde_json = { version = "1.0.55", optional = true}
@@ -33,6 +33,9 @@ state_yaml = ["serde_yaml"]
 
 default = ["resp_bincode","send_json","state_bincode"]
 
+
+
+
 [dependencies.async-std]
 version = "~1.6.5"
-features = ["unstable","attributes"]
+features = ["attributes"]
