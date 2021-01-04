@@ -207,11 +207,7 @@ pub trait NetworkingPlugin {
     ) -> FResult<VirtualInterface>;
 
     /// Detaches the given interface from the given bridge
-    async fn detach_interface_from_bridge(
-        &self,
-        intf_uuid: Uuid,
-        br_uuid: Uuid,
-    ) -> FResult<VirtualInterface>;
+    async fn detach_interface_from_bridge(&self, intf_uuid: Uuid) -> FResult<VirtualInterface>;
 
     /// Creates a virtual interface in the given namespace
     async fn create_virtual_interface_in_namespace(

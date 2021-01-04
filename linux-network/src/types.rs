@@ -129,6 +129,7 @@ pub trait NamespaceManager {
         addr: Option<IpNetwork>,
     ) -> FResult<Vec<IPAddress>>;
     async fn set_virtual_interface_master(&self, iface: String, master: String) -> FResult<()>;
+    async fn set_virtual_interface_nomaster(&self, iface: String) -> FResult<()>;
     async fn del_virtual_interface(&self, iface: String) -> FResult<()>;
     async fn add_virtual_interface_ptp_vxlan(
         &self,

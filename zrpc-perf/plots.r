@@ -54,6 +54,8 @@ data <- raw_data %>% group_by(SIZE,KIND) %>% summarise( MEAN_MSGS = mean(MSGS),
                                             )
 
 
+#data <- data %>% filter(KIND=="GRPC-CLIENT" | KIND=="PP-ZNRPC" | KIND=="PP-QUERY-EVAL")
+
 # p_msgs <- ggplot(data=data, aes(x=factor(SIZE), y=MEAN_MSGS, fill=KIND)) +
 #   geom_bar(stat="identity", position="dodge") + scale_y_log10()
 # 
@@ -71,7 +73,7 @@ data <- raw_data %>% group_by(SIZE,KIND) %>% summarise( MEAN_MSGS = mean(MSGS),
 p_msgs<-ggplot(data=data, aes(x=factor(SIZE), y=MEAN_MSGS, colour=KIND, group=KIND)) +
   geom_point(size=2) +
   geom_line() +
-#  scale_y_log10() +
+  #scale_y_log10() +
   geom_errorbar(aes(ymin=MEAN_MSGS-SE_MSGS, ymax=MEAN_MSGS+SE_MSGS), colour="black", width=.2) +
   scale_x_discrete(breaks = sizes, labels = sizes) +
   ggtitle("zrpc zenoh comparison msg/s localhost") +

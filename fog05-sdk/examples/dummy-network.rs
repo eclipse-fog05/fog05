@@ -838,31 +838,23 @@ impl NetworkingPlugin for DummyNetwork {
         }
     }
 
-    async fn detach_interface_from_bridge(
-        &self,
-        intf_uuid: Uuid,
-        br_uuid: Uuid,
-    ) -> FResult<VirtualInterface> {
+    async fn detach_interface_from_bridge(&self, intf_uuid: Uuid) -> FResult<VirtualInterface> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
         let mut iface = self
             .connector
             .global
             .get_node_interface(node_uuid, intf_uuid)
             .await?;
-        let bridge = self
-            .connector
-            .global
-            .get_node_interface(node_uuid, br_uuid)
-            .await?;
-        match bridge.kind {
-            VirtualInterfaceKind::BRIDGE(mut info) => match iface.parent {
-                Some(br) => {
-                    if br == bridge.uuid {
-                        iface.parent = None;
-                        self.connector
-                            .global
-                            .add_node_interface(node_uuid, &iface)
-                            .await?;
+
+        match iface.parent {
+            Some(br_uuid) => {
+                let bridge = self
+                    .connector
+                    .global
+                    .get_node_interface(node_uuid, br_uuid)
+                    .await?;
+                match bridge.kind {
+                    VirtualInterfaceKind::BRIDGE(mut info) => {
                         match info.childs.iter().position(|&x| x == iface.uuid) {
                             Some(p) => {
                                 info.childs.remove(p);
@@ -872,6 +864,11 @@ impl NetworkingPlugin for DummyNetwork {
                                     .get_node_interface(node_uuid, br_uuid)
                                     .await?;
                                 new_bridge.kind = VirtualInterfaceKind::BRIDGE(info);
+                                iface.parent = None;
+                                self.connector
+                                    .global
+                                    .add_node_interface(node_uuid, &iface)
+                                    .await?;
                                 self.connector
                                     .global
                                     .add_node_interface(node_uuid, &new_bridge)
@@ -881,11 +878,10 @@ impl NetworkingPlugin for DummyNetwork {
                             None => return Err(FError::NotConnected),
                         }
                     }
-                    Err(FError::NotConnected)
+                    _ => Err(FError::WrongKind),
                 }
-                None => Err(FError::NotConnected),
-            },
-            _ => Err(FError::WrongKind),
+            }
+            None => Err(FError::NotConnected),
         }
     }
 

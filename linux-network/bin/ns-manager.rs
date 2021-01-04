@@ -518,6 +518,32 @@ impl NSManager {
         })
     }
 
+    async fn del_iface_master(&self, iface: String) -> FResult<()> {
+        log::trace!("del_iface_master {}", iface);
+        let mut tokio_rt = self.rt.write().await;
+        tokio_rt.block_on(async {
+            let (connection, handle, _) = new_connection().unwrap();
+            tokio::spawn(connection);
+            let mut links = handle.link().get().set_name_filter(iface).execute();
+            if let Some(link) = links
+                .try_next()
+                .await
+                .map_err(|e| FError::NetworkingError(format!("{}", e)))?
+            {
+                handle
+                    .link()
+                    .set(link.header.index)
+                    .master(0u32)
+                    .execute()
+                    .await
+                    .map_err(|e| FError::NetworkingError(format!("{}", e)))
+            } else {
+                log::error!("del_iface_master iface not found");
+                Err(FError::NotFound)
+            }
+        })
+    }
+
     async fn add_iface_address(&self, iface: String, addr: IPAddress, prefix: u8) -> FResult<()> {
         let mut tokio_rt = self.rt.write().await;
         tokio_rt.block_on(async {
@@ -882,6 +908,9 @@ impl NamespaceManager for NSManager {
     }
     async fn set_virtual_interface_master(&self, iface: String, master: String) -> FResult<()> {
         self.set_iface_master(iface, master).await
+    }
+    async fn set_virtual_interface_nomaster(&self, iface: String) -> FResult<()> {
+        self.del_iface_master(iface).await
     }
     async fn del_virtual_interface(&self, iface: String) -> FResult<()> {
         self.del_iface(iface).await

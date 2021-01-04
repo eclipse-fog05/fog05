@@ -1467,23 +1467,85 @@ impl NetworkingPlugin for LinuxNetwork {
         }
     }
 
-    async fn detach_interface_from_bridge(
-        &self,
-        intf_uuid: Uuid,
-        br_uuid: Uuid,
-    ) -> FResult<VirtualInterface> {
+    async fn detach_interface_from_bridge(&self, intf_uuid: Uuid) -> FResult<VirtualInterface> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
         let mut iface = self
             .connector
             .global
             .get_node_interface(node_uuid, intf_uuid)
             .await?;
-        let bridge = self
-            .connector
-            .global
-            .get_node_interface(node_uuid, br_uuid)
-            .await?;
-        Err(FError::Unimplemented)
+        match iface.parent {
+            None => Err(FError::NotConnected),
+            Some(br_uuid) => {
+                let bridge = self
+                    .connector
+                    .global
+                    .get_node_interface(node_uuid, br_uuid)
+                    .await?;
+                match bridge.kind {
+                    VirtualInterfaceKind::BRIDGE(mut info) => match iface.net_ns {
+                        Some(ns_uuid) => {
+                            let guard = self.state.read().await;
+                            let (_, ns_manager) =
+                                guard.ns_managers.get(&ns_uuid).ok_or_else(|| {
+                                    FError::NetworkingError("Manager not found".to_string())
+                                })?;
+
+                            iface.parent = None;
+
+                            match info.childs.iter().position(|&x| x == iface.uuid) {
+                                Some(p) => {
+                                    info.childs.remove(p);
+                                    let mut new_bridge = self
+                                        .connector
+                                        .global
+                                        .get_node_interface(node_uuid, br_uuid)
+                                        .await?;
+                                    ns_manager
+                                        .set_virtual_interface_nomaster(iface.if_name.clone())
+                                        .await??;
+                                    new_bridge.kind = VirtualInterfaceKind::BRIDGE(info);
+                                    self.connector
+                                        .global
+                                        .add_node_interface(node_uuid, &new_bridge)
+                                        .await?;
+                                    self.connector
+                                        .global
+                                        .add_node_interface(node_uuid, &iface)
+                                        .await?;
+                                    return Ok(iface);
+                                }
+                                None => return Err(FError::NotConnected),
+                            }
+                        }
+                        None => match info.childs.iter().position(|&x| x == iface.uuid) {
+                            Some(p) => {
+                                info.childs.remove(p);
+                                let mut new_bridge = self
+                                    .connector
+                                    .global
+                                    .get_node_interface(node_uuid, br_uuid)
+                                    .await?;
+                                self.del_iface_master(iface.if_name.clone()).await?;
+                                new_bridge.kind = VirtualInterfaceKind::BRIDGE(info);
+                                self.connector
+                                    .global
+                                    .add_node_interface(node_uuid, &new_bridge)
+                                    .await?;
+                                self.connector
+                                    .global
+                                    .add_node_interface(node_uuid, &iface)
+                                    .await?;
+                                return Ok(iface);
+                            }
+                            None => return Err(FError::NotConnected),
+                        },
+                    },
+                    _ => Err(FError::WrongKind),
+                }
+            }
+        }
+
         // match bridge.kind {
         //     VirtualInterfaceKind::BRIDGE(mut info) => match iface.parent {
         //         Some(br) => {
@@ -1501,6 +1563,7 @@ impl NetworkingPlugin for LinuxNetwork {
         //                             .global
         //                             .get_node_interface(node_uuid, br_uuid)
         //                             .await?;
+        //                         self.del_iface_master(iface.if_name.clone()).await?;
         //                         new_bridge.kind = VirtualInterfaceKind::BRIDGE(info);
         //                         self.connector
         //                             .global
@@ -2532,6 +2595,32 @@ impl LinuxNetwork {
                 }
             } else {
                 log::error!("set_iface_master iface not found");
+                Err(FError::NotFound)
+            }
+        })
+    }
+
+    async fn del_iface_master(&self, iface: String) -> FResult<()> {
+        log::trace!("del_iface_master {}", iface);
+        let mut state = self.state.write().await;
+        state.tokio_rt.block_on(async {
+            let (connection, handle, _) = new_connection().unwrap();
+            tokio::spawn(connection);
+            let mut links = handle.link().get().set_name_filter(iface).execute();
+            if let Some(link) = links
+                .try_next()
+                .await
+                .map_err(|e| FError::NetworkingError(format!("{}", e)))?
+            {
+                handle
+                    .link()
+                    .set(link.header.index)
+                    .master(0u32)
+                    .execute()
+                    .await
+                    .map_err(|e| FError::NetworkingError(format!("{}", e)))
+            } else {
+                log::error!("del_iface_master iface not found");
                 Err(FError::NotFound)
             }
         })
