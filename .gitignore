@@ -18,3 +18,9 @@ _build
 .vscode/
 */_build/*
 .coverage
+target/
+Cargo.lock
+results/
+results-*/
+*.pdf
+.Rhistory

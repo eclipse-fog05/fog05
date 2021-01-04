@@ -1,0 +1,55 @@
+[package]
+name = "fosctl"
+version = "0.3.0-alpha1"
+repository = "https://github.com/eclipse-fog05/fog05"
+homepage = "http://fog05.io"
+authors = ["gabrik <gabriele.baldoni@gmail.com>"]
+edition = "2018"
+license = " EPL-2.0 OR Apache-2.0"
+categories = ["command-line-utilities"]
+description = "fog05: The End-to-End Compute, Storage and Networking Virtualisation solution."
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[badges]
+travis-ci = { repository = "...", branch = "master" }
+maintenance = { status = "actively-developed" }
+
+
+[dependencies]
+async-std = { version = "=1.8.0", features = ["attributes"] }
+structopt = "0.3.13"
+clap = "2.33"
+exitfailure = "0.5.1"
+failure = "0.1.8"
+prettytable-rs = "^0.8"
+reqwest = { version = "0.10", features = ["blocking", "json"] }
+uuid = { version = "0.8.1", features = ["serde", "v4"] }
+base64 = "0.12.3"
+derive_more = "0.99.10"
+semver = { version = "0.11.0", features = ["serde"]}
+rand = "0.7.3"
+fog05-sdk = {path = "../fog05-sdk" }
+zenoh = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "master" }
+serde_derive = "1.0.55"
+serde = { version = "1.0.55", features = ["derive"] }
+serde_yaml = "0.8.13"
+serde_json = "1.0.55"
+serde-aux = "0.6.1"
+log = "0.4"
+env_logger = "0.7.1"
+git-version = "0.3.4"
+
+
+
+[package.metadata.deb]
+maintainer = "ADLINK fog05 team <fog05@adlink-labs.tech>"
+copyright = "2020, ADLINK Technology Inc"
+extended-description = "Eclipse fog05 CLI Tool"
+depends = "$auto"
+section = "utils"
+priority = "optional"
+assets = [
+    # binary
+    ["target/release/fosctl", "usr/bin/", "755"],
+]

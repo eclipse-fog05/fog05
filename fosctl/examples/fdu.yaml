@@ -1,0 +1,15 @@
+---
+  id: test-dummy-fdu
+  name: dummy fdu
+  version: 0.3.0
+  fdu_version: 0.0.1
+  hypervisor: dummy
+  computation_requirements:
+      cpu_arch: x86_64
+      ram_size_mb: 10
+      storage_size_mb: 1
+  migration_kind : COLD
+  interfaces : []
+  storage: []
+  connection_points: []
+  depends_on: []

@@ -1,0 +1,44 @@
+[package]
+name = "znrpc-macros"
+version = "0.3.0-alpha1"
+repository = "https://github.com/eclipse-fog05/fog05"
+homepage = "http://fog05.io"
+authors = ["gabrik <gabriele.baldoni@gmail.com>"]
+edition = "2018"
+license = " EPL-2.0 OR Apache-2.0"
+description = "fog05: The End-to-End Compute, Storage and Networking Virtualisation solution."
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+# To build with debug on macros: RUSTFLAGS="-Z macro-backtrace"
+
+[dependencies]
+async-std = { version = "=1.8.0", features = ["attributes"] }
+futures = "0.3.5"
+syn = { version = "1.0.11", features = ["full"] }
+quote = "1.0.2"
+proc-macro2 = "1.0.6"
+serde_derive = "1.0.55"
+serde = { version = "1.0.55", features = ["derive"] }
+zenoh = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "master" }
+zenoh-protocol = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "master" }
+uhlc = "0.2"
+zrpc = {path = "../zrpc"}
+base64 = "0.12.3"
+log = "0.4.11"
+uuid = { version = "0.8.1", features = ["serde", "v4"] }
+darling = "0.10.2"
+Inflector = "0.11.4"
+
+
+
+
+[dev-dependencies]
+env_logger = "0.7.1"
+
+
+[lib]
+proc-macro = true
+
+
+[[example]]
+name = "znservice"

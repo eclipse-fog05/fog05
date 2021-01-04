@@ -1,8 +1,0 @@
-network:
-  version: 2
-  ethernets:
-    eth0: {dhcp4: true}
-
-    eth1:
-          addresses : [172.16.123.254/24]
-          dhcp4: no
