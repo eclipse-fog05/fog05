@@ -54,7 +54,7 @@ data <- raw_data %>% group_by(SIZE,KIND) %>% summarise( MEAN_MSGS = mean(MSGS),
                                             )
 
 
-#data <- data %>% filter(KIND=="GRPC-CLIENT" | KIND=="PP-ZNRPC" | KIND=="PP-QUERY-EVAL")
+data <- data %>% filter(KIND!="ZNRPC-RESP-SER" & KIND!="ZNRPC-RESP-DE")
 
 # p_msgs <- ggplot(data=data, aes(x=factor(SIZE), y=MEAN_MSGS, fill=KIND)) +
 #   geom_bar(stat="identity", position="dodge") + scale_y_log10()
