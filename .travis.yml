@@ -9,4 +9,14 @@ matrix:
 before_install:
   - sudo apt-get install protobuf-compiler nftables libnftnl-dev libnfnetlink-dev libmnl-dev
 script:
-  - cargo build
+  - cargo check
+  - cargo fmt -- --check
+  - cargo build --release --all-targets --verbose
+  - cargo deb -p fog05-agent --no-build --verbose
+  - cargo deb -p fosctl --no-build --verbose
+  - cargo deb -p linux-network --no-build --verbose
+  - cargo deb -p native-hypervisor --no-build --verbose
+  - dpkg -I ./target/debian/fog05-agent_0.3.0~alpha1_amd64.deb
+  - dpkg -I ./target/debian/fosctl_0.3.0~alpha1_amd64.deb
+  - dpkg -I ./target/debian/linux-network_0.3.0~alpha1_amd64.deb
+  - dpkg -I ./target/debian/native-hypervisor_0.3.0~alpha1_amd64.deb

@@ -1,6 +1,6 @@
 [package]
 name = "fog05-sdk"
-version = "0.3.0"
+version = "0.3.0-alpha1"
 repository = "https://github.com/eclipse-fog05/fog05"
 homepage = "http://fog05.io"
 authors = ["gabrik <gabriele.baldoni@gmail.com>"]

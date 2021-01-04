@@ -1,6 +1,6 @@
 [package]
 name = "fosctl"
-version = "0.2.2-alpha1"
+version = "0.3.0-alpha1"
 repository = "https://github.com/eclipse-fog05/fog05"
 homepage = "http://fog05.io"
 authors = ["gabrik <gabriele.baldoni@gmail.com>"]
