@@ -17,6 +17,7 @@ maintenance = { status = "actively-developed" }
 
 
 [dependencies]
+async-std = { version = "=1.8.0", features = ["attributes"] }
 structopt = "0.3.13"
 clap = "2.33"
 exitfailure = "0.5.1"
@@ -39,9 +40,6 @@ log = "0.4"
 env_logger = "0.7.1"
 git-version = "0.3.4"
 
-[dependencies.async-std]
-version = "~1.6.5"
-features = ["unstable","attributes"]
 
 
 [package.metadata.deb]

@@ -15,6 +15,9 @@ BIN_DIR="./target/release"
 
 WD=$(pwd)
 
+SERVER_BIN="gserver"
+CLIENT_BIN="gclient"
+
 GET_BIN="get"
 QUERY_BIN="query"
 
@@ -60,6 +63,20 @@ fi
 
 mkdir -p $OUT_DIR
 
+plog "Running baseline gRPC bench"
+
+x=8
+while [ $x -le $END_SIZE ]
+do
+   nohup $BIN_DIR/$SERVER_BIN -a 127.0.0.1:50001 -s $x > /dev/null 2>&1 &
+   SERVER_PID=$!
+   plog "Server PID $SERVER_PID"
+   plog "Running gRPC bench with $x size"
+   $BIN_DIR/$CLIENT_BIN -d $DURATION -i 1 -a 127.0.0.1:50001 -s $x > $OUT_DIR/grpc-$x-$TS.csv
+   plog "Done gRPC bench with $x size"
+   kill -9 $SERVER_PID
+   x=$(( $x * 2 ))
+done
 
 plog "Running baseline get bench"
 

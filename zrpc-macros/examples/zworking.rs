@@ -197,7 +197,7 @@ where
         Box<
             dyn std::future::Future<
                 Output = ZRPCResult<(
-                    async_std::sync::Sender<()>,
+                    async_std::channel::Sender<()>,
                     async_std::task::JoinHandle<ZRPCResult<()>>,
                 )>,
             > + '_,
@@ -207,13 +207,13 @@ where
         async fn __start<S>(
             _self: &ServeHello<S>,
         ) -> ZRPCResult<(
-            async_std::sync::Sender<()>,
+            async_std::channel::Sender<()>,
             async_std::task::JoinHandle<ZRPCResult<()>>,
         )>
         where
             S: Hello + Send + 'static,
         {
-            let (s, r) = async_std::sync::channel::<()>(1);
+            let (s, r) = async_std::channel::bounded::<()>(1);
             let selector = zenoh::Selector::try_from(format!(
                 "/this/is/generated/Hello/instance/{}/state",
                 _self.instance_uuid()
@@ -264,12 +264,12 @@ where
 
     fn serve(
         &self,
-        stop: async_std::sync::Receiver<()>,
+        stop: async_std::channel::Receiver<()>,
     ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>> {
         log::trace!("server serve");
         async fn __serve<S>(
             _self: &ServeHello<S>,
-            _stop: async_std::sync::Receiver<()>,
+            _stop: async_std::channel::Receiver<()>,
         ) -> ZRPCResult<()>
         where
             S: Hello + Send + 'static,
@@ -305,21 +305,21 @@ where
                                             let get_request = rcv
                                                 .next()
                                                 .await
-                                                .ok_or_else(|| async_std::sync::RecvError)?;
+                                                .ok_or_else(|| async_std::channel::RecvError)?;
                                             let base64_req = get_request
                                                 .selector
                                                 .properties
                                                 .get("req")
                                                 .cloned()
-                                                .ok_or_else(|| async_std::sync::RecvError)?;
+                                                .ok_or_else(|| async_std::channel::RecvError)?;
                                             let b64_bytes = base64::decode(base64_req)
-                                                .map_err(|_| async_std::sync::RecvError)?;
+                                                .map_err(|_| async_std::channel::RecvError)?;
                                             let req = zrpc::serialize::deserialize_request::<
                                                 HelloRequest,
                                             >(
                                                 &b64_bytes
                                             )
-                                            .map_err(|_| async_std::sync::RecvError)?;
+                                            .map_err(|_| async_std::channel::RecvError)?;
 
                                             let gr = get_request.clone();
                                             // let inner_ser = arc_ser.clone();
@@ -333,7 +333,7 @@ where
                                                     let encoded =
                                                         zrpc::serialize::serialize_response(&resp)
                                                             .map_err(|_| {
-                                                                async_std::sync::RecvError
+                                                                async_std::channel::RecvError
                                                             })?;
                                                     gr.reply(p, encoded.into()).await;
                                                 }
@@ -342,7 +342,7 @@ where
                                                     let encoded =
                                                         zrpc::serialize::serialize_response(&resp)
                                                             .map_err(|_| {
-                                                                async_std::sync::RecvError
+                                                                async_std::channel::RecvError
                                                             })?;
                                                     gr.reply(p, encoded.into()).await;
                                                 }
@@ -372,12 +372,12 @@ where
 
     fn stop(
         &self,
-        stop: async_std::sync::Sender<()>,
+        stop: async_std::channel::Sender<()>,
     ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>> {
         log::trace!("server stop");
         async fn __stop<S>(
             _self: &ServeHello<S>,
-            _stop: async_std::sync::Sender<()>,
+            _stop: async_std::channel::Sender<()>,
         ) -> ZRPCResult<()>
         where
             S: Hello + Send + 'static,
@@ -408,7 +408,7 @@ where
                                     ))?;
                                     ws.put(&path, encoded_ci.into()).await?;
                                     // Here we stop the serve
-                                    Ok(_stop.send(()).await)
+                                    Ok(_stop.send(()).await?)
                                 }
                                 _ => Err(ZRPCError::StateTransitionNotAllowed(
                                     "Cannot unwork a component in a state different than WORK"

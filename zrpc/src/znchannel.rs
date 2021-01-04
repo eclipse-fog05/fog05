@@ -64,10 +64,10 @@ where
         &self,
         zsession: &zenoh::net::Session,
         request: &Req,
-    ) -> ZRPCResult<async_std::sync::Receiver<zenoh::net::Reply>> {
+    ) -> ZRPCResult<async_std::channel::Receiver<zenoh::net::Reply>> {
         let req = serialize::serialize_request(&request)?;
         let selector = format!("{}{}/eval", self.path, self.server_uuid.unwrap(),);
-        let predicate = format!("{}", base64::encode(req));
+        let predicate = base64::encode(req).to_string();
 
         //Should create the appropriate Error type and the conversions form ZError
         trace!("Sending {:?} to  {:?} {:?}", request, selector, predicate);

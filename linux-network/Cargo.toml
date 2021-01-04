@@ -11,6 +11,7 @@ description = "Eclipse fog05 Linux Networking Plugin"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+async-std = { version = "=1.8.0", features = ["attributes"] }
 zenoh = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "master" }
 async-trait = "0.1.36"
 futures = "0.3.5"
@@ -47,10 +48,6 @@ ipnetwork = "0.17.0"
 mnl = "0.2"
 signal-hook = "0.2.1"
 signal-hook-async-std = "0.1.0"
-
-[dependencies.async-std]
-version = "~1.6.5"
-features = ["unstable","attributes"]
 
 [[bin]]
 name = "linux-networking"

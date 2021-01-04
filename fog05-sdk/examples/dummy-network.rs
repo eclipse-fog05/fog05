@@ -1257,7 +1257,7 @@ impl NetworkingPlugin for DummyNetwork {
 }
 
 impl DummyNetwork {
-    async fn run(&self, stop: async_std::sync::Receiver<()>) {
+    async fn run(&self, stop: async_std::channel::Receiver<()>) {
         info!("DummyNetwork main loop starting...");
 
         //starting the Agent-Plugin Server
@@ -1312,7 +1312,10 @@ impl DummyNetwork {
 
     pub async fn start(
         &mut self,
-    ) -> (async_std::sync::Sender<()>, async_std::task::JoinHandle<()>) {
+    ) -> (
+        async_std::channel::Sender<()>,
+        async_std::task::JoinHandle<()>,
+    ) {
         let local_os = OSClient::find_local_servers(self.z.clone()).await.unwrap();
         if local_os.is_empty() {
             error!("Unable to find a local OS interface");
@@ -1334,7 +1337,7 @@ impl DummyNetwork {
         self.os = Some(os);
 
         // Starting main loop in a task
-        let (s, r) = async_std::sync::channel::<()>(1);
+        let (s, r) = async_std::channel::bounded::<()>(1);
         let plugin = self.clone();
         let h = async_std::task::spawn_blocking(move || {
             async_std::task::block_on(async {
@@ -1344,8 +1347,8 @@ impl DummyNetwork {
         (s, h)
     }
 
-    pub async fn stop(&self, stop: async_std::sync::Sender<()>) {
-        stop.send(()).await;
+    pub async fn stop(&self, stop: async_std::channel::Sender<()>) {
+        stop.send(()).await.unwrap();
     }
 
     fn get_dummy_face(&self) -> Interface {

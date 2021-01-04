@@ -84,7 +84,7 @@ pub struct Agent {
 }
 
 impl Agent {
-    async fn run(&self, stop: async_std::sync::Receiver<()>) -> FResult<()> {
+    async fn run(&self, stop: async_std::channel::Receiver<()>) -> FResult<()> {
         info!("Agent main loop starting...");
         //this should return a channel to send the stop and a task handler to wait for
 
@@ -236,11 +236,11 @@ impl Agent {
     pub async fn start(
         &self,
     ) -> (
-        async_std::sync::Sender<()>,
+        async_std::channel::Sender<()>,
         async_std::task::JoinHandle<FResult<()>>,
     ) {
         // Starting main loop in a task
-        let (s, r) = async_std::sync::channel::<()>(1);
+        let (s, r) = async_std::channel::bounded::<()>(1);
         let agent = self.clone();
         let h = async_std::task::spawn_blocking(move || {
             async_std::task::block_on(async { agent.run(r).await })
@@ -248,8 +248,8 @@ impl Agent {
         (s, h)
     }
 
-    pub async fn stop(&self, stop: async_std::sync::Sender<()>) {
-        stop.send(()).await;
+    pub async fn stop(&self, stop: async_std::channel::Sender<()>) {
+        stop.send(()).await.unwrap();
         self.connector
             .global
             .remove_node_status(self.node_uuid)

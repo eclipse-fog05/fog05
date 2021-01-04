@@ -25,6 +25,7 @@ pub enum ZRPCError {
     StateTransitionNotAllowed(String),
     Error(String),
     IOError(String),
+    ChannelError(String),
     TimedOut,
     MissingValue,
     NotFound,
@@ -42,6 +43,7 @@ impl fmt::Display for ZRPCError {
             ZRPCError::StateTransitionNotAllowed(err) => write!(f, "{}", err),
             ZRPCError::Error(err) => write!(f, "{}", err),
             ZRPCError::IOError(err) => write!(f, "{}", err),
+            ZRPCError::ChannelError(err) => write!(f, "{}", err),
             ZRPCError::MissingValue => write!(f, "Missing Value in Option"),
             ZRPCError::NotFound => write!(f, "Component not found"),
             ZRPCError::Unreachable => write!(f, "Unreachable code!"),
@@ -91,6 +93,18 @@ impl From<std::option::NoneError> for ZRPCError {
 impl From<std::io::Error> for ZRPCError {
     fn from(err: std::io::Error) -> Self {
         ZRPCError::IOError(err.to_string())
+    }
+}
+
+impl From<async_std::channel::RecvError> for ZRPCError {
+    fn from(err: async_std::channel::RecvError) -> Self {
+        ZRPCError::ChannelError(err.to_string())
+    }
+}
+
+impl<T> From<async_std::channel::SendError<T>> for ZRPCError {
+    fn from(err: async_std::channel::SendError<T>) -> Self {
+        ZRPCError::ChannelError(err.to_string())
     }
 }
 

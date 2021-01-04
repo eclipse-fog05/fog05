@@ -62,7 +62,7 @@ pub trait ZServe<Req>: Sized + Clone {
         Box<
             dyn std::future::Future<
                 Output = ZRPCResult<(
-                    async_std::sync::Sender<()>,
+                    async_std::channel::Sender<()>,
                     async_std::task::JoinHandle<ZRPCResult<()>>,
                 )>,
             > + '_,
@@ -73,14 +73,14 @@ pub trait ZServe<Req>: Sized + Clone {
     #[allow(clippy::type_complexity)]
     fn serve(
         &self,
-        stop: async_std::sync::Receiver<()>,
+        stop: async_std::channel::Receiver<()>,
     ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>>;
 
     /// State changes to REGISTERED, will stop serve/work
     #[allow(clippy::type_complexity)]
     fn stop(
         &self,
-        stop: async_std::sync::Sender<()>,
+        stop: async_std::channel::Sender<()>,
     ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>>;
 
     // state changes to HALTED
@@ -109,7 +109,7 @@ pub trait ZNServe<Req>: Sized + Clone {
         Box<
             dyn std::future::Future<
                 Output = ZRPCResult<(
-                    async_std::sync::Sender<()>,
+                    async_std::channel::Sender<()>,
                     async_std::task::JoinHandle<ZRPCResult<()>>,
                 )>,
             > + '_,
@@ -139,7 +139,7 @@ pub trait ZNServe<Req>: Sized + Clone {
         Box<
             dyn std::future::Future<
                 Output = ZRPCResult<(
-                    async_std::sync::Sender<()>,
+                    async_std::channel::Sender<()>,
                     async_std::task::JoinHandle<ZRPCResult<()>>,
                 )>,
             > + '_,
@@ -150,14 +150,14 @@ pub trait ZNServe<Req>: Sized + Clone {
     #[allow(clippy::type_complexity)]
     fn serve(
         &self,
-        stop: async_std::sync::Receiver<()>,
+        stop: async_std::channel::Receiver<()>,
     ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>>;
 
     /// State changes to REGISTERED, will stop serve/work
     #[allow(clippy::type_complexity)]
     fn stop(
         &self,
-        stop: async_std::sync::Sender<()>,
+        stop: async_std::channel::Sender<()>,
     ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>>;
 
     // state changes to HALTED
@@ -170,6 +170,6 @@ pub trait ZNServe<Req>: Sized + Clone {
     #[allow(clippy::type_complexity)]
     fn disconnect(
         &self,
-        stop: async_std::sync::Sender<()>,
+        stop: async_std::channel::Sender<()>,
     ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>>;
 }

@@ -719,7 +719,7 @@ impl<'a> ZServiceGenerator<'a> {
                 ) -> ::core::pin::Pin<
                     Box<
                         dyn std::future::Future<
-                                Output = ZRPCResult<(async_std::sync::Sender<()>, async_std::task::JoinHandle<ZRPCResult<()>>)>,
+                                Output = ZRPCResult<(async_std::channel::Sender<()>, async_std::task::JoinHandle<ZRPCResult<()>>)>,
                             > + '_,
                     >,
                 > {
@@ -748,11 +748,11 @@ impl<'a> ZServiceGenerator<'a> {
 
                     async fn __start<S>(
                         _self: &#server_ident<S>,
-                    ) -> ZRPCResult<(async_std::sync::Sender<()>, async_std::task::JoinHandle<ZRPCResult<()>>)>
+                    ) -> ZRPCResult<(async_std::channel::Sender<()>, async_std::task::JoinHandle<ZRPCResult<()>>)>
                     where
                         S: #service_ident + Send + 'static,
                     {
-                            let (s, r) = async_std::sync::channel::<()>(1);
+                            let (s, r) = async_std::channel::bounded::<()>(1);
                             let selector = zenoh::Selector::try_from(format!("/{}/{}/state",#eval_path,_self.instance_uuid()))?;
                             let ws = _self.z.workspace(None).await?;
                             let ds = ws.get(&selector).await?;
@@ -812,10 +812,10 @@ impl<'a> ZServiceGenerator<'a> {
                 #[allow(clippy::type_complexity,clippy::manual_async_fn)]
                 fn serve(
                     &self,
-                    stop: async_std::sync::Receiver<()>,
+                    stop: async_std::channel::Receiver<()>,
                 ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>> {
                     log::trace!("Serve Service {} Instance {}", #service_name, self.instance_uuid());
-                    async fn __serve<S>(_self: &#server_ident<S>, _stop: async_std::sync::Receiver<()>) -> ZRPCResult<()>
+                    async fn __serve<S>(_self: &#server_ident<S>, _stop: async_std::channel::Receiver<()>) -> ZRPCResult<()>
                     where
                         S: #service_ident + Send + 'static,
                     {
@@ -838,10 +838,10 @@ impl<'a> ZServiceGenerator<'a> {
                                                 log::trace!("Registered on {:?}", path);
                                                 let rcv_loop = async {
                                                     loop {
-                                                        let get_request = rcv.next().await.ok_or_else(|| async_std::sync::RecvError)?;
-                                                        let base64_req = get_request.selector.properties.get("req").cloned().ok_or_else(|| async_std::sync::RecvError)?;
-                                                        let b64_bytes = base64::decode(base64_req).map_err(|_| async_std::sync::RecvError)?;
-                                                        let req = zrpc::serialize::deserialize_request::<#request_ident>(&b64_bytes).map_err(|_| async_std::sync::RecvError)?;
+                                                        let get_request = rcv.next().await.ok_or_else(|| async_std::channel::RecvError)?;
+                                                        let base64_req = get_request.selector.properties.get("req").cloned().ok_or_else(|| async_std::channel::RecvError)?;
+                                                        let b64_bytes = base64::decode(base64_req).map_err(|_| async_std::channel::RecvError)?;
+                                                        let req = zrpc::serialize::deserialize_request::<#request_ident>(&b64_bytes).map_err(|_| async_std::channel::RecvError)?;
                                                         log::trace!("Received on {:?} {:?}", path, req);
 
                                                         let mut ser = _self.server.clone();
@@ -853,7 +853,7 @@ impl<'a> ZServiceGenerator<'a> {
                                                             #(
                                                                 #request_ident::#camel_case_idents{#(#arg_pats),*} => {
                                                                     let resp = #response_ident::#camel_case_idents(ser.#method_idents( #(#arg_pats),*));
-                                                                    let encoded =  zrpc::serialize::serialize_response(&resp).map_err(|_| async_std::sync::RecvError)?;
+                                                                    let encoded =  zrpc::serialize::serialize_response(&resp).map_err(|_| async_std::channel::RecvError)?;
                                                                     gr.reply(p, encoded.into()).await;
                                                                 }
                                                             )*
@@ -877,7 +877,7 @@ impl<'a> ZServiceGenerator<'a> {
                 #[allow(clippy::type_complexity,clippy::manual_async_fn)]
                 fn stop(
                     &self,
-                    stop: async_std::sync::Sender<()>,
+                    stop: async_std::channel::Sender<()>,
                 ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>> {
                     log::trace!("Stop Service {} Instance {}", #service_name, self.instance_uuid());
 
@@ -901,7 +901,7 @@ impl<'a> ZServiceGenerator<'a> {
                         }
                     }
 
-                    async fn __stop<S>(_self: &#server_ident<S>, _stop: async_std::sync::Sender<()>) -> ZRPCResult<()>
+                    async fn __stop<S>(_self: &#server_ident<S>, _stop: async_std::channel::Sender<()>) -> ZRPCResult<()>
                     where
                         S: #service_ident + Send + 'static,
                     {
@@ -939,7 +939,7 @@ impl<'a> ZServiceGenerator<'a> {
                                                         i += 1;
                                                     }
 
-                                                    Ok(_stop.send(()).await)
+                                                    Ok(_stop.send(()).await?)
                                                 },
                                                 _ => Err(ZRPCError::StateTransitionNotAllowed("Cannot stop a component in a state different than WORK".to_string())),
                                             }

@@ -7,6 +7,7 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+async-std = { version = "=1.8.0", features = ["attributes"] }
 futures = "0.3.5"
 zenoh = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "master" }
 uuid = { version = "0.8.1", features = ["serde", "v4"] }
@@ -36,6 +37,4 @@ default = ["resp_bincode","send_json","state_bincode"]
 
 
 
-[dependencies.async-std]
-version = "~1.6.5"
-features = ["attributes"]
+

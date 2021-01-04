@@ -253,7 +253,7 @@ impl NSManager {
         })
     }
 
-    async fn run(&self, stop: async_std::sync::Receiver<()>) -> FResult<()> {
+    async fn run(&self, stop: async_std::channel::Receiver<()>) -> FResult<()> {
         log::info!("Network Namespace Manager main loop starting...");
         let ns_manager_server = self
             .clone()
@@ -284,10 +284,10 @@ impl NSManager {
     pub async fn start(
         &mut self,
     ) -> (
-        async_std::sync::Sender<()>,
+        async_std::channel::Sender<()>,
         async_std::task::JoinHandle<FResult<()>>,
     ) {
-        let (s, r) = async_std::sync::channel::<()>(1);
+        let (s, r) = async_std::channel::bounded::<()>(1);
         let plugin = self.clone();
         let h = async_std::task::spawn_blocking(move || {
             async_std::task::block_on(async { plugin.run(r).await })
@@ -295,7 +295,7 @@ impl NSManager {
         (s, h)
     }
 
-    pub async fn stop(&self, stop: async_std::sync::Sender<()>) -> FResult<()> {
+    pub async fn stop(&self, stop: async_std::channel::Sender<()>) -> FResult<()> {
         log::info!("Stopping...");
         stop.send(()).await;
         log::info!("Stopped");

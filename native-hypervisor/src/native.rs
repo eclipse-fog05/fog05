@@ -584,7 +584,7 @@ impl HypervisorPlugin for NativeHypervisor {
 }
 
 impl NativeHypervisor {
-    async fn run(&self, stop: async_std::sync::Receiver<()>) -> FResult<()> {
+    async fn run(&self, stop: async_std::channel::Receiver<()>) -> FResult<()> {
         log::info!("NativeHypervisor main loop starting...");
 
         //starting the Agent-Plugin Server
@@ -640,7 +640,7 @@ impl NativeHypervisor {
     pub async fn start(
         &mut self,
     ) -> (
-        async_std::sync::Sender<()>,
+        async_std::channel::Sender<()>,
         async_std::task::JoinHandle<FResult<()>>,
     ) {
         let local_os = OSClient::find_local_servers(self.z.clone()).await.unwrap();
@@ -674,7 +674,7 @@ impl NativeHypervisor {
         self.net = Some(net);
 
         // Starting main loop in a task
-        let (s, r) = async_std::sync::channel::<()>(1);
+        let (s, r) = async_std::channel::bounded::<()>(1);
         let plugin = self.clone();
         let h = async_std::task::spawn_blocking(move || {
             async_std::task::block_on(async { plugin.run(r).await })
@@ -682,7 +682,7 @@ impl NativeHypervisor {
         (s, h)
     }
 
-    pub async fn stop(&self, stop: async_std::sync::Sender<()>) {
+    pub async fn stop(&self, stop: async_std::channel::Sender<()>) {
         stop.send(()).await;
     }
 

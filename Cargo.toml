@@ -22,10 +22,12 @@ members = [
   "agent",
   "native-hypervisor",
   "linux-network",
+
 ]
 
 exclude = [
-  "zrpc-perf"
+  "zrpc-perf",
+
 ]
 
 #[profile.release]
