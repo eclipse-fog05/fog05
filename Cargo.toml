@@ -20,9 +20,6 @@ members = [
   "fog05-sdk",
   "fosctl",
   "agent",
-  "native-hypervisor",
-  "linux-network",
-
 ]
 
 exclude = [
