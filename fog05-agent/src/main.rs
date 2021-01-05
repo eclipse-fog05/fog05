@@ -40,7 +40,7 @@ use agent::{Agent, AgentConfig, AgentInner};
 
 use git_version::git_version;
 
-static AGENT_PID_FILE: &str = "/tmp/fos_agent.pid";
+//static AGENT_PID_FILE: &str = "/tmp/fos_agent.pid";
 static AGENT_CONFIG_FILE: &str = "/etc/fos/agent.yaml";
 
 const GIT_VERSION: &str = git_version!(prefix = "v", cargo_prefix = "v");
@@ -82,7 +82,7 @@ async fn main() {
 
     info!("PID is {}", my_pid);
 
-    let pid_file_path = Path::new(AGENT_PID_FILE);
+    let pid_file_path = Path::new(&config.pid_file);
 
     //Read Agent PID file
     let old_pid: Option<u32> = if pid_file_path.exists().await {

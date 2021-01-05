@@ -57,9 +57,9 @@ use rand::seq::SliceRandom;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AgentConfig {
     pub system: Uuid,
-    pub pid_file: Box<std::path::Path>,
+    pub pid_file: String,
     pub zlocator: String,
-    pub path: Box<std::path::Path>,
+    pub path: String,
     pub mgmt_interface: String,
     pub monitoring_interveal: u64,
 }
