@@ -19,7 +19,7 @@ members = [
   "znrpc-macros",
   "fog05-sdk",
   "fosctl",
-  "agent",
+  "fog05-agent",
 ]
 
 exclude = [
