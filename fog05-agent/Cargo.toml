@@ -67,7 +67,6 @@ assets = [
 ]
 conf-files = ["/etc/fos/agent.yaml"]
 
-]
 [package.metadata.deb.systemd-units]
 unit-scripts = "resources/"
 unit-name = "fos-agent.service"
