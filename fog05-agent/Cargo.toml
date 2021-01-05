@@ -64,6 +64,7 @@ assets = [
     # assets
     ["etc/*", "/etc/fos", "644"],
     ["etc/*", "/var/fos", "644"],
+    ["resources/fos-agent.service","/lib/systemd/system/fos-agent.service"]
 ]
 conf-files = ["/etc/fos/agent.yaml"]
 

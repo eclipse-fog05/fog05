@@ -13,6 +13,6 @@ script:
   - cargo fmt -- --check
   - cargo build --release --all-targets --verbose
   - cargo deb -p fog05-agent --no-build --verbose
-  - cargo deb -p fosctl --no-build --verbose
+  - cargo deb -p fog05-fosctl --no-build --verbose
   - dpkg -I ./target/debian/fog05-agent_0.3.0~alpha1_amd64.deb
-  - dpkg -I ./target/debian/fosctl_0.3.0~alpha1_amd64.deb
+  - dpkg -I ./target/debian/fog05-fosctl_0.3.0~alpha1_amd64.deb

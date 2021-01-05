@@ -18,7 +18,7 @@ members = [
   "zrpc-macros",
   "znrpc-macros",
   "fog05-sdk",
-  "fosctl",
+  "fog05-fosctl",
   "fog05-agent",
 ]
 
