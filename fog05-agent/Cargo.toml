@@ -7,7 +7,7 @@ authors = ["gabrik <gabriele.baldoni@gmail.com>"]
 edition = "2018"
 license = " EPL-2.0 OR Apache-2.0"
 description = "fog05: The End-to-End Compute, Storage and Networking Virtualisation solution."
-
+readme = "../README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -54,13 +54,20 @@ maintainer = "ADLINK fog05 team <fog05@adlink-labs.tech>"
 copyright = "2020, ADLINK Technology Inc"
 extended-description = "Eclipse fog05 Agent"
 depends = "$auto"
+license-file = ["../LICENSE.md", "0"]
+maintainer-scripts = "resources/debian/"
 section = "utils"
 priority = "optional"
 assets = [
     # binary
-    ["target/release/fog05-agent", "usr/bin/", "755"],
+    ["target/release/fog05-agent", "/usr/bin/", "755"],
     # assets
-    ["etc/*", "etc/fos", "644"],
-    ["etc/*", "var/fos", "644"],
+    ["etc/*", "/etc/fos", "644"],
+    ["etc/*", "/var/fos", "644"],
 ]
-conf-files = ["etc/fos/agent.yaml"]
+conf-files = ["/etc/fos/agent.yaml"]
+
+]
+[package.metadata.deb.systemd-units]
+unit-scripts = "resources/"
+unit-name = "fos-agent.service"

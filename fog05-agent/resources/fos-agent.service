@@ -1,0 +1,17 @@
+[unit]
+Description = Eclipse fog05 Agent
+
+
+
+[Service]
+Type=simple
+PIDFile=/var/fos/fos-agent.pid
+ExecStart = /usr/bin/fog05-agent -c /etc/fos/agent.yaml
+KillMode=process
+Restart=on-failure
+User=fos
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=fos-agent
+[Install]
+WantedBy=multi-user.target
