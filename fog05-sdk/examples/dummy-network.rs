@@ -9,8 +9,11 @@ use log::{error, info, trace};
 
 use zenoh::*;
 
-use zrpc::ZServe;
-use zrpc_macros::zserver;
+// use zrpc::ZServe;
+// use zrpc_macros::zserver;
+
+use znrpc_macros::znserver;
+use zrpc::ZNServe;
 
 use fog05_sdk::agent::{AgentPluginInterfaceClient, OSClient};
 use fog05_sdk::fresult::{FError, FResult};
@@ -40,7 +43,7 @@ struct DummyArgs {
 
 #[derive(Clone)]
 pub struct DummyNetwork {
-    pub z: Arc<zenoh::Zenoh>,
+    pub z: Arc<zenoh::net::Session>,
     pub connector: Arc<fog05_sdk::zconnector::ZConnector>,
     pub pid: u32,
     pub agent: Option<AgentPluginInterfaceClient>,
@@ -48,7 +51,7 @@ pub struct DummyNetwork {
     pub uuid: Arc<RwLock<Option<Uuid>>>,
 }
 
-#[zserver]
+#[znserver]
 impl NetworkingPlugin for DummyNetwork {
     /// Creates the default fosbr0 virtual network
     /// it's UUID is 00000000-0000-0000-0000-000000000000
@@ -1260,7 +1263,7 @@ impl DummyNetwork {
         let hv_server = self
             .clone()
             .get_networking_plugin_server(self.z.clone(), None);
-        hv_server.connect().await.unwrap();
+        let (stopper, _h) = hv_server.connect().await.unwrap();
         hv_server.initialize().await.unwrap();
 
         let mut guard = self.uuid.write().await;
@@ -1301,7 +1304,7 @@ impl DummyNetwork {
 
         hv_server.stop(shv).await.unwrap();
         hv_server.unregister().await.unwrap();
-        hv_server.disconnect().await.unwrap();
+        hv_server.disconnect(stopper).await.unwrap();
 
         info!("DummyNetwork main loop exiting")
     }
@@ -1312,13 +1315,13 @@ impl DummyNetwork {
         async_std::channel::Sender<()>,
         async_std::task::JoinHandle<()>,
     ) {
-        let local_os = OSClient::find_local_servers(self.z.clone()).await.unwrap();
+        let local_os = OSClient::find_servers(self.z.clone()).await.unwrap();
         if local_os.is_empty() {
             error!("Unable to find a local OS interface");
             panic!("No OS Server");
         }
 
-        let local_agent = AgentPluginInterfaceClient::find_local_servers(self.z.clone())
+        let local_agent = AgentPluginInterfaceClient::find_servers(self.z.clone())
             .await
             .unwrap();
         if local_agent.is_empty() {
@@ -1380,8 +1383,9 @@ async fn main() {
 
     let properties = format!("mode=client;peer={}", args.zenoh.clone());
     let zproperties = Properties::from(properties);
-    let zenoh = Arc::new(Zenoh::new(zproperties.into()).await.unwrap());
-    let zconnector = Arc::new(ZConnector::new(zenoh.clone(), None, None));
+    let z = Arc::new(Zenoh::new(zproperties.clone().into()).await.unwrap());
+    let zenoh = Arc::new(zenoh::net::open(zproperties.into()).await.unwrap());
+    let zconnector = Arc::new(ZConnector::new(z.clone(), None, None));
 
     let mut dummy = DummyNetwork {
         uuid: Arc::new(RwLock::new(None)),

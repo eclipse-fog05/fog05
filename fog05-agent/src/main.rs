@@ -125,10 +125,10 @@ async fn main() {
     info!("Node UUID is {}", node_uuid);
 
     //Creating the Zenoh and ZConnector
-    let properties = format!("mode=client;peer={}", config.zlocator.clone());
-    let zproperties = Properties::from(properties);
-    let zenoh = Arc::new(Zenoh::new(zproperties.into()).await.unwrap());
-    let zconnector = Arc::new(ZConnector::new(zenoh.clone(), Some(config.system), None));
+    let zproperties = format!("mode=client;peer={}", config.zlocator.clone());
+    let z = Arc::new(Zenoh::new(zproperties.clone().into()).await.unwrap());
+    let zenoh = Arc::new(zenoh::net::open(zproperties.into()).await.unwrap());
+    let zconnector = Arc::new(ZConnector::new(z.clone(), Some(config.system), None));
 
     // Creating Agent
     let agent = Agent {

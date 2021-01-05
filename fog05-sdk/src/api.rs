@@ -18,7 +18,7 @@ use rand::seq::SliceRandom;
 
 use async_std::sync::Arc;
 
-use zenoh::Zenoh;
+use zenoh::net::Session;
 
 use crate::agent::AgentOrchestratorInterfaceClient;
 use crate::fresult::FResult;
@@ -26,12 +26,12 @@ use crate::im;
 use crate::zconnector::ZConnector;
 
 pub struct FDUApi {
-    pub zenoh: Arc<Zenoh>,
+    pub zenoh: Arc<zenoh::net::Session>,
     pub zconnector: Arc<ZConnector>,
 }
 
 impl FDUApi {
-    pub fn new(zconnector: Arc<ZConnector>, zenoh: Arc<Zenoh>) -> Self {
+    pub fn new(zconnector: Arc<ZConnector>, zenoh: Arc<zenoh::net::Session>) -> Self {
         Self { zenoh, zconnector }
     }
 
@@ -197,12 +197,12 @@ impl FDUApi {
 }
 
 pub struct NodeApi {
-    pub zenoh: Arc<Zenoh>,
+    pub zenoh: Arc<zenoh::net::Session>,
     pub zconnector: Arc<ZConnector>,
 }
 
 impl NodeApi {
-    pub fn new(zconnector: Arc<ZConnector>, zenoh: Arc<Zenoh>) -> Self {
+    pub fn new(zconnector: Arc<ZConnector>, zenoh: Arc<zenoh::net::Session>) -> Self {
         Self { zenoh, zconnector }
     }
 
@@ -220,19 +220,19 @@ impl NodeApi {
 }
 
 pub struct NetworkApi {
-    pub zenoh: Arc<Zenoh>,
+    pub zenoh: Arc<zenoh::net::Session>,
     pub zconnector: Arc<ZConnector>,
 }
 
 pub struct FIMApi {
-    pub zenoh: Arc<Zenoh>,
+    pub zenoh: Arc<zenoh::net::Session>,
     pub zconnector: Arc<ZConnector>,
     pub fdu: FDUApi,
     pub node: NodeApi,
 }
 
 impl FIMApi {
-    pub fn new(zconnector: Arc<ZConnector>, zenoh: Arc<Zenoh>) -> Self {
+    pub fn new(zconnector: Arc<ZConnector>, zenoh: Arc<zenoh::net::Session>) -> Self {
         Self {
             zenoh: zenoh.clone(),
             zconnector: zconnector.clone(),

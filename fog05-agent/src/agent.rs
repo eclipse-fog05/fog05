@@ -34,8 +34,10 @@ use async_std::io::ReadExt;
 
 use log::{error, info, trace};
 
-use zrpc::ZServe;
-use zrpc_macros::zserver;
+// use zrpc::ZServe;
+// use zrpc_macros::zserver;
+use znrpc_macros::znserver;
+use zrpc::ZNServe;
 
 use fog05_sdk::agent::{
     AgentOrchestratorInterface, AgentOrchestratorInterfaceClient, AgentPluginInterface, OS,
@@ -77,7 +79,7 @@ pub struct AgentInner {
 
 #[derive(Clone)]
 pub struct Agent {
-    pub z: Arc<zenoh::Zenoh>,
+    pub z: Arc<zenoh::net::Session>,
     pub connector: Arc<fog05_sdk::zconnector::ZConnector>,
     pub node_uuid: Uuid,
     pub agent: Arc<RwLock<AgentInner>>,
@@ -92,13 +94,13 @@ impl Agent {
         let a2p_server = self
             .clone()
             .get_agent_plugin_interface_server(self.z.clone(), None);
-        a2p_server.connect().await?;
+        let (a2p_stopper, _ha2p) = a2p_server.connect().await?;
         a2p_server.initialize().await?;
         a2p_server.register().await?;
 
         //starting the OS Server
         let os_server = self.clone().get_os_server(self.z.clone(), None);
-        os_server.connect().await?;
+        let (os_stopper, _hos) = os_server.connect().await?;
         os_server.initialize().await?;
         os_server.register().await?;
 
@@ -106,7 +108,7 @@ impl Agent {
         let a2o_server = self
             .clone()
             .get_agent_orchestrator_interface_server(self.z.clone(), None);
-        a2o_server.connect().await?;
+        let (a2o_stopper, _ha2o) = a2o_server.connect().await?;
         a2o_server.initialize().await?;
         a2o_server.register().await?;
 
@@ -219,15 +221,15 @@ impl Agent {
 
         a2p_server.stop(sa2p).await?;
         a2p_server.unregister().await?;
-        a2p_server.disconnect().await?;
+        a2p_server.disconnect(a2p_stopper).await?;
 
         os_server.stop(sos).await?;
         os_server.unregister().await?;
-        os_server.disconnect().await?;
+        os_server.disconnect(os_stopper).await?;
 
         a2o_server.stop(sa2o).await?;
         a2o_server.unregister().await?;
-        a2o_server.disconnect().await?;
+        a2o_server.disconnect(a2o_stopper).await?;
 
         info!("Agent main loop exiting...");
         Ok(())
@@ -342,7 +344,7 @@ impl Agent {
     }
 }
 
-#[zserver]
+#[znserver]
 impl AgentPluginInterface for Agent {
     async fn fdu_info(&self, fdu_uuid: Uuid) -> FResult<im::fdu::FDUDescriptor> {
         trace!("Called fdu_info with {:?}", fdu_uuid);
@@ -509,7 +511,7 @@ impl AgentPluginInterface for Agent {
     }
 }
 
-#[zserver]
+#[znserver]
 impl OS for Agent {
     async fn dir_exists(&self, dir_path: String) -> FResult<bool> {
         let path = Path::new(&dir_path);
@@ -656,7 +658,7 @@ impl OS for Agent {
     }
 }
 
-#[zserver]
+#[znserver]
 impl AgentOrchestratorInterface for Agent {
     async fn check_fdu_compatibility(&self, fdu_uuid: Uuid) -> FResult<bool> {
         trace!("FDU Compatibility check for {}", fdu_uuid);
@@ -781,7 +783,7 @@ impl AgentOrchestratorInterface for Agent {
         let mut results = futures::future::join_all(results_futures).await;
 
         // Self check
-        let self_check = self.check_fdu_compatibility(fdu_uuid);
+        let self_check = self.check_fdu_compatibility(fdu_uuid).await;
         results.push((Ok(self_check), self.node_uuid));
 
         let compatibles = results
@@ -809,7 +811,7 @@ impl AgentOrchestratorInterface for Agent {
         info!("FDU Scheduling node {} is random picked", selected);
 
         if *selected == self.node_uuid {
-            Ok(self.define_fdu(fdu_uuid)?)
+            Ok(self.define_fdu(fdu_uuid).await?)
         } else {
             let client = AgentOrchestratorInterfaceClient::new(self.z.clone(), *selected);
             Ok(client.define_fdu(fdu_uuid).await??)

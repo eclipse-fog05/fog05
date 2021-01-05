@@ -39,6 +39,11 @@ pub fn fim_cli(args: FIMCtl, zlocator: String) -> Result<(), ExitFailure> {
                 .await
                 .unwrap(),
         );
+        let zsession = Arc::new(
+            zenoh::net::open(Properties::from(format!("mode=client;peer={}", zlocator)).into())
+                .await
+                .unwrap(),
+        );
         let zconnector = Arc::new(ZConnector::new(zenoh.clone(), None, None));
         let mut table = Table::new();
         match args {
@@ -57,7 +62,7 @@ pub fn fim_cli(args: FIMCtl, zlocator: String) -> Result<(), ExitFailure> {
                         entry_point.agent_service_uuid
                     );
                     let node_client = AgentOrchestratorInterfaceClient::new(
-                        zenoh.clone(),
+                        zsession.clone(),
                         entry_point.agent_service_uuid,
                     );
                     match node_client.onboard_fdu(fdu).await? {
@@ -75,7 +80,7 @@ pub fn fim_cli(args: FIMCtl, zlocator: String) -> Result<(), ExitFailure> {
                     let nodes = zconnector.global.get_all_nodes().await?;
                     let entry_point = nodes.choose(&mut rand::thread_rng()).unwrap();
                     let node_client = AgentOrchestratorInterfaceClient::new(
-                        zenoh.clone(),
+                        zsession.clone(),
                         entry_point.agent_service_uuid,
                     );
 
@@ -216,7 +221,7 @@ pub fn fim_cli(args: FIMCtl, zlocator: String) -> Result<(), ExitFailure> {
                         entry_point.agent_service_uuid
                     );
                     let node_client = AgentOrchestratorInterfaceClient::new(
-                        zenoh.clone(),
+                        zsession.clone(),
                         entry_point.agent_service_uuid,
                     );
                     match node_client.offload_fdu(id).await? {
@@ -234,7 +239,7 @@ pub fn fim_cli(args: FIMCtl, zlocator: String) -> Result<(), ExitFailure> {
                     let nodes = zconnector.global.get_all_nodes().await?;
                     let entry_point = nodes.choose(&mut rand::thread_rng()).unwrap();
                     let node_client = AgentOrchestratorInterfaceClient::new(
-                        zenoh.clone(),
+                        zsession.clone(),
                         entry_point.agent_service_uuid,
                     );
 

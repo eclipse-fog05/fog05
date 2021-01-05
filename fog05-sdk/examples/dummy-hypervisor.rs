@@ -12,8 +12,11 @@ use log::{error, info, trace};
 
 use zenoh::*;
 
-use zrpc::ZServe;
-use zrpc_macros::zserver;
+// use zrpc::ZServe;
+// use zrpc_macros::zserver;
+
+use znrpc_macros::znserver;
+use zrpc::ZNServe;
 
 use fog05_sdk::agent::{AgentPluginInterfaceClient, OSClient};
 use fog05_sdk::fresult::{FError, FResult};
@@ -50,7 +53,7 @@ pub struct DummyHVState {
 
 #[derive(Clone)]
 pub struct DummyHypervisor {
-    pub z: Arc<zenoh::Zenoh>,
+    pub z: Arc<zenoh::net::Session>,
     pub connector: Arc<fog05_sdk::zconnector::ZConnector>,
     pub pid: u32,
     pub agent: Option<AgentPluginInterfaceClient>,
@@ -59,7 +62,7 @@ pub struct DummyHypervisor {
     pub fdus: Arc<RwLock<DummyHVState>>,
 }
 
-#[zserver]
+#[znserver]
 impl HypervisorPlugin for DummyHypervisor {
     async fn define_fdu(&mut self, fdu: FDUDescriptor) -> FResult<FDURecord> {
         log::debug!("Define FDU {:?}", fdu);
@@ -385,7 +388,7 @@ impl DummyHypervisor {
         let hv_server = self
             .clone()
             .get_hypervisor_plugin_server(self.z.clone(), None);
-        hv_server.connect().await.unwrap();
+        let (stopper, _h) = hv_server.connect().await.unwrap();
         hv_server.initialize().await.unwrap();
 
         let mut guard = self.fdus.write().await;
@@ -429,7 +432,7 @@ impl DummyHypervisor {
 
         hv_server.stop(shv).await.unwrap();
         hv_server.unregister().await.unwrap();
-        hv_server.disconnect().await.unwrap();
+        hv_server.disconnect(stopper).await.unwrap();
 
         info!("DummyHypervisor main loop exiting")
     }
@@ -440,13 +443,13 @@ impl DummyHypervisor {
         async_std::channel::Sender<()>,
         async_std::task::JoinHandle<()>,
     ) {
-        let local_os = OSClient::find_local_servers(self.z.clone()).await.unwrap();
+        let local_os = OSClient::find_servers(self.z.clone()).await.unwrap();
         if local_os.is_empty() {
             error!("Unable to find a local OS interface");
             panic!("No OS Server");
         }
 
-        let local_agent = AgentPluginInterfaceClient::find_local_servers(self.z.clone())
+        let local_agent = AgentPluginInterfaceClient::find_servers(self.z.clone())
             .await
             .unwrap();
         if local_agent.is_empty() {
@@ -454,7 +457,7 @@ impl DummyHypervisor {
             panic!("No Agent Server");
         }
 
-        let local_net = NetworkingPluginClient::find_local_servers(self.z.clone())
+        let local_net = NetworkingPluginClient::find_servers(self.z.clone())
             .await
             .unwrap();
         if local_net.is_empty() {
@@ -499,8 +502,9 @@ async fn main() {
 
     let properties = format!("mode=client;peer={}", args.zenoh.clone());
     let zproperties = Properties::from(properties);
-    let zenoh = Arc::new(Zenoh::new(zproperties.into()).await.unwrap());
-    let zconnector = Arc::new(ZConnector::new(zenoh.clone(), None, None));
+    let z = Arc::new(Zenoh::new(zproperties.clone().into()).await.unwrap());
+    let zenoh = Arc::new(zenoh::net::open(zproperties.into()).await.unwrap());
+    let zconnector = Arc::new(ZConnector::new(z.clone(), None, None));
 
     let mut dummy = DummyHypervisor {
         z: zenoh.clone(),

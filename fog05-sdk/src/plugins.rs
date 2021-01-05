@@ -35,7 +35,8 @@ use log::trace;
 use ipnetwork::IpNetwork;
 
 use zrpc::zrpcresult::{ZRPCError, ZRPCResult};
-use zrpc_macros::{zserver, zservice};
+// use zrpc_macros::{zserver, zservice};
+use znrpc_macros::{znserver, znservice};
 
 use crate::fresult::FResult;
 use crate::im::fdu::{FDUDescriptor, FDURecord};
@@ -44,7 +45,7 @@ use crate::types::{
     VirtualInterface, VirtualInterfaceConfig, VirtualNetwork, VirtualNetworkConfig,
 };
 
-#[zservice(
+#[znservice(
     timeout_s = 60,
     prefix = "/fos/local",
     service_uuid = "00000000-0000-0000-0000-000000000004"
@@ -245,7 +246,7 @@ pub trait NetworkingPlugin {
     ) -> FResult<VirtualInterface>;
 }
 
-#[zservice(
+#[znservice(
     timeout_s = 60,
     prefix = "/fos/local",
     service_uuid = "00000000-0000-0000-0000-000000000005"

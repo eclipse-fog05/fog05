@@ -10,11 +10,11 @@ async fn main() {
     env_logger::init();
 
     let zenoh = Arc::new(
-        Zenoh::new(Properties::from("mode=client;peer=tcp/127.0.0.1:7447").into())
+        zenoh::net::open(Properties::from("mode=client;peer=tcp/127.0.0.1:7447").into())
             .await
             .unwrap(),
     );
-    let local_servers = OSClient::find_local_servers(zenoh.clone()).await.unwrap();
+    let local_servers = OSClient::find_servers(zenoh.clone()).await.unwrap();
     println!("local_servers: {:?}", local_servers);
     match local_servers.len() {
         0 => panic!("No Agent to test with"),

@@ -32,15 +32,18 @@ use zenoh::*;
 use log::trace;
 
 //importing the macros
+// use zrpc::zrpcresult::{ZRPCError, ZRPCResult};
+// use zrpc_macros::{zserver, zservice};
+
+use znrpc_macros::{znserver, znservice};
 use zrpc::zrpcresult::{ZRPCError, ZRPCResult};
-use zrpc_macros::{zserver, zservice};
 
 use crate::fresult::FResult;
 use crate::im;
 use crate::types;
 use crate::types::{IPAddress, InterfaceKind};
 
-#[zservice(
+#[znservice(
     timeout_s = 60,
     prefix = "/fos/local",
     service_uuid = "00000000-0000-0000-0000-000000000001"
@@ -72,7 +75,7 @@ pub trait OS {
     async fn get_local_mgmt_interface(&self) -> FResult<String>;
 }
 
-#[zservice(
+#[znservice(
     timeout_s = 60,
     prefix = "/fos/local",
     service_uuid = "00000000-0000-0000-0000-000000000002"
@@ -128,7 +131,7 @@ pub trait AgentPluginInterface {
     async fn unregister_plugin(&mut self, plugin_uuid: Uuid) -> FResult<Uuid>;
 }
 
-#[zservice(
+#[znservice(
     timeout_s = 60,
     prefix = "/fos/local",
     service_uuid = "00000000-0000-0000-0000-000000000003"
