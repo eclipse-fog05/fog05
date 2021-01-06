@@ -32,7 +32,7 @@ use async_std::task;
 
 use async_std::io::ReadExt;
 
-use log::{error, info, trace};
+use log::{info, trace};
 
 // use zrpc::ZServe;
 // use zrpc_macros::zserver;
@@ -536,30 +536,64 @@ impl OS for Agent {
     }
 
     async fn download_file(&self, url: url::Url, dest_path: String) -> FResult<bool> {
-        task::spawn(async move {
+        let res = task::spawn(async move {
             trace!("Start downloading: {}", url);
-            match reqwest::blocking::get(url.clone()) {
-                Err(err) => error!("Error in getting {} error: {}", url, err),
-                Ok(resp) => {
-                    let out = fs::File::create(dest_path.clone()).await;
-                    match out {
-                        Err(err) => error!(
-                            "Unable to create destination file {} for {} error: {}",
-                            dest_path, url, err
-                        ),
-                        Ok(mut f) => {
-                            let bytes = resp.bytes().unwrap();
-                            let mut slice: &[u8] = bytes.as_ref();
-                            match async_std::io::copy(&mut slice, &mut f).await {
-                                Ok(_) => trace!("Done downloading: {} info {}", url, dest_path),
-                                Err(err) => error!("Unable to copy content: {}", err),
+
+            match url.scheme() {
+                "file" => {
+                    let source = async_std::path::Path::new(url.path());
+                    let destination = async_std::path::Path::new(&dest_path);
+                    let r = async_std::fs::copy(source, destination).await?;
+                    if r > 0 {
+                        Ok(true)
+                    } else {
+                        Err(FError::IOError("0 bytes copy".to_string()))
+                    }
+                }
+                "ssh" => Err(FError::Unimplemented),
+                "http" | "https" => match reqwest::blocking::get(url.clone()) {
+                    Err(err) => {
+                        let err_msg = format!("Error in getting {} error: {}", url, err);
+                        log::error!("{}", err_msg);
+                        Err(FError::IOError(err_msg))
+                    }
+                    Ok(resp) => {
+                        let out = fs::File::create(dest_path.clone()).await;
+                        match out {
+                            Err(err) => {
+                                let err_msg = format!(
+                                    "Unable to create destination file {} for {} error: {}",
+                                    dest_path, url, err
+                                );
+                                log::error!("{}", err_msg);
+                                Err(FError::IOError(err_msg))
+                            }
+                            Ok(mut f) => {
+                                let bytes = resp.bytes().unwrap();
+                                let mut slice: &[u8] = bytes.as_ref();
+                                match async_std::io::copy(&mut slice, &mut f).await {
+                                    Ok(_) => {
+                                        trace!("Done downloading: {} info {}", url, dest_path);
+                                        Ok(true)
+                                    }
+                                    Err(err) => {
+                                        let err_msg = format!("Unable to copy content: {}", err);
+                                        log::error!("{}", err_msg);
+                                        Err(FError::IOError(err_msg))
+                                    }
+                                }
                             }
                         }
                     }
+                },
+                _ => {
+                    let err_msg = format!("Schema is not recognized {}", url.scheme());
+                    log::error!("{}", err_msg);
+                    Err(FError::IOError(err_msg))
                 }
             }
         });
-        Ok(true)
+        res.await
     }
 
     async fn create_file(&self, file_path: String) -> FResult<bool> {
@@ -608,7 +642,13 @@ impl OS for Agent {
     }
 
     async fn execute_command(&self, cmd: String) -> FResult<String> {
-        Err(FError::Unimplemented)
+        let mut cmd_v = cmd.split_whitespace().collect::<Vec<&str>>();
+        let cmd = cmd_v.remove(0);
+        let mut command = async_std::process::Command::new(cmd);
+        command.args(cmd_v);
+
+        let output = command.output().await?;
+        String::from_utf8(output.stdout).map_err(|e| FError::IOError(format!("{}", e)))
     }
 
     async fn send_signal(&self, signal: u8, pid: u32) -> FResult<bool> {
@@ -617,7 +657,7 @@ impl OS for Agent {
         let process = system.get_process(pid.try_into()?);
         match process {
             Some(p) => {
-                Err(FError::UnknownError("Not yet...".to_string()))
+                Err(FError::Unimplemented)
                 //Ok(p.kill(signal))
             }
             None => Err(FError::NotFound),
