@@ -1,0 +1,20 @@
+---
+  id: test-ros2-fdu
+  name: ros2 test fdu
+  version: 0.3.0
+  fdu_version: 0.0.1
+  hypervisor: ros2
+  computation_requirements:
+      cpu_arch: x86_64
+      ram_size_mb: 10
+      storage_size_mb: 1
+  migration_kind : COLD
+  image:
+      uri: file:///home/ubuntu/demo_ws.tar.gz
+      checksum: 6d37f74bb8752e56a3b624cb40f8c053846f80d87ac4880a77fe3dca01636ad9
+      format: tar.gz
+  hypervisor_specific : "{\"kind\":\"RUN\",\"app_name\":\"examples_rclcpp_minimal_subscriber\",\"entry_point\":\"subscriber_member_function\",\"args\":[],\"env\":{}}"
+  interfaces : []
+  storage: []
+  connection_points: []
+  depends_on: []

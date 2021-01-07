@@ -51,5 +51,5 @@ section = "utils"
 priority = "optional"
 assets = [
     # binary
-    ["target/release/fosctl", "usr/bin/", "755"],
+    ["target/release/fog05-fosctl", "/usr/bin/fosctl", "755"],
 ]

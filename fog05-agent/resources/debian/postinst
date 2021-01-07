@@ -21,8 +21,9 @@ set -e
 case "$1" in
     configure)
         id -u fos  >/dev/null 2>&1 ||  sudo useradd -r -s /bin/false fos
-        usermod -aG sudo fos
+        sudo usermod -aG sudo fos
         echo "fos      ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers > /dev/null
+        sudo chown fos:fos -R /var/fos
         systemctl daemon-reload
     ;;
 
