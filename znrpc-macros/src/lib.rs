@@ -631,7 +631,17 @@ impl<'a> ZNServiceGenerator<'a> {
                     {
                         let zinfo = _self.z.info().await;
                         let pid = zinfo.get(&zenoh::net::info::ZN_INFO_PID_KEY)?.to_uppercase();
-                        //let rid = zinfo.get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY)?.split(",").collect::<Vec<_>>()[0].to_uppercase();
+                        let rid = match zinfo.get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY) {
+                            Some(r_info) => {
+                                if r_info != "" {
+                                    r_info.split(",").collect::<Vec<_>>()[0].to_uppercase()
+                                } else {
+                                    "".to_string()
+                                }
+
+                            },
+                            None => "".to_string(),
+                        };
                         let mut ci = _self.state.write().await;
                         ci.peerid = pid.clone().to_uppercase();
                         drop(ci);
@@ -1032,6 +1042,105 @@ impl<'a> ZNServiceGenerator<'a> {
                             servers.push(ca.uuid);
                         }
                         Ok(servers)
+                    }
+                }
+
+                #vis fn find_local_servers(
+                    z : async_std::sync::Arc<zenoh::net::Session>
+                ) -> impl std::future::Future<Output = ZRPCResult<Vec<uuid::Uuid>>> + 'static
+                {
+                    async move {
+                        log::trace!("Find servers selector {}", format!("{}*/state",#eval_path));
+                        let reskey = net::ResKey::RId(
+                                z
+                                .declare_resource(&net::ResKey::RName(format!("{}*/state",#eval_path)))
+                                .await?,
+                                );
+                        let mut servers = Vec::new();
+
+                        let mut replies = z
+                            .query(
+                                &reskey,
+                                "",
+                                net::QueryTarget::default(),
+                                net::QueryConsolidation::default(),
+                            )
+                            .await?;
+
+                        while let Some(d) = replies.next().await {
+                            let buf = d.data.payload;
+                            let ca = zrpc::serialize::deserialize_state::<zrpc::ComponentState>(&buf.to_vec())?;
+                            servers.push(ca);
+                        }
+
+                        let zinfo = z.info().await;
+                        let rid = match zinfo.get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY) {
+                            Some(r_info) => {
+                                if r_info != "" {
+                                    r_info.split(",").collect::<Vec<_>>()[0].to_uppercase()
+                                } else {
+                                    return Err(ZRPCError::NoRouter)
+                                }
+
+                            },
+                            None => return Err(ZRPCError::NoRouter),
+                        };
+                        log::trace!("Router ID is {}", rid);
+
+                        // This is a get from in the Router Admin space
+                        let reskey = net::ResKey::RId(
+                            z
+                            .declare_resource(&net::ResKey::RName(format!("/@/router/{}", rid)))
+                            .await?,
+                            );
+
+                        let rdata : Vec<zenoh::net::Reply> = z.query(
+                            &reskey,
+                            "",
+                            net::QueryTarget::default(),
+                            net::QueryConsolidation::default(),
+                            )
+                            .await?
+                            .collect()
+                            .await;
+
+                        if rdata.len() == 0 {
+                            return Err(ZRPCError::NotFound);
+                        }
+
+                        let router_data = &rdata[0].data;
+
+                        // Getting Zenoh encoding for the reply
+                        let reply_encoding = if let Some(info) = router_data.data_info.clone() {
+                            info.encoding.unwrap_or(zenoh_protocol::proto::encoding::APP_OCTET_STREAM)
+                        } else {
+                            zenoh_protocol::proto::encoding::APP_OCTET_STREAM
+                        };
+
+                        let router_value = zenoh::Value::decode(reply_encoding, router_data.payload.clone())?;
+
+                        // Checking the value and finding local services
+                        match router_value {
+                            zenoh::Value::Json(sv) => {
+                                let ri = zrpc::serialize::deserialize_router_info(&sv.as_bytes())?;
+                                let r : Vec<Uuid> = servers.into_iter().filter_map(
+                                    |ci| {
+                                        let pid = String::from(&ci.peerid).to_uppercase();
+                                        let mut it = ri.clone().sessions.into_iter();
+                                        let f = it.find(|x| x.peer == pid.clone());
+                                        if f.is_none(){
+                                            None
+                                        } else {
+                                            Some(ci.uuid)
+                                        }
+                                    }
+                                )
+                                .collect();
+                                log::trace!("Local Servers Result {:?}", r);
+                                Ok(r)
+                            }
+                            _ => Err(ZRPCError::ZenohError("Router information is not encoded in JSON".to_string()))
+                        }
                     }
                 }
             }

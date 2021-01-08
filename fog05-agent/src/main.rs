@@ -126,7 +126,8 @@ async fn main() {
 
     //Creating the Zenoh and ZConnector
     log::trace!("Creating zenoh and zenoh.net session...");
-    let zproperties = zenoh::Properties::from(format!("mode=client;peer={}", config.zlocator.clone()));
+    let zproperties =
+        zenoh::Properties::from(format!("mode=client;peer={}", config.zlocator.clone()));
     log::trace!("Zenoh properties: {}", zproperties);
     let z = Arc::new(Zenoh::new(zproperties.clone().into()).await.unwrap());
     log::trace!("Zenoh session created...");

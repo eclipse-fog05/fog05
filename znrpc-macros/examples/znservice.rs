@@ -49,7 +49,6 @@ async fn main() {
     env_logger::init();
     let zproperties = Properties::from("mode=peer");
     let zsession = Arc::new(zenoh::net::open(zproperties.into()).await.unwrap());
-    // let ws = Arc::new(zenoh.workspace(None).await.unwrap());
 
     let service = HelloZService {
         ser_name: "test service".to_string(),
@@ -78,6 +77,9 @@ async fn main() {
 
     let servers = HelloClient::find_servers(zsession.clone()).await;
     println!("servers found: {:?}", servers);
+
+    let local_servers = HelloClient::find_local_servers(zsession.clone()).await;
+    println!("local_servers found: {:?}", local_servers);
 
     task::sleep(Duration::from_secs(1)).await;
     let hello = client.hello("client".to_string()).await;

@@ -32,6 +32,7 @@ pub enum ZRPCError {
     Unreachable,
     PermissionDenied,
     Unavailable,
+    NoRouter,
 }
 
 impl fmt::Display for ZRPCError {
@@ -50,6 +51,7 @@ impl fmt::Display for ZRPCError {
             ZRPCError::TimedOut => write!(f, "ZRPC call has timed out!"),
             ZRPCError::PermissionDenied => write!(f, "ZRPC Permission denied"),
             ZRPCError::Unavailable => write!(f, "ZRPC Unavailable"),
+            ZRPCError::NoRouter => write!(f, "No router found"),
         }
     }
 }

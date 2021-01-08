@@ -19,17 +19,17 @@ log = "0.4"
 #async-std = { version = "=1.8.0", features = ["unstable"] }
 bincode = { version = "1.3.1", optional = true}
 serde_yaml = {version = "0.8.13", optional = true}
-serde_json = { version = "1.0.55", optional = true}
+serde_json = { version = "1.0.55"}
 
 [features]
 resp_bincode = ["bincode"]
 send_bincode = ["bincode"]
 
-send_json = ["serde_json"]
-resp_json = ["serde_json"]
+send_json = []
+resp_json = []
 
 state_bincode = ["bincode"]
-state_json = ["serde_json"]
+state_json = []
 state_yaml = ["serde_yaml"]
 
 default = ["resp_bincode","send_json","state_bincode"]

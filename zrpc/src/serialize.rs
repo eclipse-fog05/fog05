@@ -25,6 +25,7 @@ extern crate serde_json;
 
 use serde::{de::DeserializeOwned, Serialize};
 
+use crate::types::ZRouterInfo;
 use crate::zrpcresult::ZRPCResult;
 
 pub fn serialize_response<T>(data: &T) -> ZRPCResult<Vec<u8>>
@@ -77,4 +78,11 @@ where
 {
     #[cfg(feature = "send_json")]
     Ok(serde_json::from_str::<T>(std::str::from_utf8(raw_data)?)?)
+}
+
+pub fn deserialize_router_info(raw_data: &[u8]) -> ZRPCResult<ZRouterInfo> {
+    #[cfg(feature = "send_json")]
+    Ok(serde_json::from_str::<ZRouterInfo>(std::str::from_utf8(
+        raw_data,
+    )?)?)
 }
