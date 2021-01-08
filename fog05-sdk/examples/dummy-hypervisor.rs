@@ -443,13 +443,13 @@ impl DummyHypervisor {
         async_std::channel::Sender<()>,
         async_std::task::JoinHandle<()>,
     ) {
-        let local_os = OSClient::find_servers(self.z.clone()).await.unwrap();
+        let local_os = OSClient::find_local_servers(self.z.clone()).await.unwrap();
         if local_os.is_empty() {
             error!("Unable to find a local OS interface");
             panic!("No OS Server");
         }
 
-        let local_agent = AgentPluginInterfaceClient::find_servers(self.z.clone())
+        let local_agent = AgentPluginInterfaceClient::find_local_servers(self.z.clone())
             .await
             .unwrap();
         if local_agent.is_empty() {
@@ -457,7 +457,7 @@ impl DummyHypervisor {
             panic!("No Agent Server");
         }
 
-        let local_net = NetworkingPluginClient::find_servers(self.z.clone())
+        let local_net = NetworkingPluginClient::find_local_servers(self.z.clone())
             .await
             .unwrap();
         if local_net.is_empty() {
