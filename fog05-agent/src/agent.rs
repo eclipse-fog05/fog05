@@ -846,15 +846,19 @@ impl AgentOrchestratorInterface for Agent {
 
         trace!("FDU scheduling compatible nodes {:?}", compatibles);
 
-        let (selected, _) = compatibles.choose(&mut rand::thread_rng()).unwrap();
+        let selected = compatibles.choose(&mut rand::thread_rng());
 
-        info!("FDU Scheduling node {} is random picked", selected);
-
-        if *selected == self.node_uuid {
-            Ok(self.define_fdu(fdu_uuid).await?)
-        } else {
-            let client = AgentOrchestratorInterfaceClient::new(self.z.clone(), *selected);
-            Ok(client.define_fdu(fdu_uuid).await??)
+        match selected {
+            Some((selected, _)) => {
+                info!("FDU Scheduling node {} is random picked", selected);
+                if *selected == self.node_uuid {
+                    Ok(self.define_fdu(fdu_uuid).await?)
+                } else {
+                    let client = AgentOrchestratorInterfaceClient::new(self.z.clone(), *selected);
+                    Ok(client.define_fdu(fdu_uuid).await??)
+                }
+            }
+            None => Err(FError::NotFound),
         }
 
         // Err(FError::Unimplemented)

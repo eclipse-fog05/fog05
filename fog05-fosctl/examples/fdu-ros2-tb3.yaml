@@ -1,0 +1,20 @@
+---
+  id: tb3-ros2-fdu
+  name: ros2 turtlebot3 fdu
+  version: 0.3.0
+  fdu_version: 0.0.1
+  hypervisor: ros2
+  computation_requirements:
+      cpu_arch: aarch64
+      ram_size_mb: 10
+      storage_size_mb: 1
+  migration_kind : COLD
+  image:
+      uri: file:///home/ubuntu/tb3_ws.tar.gz
+      checksum: c72f0a7aad723a3b34de883c07bc020750b4b293f794c3a91632b212f4700462
+      format: tar.gz
+  hypervisor_specific : "{\"kind\":\"LAUNCH\",\"app_name\":\"turtlebot3_bringup\",\"entry_point\":\"robot.launch.py\",\"args\":[],\"env\":{\"TURTLEBOT3_MODEL\":\"burger\"}}"
+  interfaces : []
+  storage: []
+  connection_points: []
+  depends_on: []
