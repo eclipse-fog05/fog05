@@ -73,23 +73,23 @@ pub struct EntityDescriptor {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Display)]
 pub enum EntityStatus {
-    ONBOARDING, //instantiation request received  by orchestrator
-    ONBOARDED,  // instantiation request scheduled
-    STARTING,   //start instantiation
-    RUNNING,    //
-    STOPPING,   //
-    STOPPED,    //fdu are there but not running
-    OFFLOADING, // removing fdu/virtual links
-    OFFLOADED,  // removed, still in registry
-    INVALID,    //error in descriptor
-    ERROR,      //generic error state
+    ONBOARDING,    //instantiation request received  by orchestrator
+    ONBOARDED,     // instantiation request scheduled
+    STARTING,      //start instantiation
+    RUNNING,       //
+    STOPPING,      //
+    STOPPED,       //fdu are there but not running
+    OFFLOADING,    // removing fdu/virtual links
+    OFFLOADED,     // removed, still in registry
+    INVALID,       //error in descriptor
+    ERROR(String), //generic error state
     RECOVERING, //from an ERROR from RUNNING recovering from a recoverable error (eg. fdu an went down)
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct EntityRecord {
     pub uuid: Uuid,
-    pub id: String, //ref to EntityDescriptor.UUID
+    pub id: Uuid, //ref to EntityDescriptor.UUID
     pub status: EntityStatus,
     pub fdus: Vec<Uuid>,
     pub virtual_links: Vec<Uuid>,

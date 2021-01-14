@@ -1,0 +1,91 @@
+---
+  id: tb3-teleop
+  name: turtlebot3 teleop demo
+  version: 0.3.0
+  entity_version: 0.0.1
+  virtual_links: []
+  fdus:
+    - id: tb3-ros2-fdu
+      name: ros2 turtlebot3 fdu
+      version: 0.3.0
+      fdu_version: 0.0.1
+      hypervisor: ros2
+      computation_requirements:
+          cpu_arch: aarch64
+          ram_size_mb: 10
+          storage_size_mb: 1
+      migration_kind : COLD
+      image:
+          uri: file:///home/ubuntu/tb3_ws.tar.gz
+          checksum: c72f0a7aad723a3b34de883c07bc020750b4b293f794c3a91632b212f4700462
+          format: tar.gz
+      hypervisor_specific : "{\"kind\":\"LAUNCH\",\"app_name\":\"turtlebot3_bringup\",\"entry_point\":\"robot.launch.py\",\"args\":[],\"env\":{\"TURTLEBOT3_MODEL\":\"burger\"}}"
+      interfaces : []
+      storage: []
+      connection_points: []
+      depends_on: []
+    - id: dzd-robot
+      name: robot dzd
+      version: 0.3.0
+      fdu_version: 0.0.1
+      hypervisor: bare
+      computation_requirements:
+          cpu_arch: aarch64
+          ram_size_mb: 10
+          storage_size_mb: 1
+      migration_kind : COLD
+      hypervisor_specific : "{\"cmd\":\"/home/ubuntu/dzd\",\"args\":[\"-m\",\"client\",\"-e\",\"tcp/51.178.81.124:7447\"],\"env\":{}}"
+      interfaces : []
+      storage: []
+      connection_points: []
+      depends_on: []
+    - id: dzd-cloud
+      name: cloud dzd
+      version: 0.3.0
+      fdu_version: 0.0.1
+      hypervisor: bare
+      computation_requirements:
+          cpu_arch: x86_64
+          ram_size_mb: 10
+          storage_size_mb: 1
+      migration_kind : COLD
+      hypervisor_specific : "{\"cmd\":\"/home/ato/fos/dzd\",\"args\":[\"-m\",\"client\",\"-e\",\"tcp/51.178.81.124:7447\"],\"env\":{}}"
+      interfaces : []
+      storage: []
+      connection_points: []
+      depends_on: []
+    - id: test-ros2-fdu
+      name: ros2 test fdu
+      version: 0.3.0
+      fdu_version: 0.0.1
+      hypervisor: ros2
+      computation_requirements:
+          cpu_arch: x86_64
+          ram_size_mb: 10
+          storage_size_mb: 1
+      migration_kind : COLD
+      image:
+          uri: file:///home/ato/teleop_ws.tar.gz
+          checksum: 10a8e1251878f9dd390cb579db6126fe12ce06a509d5ad757d3e1e1398f45c4d
+          format: tar.gz
+      hypervisor_specific : "{\"kind\":\"RUN\",\"app_name\":\"turtlebot3_server\",\"entry_point\":\"teleop_yaks\",\"args\":[\"tcp/51.178.81.124:7447\"],\"env\":{}}"
+      interfaces : []
+      storage: []
+      connection_points: []
+      depends_on: []
+    - id: camera-robot
+      name: robot camera
+      version: 0.3.0
+      fdu_version: 0.0.1
+      hypervisor: bare
+      computation_requirements:
+          cpu_arch: aarch64
+          ram_size_mb: 10
+          storage_size_mb: 1
+      migration_kind : COLD
+      hypervisor_specific : "{\"cmd\":\"/home/ubuntu/zcam/target/debug/zcapture\",\"args\":[\"-m\",\"client\",\"-e\",\"tcp/51.178.81.124:7447\",\"-p\",\"/robot/video\"],\"env\":{}}"
+      interfaces : []
+      storage: []
+      connection_points: []
+      depends_on: []
+

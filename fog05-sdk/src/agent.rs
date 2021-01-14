@@ -140,8 +140,12 @@ pub trait AgentOrchestratorInterface {
     async fn check_fdu_compatibility(&self, fdu_uuid: Uuid) -> FResult<bool>;
 
     async fn schedule_fdu(&self, fdu_uuid: Uuid) -> FResult<im::fdu::FDURecord>;
+    async fn schedule_entity(&self, entity: Uuid) -> FResult<Uuid>;
+
+    async fn deschedule_entity(&self, entity: Uuid) -> FResult<Uuid>;
 
     async fn onboard_fdu(&self, fdu: im::fdu::FDUDescriptor) -> FResult<Uuid>;
+    async fn onboard_entity(&self, entity: im::entity::EntityDescriptor) -> FResult<Uuid>;
 
     async fn define_fdu(&self, fdu_uuid: Uuid) -> FResult<im::fdu::FDURecord>;
     async fn configure_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord>;
@@ -155,7 +159,9 @@ pub trait AgentOrchestratorInterface {
     async fn stop_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord>;
     async fn clean_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord>;
     async fn undefine_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord>;
+
     async fn offload_fdu(&self, fdu_uuid: Uuid) -> FResult<Uuid>;
+    async fn offload_entity(&self, entity_uuid: Uuid) -> FResult<Uuid>;
 
     async fn fdu_status(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord>;
 

@@ -113,18 +113,23 @@ pub enum AddFIMKind {
         #[structopt(parse(from_os_str), name = "FDU descriptor path")]
         descriptor_path: std::path::PathBuf,
     },
+    Entity {
+        #[structopt(parse(from_os_str), name = "Entity descriptor path")]
+        descriptor_path: std::path::PathBuf,
+    },
     Network {
         #[structopt(parse(from_os_str), name = "Network descriptor path")]
         descriptor_path: std::path::PathBuf,
     },
     Instance {
-        fdu_id: Uuid,
+        id: Uuid,
     },
 }
 
 #[derive(StructOpt, Debug)]
 pub enum DeleteFIMKind {
     FDU { id: Uuid },
+    Entity { id: Uuid },
     Network { id: Uuid },
     Instance { id: Uuid },
 }
@@ -132,6 +137,7 @@ pub enum DeleteFIMKind {
 #[derive(StructOpt, Debug)]
 pub enum GetFIMKind {
     FDU { id: Option<Uuid> },
+    Entity { id: Option<Uuid> },
     Network { id: Option<Uuid> },
     Instance { id: Option<Uuid> },
     Node { id: Option<Uuid> },

@@ -1,0 +1,16 @@
+---
+  id: dzd-robot
+  name: robot dzd
+  version: 0.3.0
+  fdu_version: 0.0.1
+  hypervisor: bare
+  computation_requirements:
+      cpu_arch: aarch64
+      ram_size_mb: 10
+      storage_size_mb: 1
+  migration_kind : COLD
+  hypervisor_specific : "{\"cmd\":\"/home/ubuntu/dzd\",\"args\":[\"-m\",\"client\",\"-e\",\"tcp/51.178.81.124:7447\"],\"env\":{}}"
+  interfaces : []
+  storage: []
+  connection_points: []
+  depends_on: []

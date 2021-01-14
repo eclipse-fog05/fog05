@@ -252,6 +252,56 @@ macro_rules! FDU_ALL_INSTANCES_SELECTOR {
     };
 }
 
+macro_rules! ENTITY_DESCRIPTOR_PATH {
+    ($prefix:expr, $sysid:expr, $tenantid:expr, $entityid:expr) => {
+        format!(
+            "{}/{}/tenants/{}/catalog/entity/{}/info",
+            $prefix, $sysid, $tenantid, $entityid
+        )
+    };
+}
+macro_rules! ENTITY_DESCRIPTOR_SELECTOR {
+    ($prefix:expr, $sysid:expr, $tenantid:expr) => {
+        format!(
+            "{}/{}/tenants/{}/catalog/entity/*/info",
+            $prefix, $sysid, $tenantid
+        )
+    };
+}
+
+macro_rules! ENTITY_INSTANCE_SELECTOR {
+    ($prefix:expr, $sysid:expr, $tenantid:expr, $instanceid:expr) => {
+        format!(
+            "{}/{}/tenants/{}/records/entity/*/instance/{}/info",
+            $prefix, $sysid, $tenantid, $instanceid
+        )
+    };
+}
+macro_rules! ENTITY_INSTANCE_PATH {
+    ($prefix:expr, $sysid:expr, $tenantid:expr, $entityid:expr, $instanceid:expr) => {
+        format!(
+            "{}/{}/tenants/{}/records/entity/{}/instance/{}/info",
+            $prefix, $sysid, $tenantid, $entityid, $instanceid
+        )
+    };
+}
+macro_rules! ENTITY_INSTANCES_SELECTOR {
+    ($prefix:expr, $sysid:expr, $tenantid:expr, $entityid:expr) => {
+        format!(
+            "{}/{}/tenants/{}/records/entity/{}/instance/*/info",
+            $prefix, $sysid, $tenantid, $entityid
+        )
+    };
+}
+macro_rules! ENTITY_ALL_INSTANCES_SELECTOR {
+    ($prefix:expr, $sysid:expr, $tenantid:expr) => {
+        format!(
+            "{}/{}/tenants/{}/records/entity/*/instance/*/info",
+            $prefix, $sysid, $tenantid
+        )
+    };
+}
+
 macro_rules! VNET_PATH {
     ($prefix:expr, $sysid:expr, $tenantid:expr, $vnetid:expr) => {
         format!(
@@ -950,6 +1000,224 @@ impl Global {
             self.system_id,
             self.tenant_id,
             instance_info.fdu_uuid,
+            instance_info.uuid
+        ))?;
+        let ws = self.z.workspace(None).await?;
+        Ok(ws.delete(&path).await?)
+    }
+
+    pub async fn get_entity(
+        &self,
+        entity_uuid: Uuid,
+    ) -> FResult<crate::im::entity::EntityDescriptor> {
+        let selector = zenoh::Selector::try_from(ENTITY_DESCRIPTOR_PATH!(
+            GLOBAL_ACTUAL_PREFIX,
+            self.system_id,
+            self.tenant_id,
+            entity_uuid
+        ))?;
+        let ws = self.z.workspace(None).await?;
+        let mut ds = ws.get(&selector).await?;
+        let mut data = Vec::new();
+        while let Some(d) = ds.next().await {
+            data.push(d)
+        }
+        match data.len() {
+            0 => Err(FError::NotFound),
+            1 => {
+                let kv = &data[0];
+                match &kv.value {
+                    zenoh::Value::Raw(_, buf) => {
+                        let info = bincode::deserialize::<crate::im::entity::EntityDescriptor>(
+                            &buf.to_vec(),
+                        )?;
+                        Ok(info)
+                    }
+                    _ => Err(FError::EncodingError),
+                }
+            }
+            _ => Err(FError::TooMuchError),
+        }
+    }
+
+    pub async fn get_all_entity(&self) -> FResult<Vec<crate::im::entity::EntityDescriptor>> {
+        let selector = zenoh::Selector::try_from(ENTITY_DESCRIPTOR_SELECTOR!(
+            GLOBAL_ACTUAL_PREFIX,
+            self.system_id,
+            self.tenant_id
+        ))?;
+        let ws = self.z.workspace(None).await?;
+        let mut ds = ws.get(&selector).await?;
+        let mut data = Vec::new();
+        let mut entities: Vec<crate::im::entity::EntityDescriptor> = Vec::new();
+        while let Some(d) = ds.next().await {
+            data.push(d)
+        }
+
+        for kv in data {
+            match &kv.value {
+                zenoh::Value::Raw(_, buf) => {
+                    let info =
+                        bincode::deserialize::<crate::im::entity::EntityDescriptor>(&buf.to_vec())?;
+                    entities.push(info);
+                }
+                _ => return Err(FError::EncodingError),
+            }
+        }
+        Ok(entities)
+    }
+
+    pub async fn add_entity(
+        &self,
+        entity_info: &crate::im::entity::EntityDescriptor,
+    ) -> FResult<()> {
+        let entity_uuid = entity_info.uuid.ok_or(FError::MalformedDescriptor)?;
+        let path = zenoh::Path::try_from(ENTITY_DESCRIPTOR_PATH!(
+            GLOBAL_ACTUAL_PREFIX,
+            self.system_id,
+            self.tenant_id,
+            entity_uuid
+        ))?;
+        let ws = self.z.workspace(None).await?;
+        let encoded_info = bincode::serialize(&entity_info)?;
+        Ok(ws.put(&path, encoded_info.into()).await?)
+    }
+
+    pub async fn remove_entity(&self, entity_uuid: Uuid) -> FResult<()> {
+        let path = zenoh::Path::try_from(ENTITY_DESCRIPTOR_PATH!(
+            GLOBAL_ACTUAL_PREFIX,
+            self.system_id,
+            self.tenant_id,
+            entity_uuid
+        ))?;
+        let ws = self.z.workspace(None).await?;
+        Ok(ws.delete(&path).await?)
+    }
+
+    pub async fn get_entity_instance(
+        &self,
+        instance_uuid: Uuid,
+    ) -> FResult<crate::im::entity::EntityRecord> {
+        let selector = zenoh::Selector::try_from(ENTITY_INSTANCE_SELECTOR!(
+            GLOBAL_ACTUAL_PREFIX,
+            self.system_id,
+            self.tenant_id,
+            instance_uuid
+        ))?;
+        let ws = self.z.workspace(None).await?;
+        let mut ds = ws.get(&selector).await?;
+        let mut data = Vec::new();
+        while let Some(d) = ds.next().await {
+            data.push(d)
+        }
+        match data.len() {
+            0 => Err(FError::NotFound),
+            1 => {
+                let kv = &data[0];
+                match &kv.value {
+                    zenoh::Value::Raw(_, buf) => {
+                        let info =
+                            bincode::deserialize::<crate::im::entity::EntityRecord>(&buf.to_vec())?;
+                        Ok(info)
+                    }
+                    _ => Err(FError::EncodingError),
+                }
+            }
+            _ => Err(FError::TooMuchError),
+        }
+    }
+
+    pub async fn get_all_entities_instances(
+        &self,
+    ) -> FResult<Vec<crate::im::entity::EntityRecord>> {
+        log::debug!("Get all Entity instances");
+        let selector = zenoh::Selector::try_from(ENTITY_ALL_INSTANCES_SELECTOR!(
+            GLOBAL_ACTUAL_PREFIX,
+            self.system_id,
+            self.tenant_id
+        ))?;
+        log::trace!("Creating workspace");
+        let ws = self.z.workspace(None).await?;
+        log::trace!("Calling get");
+        let mut ds = ws.get(&selector).await?;
+        let mut data = Vec::new();
+        let mut entities: Vec<crate::im::entity::EntityRecord> = Vec::new();
+        while let Some(d) = ds.next().await {
+            data.push(d)
+        }
+        log::trace!("Got {} values", data.len());
+
+        for kv in data {
+            match &kv.value {
+                zenoh::Value::Raw(_, buf) => {
+                    let info =
+                        bincode::deserialize::<crate::im::entity::EntityRecord>(&buf.to_vec())?;
+                    entities.push(info);
+                }
+                _ => return Err(FError::EncodingError),
+            }
+        }
+        Ok(entities)
+    }
+
+    pub async fn get_all_entity_instances(
+        &self,
+        entity_uuid: Uuid,
+    ) -> FResult<Vec<crate::im::entity::EntityRecord>> {
+        log::debug!("Get all Entity instance for {}", entity_uuid);
+        let selector = zenoh::Selector::try_from(ENTITY_INSTANCES_SELECTOR!(
+            GLOBAL_ACTUAL_PREFIX,
+            self.system_id,
+            self.tenant_id,
+            entity_uuid
+        ))?;
+        log::trace!("Creating workspace");
+        let ws = self.z.workspace(None).await?;
+        log::trace!("Calling get");
+        let mut ds = ws.get(&selector).await?;
+        let mut data = Vec::new();
+        let mut entities: Vec<crate::im::entity::EntityRecord> = Vec::new();
+        while let Some(d) = ds.next().await {
+            data.push(d)
+        }
+        log::trace!("Got {} values", data.len());
+
+        for kv in data {
+            match &kv.value {
+                zenoh::Value::Raw(_, buf) => {
+                    let info =
+                        bincode::deserialize::<crate::im::entity::EntityRecord>(&buf.to_vec())?;
+                    entities.push(info);
+                }
+                _ => return Err(FError::EncodingError),
+            }
+        }
+        Ok(entities)
+    }
+
+    pub async fn add_entity_instance(
+        &self,
+        instance_info: &crate::im::entity::EntityRecord,
+    ) -> FResult<()> {
+        let path = zenoh::Path::try_from(ENTITY_INSTANCE_PATH!(
+            GLOBAL_ACTUAL_PREFIX,
+            self.system_id,
+            self.tenant_id,
+            instance_info.id,
+            instance_info.uuid
+        ))?;
+        let ws = self.z.workspace(None).await?;
+        let encoded_info = bincode::serialize(&instance_info)?;
+        Ok(ws.put(&path, encoded_info.into()).await?)
+    }
+
+    pub async fn remove_entity_instance(&self, instance_uuid: Uuid) -> FResult<()> {
+        let instance_info = self.get_entity_instance(instance_uuid).await?;
+        let path = zenoh::Path::try_from(ENTITY_INSTANCE_PATH!(
+            GLOBAL_ACTUAL_PREFIX,
+            self.system_id,
+            self.tenant_id,
+            instance_info.id,
             instance_info.uuid
         ))?;
         let ws = self.z.workspace(None).await?;

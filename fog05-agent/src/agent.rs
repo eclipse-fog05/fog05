@@ -342,6 +342,87 @@ impl Agent {
 
         self.connector.global.add_node_info(&ni).await.unwrap();
     }
+
+    async fn entity_scheduling(
+        z: Arc<zenoh::net::Session>,
+        zconnector: Arc<fog05_sdk::zconnector::ZConnector>,
+        self_node_uuid: Uuid,
+        self_instance_uuid: Uuid,
+        mut instance: im::entity::EntityRecord,
+        descriptor: im::entity::EntityDescriptor,
+    ) -> FResult<()> {
+        // Creating self client to use FDU functions
+        let self_client = AgentOrchestratorInterfaceClient::new(z.clone(), self_instance_uuid);
+
+        // onboarding of FDUs
+        for fdu in descriptor.fdus.clone() {
+            self_client.onboard_fdu(fdu).await??;
+        }
+
+        instance.status = im::entity::EntityStatus::ONBOARDED;
+        zconnector.global.add_entity_instance(&instance).await?;
+
+        //Skipping virtual networks
+
+        instance.status = im::entity::EntityStatus::STARTING;
+        zconnector.global.add_entity_instance(&instance).await?;
+
+        // Starting the FDUs
+        for fdu in descriptor.fdus.clone() {
+            let fdu_instance = self_client
+                .schedule_fdu(fdu.uuid.ok_or(FError::MalformedDescriptor)?)
+                .await??;
+            self_client.configure_fdu(fdu_instance.uuid).await??;
+            self_client.start_fdu(fdu_instance.uuid).await??;
+            instance.fdus.push(fdu_instance.uuid);
+        }
+
+        instance.status = im::entity::EntityStatus::RUNNING;
+        zconnector.global.add_entity_instance(&instance).await?;
+
+        Ok(())
+    }
+
+    async fn entity_unscheduling(
+        z: Arc<zenoh::net::Session>,
+        zconnector: Arc<fog05_sdk::zconnector::ZConnector>,
+        self_node_uuid: Uuid,
+        self_instance_uuid: Uuid,
+        mut instance: im::entity::EntityRecord,
+    ) -> FResult<()> {
+        let self_client = AgentOrchestratorInterfaceClient::new(z.clone(), self_instance_uuid);
+        let descriptor = zconnector.global.get_entity(instance.id).await?;
+
+        instance.status = im::entity::EntityStatus::STOPPING;
+        zconnector.global.add_entity_instance(&instance).await?;
+
+        // stop, clean and undefine all FDUs
+
+        for fdu_inst_id in instance.fdus.clone() {
+            self_client.stop_fdu(fdu_inst_id).await??;
+            self_client.clean_fdu(fdu_inst_id).await??;
+            self_client.undefine_fdu(fdu_inst_id).await??;
+        }
+
+        instance.status = im::entity::EntityStatus::STOPPED;
+        zconnector.global.add_entity_instance(&instance).await?;
+
+        //removing fdu descriptors
+
+        instance.status = im::entity::EntityStatus::OFFLOADING;
+        zconnector.global.add_entity_instance(&instance).await?;
+
+        for fdu in descriptor.fdus.clone() {
+            self_client
+                .offload_fdu(fdu.uuid.ok_or(FError::MalformedDescriptor)?)
+                .await??;
+        }
+
+        instance.status = im::entity::EntityStatus::OFFLOADED;
+        zconnector.global.add_entity_instance(&instance).await?;
+
+        Ok(())
+    }
 }
 
 #[znserver]
@@ -800,10 +881,114 @@ impl AgentOrchestratorInterface for Agent {
         Ok(compatible)
     }
 
+    async fn schedule_entity(&self, entity: Uuid) -> FResult<Uuid> {
+        let descriptor = self.connector.global.get_entity(entity).await?;
+        let instance_uuid = Uuid::new_v4();
+        let mut instance = im::entity::EntityRecord {
+            uuid: instance_uuid.clone(),
+            id: descriptor.uuid.ok_or(FError::MalformedDescriptor)?,
+            status: im::entity::EntityStatus::ONBOARDING,
+            virtual_links: Vec::new(),
+            fdus: Vec::new(),
+            fim_id: None,
+            cloud_id: None,
+        };
+        self.connector.global.add_entity_instance(&instance).await?;
+
+        let task_z = self.z.clone();
+        let task_connector = self.connector.clone();
+        let task_self_node = self.node_uuid.clone();
+        let task_self_instance = self.instance_uuid().await.clone();
+
+        let _h = task::spawn(async move {
+            log::trace!("Entering entity scheduling task");
+
+            let res = Agent::entity_scheduling(
+                task_z,
+                task_connector.clone(),
+                task_self_node,
+                task_self_instance,
+                instance.clone(),
+                descriptor,
+            )
+            .await;
+
+            match res {
+                Ok(_) => {
+                    log::debug!("Entity scheduling done!")
+                }
+                Err(e) => {
+                    instance.status = im::entity::EntityStatus::ERROR(format!("{}", e));
+                    task_connector.global.add_entity_instance(&instance).await;
+                    log::error!("Entity scheduling got error {}", e);
+                }
+            }
+        });
+
+        // Here we spawn a task that is in charge of scheduling
+        // each FDU composing the entity steps are:
+        // 1) Onboard the FDU descriptors
+        // 2) change status to ONBOARDED
+        // 3) Create the virtual networks (not yet...)
+        // 4) change status to STARTING
+        // 3) schedule and run each FDU
+        // 4) change state to RUNNING
+
+        Ok(instance_uuid)
+    }
+
+    async fn deschedule_entity(&self, entity: Uuid) -> FResult<Uuid> {
+        let mut instance = self.connector.global.get_entity_instance(entity).await?;
+
+        // Here we spawn a task that is in charge of terminating
+        // all the FDU instances composing the entity
+        // steps are:
+        // 1) change status to STOPPING
+        // 2) stop, clean and undefine each FDU
+        // 3) change status to stopped
+        // 4) remove all FDU descriptors
+        // 5) change status to OFFLOADING
+        // 6) remove all virtual networks (not yet...)
+        // 7) change status to OFFLOADED
+        // 8) remove the entity record (or have something that removes all the offloaded ones)
+
+        let task_z = self.z.clone();
+        let task_connector = self.connector.clone();
+        let task_self_node = self.node_uuid.clone();
+        let task_self_instance = self.instance_uuid().await.clone();
+
+        let _h = task::spawn(async move {
+            log::trace!("Entering entity scheduling task");
+
+            let res = Agent::entity_unscheduling(
+                task_z,
+                task_connector.clone(),
+                task_self_node,
+                task_self_instance,
+                instance.clone(),
+            )
+            .await;
+
+            match res {
+                Ok(_) => {
+                    log::debug!("Entity descheduling done!")
+                }
+                Err(e) => {
+                    instance.status = im::entity::EntityStatus::ERROR(format!("{}", e));
+                    task_connector.global.add_entity_instance(&instance).await;
+                    log::error!("Entity descheduling got error {}", e);
+                }
+            }
+        });
+
+        Ok(entity)
+    }
+
     async fn schedule_fdu(&self, fdu_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
         trace!("FDU Scheduling for {}", fdu_uuid);
         let my_uuid = self.instance_uuid().await;
         let nodes = self.connector.global.get_all_nodes().await?;
+        log::info!("FDU Scheduling for {}, with nodes {:?}", fdu_uuid, nodes);
         let mut clients: Vec<AgentOrchestratorInterfaceClient> = Vec::new();
 
         for node in nodes {
@@ -844,7 +1029,7 @@ impl AgentOrchestratorInterface for Agent {
             })
             .collect::<Vec<(Uuid, bool)>>();
 
-        trace!("FDU scheduling compatible nodes {:?}", compatibles);
+        log::info!("FDU scheduling compatible nodes {:?}", compatibles);
 
         let selected = compatibles.choose(&mut rand::thread_rng());
 
@@ -878,6 +1063,39 @@ impl AgentOrchestratorInterface for Agent {
             Some(fdu_uuid) => {
                 self.connector.global.add_fdu(&fdu).await?;
                 Ok(fdu_uuid)
+            }
+        }
+    }
+
+    async fn onboard_entity(&self, entity: im::entity::EntityDescriptor) -> FResult<Uuid> {
+        info!("Entity Onboard {:?}", entity);
+        let mut entity = entity.clone();
+        let mut fdus = Vec::new();
+        for fdu in entity.fdus {
+            let mut ifdu = fdu.clone();
+            match ifdu.uuid {
+                None => {
+                    let fdu_uuid = Uuid::new_v4();
+                    ifdu.uuid = Some(fdu_uuid);
+                    fdus.push(ifdu);
+                }
+                Some(_) => fdus.push(ifdu),
+            }
+        }
+
+        entity.fdus = fdus;
+
+        match entity.uuid {
+            None => {
+                let entity_uuid = Uuid::new_v4();
+                trace!("Entity Onboard adding UUID: {}", entity_uuid);
+                entity.uuid = Some(entity_uuid);
+                self.connector.global.add_entity(&entity).await?;
+                Ok(entity_uuid)
+            }
+            Some(entity_uuid) => {
+                self.connector.global.add_entity(&entity).await?;
+                Ok(entity_uuid)
             }
         }
     }
@@ -1034,6 +1252,22 @@ impl AgentOrchestratorInterface for Agent {
         }
         self.connector.global.remove_fdu(fdu_uuid).await?;
         Ok(fdu_uuid)
+    }
+
+    async fn offload_entity(&self, entity_uuid: Uuid) -> FResult<Uuid> {
+        info!("Entity Offload {}", entity_uuid);
+        self.connector.global.get_entity(entity_uuid).await?;
+        let instances = self
+            .connector
+            .global
+            .get_all_entity_instances(entity_uuid)
+            .await?;
+        trace!("Entity Instances: {:?}", instances);
+        if !instances.is_empty() {
+            return Err(FError::HasInstances);
+        }
+        self.connector.global.remove_entity(entity_uuid).await?;
+        Ok(entity_uuid)
     }
 
     async fn fdu_status(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {

@@ -1,0 +1,20 @@
+---
+  id: test-ros2-fdu
+  name: ros2 test fdu
+  version: 0.3.0
+  fdu_version: 0.0.1
+  hypervisor: ros2
+  computation_requirements:
+      cpu_arch: x86_64
+      ram_size_mb: 10
+      storage_size_mb: 1
+  migration_kind : COLD
+  image:
+      uri: file:///home/ato/teleop_ws.tar.gz
+      checksum: 10a8e1251878f9dd390cb579db6126fe12ce06a509d5ad757d3e1e1398f45c4d
+      format: tar.gz
+  hypervisor_specific : "{\"kind\":\"RUN\",\"app_name\":\"turtlebot3_server\",\"entry_point\":\"teleop_yaks\",\"args\":[\"tcp/51.178.81.124:7447\"],\"env\":{}}"
+  interfaces : []
+  storage: []
+  connection_points: []
+  depends_on: []

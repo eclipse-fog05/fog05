@@ -1,0 +1,37 @@
+---
+  id: two-ping
+  name: two ping native entity
+  version: 0.3.0
+  entity_version: 0.0.1
+  virtual_links: []
+  fdus:
+    - id: test-ping-fdu-1
+      name: ping fdu 1.1.1.1
+      version: 0.3.0
+      fdu_version: 0.0.1
+      hypervisor: bare
+      computation_requirements:
+          cpu_arch: x86_64
+          ram_size_mb: 10
+          storage_size_mb: 1
+      migration_kind : COLD
+      hypervisor_specific : "{\"cmd\":\"ping\",\"args\":[\"1.1.1.1\"],\"env\":{}}"
+      interfaces : []
+      storage: []
+      connection_points: []
+      depends_on: []
+    - id: test-ping-fdu-2
+      name: ping fdu 8.8.8.8
+      version: 0.3.0
+      fdu_version: 0.0.1
+      hypervisor: bare
+      computation_requirements:
+          cpu_arch: x86_64
+          ram_size_mb: 10
+          storage_size_mb: 1
+      migration_kind : COLD
+      hypervisor_specific : "{\"cmd\":\"ping\",\"args\":[\"8.8.8.8\"],\"env\":{}}"
+      interfaces : []
+      storage: []
+      connection_points: []
+      depends_on: []
