@@ -8,6 +8,7 @@ matrix:
     - rust: nightly
 before_install:
   - sudo apt-get install protobuf-compiler nftables libnftnl-dev libnfnetlink-dev libmnl-dev
+  - cargo install cargo-deb
 script:
   - cargo check
   - cargo fmt -- --check
