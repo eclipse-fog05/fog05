@@ -343,6 +343,57 @@ impl Agent {
         self.connector.global.add_node_info(&ni).await.unwrap();
     }
 
+    async fn get_compatible_nodes(&self, fdu_uuid: Uuid) -> FResult<Vec<Uuid>> {
+        let my_uuid = self.instance_uuid().await;
+        let nodes = self.connector.global.get_all_nodes().await?;
+        log::info!(
+            "Get compatible nodes for {}, with nodes {:?}",
+            fdu_uuid,
+            nodes
+        );
+        let mut clients: Vec<AgentOrchestratorInterfaceClient> = Vec::new();
+
+        for node in nodes {
+            if node.uuid == my_uuid {
+                let client =
+                    AgentOrchestratorInterfaceClient::new(self.z.clone(), node.agent_service_uuid);
+                clients.push(client);
+            }
+        }
+
+        let results_futures = clients.iter().map(|c| async move {
+            // this is a trick to have the Node UUID in the results list
+            let check_res = c.check_fdu_compatibility(fdu_uuid).await;
+            (check_res, c.get_server_uuid())
+        });
+
+        let mut results = futures::future::join_all(results_futures).await;
+
+        // Self check
+        let self_check = self.check_fdu_compatibility(fdu_uuid).await;
+        results.push((Ok(self_check), self.node_uuid));
+
+        let compatibles = results
+            .iter()
+            .filter_map(|r| {
+                trace!("FDU Scheduling check result: {:?}", r);
+                let (check_res, node_uuid) = r;
+                match check_res {
+                    Ok(outer_res) => match outer_res {
+                        Ok(inner_res) => match *inner_res {
+                            true => Some(*node_uuid),
+                            false => None,
+                        },
+                        Err(err) => None,
+                    },
+                    Err(err) => None,
+                }
+            })
+            .collect::<Vec<Uuid>>();
+
+        Ok(compatibles)
+    }
+
     async fn entity_scheduling(
         z: Arc<zenoh::net::Session>,
         zconnector: Arc<fog05_sdk::zconnector::ZConnector>,
@@ -885,7 +936,7 @@ impl AgentOrchestratorInterface for Agent {
         let descriptor = self.connector.global.get_entity(entity).await?;
         let instance_uuid = Uuid::new_v4();
         let mut instance = im::entity::EntityRecord {
-            uuid: instance_uuid.clone(),
+            uuid: instance_uuid,
             id: descriptor.uuid.ok_or(FError::MalformedDescriptor)?,
             status: im::entity::EntityStatus::ONBOARDING,
             virtual_links: Vec::new(),
@@ -897,8 +948,8 @@ impl AgentOrchestratorInterface for Agent {
 
         let task_z = self.z.clone();
         let task_connector = self.connector.clone();
-        let task_self_node = self.node_uuid.clone();
-        let task_self_instance = self.instance_uuid().await.clone();
+        let task_self_node = self.node_uuid;
+        let task_self_instance = self.instance_uuid().await;
 
         let _h = task::spawn(async move {
             log::trace!("Entering entity scheduling task");
@@ -954,8 +1005,8 @@ impl AgentOrchestratorInterface for Agent {
 
         let task_z = self.z.clone();
         let task_connector = self.connector.clone();
-        let task_self_node = self.node_uuid.clone();
-        let task_self_instance = self.instance_uuid().await.clone();
+        let task_self_node = self.node_uuid;
+        let task_self_instance = self.instance_uuid().await;
 
         let _h = task::spawn(async move {
             log::trace!("Entering entity scheduling task");
@@ -987,54 +1038,15 @@ impl AgentOrchestratorInterface for Agent {
     async fn schedule_fdu(&self, fdu_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
         trace!("FDU Scheduling for {}", fdu_uuid);
         let my_uuid = self.instance_uuid().await;
-        let nodes = self.connector.global.get_all_nodes().await?;
-        log::info!("FDU Scheduling for {}, with nodes {:?}", fdu_uuid, nodes);
-        let mut clients: Vec<AgentOrchestratorInterfaceClient> = Vec::new();
 
-        for node in nodes {
-            if node.uuid == my_uuid {
-                let client =
-                    AgentOrchestratorInterfaceClient::new(self.z.clone(), node.agent_service_uuid);
-                clients.push(client);
-            }
-        }
-
-        let results_futures = clients.iter().map(|c| async move {
-            // this is a trick to have the Node UUID in the results list
-            let check_res = c.check_fdu_compatibility(fdu_uuid).await;
-            (check_res, c.get_server_uuid())
-        });
-
-        let mut results = futures::future::join_all(results_futures).await;
-
-        // Self check
-        let self_check = self.check_fdu_compatibility(fdu_uuid).await;
-        results.push((Ok(self_check), self.node_uuid));
-
-        let compatibles = results
-            .iter()
-            .filter_map(|r| {
-                trace!("FDU Scheduling check result: {:?}", r);
-                let (check_res, node_uuid) = r;
-                match check_res {
-                    Ok(outer_res) => match outer_res {
-                        Ok(inner_res) => match *inner_res {
-                            true => Some((*node_uuid, *inner_res)),
-                            false => None,
-                        },
-                        Err(err) => None,
-                    },
-                    Err(err) => None,
-                }
-            })
-            .collect::<Vec<(Uuid, bool)>>();
+        let compatibles = self.get_compatible_nodes(fdu_uuid).await?;
 
         log::info!("FDU scheduling compatible nodes {:?}", compatibles);
 
         let selected = compatibles.choose(&mut rand::thread_rng());
 
         match selected {
-            Some((selected, _)) => {
+            Some(selected) => {
                 info!("FDU Scheduling node {} is random picked", selected);
                 if *selected == self.node_uuid {
                     Ok(self.define_fdu(fdu_uuid).await?)
@@ -1045,8 +1057,6 @@ impl AgentOrchestratorInterface for Agent {
             }
             None => Err(FError::NotFound),
         }
-
-        // Err(FError::Unimplemented)
     }
 
     async fn onboard_fdu(&self, fdu: im::fdu::FDUDescriptor) -> FResult<Uuid> {

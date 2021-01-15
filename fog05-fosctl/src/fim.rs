@@ -366,23 +366,25 @@ pub fn fim_cli(args: FIMCtl, zlocator: String) -> Result<(), ExitFailure> {
                         println!("{}", instance.uuid);
                         Ok(())
                     }
-                    Err(FError::NotFound) => match zconnector.global.get_entity_instance(id).await {
-                        Ok(_entity) => {
-                            let nodes = zconnector.global.get_all_nodes().await?;
-                            let entry_point = nodes.choose(&mut rand::thread_rng()).unwrap();
-                            let node_client = AgentOrchestratorInterfaceClient::new(
-                                zsession.clone(),
-                                entry_point.agent_service_uuid,
-                            );
+                    Err(FError::NotFound) => {
+                        match zconnector.global.get_entity_instance(id).await {
+                            Ok(_entity) => {
+                                let nodes = zconnector.global.get_all_nodes().await?;
+                                let entry_point = nodes.choose(&mut rand::thread_rng()).unwrap();
+                                let node_client = AgentOrchestratorInterfaceClient::new(
+                                    zsession.clone(),
+                                    entry_point.agent_service_uuid,
+                                );
 
-                            let entity_uuid = node_client.deschedule_entity(id).await??;
-                            println!("{}", entity_uuid);
-                            Ok(())
+                                let entity_uuid = node_client.deschedule_entity(id).await??;
+                                println!("{}", entity_uuid);
+                                Ok(())
+                            }
+                            Err(e) => {
+                                panic!("Error occured: {}", e);
+                            }
                         }
-                        Err(e) => {
-                            panic!("Error occured: {}", e);
-                        }
-                    },
+                    }
                     Err(e) => {
                         panic!("Error occured: {}", e);
                     }
