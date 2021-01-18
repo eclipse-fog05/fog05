@@ -45,7 +45,7 @@ cp -a * %{buildroot}
 %clean
 rm -rf %{buildroot}
 
-{{#if service ~}}
+
 %post
 %systemd_post {{service}}
 /usr/bin/chown fos:fos -R /var/fos
@@ -57,7 +57,6 @@ rm -rf %{buildroot}
 %postun
 %systemd_postun_with_restart {{service}}
 
-{{/if ~}}
 
 %files
 %defattr(-,root,root,-)
