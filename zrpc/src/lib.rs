@@ -61,11 +61,11 @@ pub trait ZServe<Req>: Sized + Clone {
     ) -> ::core::pin::Pin<
         Box<
             dyn std::future::Future<
-                Output = ZRPCResult<(
-                    async_std::channel::Sender<()>,
-                    async_std::task::JoinHandle<ZRPCResult<()>>,
-                )>,
-            > + '_,
+                    Output = ZRPCResult<(
+                        async_std::channel::Sender<()>,
+                        async_std::task::JoinHandle<ZRPCResult<()>>,
+                    )>,
+                > + '_,
         >,
     >;
 
@@ -108,11 +108,11 @@ pub trait ZNServe<Req>: Sized + Clone {
     ) -> ::core::pin::Pin<
         Box<
             dyn std::future::Future<
-                Output = ZRPCResult<(
-                    async_std::channel::Sender<()>,
-                    async_std::task::JoinHandle<ZRPCResult<()>>,
-                )>,
-            > + '_,
+                    Output = ZRPCResult<(
+                        async_std::channel::Sender<()>,
+                        async_std::task::JoinHandle<ZRPCResult<()>>,
+                    )>,
+                > + '_,
         >,
     >;
 
@@ -138,11 +138,11 @@ pub trait ZNServe<Req>: Sized + Clone {
     ) -> ::core::pin::Pin<
         Box<
             dyn std::future::Future<
-                Output = ZRPCResult<(
-                    async_std::channel::Sender<()>,
-                    async_std::task::JoinHandle<ZRPCResult<()>>,
-                )>,
-            > + '_,
+                    Output = ZRPCResult<(
+                        async_std::channel::Sender<()>,
+                        async_std::task::JoinHandle<ZRPCResult<()>>,
+                    )>,
+                > + '_,
         >,
     >;
 
