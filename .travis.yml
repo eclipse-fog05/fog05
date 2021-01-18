@@ -17,3 +17,4 @@ script:
   - cargo deb -p fog05-fosctl --no-build --verbose
   - dpkg -I ./target/debian/fog05-agent_0.3.0~alpha1_amd64.deb
   - dpkg -I ./target/debian/fog05-fosctl_0.3.0~alpha1_amd64.deb
+# - cd fog05-agent && cargo rpm init --template ./resources/rpm/template.hbs && cargo rpm build -v

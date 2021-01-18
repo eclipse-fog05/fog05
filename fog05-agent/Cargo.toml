@@ -49,6 +49,7 @@ log = "0.4"
 env_logger = "0.7.1"
 git-version = "0.3.4"
 
+# Debian package configuration
 
 [package.metadata.deb]
 maintainer = "ADLINK fog05 team <fog05@adlink-labs.tech>"
@@ -64,7 +65,7 @@ assets = [
     ["target/release/fog05-agent", "/usr/bin/", "755"],
     # assets
     ["etc/*", "/etc/fos", "644"],
-    ["etc/*", "/var/fos", "644"],
+    ["var/*", "/var/fos", "644"],
     ["resources/fos-agent.service","/lib/systemd/system/fos-agent.service","644"]
 ]
 conf-files = ["/etc/fos/agent.yaml"]
@@ -72,3 +73,20 @@ conf-files = ["/etc/fos/agent.yaml"]
 [package.metadata.deb.systemd-units]
 unit-scripts = "resources/"
 unit-name = "fos-agent.service"
+
+
+# RPM package configuration
+
+[package.metadata.rpm]
+package = "fog05-agent"
+
+[package.metadata.rpm.cargo]
+buildflags = ["--release"]
+
+[package.metadata.rpm.targets]
+fog05-agent = { path = "/usr/bin/fog05-agent" }
+
+[package.metadata.rpm.files]
+"../etc/agent.yaml" = { path = "/etc/fos/agent.yaml", mode = "644", username = "fos" }
+"../var/placeholder" = { path = "/var/fos/placeholder", username = "fos" }
+"../resources/fos-agent.service" = { path = "/lib/systemd/system/fos-agent.service" }

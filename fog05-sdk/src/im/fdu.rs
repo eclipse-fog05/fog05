@@ -223,6 +223,7 @@ pub enum FDUState {
     DEFINED,
     CONFIGURED,
     RUNNING,
+    ERROR(String),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

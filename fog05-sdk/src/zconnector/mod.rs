@@ -169,6 +169,16 @@ macro_rules! NODE_INSTANCE_SELECTOR2 {
         )
     };
 }
+
+macro_rules! NODE_INSTANCE_SELECTOR3 {
+    ($prefix:expr, $sysid:expr, $tenantid:expr, $nodeid:expr) => {
+        format!(
+            "{}/{}/tenants/{}/nodes/{}/fdu/*/instances/*/info",
+            $prefix, $sysid, $tenantid, $nodeid,
+        )
+    };
+}
+
 macro_rules! NODE_VNET_PATH {
     ($prefix:expr, $sysid:expr, $tenantid:expr, $nodeid:expr, $vnetid:expr) => {
         format!(
@@ -1257,6 +1267,38 @@ impl Global {
             }
             _ => Err(FError::TooMuchError),
         }
+    }
+
+    pub async fn get_node_instances(
+        &self,
+        node_uuid: Uuid,
+    ) -> FResult<Vec<crate::im::fdu::FDURecord>> {
+        let selector = zenoh::Selector::try_from(NODE_INSTANCE_SELECTOR3!(
+            GLOBAL_ACTUAL_PREFIX,
+            self.system_id,
+            self.tenant_id,
+            node_uuid
+        ))?;
+        let ws = self.z.workspace(None).await?;
+
+        let mut ds = ws.get(&selector).await?;
+        let mut data = Vec::new();
+        let mut fdus: Vec<crate::im::fdu::FDURecord> = Vec::new();
+        while let Some(d) = ds.next().await {
+            data.push(d)
+        }
+        log::trace!("Got {} values", data.len());
+
+        for kv in data {
+            match &kv.value {
+                zenoh::Value::Raw(_, buf) => {
+                    let info = bincode::deserialize::<crate::im::fdu::FDURecord>(&buf.to_vec())?;
+                    fdus.push(info);
+                }
+                _ => return Err(FError::EncodingError),
+            }
+        }
+        Ok(fdus)
     }
 
     pub async fn add_node_instance(

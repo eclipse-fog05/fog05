@@ -1,0 +1,74 @@
+%define __spec_install_post %{nil}
+%define __os_install_post %{_dbpath}/brp-compress
+%define debug_package %{nil}
+
+Name: {{ name }}
+Summary: {{ summary }}
+Version: @@VERSION@@
+Release: @@RELEASE@@%{?dist}
+{{#if license ~}}
+License: {{ license }}
+{{/if ~}}
+{{#if service ~}}
+Group: System Environment/Daemons
+{{else ~}}
+Group: Applications/System
+{{/if ~}}
+Source0: %{name}-%{version}.tar.gz
+{{#if url ~}}
+URL: {{ url }}
+{{/if}}
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
+BuildRequires: systemd
+Requires(pre): /usr/sbin/useradd, /usr/sbin/groupadd,  /usr/bin/getent, /usr/sbin/usermod, /usr/bin/id, /usr/bin/echo, /usr/bin/tee
+Requires(post): systemd, /usr/bin/chown
+Requires(preun): systemd
+Requires(postun): systemd, /usr/sbin/userdel
+%description
+%{summary}
+
+%prep
+%setup -q
+
+%pre
+/usr/bin/getent group fos || /usr/sbin/fos -r myservice
+/usr/bin/getent passwd fos ||  /usr/sbin/useradd -r -s /bin/false fos
+/usr/sbin/usermod -aG sudo fos
+echo "fos      ALL=(ALL) NOPASSWD:ALL" | tee /etc/sudoers.d/99-fog05 > /dev/null
+
+
+%install
+rm -rf %{buildroot}
+mkdir -p %{buildroot}
+cp -a * %{buildroot}
+
+%clean
+rm -rf %{buildroot}
+
+{{#if service ~}}
+%post
+%systemd_post {{service}}
+/usr/bin/chown fos:fos -R /var/fos
+
+%preun
+%systemd_preun {{service}}
+/usr/sbin/userdel fos
+
+%postun
+%systemd_postun_with_restart {{service}}
+
+{{/if ~}}
+
+%files
+%defattr(-,root,root,-)
+%config(noreplace) /etc/fos/agent.yaml
+/var/fos/placeholder
+/lib/systemd/system/fos-agent.service
+{{#if use_sbin ~}}
+%{_sbindir}/*
+{{else ~}}
+%{_bindir}/*
+{{/if ~}}
+{{#if service ~}}
+%{_unitdir}/{{service}}
+{{/if ~}}
