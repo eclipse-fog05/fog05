@@ -236,6 +236,7 @@ pub struct FDURecord {
     pub status: FDUState,
     pub error: Option<crate::fresult::FError>,
     pub hypervisor_specific: Option<Vec<u8>>,
+    pub restarts: u32,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
