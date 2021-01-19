@@ -182,7 +182,13 @@ pub fn fim_cli(args: FIMCtl, zlocator: String) -> Result<(), ExitFailure> {
                     Some(instance_id) => match zconnector.global.get_instance(instance_id).await {
                         Ok(fdu) => {
                             table.add_row(row!["UUID", "ID", "Node", "Status", "Restarts"]);
-                            table.add_row(row![fdu.uuid, fdu.fdu_uuid, fdu.node, fdu.status,fdu.restarts]);
+                            table.add_row(row![
+                                fdu.uuid,
+                                fdu.fdu_uuid,
+                                fdu.node,
+                                fdu.status,
+                                fdu.restarts
+                            ]);
                             table.printstd();
                             Ok(())
                         }
@@ -218,10 +224,14 @@ pub fn fim_cli(args: FIMCtl, zlocator: String) -> Result<(), ExitFailure> {
                     None => {
                         // first getting FDUs ...
 
-                        table.add_row(row!["UUID", "ID", "Node", "Status", "Kind", "FDUs", "Restarts"]);
+                        table.add_row(row![
+                            "UUID", "ID", "Node", "Status", "Kind", "FDUs", "Restarts"
+                        ]);
                         let fdus = zconnector.global.get_all_instances().await?;
                         for f in fdus {
-                            table.add_row(row![f.uuid, f.fdu_uuid, f.node, f.status, "FDU", "-", f.restarts]);
+                            table.add_row(row![
+                                f.uuid, f.fdu_uuid, f.node, f.status, "FDU", "-", f.restarts
+                            ]);
                         }
 
                         // then
@@ -234,7 +244,7 @@ pub fn fim_cli(args: FIMCtl, zlocator: String) -> Result<(), ExitFailure> {
                                 efdus.push_str(&f);
                             }
 
-                            table.add_row(row![e.uuid, e.id, "", e.status, "Entity", efdus,  "-"]);
+                            table.add_row(row![e.uuid, e.id, "", e.status, "Entity", efdus, "-"]);
                         }
 
                         table.printstd();
