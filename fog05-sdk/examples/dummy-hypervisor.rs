@@ -82,6 +82,7 @@ impl HypervisorPlugin for DummyHypervisor {
             status: FDUState::DEFINED,
             error: None,
             hypervisor_specific: None,
+            restarts: 0,
         };
         log::trace!("Add instance in zenoh");
         self.connector
