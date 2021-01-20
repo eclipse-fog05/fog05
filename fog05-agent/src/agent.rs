@@ -154,6 +154,8 @@ impl Agent {
             }
         };
 
+        let _ = monitoring_fdus.await;
+
         let monitoring_hw = async {
             let guard = self.agent.read().await;
             info!(
