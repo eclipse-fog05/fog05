@@ -67,7 +67,8 @@ assets = [
     ["etc/*", "/etc/fos", "644"],
     ["var/*", "/var/fos", "644"],
     ["resources/fos-agent.service","/lib/systemd/system/fos-agent.service","644"],
-    ["resources/fos-zenoh.service","/lib/systemd/system/fos-zenoh.service","644"]
+    ["resources/fos-zenoh.service","/lib/systemd/system/fos-zenoh.service","644"],
+    ["resources/get-zip.sh","/var/fos/get-zip.sh","755"]
 ]
 conf-files = ["/etc/fos/agent.yaml"]
 
