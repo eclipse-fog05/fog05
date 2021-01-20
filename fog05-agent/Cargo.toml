@@ -55,7 +55,7 @@ git-version = "0.3.4"
 maintainer = "ADLINK fog05 team <fog05@adlink-labs.tech>"
 copyright = "2020, ADLINK Technology Inc"
 extended-description = "Eclipse fog05 Agent"
-depends = "zenohd (>= 0.5 ), zenohd (<< 0.6 ), $auto"
+depends = "zenohd (>= 0.5 ), zenohd (<< 0.6 ), zenoh-storages (>= 0.5 ), zenoh-storages (<< 0.6 ), $auto"
 license-file = ["../LICENSE.md", "0"]
 maintainer-scripts = "fog05-agent/resources/debian/"
 section = "utils"

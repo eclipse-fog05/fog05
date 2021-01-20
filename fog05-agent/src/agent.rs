@@ -126,7 +126,35 @@ impl Agent {
 
         self.advertise().await;
 
-        let monitoring = async {
+        let monitoring_fdus = async {
+            // TODO this can become a on-update based
+            // Subscribing to node instances that are updated by
+            // plugins and share that update globally
+
+            let guard = self.agent.read().await;
+            info!(
+                "Monitoring FDUs loop started with interveal {}",
+                guard.config.monitoring_interveal
+            );
+            let interveal = guard.config.monitoring_interveal;
+            drop(guard);
+            loop {
+                let node_fdus_instances = self
+                    .connector
+                    .global
+                    .get_node_instances(self.node_uuid)
+                    .await
+                    .unwrap();
+
+                for i in node_fdus_instances {
+                    log::trace!("Node FDU: {} Status: {}", i.uuid, i.status);
+                    let _ = self.connector.global.add_instance(&i).await;
+                }
+                task::sleep(Duration::from_secs(interveal)).await;
+            }
+        };
+
+        let monitoring_hw = async {
             let guard = self.agent.read().await;
             info!(
                 "Monitoring loop started with interveal {}",
@@ -214,7 +242,7 @@ impl Agent {
                 task::sleep(Duration::from_secs(interveal)).await;
             }
         };
-        match monitoring.race(stop.recv()).await {
+        match monitoring_hw.race(stop.recv()).await {
             Ok(_) => trace!("Monitoring ending correct"),
             Err(e) => trace!("Monitoring ending got error: {}", e),
         }

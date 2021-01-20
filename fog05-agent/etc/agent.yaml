@@ -1,7 +1,7 @@
 ---
     system: 00000000-0000-0000-0000-000000000000
     pid_file : /var/fos/fos_agent.pid
-    zlocator : tcp/127.0.0.1:7447
+    zlocator : tcp/127.0.0.1:61189
     path : /etc/fos
     mgmt_interface : eno0
     monitoring_interveal: 10

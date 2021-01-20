@@ -10,7 +10,7 @@ async fn main() {
     env_logger::init();
 
     let zenoh = Arc::new(
-        zenoh::net::open(Properties::from("mode=client;peer=tcp/127.0.0.1:7447").into())
+        zenoh::net::open(Properties::from("mode=client;peer=tcp/127.0.0.1:61189").into())
             .await
             .unwrap(),
     );

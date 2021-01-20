@@ -37,7 +37,7 @@ use structopt::StructOpt;
 #[derive(StructOpt, Debug)]
 struct DummyArgs {
     /// Config file
-    #[structopt(short, long, default_value = "tcp/127.0.0.1:7447")]
+    #[structopt(short, long, default_value = "tcp/127.0.0.1:61189")]
     zenoh: String,
 }
 

@@ -161,7 +161,7 @@ fn main() -> Result<(), ExitFailure> {
 
     let zlocator = match std::env::var("FOSZENOH") {
         Ok(s) => s,
-        Err(_) => String::from("tcp/127.0.0.1:7447"),
+        Err(_) => String::from("tcp/127.0.0.1:61189"),
     };
 
     let args = FOSCtl::from_args();

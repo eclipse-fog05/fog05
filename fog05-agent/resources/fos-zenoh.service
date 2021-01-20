@@ -8,7 +8,7 @@ Type=simple
 PIDFile=/tmp/zenoh.pid
 Environment=RUST_LOG=debug
 ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment ZIP=$( /var/fos/get-zip.sh )"
-ExecStart = /usr/bin/zenohd --mem-storage "/fos/**" -l tcp/127.0.0.1:7447 -l unixsock-stream//tmp/zenoh.sock -l tcp/${ZIP}:7447
+ExecStart = /usr/bin/zenohd --mem-storage "/fos/**" -l tcp/127.0.0.1:61189 -l unixsock-stream//tmp/fos-zenoh.sock -l tcp/${ZIP}:61189
 KillMode=mixed
 KillSignal=SIGINT
 RestartKillSignal=SIGINT
