@@ -55,7 +55,7 @@ git-version = "0.3.4"
 maintainer = "ADLINK fog05 team <fog05@adlink-labs.tech>"
 copyright = "2020, ADLINK Technology Inc"
 extended-description = "Eclipse fog05 Agent"
-depends = "$auto"
+depends = "zenohd (>= 0.5 ), zenohd (<< 0.6 ), $auto"
 license-file = ["../LICENSE.md", "0"]
 maintainer-scripts = "fog05-agent/resources/debian/"
 section = "utils"
@@ -66,7 +66,8 @@ assets = [
     # assets
     ["etc/*", "/etc/fos", "644"],
     ["var/*", "/var/fos", "644"],
-    ["resources/fos-agent.service","/lib/systemd/system/fos-agent.service","644"]
+    ["resources/fos-agent.service","/lib/systemd/system/fos-agent.service","644"],
+    ["resources/fos-zenoh.service","/lib/systemd/system/fos-zenoh.service","644"]
 ]
 conf-files = ["/etc/fos/agent.yaml"]
 

@@ -1,0 +1,21 @@
+[unit]
+Description = Eclipse fog05 -- Eclipse Zenoh
+
+
+
+[Service]
+Type=simple
+PIDFile=/tmp/zenoh.pid
+Environment=RUST_LOG=debug
+ExecStart = /usr/bin/zenohd --mem-storage "/fos/**" -l tcp/127.0.0.1:7447 -l unixsock-stream//tmp/zenoh.sock -l tcp/$(ip addr show dev $(awk '$2 == 00000000 { print $1 }' /proc/net/route) | awk '$1 ~ /^inet/ { sub("/.*", "", $2); print $2 }' | head -n1):7447
+KillMode=mixed
+KillSignal=SIGINT
+RestartKillSignal=SIGINT
+Restart=on-failure
+User=fos
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=fos-zenoh
+[Install]
+WantedBy=multi-user.target
+
