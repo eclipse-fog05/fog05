@@ -685,7 +685,7 @@ impl<'a> ZNServiceGenerator<'a> {
                                     }
                                 };
                                 log::trace!("Receiver loop started");
-                                Ok(rcv_loop.race(r.recv()).await.map_err(|e| ZRPCError::Error(format!("{}", e)))?)
+                                rcv_loop.race(r.recv()).await.map_err(|e| ZRPCError::Error(format!("{}", e)))
                             }
                         );
                         Ok((s,h))
@@ -734,7 +734,7 @@ impl<'a> ZNServiceGenerator<'a> {
                     Box::pin(__register(self))
                 }
 
-                #[allow(clippy::type_complexity,clippy::manual_async_fn)]
+                #[allow(clippy::type_complexity,clippy::manual_async_fn, clippy::needless_question_mark)]
                 fn start(
                     &self,
                 ) -> ::core::pin::Pin<
@@ -852,7 +852,7 @@ impl<'a> ZNServiceGenerator<'a> {
                                 log::trace!("RPC Receiver loop started...");
                                 let res = rcv_loop.race(_stop.recv()).await.map_err(|e| ZRPCError::Error(format!("{}", e)));
                                 log::trace!("RPC Receiver loop existing  with {:?}", res);
-                                Ok(res?)
+                                res
                             }
                             _ => Err(ZRPCError::StateTransitionNotAllowed("State is not WORK, serve called directly? serve is called by calling work!".to_string())),
                         }

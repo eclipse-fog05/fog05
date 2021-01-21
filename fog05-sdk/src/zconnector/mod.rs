@@ -18,9 +18,14 @@ extern crate serde;
 
 use super::im::data::*;
 use crate::fresult::{FError, FResult};
+use async_std::pin::Pin;
+use async_std::stream::Stream;
 use async_std::sync::{Arc, Mutex};
+use async_std::task::{Context, Poll};
+use futures::future;
 use futures::prelude::*;
 use log::{debug, error, info, trace, warn};
+use pin_project_lite::pin_project;
 use serde::{de::DeserializeOwned, Serialize};
 use std::convert::TryFrom;
 use std::convert::TryInto;
@@ -370,6 +375,52 @@ macro_rules! NETNS_SELECTOR {
     ($prefix:expr, $sysid:expr, $tenantid:expr) => {
         format!("{}/{}/tenants/{}/netns/*/info", $prefix, $sysid, $tenantid)
     };
+}
+
+pin_project! {
+    pub struct FDURecordStream<'a> {
+        #[pin]
+        change_stream: zenoh::ChangeStream<'a>,
+    }
+}
+
+impl FDURecordStream<'_> {
+    pub async fn close(self) -> FResult<()> {
+        Ok(self.change_stream.close().await?)
+    }
+}
+
+impl Stream for FDURecordStream<'_> {
+    type Item = crate::im::fdu::FDURecord;
+
+    #[inline(always)]
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+        match async_std::pin::Pin::new(self)
+            .change_stream
+            .poll_next_unpin(cx)
+        {
+            Poll::Ready(Some(change)) => match change.kind {
+                zenoh::ChangeKind::PUT | zenoh::ChangeKind::PATCH => match change.value {
+                    Some(value) => match value {
+                        zenoh::Value::Raw(_, buf) => {
+                            match bincode::deserialize::<crate::im::fdu::FDURecord>(&buf.to_vec()) {
+                                Ok(info) => Poll::Ready(Some(info)),
+                                Err(_) => Poll::Pending,
+                            }
+                        }
+                        _ => Poll::Pending,
+                    },
+                    None => {
+                        log::warn!("Received empty change drop it");
+                        Poll::Pending
+                    }
+                },
+                zenoh::ChangeKind::DELETE => Poll::Pending,
+            },
+            Poll::Ready(None) => Poll::Ready(None),
+            Poll::Pending => Poll::Pending,
+        }
+    }
 }
 
 pub struct Global {
@@ -1267,6 +1318,52 @@ impl Global {
             }
             _ => Err(FError::TooMuchError),
         }
+    }
+
+    pub async fn subscribe_node_instances(
+        &self,
+        node_uuid: Uuid,
+    ) -> FResult<async_std::channel::Receiver<crate::im::fdu::FDURecord>> {
+        let selector = zenoh::Selector::try_from(NODE_INSTANCE_SELECTOR3!(
+            GLOBAL_ACTUAL_PREFIX,
+            self.system_id,
+            self.tenant_id,
+            node_uuid
+        ))?;
+
+        let (sender, receiver) = async_std::channel::unbounded::<crate::im::fdu::FDURecord>();
+        let sub_z = self.z.clone();
+
+        let _sub = async_std::task::spawn(async move {
+            let ws = sub_z.workspace(None).await.ok().unwrap();
+            let mut cs = ws.subscribe(&selector).await.ok().unwrap();
+            while let Some(change) = cs.next().await {
+                match change.kind {
+                    zenoh::ChangeKind::PUT | zenoh::ChangeKind::PATCH => match change.value {
+                        Some(value) => {
+                            if let zenoh::Value::Raw(_, buf) = value {
+                                if let Ok(info) =
+                                    bincode::deserialize::<crate::im::fdu::FDURecord>(&buf.to_vec())
+                                {
+                                    sender.send(info).await.ok().unwrap();
+                                }
+                            }
+                        }
+                        None => log::warn!("Received empty change drop it"),
+                    },
+                    zenoh::ChangeKind::DELETE => (),
+                }
+            }
+        });
+
+        Ok(receiver)
+
+        // If Zenoh was allowing this, this would be the preferred solution.
+        // let ws = self.z.workspace(None).await?;
+        // Ok(ws
+        //     .subscribe(&selector)
+        //     .await
+        //     .map(|change_stream| FDURecordStream { change_stream })?)
     }
 
     pub async fn get_node_instances(

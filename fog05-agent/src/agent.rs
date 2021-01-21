@@ -128,30 +128,22 @@ impl Agent {
 
         let m_self = self.clone();
         let monitoring_fdus = async_std::task::spawn(async move {
-            // TODO this can become a on-update based
-            // Subscribing to node instances that are updated by
-            // plugins and share that update globally
 
-            let guard = m_self.agent.read().await;
-            info!(
-                "Monitoring FDUs loop started with interveal {}",
-                guard.config.monitoring_interveal
-            );
-            let interveal = guard.config.monitoring_interveal;
-            drop(guard);
+            let receiver = m_self
+                .connector
+                .global
+                .subscribe_node_instances(m_self.node_uuid)
+                .await
+                .unwrap();
+
             loop {
-                let node_fdus_instances = m_self
-                    .connector
-                    .global
-                    .get_node_instances(m_self.node_uuid)
-                    .await
-                    .unwrap();
-
-                for i in node_fdus_instances {
-                    log::trace!("Node FDU: {} Status: {}", i.uuid, i.status);
-                    let _ = m_self.connector.global.add_instance(&i).await;
+                match receiver.recv().await {
+                    Ok(instance) => {
+                        log::info!("Node FDU: {} Status: {}", instance.uuid, instance.status);
+                        let _ = m_self.connector.global.add_instance(&instance).await;
+                    }
+                    Err(e) => log::warn!("FDU Monitoring receiver error: {}", e),
                 }
-                task::sleep(Duration::from_secs(interveal)).await;
             }
         });
 
@@ -1152,7 +1144,6 @@ impl AgentOrchestratorInterface for Agent {
         trace!("Calling plugin function");
         let instance = plugin.define_fdu(descriptor).await??;
         trace!("Writing instance {:?}", instance);
-        self.connector.global.add_instance(&instance).await?;
         Ok(instance)
     }
 
@@ -1171,13 +1162,6 @@ impl AgentOrchestratorInterface for Agent {
 
         trace!("Calling plugin function");
         plugin.configure_fdu(instance_uuid).await??;
-        let instance = self
-            .connector
-            .global
-            .get_node_instance(self.node_uuid, instance_uuid)
-            .await?;
-        trace!("Writing instance {:?}", instance);
-        self.connector.global.add_instance(&instance).await?;
         Ok(instance)
     }
 
@@ -1193,13 +1177,6 @@ impl AgentOrchestratorInterface for Agent {
             .ok_or(FError::NotFound)?;
 
         plugin.start_fdu(instance_uuid).await??;
-        let instance = self
-            .connector
-            .global
-            .get_node_instance(self.node_uuid, instance_uuid)
-            .await?;
-        trace!("Writing instance {:?}", instance);
-        self.connector.global.add_instance(&instance).await?;
         Ok(instance)
     }
 
@@ -1230,13 +1207,6 @@ impl AgentOrchestratorInterface for Agent {
             .ok_or(FError::NotFound)?;
 
         plugin.stop_fdu(instance_uuid).await??;
-        let instance = self
-            .connector
-            .global
-            .get_node_instance(self.node_uuid, instance_uuid)
-            .await?;
-        trace!("Writing instance {:?}", instance);
-        self.connector.global.add_instance(&instance).await?;
         Ok(instance)
     }
 
@@ -1251,13 +1221,6 @@ impl AgentOrchestratorInterface for Agent {
             .ok_or(FError::NotFound)?;
 
         plugin.clean_fdu(instance_uuid).await??;
-        let instance = self
-            .connector
-            .global
-            .get_node_instance(self.node_uuid, instance_uuid)
-            .await?;
-        trace!("Writing instance {:?}", instance);
-        self.connector.global.add_instance(&instance).await?;
         Ok(instance)
     }
 

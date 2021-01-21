@@ -16,6 +16,7 @@ zenoh = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "master" 
 zenoh-protocol = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "master" }
 uhlc = "0.2"
 async-trait = "0.1.36"
+pin-project-lite = "0.1.7"
 futures = "0.3.5"
 thiserror = "1.0"
 serde_derive = "1.0.55"
