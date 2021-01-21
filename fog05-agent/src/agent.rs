@@ -128,7 +128,6 @@ impl Agent {
 
         let m_self = self.clone();
         let monitoring_fdus = async_std::task::spawn(async move {
-
             let receiver = m_self
                 .connector
                 .global
