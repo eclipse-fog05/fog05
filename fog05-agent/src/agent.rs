@@ -13,7 +13,6 @@
 
 #![allow(unused_variables)]
 
-extern crate machine_uid;
 extern crate pnet_datalink;
 extern crate serde;
 extern crate serde_json;

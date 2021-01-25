@@ -36,6 +36,7 @@ pnet = { version = "0.26.0", features = ["serde"]}
 reqwest = { version = "0.10", features = ["blocking", "json"] }
 rand = "0.7.3"
 ipnetwork = "0.17.0"
+machine-uid = "0.2.0"
 
 
 

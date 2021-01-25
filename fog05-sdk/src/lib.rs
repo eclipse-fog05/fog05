@@ -20,3 +20,9 @@ pub mod plugins;
 pub mod types;
 
 pub mod api;
+
+pub fn get_node_uuid() -> crate::fresult::FResult<uuid::Uuid> {
+    let node_id_raw = machine_uid::get()?;
+    let node_str: &str = &node_id_raw;
+    Ok(uuid::Uuid::parse_str(node_str)?)
+}

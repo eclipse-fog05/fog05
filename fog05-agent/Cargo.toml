@@ -35,7 +35,6 @@ znrpc-macros = {path = "../znrpc-macros"}
 fog05-sdk = {path = "../fog05-sdk"}
 sysinfo = "0.15.3"
 psutil = "3.2.0"
-machine-uid = "0.2.0"
 async-ctrlc ={version = "1.2.0", features = ["stream"]}
 hostname = "0.3.1"
 reqwest = { version = "0.10", features = ["blocking", "json"] }

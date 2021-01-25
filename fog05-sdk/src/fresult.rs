@@ -36,6 +36,7 @@ pub enum FError {
     UnknownError(String),
     NetworkingError(String),
     HypervisorError(String),
+    UUIDError(String),
 }
 
 impl fmt::Display for FError {
@@ -59,6 +60,7 @@ impl fmt::Display for FError {
             FError::UnknownError(err) => write!(f, "Error {}", err),
             FError::NetworkingError(err) => write!(f, "NetworkingError {}", err),
             FError::HypervisorError(err) => write!(f, "HypervisorError {}", err),
+            FError::UUIDError(err) => write!(f, "UUIDError {}", err),
         }
     }
 }
@@ -96,6 +98,18 @@ impl From<reqwest::Error> for FError {
 impl From<zrpc::zrpcresult::ZRPCError> for FError {
     fn from(err: zrpc::zrpcresult::ZRPCError) -> Self {
         FError::ZError(err.to_string())
+    }
+}
+
+impl From<Box<dyn std::error::Error>> for FError {
+    fn from(err: Box<dyn std::error::Error>) -> Self {
+        FError::UnknownError(err.to_string())
+    }
+}
+
+impl From<uuid::Error> for FError {
+    fn from(err: uuid::Error) -> Self {
+        FError::UUIDError(err.to_string())
     }
 }
 

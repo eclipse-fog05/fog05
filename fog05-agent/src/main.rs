@@ -11,8 +11,6 @@
 *   ADLINK fog05 team, <fog05@adlink-labs.tech>
 *********************************************************************************/
 
-extern crate machine_uid;
-
 use std::process;
 use std::str;
 
@@ -30,7 +28,6 @@ use zenoh::*;
 use fog05_sdk::zconnector::ZConnector;
 
 use async_ctrlc::CtrlC;
-use uuid::Uuid;
 
 use structopt::StructOpt;
 
@@ -119,9 +116,7 @@ async fn main() {
     write_file(pid_file_path, my_pid.to_string().into_bytes()).await;
 
     // Getting Node UUID
-    let node_id_raw = machine_uid::get().unwrap();
-    let node_str: &str = &node_id_raw;
-    let node_uuid = Uuid::parse_str(node_str).unwrap();
+    let node_uuid = fog05_sdk::get_node_uuid().unwrap();
     info!("Node UUID is {}", node_uuid);
 
     //Creating the Zenoh and ZConnector
