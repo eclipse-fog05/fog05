@@ -47,6 +47,9 @@ struct AgentArgs {
     /// Config file
     #[structopt(short, long, default_value = AGENT_CONFIG_FILE)]
     config: String,
+    /// Prints out the current Node UUID then exits
+    #[structopt(short, long)]
+    node_uuid: bool,
 }
 
 async fn read_file(path: &Path) -> String {
@@ -61,6 +64,16 @@ async fn write_file(path: &Path, content: Vec<u8>) {
 
 #[async_std::main]
 async fn main() {
+
+
+    let args = AgentArgs::from_args();
+
+    if args.node_uuid {
+        println!("{}", fog05_sdk::get_node_uuid().unwrap());
+        std::process::exit(0);
+    }
+
+
     // Init logging
     env_logger::init_from_env(
         env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "info"),
@@ -68,7 +81,6 @@ async fn main() {
 
     debug!("Eclipse fog05 Agent {}", GIT_VERSION);
 
-    let args = AgentArgs::from_args();
     let conf_file_path = Path::new(&args.config);
     let config = serde_yaml::from_str::<AgentConfig>(&(read_file(&conf_file_path).await)).unwrap();
 
