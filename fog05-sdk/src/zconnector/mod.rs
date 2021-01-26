@@ -1601,6 +1601,38 @@ impl Global {
         }
     }
 
+    pub async fn get_node_all_interfaces(
+        &self,
+        node_uuid: Uuid,
+    ) -> FResult<Vec<crate::types::VirtualInterface>> {
+        let selector = zenoh::Selector::try_from(NODE_VIFACE_PATH!(
+            GLOBAL_ACTUAL_PREFIX,
+            self.system_id,
+            self.tenant_id,
+            node_uuid,
+            "*"
+        ))?;
+        let ws = self.z.workspace(None).await?;
+        let mut ds = ws.get(&selector).await?;
+        let mut data = Vec::new();
+        while let Some(d) = ds.next().await {
+            data.push(d)
+        }
+        let mut ifaces = Vec::new();
+
+        for kv in data {
+            match &kv.value {
+                zenoh::Value::Raw(_, buf) => {
+                    let info =
+                            bincode::deserialize::<crate::types::VirtualInterface>(&buf.to_vec())?;
+                    ifaces.push(info);
+                }
+                _ => return Err(FError::EncodingError),
+            }
+        }
+        Ok(ifaces)
+    }
+
     pub async fn add_node_interface(
         &self,
         node_uuid: Uuid,
