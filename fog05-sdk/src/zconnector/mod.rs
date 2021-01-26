@@ -1624,7 +1624,7 @@ impl Global {
             match &kv.value {
                 zenoh::Value::Raw(_, buf) => {
                     let info =
-                            bincode::deserialize::<crate::types::VirtualInterface>(&buf.to_vec())?;
+                        bincode::deserialize::<crate::types::VirtualInterface>(&buf.to_vec())?;
                     ifaces.push(info);
                 }
                 _ => return Err(FError::EncodingError),

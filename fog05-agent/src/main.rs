@@ -64,15 +64,12 @@ async fn write_file(path: &Path, content: Vec<u8>) {
 
 #[async_std::main]
 async fn main() {
-
-
     let args = AgentArgs::from_args();
 
     if args.node_uuid {
         println!("{}", fog05_sdk::get_node_uuid().unwrap());
         std::process::exit(0);
     }
-
 
     // Init logging
     env_logger::init_from_env(
