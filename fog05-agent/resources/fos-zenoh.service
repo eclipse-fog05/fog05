@@ -8,7 +8,8 @@ Type=simple
 PIDFile=/tmp/zenoh.pid
 Environment=RUST_LOG=debug
 ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment ZIP=$( /var/fos/get-zip.sh )"
-ExecStart = /usr/bin/zenohd --mem-storage "/fos/**" -l tcp/127.0.0.1:61189 -l unixsock-stream//tmp/fos-zenoh.sock -l tcp/${ZIP}:61189
+ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment NODEID=$( /usr/bin/fog05-agent --node-uuid)"
+ExecStart = /usr/bin/zenohd --mem-storage "/fos/**" -l tcp/127.0.0.1:61189 -l unixsock-stream//tmp/fos-zenoh.sock -l tcp/${ZIP}:61189 --id ${NODEID}
 KillMode=mixed
 KillSignal=SIGINT
 RestartKillSignal=SIGINT
