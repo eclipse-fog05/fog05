@@ -1012,8 +1012,6 @@ impl<'a> ZNServiceGenerator<'a> {
                     self.server_uuid
                 }
 
-
-
                 #vis fn find_servers(
                     z : async_std::sync::Arc<zenoh::net::Session>
                 ) -> impl std::future::Future<Output = ZRPCResult<Vec<uuid::Uuid>>> + 'static

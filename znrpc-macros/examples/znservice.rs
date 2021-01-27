@@ -73,6 +73,8 @@ async fn main() {
     // let hello = client.hello("client".to_string()).await;
     // println!("Res is: {:?}", hello);
 
+    println!("Verify server: {:?}", client.verify_server().await);
+
     let (s, handle) = server.start().await.unwrap();
 
     let servers = HelloClient::find_servers(zsession.clone()).await;
@@ -81,7 +83,12 @@ async fn main() {
     let local_servers = HelloClient::find_local_servers(zsession.clone()).await;
     println!("local_servers found: {:?}", local_servers);
 
+    println!("Verify server: {:?}", client.verify_server().await);
+
     task::sleep(Duration::from_secs(1)).await;
+
+    println!("Verify server: {:?}", client.verify_server().await);
+
     let hello = client.hello("client".to_string()).await;
     println!("Res is: {:?}", hello);
 
