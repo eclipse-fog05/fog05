@@ -42,6 +42,9 @@ static LOCAL_DESIRED_PREFIX: &str = "/fos/local/desired";
 static LOCAL_CONSTRAINT_ACTUAL_PREFIX: &str = "/fos/constrained/local/actual";
 static LOCAL_CONSTRAINT_DESIRED_PREFIX: &str = "/fos/constrained/local/desired";
 
+static GLOBAL_PREFIX: &str = "/fos/global";
+static LOCAL_PREFIX: &str = "/fos/local";
+
 /// Default systemid is 00000000-0000-0000-0000-000000000000
 static DEFAULT_SYSTEM_ID: Uuid = Uuid::nil();
 static DEFAULT_TENANT_ID: Uuid = Uuid::nil();
@@ -1731,14 +1734,20 @@ impl Global {
     }
 }
 
+mod local;
+use local::Local;
+
 pub struct ZConnector {
     pub global: Global,
+    pub local: Local,
 }
 
 impl ZConnector {
     pub fn new(z: Arc<zenoh::Zenoh>, sys_id: Option<Uuid>, ten_id: Option<Uuid>) -> Self {
         Self {
-            global: Global::new(z, sys_id, ten_id),
+            global: Global::new(z.clone(), sys_id, ten_id),
+            // We should get the node UUID from zenoh
+            local: Local::new(z, crate::get_node_uuid().unwrap()),
         }
     }
 
