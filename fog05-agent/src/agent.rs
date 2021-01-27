@@ -605,6 +605,8 @@ impl AgentPluginInterface for Agent {
                     let nw_client = NetworkingPluginClient::new(self.z.clone(), plugin_uuid);
 
                     let n_client = nw_client.clone();
+
+                    // We spawn a task for the creation of the default virtual network.
                     task::spawn(async move {
                         task::sleep(Duration::from_secs(5)).await;
                         n_client
