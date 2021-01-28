@@ -127,12 +127,7 @@ impl Agent {
 
         let m_self = self.clone();
         let monitoring_fdus = async_std::task::spawn(async move {
-            let receiver = m_self
-                .connector
-                .global
-                .subscribe_node_instances(m_self.node_uuid)
-                .await
-                .unwrap();
+            let receiver = m_self.connector.local.subscribe_instances().await.unwrap();
 
             loop {
                 match receiver.recv().await {
@@ -226,6 +221,12 @@ impl Agent {
 
                 self.connector
                     .global
+                    .add_node_status(&node_status)
+                    .await
+                    .unwrap();
+
+                self.connector
+                    .local
                     .add_node_status(&node_status)
                     .await
                     .unwrap();
@@ -360,6 +361,7 @@ impl Agent {
         trace!("Node Info: {:?}", ni);
 
         self.connector.global.add_node_info(&ni).await.unwrap();
+        self.connector.local.add_node_info(&ni).await.unwrap();
     }
 
     async fn get_compatible_nodes(&self, fdu_uuid: Uuid) -> FResult<Vec<Uuid>> {
@@ -591,10 +593,7 @@ impl AgentPluginInterface for Agent {
                         kind: kind.clone(),
                         name: format!("{}Plugin", kind),
                     };
-                    self.connector
-                        .global
-                        .add_plugin(self.node_uuid, &pl_info)
-                        .await?;
+                    self.connector.local.add_plugin(&pl_info).await?;
                     Ok(plugin_uuid)
                 }
             },
@@ -622,10 +621,7 @@ impl AgentPluginInterface for Agent {
                         kind: kind.clone(),
                         name: format!("{}Plugin", kind),
                     };
-                    self.connector
-                        .global
-                        .add_plugin(self.node_uuid, &pl_info)
-                        .await?;
+                    self.connector.local.add_plugin(&pl_info).await?;
                     Ok(plugin_uuid)
                 }
             },
@@ -637,26 +633,16 @@ impl AgentPluginInterface for Agent {
         trace!("unregister_plugin called with {}", plugin_uuid);
         let mut guard = self.agent.write().await;
         trace!("register_plugin took WriteLock!");
-        let pl_info = self
-            .connector
-            .global
-            .get_plugin(self.node_uuid, plugin_uuid)
-            .await?;
+        let pl_info = self.connector.local.get_plugin(plugin_uuid).await?;
         match pl_info.kind {
             types::PluginKind::HYPERVISOR(hv) => {
                 guard.hypervisors.remove(&hv);
-                self.connector
-                    .global
-                    .remove_plugin(self.node_uuid, plugin_uuid)
-                    .await?;
+                self.connector.local.remove_plugin(plugin_uuid).await?;
                 Ok(plugin_uuid)
             }
             types::PluginKind::NETWORKING => {
                 guard.networking = None;
-                self.connector
-                    .global
-                    .remove_plugin(self.node_uuid, plugin_uuid)
-                    .await?;
+                self.connector.local.remove_plugin(plugin_uuid).await?;
                 Ok(plugin_uuid)
             }
             _ => Err(FError::Unimplemented),

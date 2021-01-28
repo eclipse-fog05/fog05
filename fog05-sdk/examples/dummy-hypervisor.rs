@@ -85,10 +85,7 @@ impl HypervisorPlugin for DummyHypervisor {
             restarts: 0,
         };
         log::trace!("Add instance in zenoh");
-        self.connector
-            .global
-            .add_node_instance(node_uuid, &instance)
-            .await?;
+        self.connector.local.add_instance(&instance).await?;
         log::trace!("Instance status {:?}", instance.status);
         guard.fdus.insert(instance_uuid, instance.clone());
 
@@ -97,19 +94,12 @@ impl HypervisorPlugin for DummyHypervisor {
 
     async fn undefine_fdu(&mut self, instance_uuid: Uuid) -> FResult<Uuid> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        let instance = self
-            .connector
-            .global
-            .get_node_instance(node_uuid, instance_uuid)
-            .await?;
+        let instance = self.connector.local.get_instance(instance_uuid).await?;
         match instance.status {
             FDUState::DEFINED => {
                 let mut guard = self.fdus.write().await;
                 guard.fdus.remove(&instance_uuid);
-                self.connector
-                    .global
-                    .remove_node_instance(node_uuid, instance_uuid)
-                    .await?;
+                self.connector.local.remove_instance(instance_uuid).await?;
 
                 Ok(instance_uuid)
             }
@@ -122,11 +112,7 @@ impl HypervisorPlugin for DummyHypervisor {
         log::trace!("Get node UUID");
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
         log::trace!("Get instance");
-        let mut instance = self
-            .connector
-            .global
-            .get_node_instance(node_uuid, instance_uuid)
-            .await?;
+        let mut instance = self.connector.local.get_instance(instance_uuid).await?;
         log::trace!("Check FDU status: {:?}", instance.status);
         match instance.status {
             FDUState::DEFINED => {
@@ -233,10 +219,7 @@ impl HypervisorPlugin for DummyHypervisor {
                 instance.interfaces = interfaces;
                 instance.connection_points = cps.into_iter().map(|(_, v)| v).collect();
                 instance.status = FDUState::CONFIGURED;
-                self.connector
-                    .global
-                    .add_node_instance(node_uuid, &instance)
-                    .await?;
+                self.connector.local.add_instance(&instance).await?;
                 log::trace!("Instance status {:?}", instance.status);
                 guard.fdus.insert(instance_uuid, instance);
                 Ok(instance_uuid)
@@ -248,11 +231,7 @@ impl HypervisorPlugin for DummyHypervisor {
     async fn clean_fdu(&mut self, instance_uuid: Uuid) -> FResult<Uuid> {
         log::debug!("Clean FDU {:?}", instance_uuid);
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        let mut instance = self
-            .connector
-            .global
-            .get_node_instance(node_uuid, instance_uuid)
-            .await?;
+        let mut instance = self.connector.local.get_instance(instance_uuid).await?;
         match instance.status {
             FDUState::CONFIGURED => {
                 let mut guard = self.fdus.write().await;
@@ -289,10 +268,7 @@ impl HypervisorPlugin for DummyHypervisor {
                 instance.interfaces = Vec::new();
                 instance.connection_points = Vec::new();
                 instance.status = FDUState::DEFINED;
-                self.connector
-                    .global
-                    .add_node_instance(node_uuid, &instance)
-                    .await?;
+                self.connector.local.add_instance(&instance).await?;
                 log::trace!("Instance status {:?}", instance.status);
                 guard.fdus.insert(instance_uuid, instance);
 
@@ -305,20 +281,13 @@ impl HypervisorPlugin for DummyHypervisor {
     async fn start_fdu(&mut self, instance_uuid: Uuid) -> FResult<Uuid> {
         log::debug!("Start FDU {:?}", instance_uuid);
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        let mut instance = self
-            .connector
-            .global
-            .get_node_instance(node_uuid, instance_uuid)
-            .await?;
+        let mut instance = self.connector.local.get_instance(instance_uuid).await?;
         log::trace!("Instance status {:?}", instance.status);
         match instance.status {
             FDUState::CONFIGURED => {
                 let mut guard = self.fdus.write().await;
                 instance.status = FDUState::RUNNING;
-                self.connector
-                    .global
-                    .add_node_instance(node_uuid, &instance)
-                    .await?;
+                self.connector.local.add_instance(&instance).await?;
 
                 log::trace!("Instance status {:?}", instance.status);
                 guard.fdus.insert(instance_uuid, instance);
@@ -346,20 +315,13 @@ impl HypervisorPlugin for DummyHypervisor {
     async fn stop_fdu(&mut self, instance_uuid: Uuid) -> FResult<Uuid> {
         log::debug!("Stop instance {:?}", instance_uuid);
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        let mut instance = self
-            .connector
-            .global
-            .get_node_instance(node_uuid, instance_uuid)
-            .await?;
+        let mut instance = self.connector.local.get_instance(instance_uuid).await?;
         log::trace!("Instance status {:?}", instance.status);
         match instance.status {
             FDUState::RUNNING => {
                 let mut guard = self.fdus.write().await;
                 instance.status = FDUState::CONFIGURED;
-                self.connector
-                    .global
-                    .add_node_instance(node_uuid, &instance)
-                    .await?;
+                self.connector.local.add_instance(&instance).await?;
                 log::trace!("Instance status {:?}", instance.status);
                 guard.fdus.insert(instance_uuid, instance);
                 Ok(instance_uuid)
@@ -374,10 +336,7 @@ impl HypervisorPlugin for DummyHypervisor {
 
     async fn get_fdu_status(&self, instance_uuid: Uuid) -> FResult<FDURecord> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        self.connector
-            .global
-            .get_node_instance(node_uuid, instance_uuid)
-            .await
+        self.connector.local.get_instance(instance_uuid).await
     }
 }
 

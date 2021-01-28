@@ -342,12 +342,12 @@ impl Local {
 
     pub async fn add_connection_point(
         &self,
-        cp_info: crate::types::ConnectionPoint,
+        cp_info: &crate::types::ConnectionPoint,
     ) -> FResult<()> {
         let path =
             zenoh::Path::try_from(NODE_CP_PATH!(LOCAL_PREFIX, self.node_uuid, cp_info.uuid))?;
         let ws = self.z.workspace(None).await?;
-        let encoded_info = bincode::serialize(&cp_info)?;
+        let encoded_info = bincode::serialize(cp_info)?;
         Ok(ws.put(&path, encoded_info.into()).await?)
     }
 
@@ -514,9 +514,8 @@ impl Local {
         Ok(ws.delete(&path).await?)
     }
 
-    pub async fn subscribe_node_instances(
+    pub async fn subscribe_instances(
         &self,
-        node_uuid: Uuid,
     ) -> FResult<async_std::channel::Receiver<crate::im::fdu::FDURecord>> {
         let selector =
             zenoh::Selector::try_from(NODE_INSTANCE_SELECTOR3!(LOCAL_PREFIX, self.node_uuid))?;

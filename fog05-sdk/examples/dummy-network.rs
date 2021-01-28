@@ -100,8 +100,8 @@ impl NetworkingPlugin for DummyNetwork {
         }
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
         self.connector
-            .global
-            .add_node_virutal_network(node_uuid, &default_vnet)
+            .local
+            .add_virutal_network(&default_vnet)
             .await?;
         Ok(default_vnet)
     }
@@ -111,10 +111,7 @@ impl NetworkingPlugin for DummyNetwork {
         match self.connector.global.get_virtual_network(vnet_uuid).await {
             Ok(vnet) => {
                 let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-                self.connector
-                    .global
-                    .add_node_virutal_network(node_uuid, &vnet)
-                    .await?;
+                self.connector.local.add_virutal_network(&vnet).await?;
                 Ok(vnet)
             }
             Err(FError::NotFound) => {
@@ -130,25 +127,17 @@ impl NetworkingPlugin for DummyNetwork {
 
     async fn get_virtual_network(&self, vnet_uuid: Uuid) -> FResult<VirtualNetwork> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        self.connector
-            .global
-            .get_node_virtual_network(node_uuid, vnet_uuid)
-            .await
+        self.connector.local.get_virtual_network(vnet_uuid).await
     }
 
     async fn delete_virtual_network(&self, vnet_uuid: Uuid) -> FResult<VirtualNetwork> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        match self
-            .connector
-            .global
-            .get_node_virtual_network(node_uuid, vnet_uuid)
-            .await
-        {
+        match self.connector.local.get_virtual_network(vnet_uuid).await {
             Err(_) => Err(FError::NotFound),
             Ok(vnet) => {
                 self.connector
-                    .global
-                    .remove_node_virtual_network(node_uuid, vnet_uuid)
+                    .local
+                    .remove_virtual_network(vnet_uuid)
                     .await?;
                 Ok(vnet)
             }
@@ -158,12 +147,7 @@ impl NetworkingPlugin for DummyNetwork {
     async fn create_connection_point(&self) -> FResult<ConnectionPoint> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
         let cp_uuid = Uuid::new_v4();
-        match self
-            .connector
-            .global
-            .get_node_connection_point(node_uuid, cp_uuid)
-            .await
-        {
+        match self.connector.local.get_connection_point(cp_uuid).await {
             Err(_) => {
                 let cp = ConnectionPoint {
                     uuid: cp_uuid,
@@ -172,10 +156,7 @@ impl NetworkingPlugin for DummyNetwork {
                     internal_veth: Uuid::new_v4(),
                     external_veth: Uuid::new_v4(),
                 };
-                self.connector
-                    .global
-                    .add_node_connection_point(node_uuid, &cp)
-                    .await?;
+                self.connector.local.add_connection_point(&cp).await?;
                 Ok(cp)
             }
             Ok(_) => Err(FError::AlreadyPresent),
@@ -184,25 +165,17 @@ impl NetworkingPlugin for DummyNetwork {
 
     async fn get_connection_point(&self, cp_uuid: Uuid) -> FResult<ConnectionPoint> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        self.connector
-            .global
-            .get_node_connection_point(node_uuid, cp_uuid)
-            .await
+        self.connector.local.get_connection_point(cp_uuid).await
     }
 
     async fn delete_connection_point(&self, cp_uuid: Uuid) -> FResult<Uuid> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        match self
-            .connector
-            .global
-            .get_node_connection_point(node_uuid, cp_uuid)
-            .await
-        {
+        match self.connector.local.get_connection_point(cp_uuid).await {
             Err(_) => Err(FError::NotFound),
             Ok(_) => {
                 self.connector
-                    .global
-                    .remove_node_connection_point(node_uuid, cp_uuid)
+                    .local
+                    .remove_connection_point(cp_uuid)
                     .await?;
                 Ok(cp_uuid)
             }
@@ -230,10 +203,7 @@ impl NetworkingPlugin for DummyNetwork {
                     addresses: Vec::new(),
                     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
-                self.connector
-                    .global
-                    .add_node_interface(node_uuid, &v_iface)
-                    .await?;
+                self.connector.local.add_interface(&v_iface).await?;
                 Ok(v_iface)
             }
             VirtualInterfaceConfigKind::BRIDGE => {
@@ -246,10 +216,7 @@ impl NetworkingPlugin for DummyNetwork {
                     addresses: Vec::new(),
                     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
-                self.connector
-                    .global
-                    .add_node_interface(node_uuid, &v_iface)
-                    .await?;
+                self.connector.local.add_interface(&v_iface).await?;
                 Ok(v_iface)
             }
             VirtualInterfaceConfigKind::VETH => {
@@ -282,12 +249,12 @@ impl NetworkingPlugin for DummyNetwork {
                 };
 
                 self.connector
-                    .global
-                    .add_node_interface(node_uuid, &v_iface_internal)
+                    .local
+                    .add_interface(&v_iface_internal)
                     .await?;
                 self.connector
-                    .global
-                    .add_node_interface(node_uuid, &v_iface_external)
+                    .local
+                    .add_interface(&v_iface_external)
                     .await?;
                 Ok(v_iface_internal)
             }
@@ -304,10 +271,7 @@ impl NetworkingPlugin for DummyNetwork {
                     addresses: Vec::new(),
                     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
-                self.connector
-                    .global
-                    .add_node_interface(node_uuid, &v_iface)
-                    .await?;
+                self.connector.local.add_interface(&v_iface).await?;
                 Ok(v_iface)
             }
             VirtualInterfaceConfigKind::MACVLAN => {
@@ -322,10 +286,7 @@ impl NetworkingPlugin for DummyNetwork {
                     addresses: Vec::new(),
                     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
-                self.connector
-                    .global
-                    .add_node_interface(node_uuid, &v_iface)
-                    .await?;
+                self.connector.local.add_interface(&v_iface).await?;
                 Ok(v_iface)
             }
             VirtualInterfaceConfigKind::GRE(conf) => {
@@ -342,10 +303,7 @@ impl NetworkingPlugin for DummyNetwork {
                     addresses: Vec::new(),
                     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
-                self.connector
-                    .global
-                    .add_node_interface(node_uuid, &v_iface)
-                    .await?;
+                self.connector.local.add_interface(&v_iface).await?;
                 Ok(v_iface)
             }
             VirtualInterfaceConfigKind::GRETAP(conf) => {
@@ -362,10 +320,7 @@ impl NetworkingPlugin for DummyNetwork {
                     addresses: Vec::new(),
                     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
-                self.connector
-                    .global
-                    .add_node_interface(node_uuid, &v_iface)
-                    .await?;
+                self.connector.local.add_interface(&v_iface).await?;
                 Ok(v_iface)
             }
             VirtualInterfaceConfigKind::IP6GRE(conf) => {
@@ -382,10 +337,7 @@ impl NetworkingPlugin for DummyNetwork {
                     addresses: Vec::new(),
                     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
-                self.connector
-                    .global
-                    .add_node_interface(node_uuid, &v_iface)
-                    .await?;
+                self.connector.local.add_interface(&v_iface).await?;
                 Ok(v_iface)
             }
             VirtualInterfaceConfigKind::IP6GRETAP(conf) => {
@@ -402,10 +354,7 @@ impl NetworkingPlugin for DummyNetwork {
                     addresses: Vec::new(),
                     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
-                self.connector
-                    .global
-                    .add_node_interface(node_uuid, &v_iface)
-                    .await?;
+                self.connector.local.add_interface(&v_iface).await?;
                 Ok(v_iface)
             }
         }
@@ -413,32 +362,18 @@ impl NetworkingPlugin for DummyNetwork {
 
     async fn get_virtual_interface(&self, intf_uuid: Uuid) -> FResult<VirtualInterface> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        self.connector
-            .global
-            .get_node_interface(node_uuid, intf_uuid)
-            .await
+        self.connector.local.get_interface(intf_uuid).await
     }
 
     async fn delete_virtual_interface(&self, intf_uuid: Uuid) -> FResult<VirtualInterface> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        match self
-            .connector
-            .global
-            .get_node_interface(node_uuid, intf_uuid)
-            .await
-        {
+        match self.connector.local.get_interface(intf_uuid).await {
             Err(_) => Err(FError::NotFound),
             Ok(intf) => {
                 if let VirtualInterfaceKind::VETH(ref info) = intf.kind {
-                    self.connector
-                        .global
-                        .remove_node_interface(node_uuid, info.pair)
-                        .await?;
+                    self.connector.local.remove_interface(info.pair).await?;
                 }
-                self.connector
-                    .global
-                    .remove_node_interface(node_uuid, intf_uuid)
-                    .await?;
+                self.connector.local.remove_interface(intf_uuid).await?;
                 Ok(intf)
             }
         }
@@ -455,21 +390,13 @@ impl NetworkingPlugin for DummyNetwork {
             addresses: Vec::new(),
             phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
         };
-        self.connector
-            .global
-            .add_node_interface(node_uuid, &v_iface)
-            .await?;
+        self.connector.local.add_interface(&v_iface).await?;
         Ok(v_iface)
     }
 
     async fn get_virtual_bridge(&self, br_uuid: Uuid) -> FResult<VirtualInterface> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        match self
-            .connector
-            .global
-            .get_node_interface(node_uuid, br_uuid)
-            .await
-        {
+        match self.connector.local.get_interface(br_uuid).await {
             Err(err) => Err(err),
             Ok(i) => match i.kind {
                 VirtualInterfaceKind::BRIDGE(_) => Ok(i),
@@ -480,19 +407,11 @@ impl NetworkingPlugin for DummyNetwork {
 
     async fn delete_virtual_bridge(&self, br_uuid: Uuid) -> FResult<VirtualInterface> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        match self
-            .connector
-            .global
-            .get_node_interface(node_uuid, br_uuid)
-            .await
-        {
+        match self.connector.global.get_interface(br_uuid).await {
             Err(err) => Err(err),
             Ok(i) => match i.kind {
                 VirtualInterfaceKind::BRIDGE(_) => {
-                    self.connector
-                        .global
-                        .remove_node_interface(node_uuid, br_uuid)
-                        .await?;
+                    self.connector.local.remove_interface(br_uuid).await?;
                     Ok(i)
                 }
                 _ => Err(FError::WrongKind),
@@ -507,34 +426,23 @@ impl NetworkingPlugin for DummyNetwork {
             ns_name: self.generate_random_netns_name(),
             interfaces: Vec::new(),
         };
-        self.connector
-            .global
-            .add_node_network_namespace(node_uuid, &netns)
-            .await?;
+        self.connector.local.add_network_namespace(&netns).await?;
         Ok(netns)
     }
 
     async fn get_network_namespace(&self, ns_uuid: Uuid) -> FResult<NetworkNamespace> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        self.connector
-            .global
-            .get_node_network_namespace(node_uuid, ns_uuid)
-            .await
+        self.connector.local.get_network_namespace(ns_uuid).await
     }
 
     async fn delete_network_namespace(&self, ns_uuid: Uuid) -> FResult<NetworkNamespace> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        match self
-            .connector
-            .global
-            .get_node_network_namespace(node_uuid, ns_uuid)
-            .await
-        {
+        match self.connector.local.get_network_namespace(ns_uuid).await {
             Err(_) => Err(FError::NotFound),
             Ok(netns) => {
                 self.connector
-                    .global
-                    .remove_node_network_namespace(node_uuid, ns_uuid)
+                    .local
+                    .remove_network_namespace(ns_uuid)
                     .await?;
                 Ok(netns)
             }
@@ -547,21 +455,10 @@ impl NetworkingPlugin for DummyNetwork {
         cp_uuid: Uuid,
     ) -> FResult<VirtualInterface> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        let cp = self
-            .connector
-            .global
-            .get_node_connection_point(node_uuid, cp_uuid)
-            .await?;
-        let mut iface = self
-            .connector
-            .global
-            .get_node_interface(node_uuid, intf_uuid)
-            .await?;
+        let cp = self.connector.local.get_connection_point(cp_uuid).await?;
+        let mut iface = self.connector.local.get_interface(intf_uuid).await?;
         iface.net_ns = Some(cp.net_ns);
-        self.connector
-            .global
-            .add_node_interface(node_uuid, &iface)
-            .await?;
+        self.connector.local.add_interface(&iface).await?;
         Ok(iface)
     }
 
@@ -571,24 +468,13 @@ impl NetworkingPlugin for DummyNetwork {
         cp_uuid: Uuid,
     ) -> FResult<VirtualInterface> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        let cp = self
-            .connector
-            .global
-            .get_node_connection_point(node_uuid, cp_uuid)
-            .await?;
-        let mut iface = self
-            .connector
-            .global
-            .get_node_interface(node_uuid, intf_uuid)
-            .await?;
+        let cp = self.connector.local.get_connection_point(cp_uuid).await?;
+        let mut iface = self.connector.local.get_interface(intf_uuid).await?;
         match iface.net_ns {
             Some(ns) => {
                 if ns == cp.net_ns {
                     iface.net_ns = None;
-                    self.connector
-                        .global
-                        .add_node_interface(node_uuid, &iface)
-                        .await?;
+                    self.connector.local.add_interface(&iface).await?;
                     return Ok(iface);
                 }
                 Err(FError::NotConnected)
@@ -603,21 +489,10 @@ impl NetworkingPlugin for DummyNetwork {
         vnet_uuid: Uuid,
     ) -> FResult<ConnectionPoint> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        let cp = self
-            .connector
-            .global
-            .get_node_connection_point(node_uuid, cp_uuid)
-            .await?;
-        let mut vnet = self
-            .connector
-            .global
-            .get_node_virtual_network(node_uuid, vnet_uuid)
-            .await?;
+        let cp = self.connector.local.get_connection_point(cp_uuid).await?;
+        let mut vnet = self.connector.local.get_virtual_network(vnet_uuid).await?;
         vnet.connection_points.push(cp.uuid);
-        self.connector
-            .global
-            .add_node_virutal_network(node_uuid, &vnet)
-            .await?;
+        self.connector.local.add_virutal_network(&vnet).await?;
         Ok(cp)
     }
 
@@ -627,23 +502,12 @@ impl NetworkingPlugin for DummyNetwork {
         vnet_uuid: Uuid,
     ) -> FResult<ConnectionPoint> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        let cp = self
-            .connector
-            .global
-            .get_node_connection_point(node_uuid, cp_uuid)
-            .await?;
-        let mut vnet = self
-            .connector
-            .global
-            .get_node_virtual_network(node_uuid, vnet_uuid)
-            .await?;
+        let cp = self.connector.local.get_connection_point(cp_uuid).await?;
+        let mut vnet = self.connector.local.get_virtual_network(vnet_uuid).await?;
         match vnet.connection_points.iter().position(|&x| x == cp.uuid) {
             Some(p) => {
                 vnet.connection_points.remove(p);
-                self.connector
-                    .global
-                    .add_node_virutal_network(node_uuid, &vnet)
-                    .await?;
+                self.connector.local.add_virutal_network(&vnet).await?;
                 Ok(cp)
             }
             None => Err(FError::NotConnected),
@@ -652,11 +516,7 @@ impl NetworkingPlugin for DummyNetwork {
 
     async fn get_interface_addresses(&self, intf_uuid: Uuid) -> FResult<Vec<IPAddress>> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        let iface = self
-            .connector
-            .global
-            .get_node_interface(node_uuid, intf_uuid)
-            .await?;
+        let iface = self.connector.local.get_interface(intf_uuid).await?;
         Ok(iface.addresses)
     }
 
@@ -685,28 +545,17 @@ impl NetworkingPlugin for DummyNetwork {
             addresses: Vec::new(),
             phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
         };
-        self.connector
-            .global
-            .add_node_interface(node_uuid, &v_iface)
-            .await?;
+        self.connector.local.add_interface(&v_iface).await?;
         Ok(v_iface)
     }
 
     async fn delete_macvan_interface(&self, intf_uuid: Uuid) -> FResult<VirtualInterface> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        match self
-            .connector
-            .global
-            .get_node_interface(node_uuid, intf_uuid)
-            .await
-        {
+        match self.connector.local.get_interface(intf_uuid).await {
             Err(err) => Err(err),
             Ok(i) => match i.kind {
                 VirtualInterfaceKind::MACVLAN(_) => {
-                    self.connector
-                        .global
-                        .remove_node_interface(node_uuid, intf_uuid)
-                        .await?;
+                    self.connector.local.remove_interface(intf_uuid).await?;
                     Ok(i)
                 }
                 _ => Err(FError::WrongKind),
@@ -720,27 +569,13 @@ impl NetworkingPlugin for DummyNetwork {
         ns_uuid: Uuid,
     ) -> FResult<VirtualInterface> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        let mut iface = self
-            .connector
-            .global
-            .get_node_interface(node_uuid, intf_uuid)
-            .await?;
-        let mut netns = self
-            .connector
-            .global
-            .get_node_network_namespace(node_uuid, ns_uuid)
-            .await?;
+        let mut iface = self.connector.local.get_interface(intf_uuid).await?;
+        let mut netns = self.connector.local.get_network_namespace(ns_uuid).await?;
         iface.net_ns = Some(netns.uuid);
         netns.interfaces.push(iface.uuid);
 
-        self.connector
-            .global
-            .add_node_interface(node_uuid, &iface)
-            .await?;
-        self.connector
-            .global
-            .add_node_network_namespace(node_uuid, &netns)
-            .await?;
+        self.connector.local.add_interface(&iface).await?;
+        self.connector.local.add_network_namespace(&netns).await?;
         Ok(iface)
     }
 
@@ -749,30 +584,20 @@ impl NetworkingPlugin for DummyNetwork {
         intf_uuid: Uuid,
     ) -> FResult<VirtualInterface> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        let mut iface = self
-            .connector
-            .global
-            .get_node_interface(node_uuid, intf_uuid)
-            .await?;
+        let mut iface = self.connector.local.get_interface(intf_uuid).await?;
         match iface.net_ns {
             Some(netns_uuid) => {
                 iface.net_ns = None;
-                self.connector
-                    .global
-                    .add_node_interface(node_uuid, &iface)
-                    .await?;
+                self.connector.local.add_interface(&iface).await?;
                 let mut netns = self
                     .connector
-                    .global
-                    .get_node_network_namespace(node_uuid, netns_uuid)
+                    .local
+                    .get_network_namespace(netns_uuid)
                     .await?;
                 match netns.interfaces.iter().position(|&x| x == iface.uuid) {
                     Some(p) => {
                         netns.interfaces.remove(p);
-                        self.connector
-                            .global
-                            .add_node_network_namespace(node_uuid, &netns)
-                            .await?;
+                        self.connector.local.add_network_namespace(&netns).await?;
                         Ok(iface)
                     }
                     None => Err(FError::NotConnected),
@@ -788,16 +613,9 @@ impl NetworkingPlugin for DummyNetwork {
         intf_name: String,
     ) -> FResult<VirtualInterface> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        let mut iface = self
-            .connector
-            .global
-            .get_node_interface(node_uuid, intf_uuid)
-            .await?;
+        let mut iface = self.connector.local.get_interface(intf_uuid).await?;
         iface.if_name = intf_name;
-        self.connector
-            .global
-            .add_node_interface(node_uuid, &iface)
-            .await?;
+        self.connector.local.add_interface(&iface).await?;
         Ok(iface)
     }
 
@@ -807,34 +625,16 @@ impl NetworkingPlugin for DummyNetwork {
         br_uuid: Uuid,
     ) -> FResult<VirtualInterface> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        let mut iface = self
-            .connector
-            .global
-            .get_node_interface(node_uuid, intf_uuid)
-            .await?;
-        let bridge = self
-            .connector
-            .global
-            .get_node_interface(node_uuid, br_uuid)
-            .await?;
+        let mut iface = self.connector.local.get_interface(intf_uuid).await?;
+        let bridge = self.connector.local.get_interface(br_uuid).await?;
         match bridge.kind {
             VirtualInterfaceKind::BRIDGE(mut info) => {
                 iface.parent = Some(bridge.uuid);
                 info.childs.push(iface.uuid);
-                let mut new_bridge = self
-                    .connector
-                    .global
-                    .get_node_interface(node_uuid, br_uuid)
-                    .await?;
+                let mut new_bridge = self.connector.local.get_interface(br_uuid).await?;
                 new_bridge.kind = VirtualInterfaceKind::BRIDGE(info);
-                self.connector
-                    .global
-                    .add_node_interface(node_uuid, &iface)
-                    .await?;
-                self.connector
-                    .global
-                    .add_node_interface(node_uuid, &new_bridge)
-                    .await?;
+                self.connector.local.add_interface(&iface).await?;
+                self.connector.local.add_interface(&new_bridge).await?;
                 Ok(iface)
             }
             _ => Err(FError::WrongKind),
@@ -843,39 +643,22 @@ impl NetworkingPlugin for DummyNetwork {
 
     async fn detach_interface_from_bridge(&self, intf_uuid: Uuid) -> FResult<VirtualInterface> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        let mut iface = self
-            .connector
-            .global
-            .get_node_interface(node_uuid, intf_uuid)
-            .await?;
+        let mut iface = self.connector.local.get_interface(intf_uuid).await?;
 
         match iface.parent {
             Some(br_uuid) => {
-                let bridge = self
-                    .connector
-                    .global
-                    .get_node_interface(node_uuid, br_uuid)
-                    .await?;
+                let bridge = self.connector.local.get_interface(br_uuid).await?;
                 match bridge.kind {
                     VirtualInterfaceKind::BRIDGE(mut info) => {
                         match info.childs.iter().position(|&x| x == iface.uuid) {
                             Some(p) => {
                                 info.childs.remove(p);
-                                let mut new_bridge = self
-                                    .connector
-                                    .global
-                                    .get_node_interface(node_uuid, br_uuid)
-                                    .await?;
+                                let mut new_bridge =
+                                    self.connector.local.get_interface(br_uuid).await?;
                                 new_bridge.kind = VirtualInterfaceKind::BRIDGE(info);
                                 iface.parent = None;
-                                self.connector
-                                    .global
-                                    .add_node_interface(node_uuid, &iface)
-                                    .await?;
-                                self.connector
-                                    .global
-                                    .add_node_interface(node_uuid, &new_bridge)
-                                    .await?;
+                                self.connector.local.add_interface(&iface).await?;
+                                self.connector.local.add_interface(&new_bridge).await?;
                                 return Ok(iface);
                             }
                             None => return Err(FError::NotConnected),
@@ -894,11 +677,7 @@ impl NetworkingPlugin for DummyNetwork {
         ns_uuid: Uuid,
     ) -> FResult<VirtualInterface> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        let mut netns = self
-            .connector
-            .global
-            .get_node_network_namespace(node_uuid, ns_uuid)
-            .await?;
+        let mut netns = self.connector.local.get_network_namespace(ns_uuid).await?;
         match intf.kind {
             VirtualInterfaceConfigKind::VXLAN(conf) => {
                 let v_iface = VirtualInterface {
@@ -916,14 +695,8 @@ impl NetworkingPlugin for DummyNetwork {
                     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 netns.interfaces.push(v_iface.uuid);
-                self.connector
-                    .global
-                    .add_node_network_namespace(node_uuid, &netns)
-                    .await?;
-                self.connector
-                    .global
-                    .add_node_interface(node_uuid, &v_iface)
-                    .await?;
+                self.connector.local.add_network_namespace(&netns).await?;
+                self.connector.local.add_interface(&v_iface).await?;
                 Ok(v_iface)
             }
             VirtualInterfaceConfigKind::BRIDGE => {
@@ -937,14 +710,8 @@ impl NetworkingPlugin for DummyNetwork {
                     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 netns.interfaces.push(v_iface.uuid);
-                self.connector
-                    .global
-                    .add_node_network_namespace(node_uuid, &netns)
-                    .await?;
-                self.connector
-                    .global
-                    .add_node_interface(node_uuid, &v_iface)
-                    .await?;
+                self.connector.local.add_network_namespace(&netns).await?;
+                self.connector.local.add_interface(&v_iface).await?;
                 Ok(v_iface)
             }
             VirtualInterfaceConfigKind::VETH => {
@@ -978,17 +745,14 @@ impl NetworkingPlugin for DummyNetwork {
 
                 netns.interfaces.push(internal_iface_uuid);
                 netns.interfaces.push(external_iface_uuid);
+                self.connector.local.add_network_namespace(&netns).await?;
                 self.connector
-                    .global
-                    .add_node_network_namespace(node_uuid, &netns)
+                    .local
+                    .add_interface(&v_iface_internal)
                     .await?;
                 self.connector
-                    .global
-                    .add_node_interface(node_uuid, &v_iface_internal)
-                    .await?;
-                self.connector
-                    .global
-                    .add_node_interface(node_uuid, &v_iface_external)
+                    .local
+                    .add_interface(&v_iface_external)
                     .await?;
                 Ok(v_iface_internal)
             }
@@ -1006,14 +770,8 @@ impl NetworkingPlugin for DummyNetwork {
                     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 netns.interfaces.push(v_iface.uuid);
-                self.connector
-                    .global
-                    .add_node_network_namespace(node_uuid, &netns)
-                    .await?;
-                self.connector
-                    .global
-                    .add_node_interface(node_uuid, &v_iface)
-                    .await?;
+                self.connector.local.add_network_namespace(&netns).await?;
+                self.connector.local.add_interface(&v_iface).await?;
                 Ok(v_iface)
             }
             VirtualInterfaceConfigKind::MACVLAN => {
@@ -1029,14 +787,8 @@ impl NetworkingPlugin for DummyNetwork {
                     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 netns.interfaces.push(v_iface.uuid);
-                self.connector
-                    .global
-                    .add_node_network_namespace(node_uuid, &netns)
-                    .await?;
-                self.connector
-                    .global
-                    .add_node_interface(node_uuid, &v_iface)
-                    .await?;
+                self.connector.local.add_network_namespace(&netns).await?;
+                self.connector.local.add_interface(&v_iface).await?;
                 Ok(v_iface)
             }
             VirtualInterfaceConfigKind::GRE(conf) => {
@@ -1054,14 +806,8 @@ impl NetworkingPlugin for DummyNetwork {
                     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 netns.interfaces.push(v_iface.uuid);
-                self.connector
-                    .global
-                    .add_node_network_namespace(node_uuid, &netns)
-                    .await?;
-                self.connector
-                    .global
-                    .add_node_interface(node_uuid, &v_iface)
-                    .await?;
+                self.connector.local.add_network_namespace(&netns).await?;
+                self.connector.local.add_interface(&v_iface).await?;
                 Ok(v_iface)
             }
             VirtualInterfaceConfigKind::GRETAP(conf) => {
@@ -1079,14 +825,8 @@ impl NetworkingPlugin for DummyNetwork {
                     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 netns.interfaces.push(v_iface.uuid);
-                self.connector
-                    .global
-                    .add_node_network_namespace(node_uuid, &netns)
-                    .await?;
-                self.connector
-                    .global
-                    .add_node_interface(node_uuid, &v_iface)
-                    .await?;
+                self.connector.local.add_network_namespace(&netns).await?;
+                self.connector.local.add_interface(&v_iface).await?;
                 Ok(v_iface)
             }
             VirtualInterfaceConfigKind::IP6GRE(conf) => {
@@ -1104,14 +844,8 @@ impl NetworkingPlugin for DummyNetwork {
                     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 netns.interfaces.push(v_iface.uuid);
-                self.connector
-                    .global
-                    .add_node_network_namespace(node_uuid, &netns)
-                    .await?;
-                self.connector
-                    .global
-                    .add_node_interface(node_uuid, &v_iface)
-                    .await?;
+                self.connector.local.add_network_namespace(&netns).await?;
+                self.connector.local.add_interface(&v_iface).await?;
                 Ok(v_iface)
             }
             VirtualInterfaceConfigKind::IP6GRETAP(conf) => {
@@ -1129,14 +863,8 @@ impl NetworkingPlugin for DummyNetwork {
                     phy_address: MACAddress::new(0, 0, 0, 0, 0, 0),
                 };
                 netns.interfaces.push(v_iface.uuid);
-                self.connector
-                    .global
-                    .add_node_network_namespace(node_uuid, &netns)
-                    .await?;
-                self.connector
-                    .global
-                    .add_node_interface(node_uuid, &v_iface)
-                    .await?;
+                self.connector.local.add_network_namespace(&netns).await?;
+                self.connector.local.add_interface(&v_iface).await?;
                 Ok(v_iface)
             }
         }
@@ -1148,16 +876,8 @@ impl NetworkingPlugin for DummyNetwork {
         ns_uuid: Uuid,
     ) -> FResult<VirtualInterface> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        let mut netns = self
-            .connector
-            .global
-            .get_node_network_namespace(node_uuid, ns_uuid)
-            .await?;
-        let iface = self
-            .connector
-            .global
-            .get_node_interface(node_uuid, intf_uuid)
-            .await?;
+        let mut netns = self.connector.local.get_network_namespace(ns_uuid).await?;
+        let iface = self.connector.local.get_interface(intf_uuid).await?;
         match iface.net_ns {
             None => Err(FError::NotConnected),
             Some(nid) => {
@@ -1166,19 +886,10 @@ impl NetworkingPlugin for DummyNetwork {
                         Some(p) => {
                             netns.interfaces.remove(p);
                             if let VirtualInterfaceKind::VETH(ref info) = iface.kind {
-                                self.connector
-                                    .global
-                                    .remove_node_interface(node_uuid, info.pair)
-                                    .await?;
+                                self.connector.local.remove_interface(info.pair).await?;
                             }
-                            self.connector
-                                .global
-                                .add_node_network_namespace(node_uuid, &netns)
-                                .await?;
-                            self.connector
-                                .global
-                                .remove_node_interface(node_uuid, intf_uuid)
-                                .await?;
+                            self.connector.local.add_network_namespace(&netns).await?;
+                            self.connector.local.remove_interface(intf_uuid).await?;
                             return Ok(iface);
                         }
                         None => return Err(FError::NotConnected),
@@ -1196,16 +907,9 @@ impl NetworkingPlugin for DummyNetwork {
     ) -> FResult<VirtualInterface> {
         if let Some(address) = address {
             let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-            let mut iface = self
-                .connector
-                .global
-                .get_node_interface(node_uuid, intf_uuid)
-                .await?;
+            let mut iface = self.connector.local.get_interface(intf_uuid).await?;
             iface.addresses.push(address.ip());
-            self.connector
-                .global
-                .add_node_interface(node_uuid, &iface)
-                .await?;
+            self.connector.local.add_interface(&iface).await?;
             return Ok(iface);
         }
         Err(FError::Unimplemented)
@@ -1217,18 +921,11 @@ impl NetworkingPlugin for DummyNetwork {
         address: IPAddress,
     ) -> FResult<VirtualInterface> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        let mut iface = self
-            .connector
-            .global
-            .get_node_interface(node_uuid, intf_uuid)
-            .await?;
+        let mut iface = self.connector.local.get_interface(intf_uuid).await?;
         match iface.addresses.iter().position(|&x| x == address) {
             Some(p) => {
                 iface.addresses.remove(p);
-                self.connector
-                    .global
-                    .add_node_interface(node_uuid, &iface)
-                    .await?;
+                self.connector.local.add_interface(&iface).await?;
                 Ok(iface)
             }
             None => Err(FError::NotConnected),
@@ -1241,16 +938,9 @@ impl NetworkingPlugin for DummyNetwork {
         address: MACAddress,
     ) -> FResult<VirtualInterface> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
-        let mut iface = self
-            .connector
-            .global
-            .get_node_interface(node_uuid, intf_uuid)
-            .await?;
+        let mut iface = self.connector.local.get_interface(intf_uuid).await?;
         iface.phy_address = address;
-        self.connector
-            .global
-            .add_node_interface(node_uuid, &iface)
-            .await?;
+        self.connector.local.add_interface(&iface).await?;
         Ok(iface)
     }
 }

@@ -43,7 +43,6 @@ static LOCAL_CONSTRAINT_ACTUAL_PREFIX: &str = "/fos/constrained/local/actual";
 static LOCAL_CONSTRAINT_DESIRED_PREFIX: &str = "/fos/constrained/local/desired";
 
 static GLOBAL_PREFIX: &str = "/fos/global";
-static LOCAL_PREFIX: &str = "/fos/local";
 
 /// Default systemid is 00000000-0000-0000-0000-000000000000
 static DEFAULT_SYSTEM_ID: Uuid = Uuid::nil();
@@ -458,8 +457,7 @@ impl Global {
     }
 
     pub async fn get_system_info(&self) -> FResult<crate::im::types::SystemInfo> {
-        let selector =
-            zenoh::Selector::try_from(SYS_INFO_PATH!(GLOBAL_ACTUAL_PREFIX, self.system_id))?;
+        let selector = zenoh::Selector::try_from(SYS_INFO_PATH!(GLOBAL_PREFIX, self.system_id))?;
         let ws = self.z.workspace(None).await?;
         let mut ds = ws.get(&selector).await?;
         let mut data = Vec::new();
@@ -484,8 +482,7 @@ impl Global {
     }
 
     pub async fn get_system_config(&self) -> FResult<crate::im::types::SystemConfig> {
-        let selector =
-            zenoh::Selector::try_from(SYS_CONF_PATH!(GLOBAL_ACTUAL_PREFIX, self.system_id))?;
+        let selector = zenoh::Selector::try_from(SYS_CONF_PATH!(GLOBAL_PREFIX, self.system_id))?;
         let ws = self.z.workspace(None).await?;
         let mut ds = ws.get(&selector).await?;
         let mut data = Vec::new();
@@ -511,7 +508,7 @@ impl Global {
 
     pub async fn get_all_nodes(&self) -> FResult<Vec<crate::im::node::NodeInfo>> {
         let selector = zenoh::Selector::try_from(NODES_SELECTOR!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id
         ))?;
@@ -532,7 +529,7 @@ impl Global {
 
     pub async fn get_node_info(&self, node_uuid: Uuid) -> FResult<crate::im::node::NodeInfo> {
         let selector = zenoh::Selector::try_from(NODE_INFO_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             node_uuid
@@ -561,7 +558,7 @@ impl Global {
 
     pub async fn remove_node_info(&self, node_uuid: Uuid) -> FResult<()> {
         let path = zenoh::Path::try_from(NODE_INFO_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             node_uuid
@@ -572,7 +569,7 @@ impl Global {
 
     pub async fn add_node_info(&self, node_info: &crate::im::node::NodeInfo) -> FResult<()> {
         let path = zenoh::Path::try_from(NODE_INFO_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             node_info.uuid
@@ -584,7 +581,7 @@ impl Global {
 
     pub async fn get_node_status(&self, node_uuid: Uuid) -> FResult<crate::im::node::NodeStatus> {
         let selector = zenoh::Selector::try_from(NODE_STATUS_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             node_uuid
@@ -614,7 +611,7 @@ impl Global {
 
     pub async fn add_node_status(&self, node_status: &crate::im::node::NodeStatus) -> FResult<()> {
         let path = zenoh::Path::try_from(NODE_STATUS_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             node_status.uuid
@@ -626,7 +623,7 @@ impl Global {
 
     pub async fn remove_node_status(&self, node_uuid: Uuid) -> FResult<()> {
         let path = zenoh::Path::try_from(NODE_STATUS_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             node_uuid
@@ -641,7 +638,7 @@ impl Global {
         plugin_uuid: Uuid,
     ) -> FResult<crate::types::PluginInfo> {
         let selector = zenoh::Selector::try_from(NODE_PLUGIN_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             nodeid,
@@ -669,41 +666,12 @@ impl Global {
         }
     }
 
-    pub async fn add_plugin(
-        &self,
-        nodeid: Uuid,
-        plugin_info: &crate::types::PluginInfo,
-    ) -> FResult<()> {
-        let path = zenoh::Path::try_from(NODE_PLUGIN_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
-            self.system_id,
-            self.tenant_id,
-            nodeid,
-            plugin_info.uuid
-        ))?;
-        let ws = self.z.workspace(None).await?;
-        let encoded_info = bincode::serialize(&plugin_info)?;
-        Ok(ws.put(&path, encoded_info.into()).await?)
-    }
-
-    pub async fn remove_plugin(&self, nodeid: Uuid, plugin_uuid: Uuid) -> FResult<()> {
-        let path = zenoh::Path::try_from(NODE_PLUGIN_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
-            self.system_id,
-            self.tenant_id,
-            nodeid,
-            plugin_uuid
-        ))?;
-        let ws = self.z.workspace(None).await?;
-        Ok(ws.delete(&path).await?)
-    }
-
     pub async fn get_virtual_network(
         &self,
         net_uuid: Uuid,
     ) -> FResult<crate::types::VirtualNetwork> {
         let selector = zenoh::Selector::try_from(VNET_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             net_uuid
@@ -736,7 +704,7 @@ impl Global {
         vnet_info: &crate::types::VirtualNetwork,
     ) -> FResult<()> {
         let path = zenoh::Path::try_from(VNET_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             vnet_info.uuid
@@ -748,7 +716,7 @@ impl Global {
 
     pub async fn remove_virtual_network(&self, net_uuid: Uuid) -> FResult<()> {
         let path = zenoh::Path::try_from(VNET_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             net_uuid
@@ -762,7 +730,7 @@ impl Global {
         cp_uuid: Uuid,
     ) -> FResult<crate::types::ConnectionPoint> {
         let selector = zenoh::Selector::try_from(CP_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             cp_uuid
@@ -795,7 +763,7 @@ impl Global {
         cp_info: crate::types::ConnectionPoint,
     ) -> FResult<()> {
         let path = zenoh::Path::try_from(CP_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             cp_info.uuid
@@ -807,7 +775,7 @@ impl Global {
 
     pub async fn remove_connection_point(&self, cp_uuid: Uuid) -> FResult<()> {
         let path = zenoh::Path::try_from(CP_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             cp_uuid
@@ -818,7 +786,7 @@ impl Global {
 
     pub async fn get_interface(&self, iface_uuid: Uuid) -> FResult<crate::types::VirtualInterface> {
         let selector = zenoh::Selector::try_from(VIFACE_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             iface_uuid
@@ -848,7 +816,7 @@ impl Global {
 
     pub async fn add_interface(&self, iface_info: &crate::types::VirtualInterface) -> FResult<()> {
         let path = zenoh::Path::try_from(VIFACE_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             iface_info.uuid
@@ -860,7 +828,7 @@ impl Global {
 
     pub async fn remove_interface(&self, iface_uuid: Uuid) -> FResult<()> {
         let path = zenoh::Path::try_from(VIFACE_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             iface_uuid
@@ -871,7 +839,7 @@ impl Global {
 
     pub async fn get_fdu(&self, fdu_uuid: Uuid) -> FResult<crate::im::fdu::FDUDescriptor> {
         let selector = zenoh::Selector::try_from(FDU_DESCRIPTOR_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             fdu_uuid
@@ -901,7 +869,7 @@ impl Global {
 
     pub async fn get_all_fdu(&self) -> FResult<Vec<crate::im::fdu::FDUDescriptor>> {
         let selector = zenoh::Selector::try_from(FDU_DESCRIPTOR_SELECTOR!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id
         ))?;
@@ -929,7 +897,7 @@ impl Global {
     pub async fn add_fdu(&self, fdu_info: &crate::im::fdu::FDUDescriptor) -> FResult<()> {
         let fdu_uuid = fdu_info.uuid.ok_or(FError::MalformedDescriptor)?;
         let path = zenoh::Path::try_from(FDU_DESCRIPTOR_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             fdu_uuid
@@ -941,7 +909,7 @@ impl Global {
 
     pub async fn remove_fdu(&self, fdu_uuid: Uuid) -> FResult<()> {
         let path = zenoh::Path::try_from(FDU_DESCRIPTOR_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             fdu_uuid
@@ -952,7 +920,7 @@ impl Global {
 
     pub async fn get_instance(&self, instance_uuid: Uuid) -> FResult<crate::im::fdu::FDURecord> {
         let selector = zenoh::Selector::try_from(FDU_INSTANCE_SELECTOR!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             instance_uuid
@@ -983,7 +951,7 @@ impl Global {
     pub async fn get_all_instances(&self) -> FResult<Vec<crate::im::fdu::FDURecord>> {
         log::debug!("Get all FDU instances");
         let selector = zenoh::Selector::try_from(FDU_ALL_INSTANCES_SELECTOR!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id
         ))?;
@@ -1016,7 +984,7 @@ impl Global {
     ) -> FResult<Vec<crate::im::fdu::FDURecord>> {
         log::debug!("Get all FDU instance for {}", fdu_uuid);
         let selector = zenoh::Selector::try_from(FDU_INSTANCES_SELECTOR!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             fdu_uuid
@@ -1046,7 +1014,7 @@ impl Global {
 
     pub async fn add_instance(&self, instance_info: &crate::im::fdu::FDURecord) -> FResult<()> {
         let path = zenoh::Path::try_from(FDU_INSTANCE_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             instance_info.fdu_uuid,
@@ -1060,7 +1028,7 @@ impl Global {
     pub async fn remove_instance(&self, instance_uuid: Uuid) -> FResult<()> {
         let instance_info = self.get_instance(instance_uuid).await?;
         let path = zenoh::Path::try_from(FDU_INSTANCE_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             instance_info.fdu_uuid,
@@ -1075,7 +1043,7 @@ impl Global {
         entity_uuid: Uuid,
     ) -> FResult<crate::im::entity::EntityDescriptor> {
         let selector = zenoh::Selector::try_from(ENTITY_DESCRIPTOR_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             entity_uuid
@@ -1106,7 +1074,7 @@ impl Global {
 
     pub async fn get_all_entity(&self) -> FResult<Vec<crate::im::entity::EntityDescriptor>> {
         let selector = zenoh::Selector::try_from(ENTITY_DESCRIPTOR_SELECTOR!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id
         ))?;
@@ -1137,7 +1105,7 @@ impl Global {
     ) -> FResult<()> {
         let entity_uuid = entity_info.uuid.ok_or(FError::MalformedDescriptor)?;
         let path = zenoh::Path::try_from(ENTITY_DESCRIPTOR_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             entity_uuid
@@ -1149,7 +1117,7 @@ impl Global {
 
     pub async fn remove_entity(&self, entity_uuid: Uuid) -> FResult<()> {
         let path = zenoh::Path::try_from(ENTITY_DESCRIPTOR_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             entity_uuid
@@ -1163,7 +1131,7 @@ impl Global {
         instance_uuid: Uuid,
     ) -> FResult<crate::im::entity::EntityRecord> {
         let selector = zenoh::Selector::try_from(ENTITY_INSTANCE_SELECTOR!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             instance_uuid
@@ -1196,7 +1164,7 @@ impl Global {
     ) -> FResult<Vec<crate::im::entity::EntityRecord>> {
         log::debug!("Get all Entity instances");
         let selector = zenoh::Selector::try_from(ENTITY_ALL_INSTANCES_SELECTOR!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id
         ))?;
@@ -1230,7 +1198,7 @@ impl Global {
     ) -> FResult<Vec<crate::im::entity::EntityRecord>> {
         log::debug!("Get all Entity instance for {}", entity_uuid);
         let selector = zenoh::Selector::try_from(ENTITY_INSTANCES_SELECTOR!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             entity_uuid
@@ -1264,7 +1232,7 @@ impl Global {
         instance_info: &crate::im::entity::EntityRecord,
     ) -> FResult<()> {
         let path = zenoh::Path::try_from(ENTITY_INSTANCE_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             instance_info.id,
@@ -1278,456 +1246,11 @@ impl Global {
     pub async fn remove_entity_instance(&self, instance_uuid: Uuid) -> FResult<()> {
         let instance_info = self.get_entity_instance(instance_uuid).await?;
         let path = zenoh::Path::try_from(ENTITY_INSTANCE_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
+            GLOBAL_PREFIX,
             self.system_id,
             self.tenant_id,
             instance_info.id,
             instance_info.uuid
-        ))?;
-        let ws = self.z.workspace(None).await?;
-        Ok(ws.delete(&path).await?)
-    }
-
-    pub async fn get_node_instance(
-        &self,
-        node_uuid: Uuid,
-        instance_uuid: Uuid,
-    ) -> FResult<crate::im::fdu::FDURecord> {
-        let selector = zenoh::Selector::try_from(NODE_INSTANCE_SELECTOR2!(
-            GLOBAL_ACTUAL_PREFIX,
-            self.system_id,
-            self.tenant_id,
-            node_uuid,
-            instance_uuid
-        ))?;
-        let ws = self.z.workspace(None).await?;
-        let mut ds = ws.get(&selector).await?;
-        let mut data = Vec::new();
-        while let Some(d) = ds.next().await {
-            data.push(d)
-        }
-        match data.len() {
-            0 => Err(FError::NotFound),
-            1 => {
-                let kv = &data[0];
-                match &kv.value {
-                    zenoh::Value::Raw(_, buf) => {
-                        let info =
-                            bincode::deserialize::<crate::im::fdu::FDURecord>(&buf.to_vec())?;
-                        Ok(info)
-                    }
-                    _ => Err(FError::EncodingError),
-                }
-            }
-            _ => Err(FError::TooMuchError),
-        }
-    }
-
-    pub async fn subscribe_node_instances(
-        &self,
-        node_uuid: Uuid,
-    ) -> FResult<async_std::channel::Receiver<crate::im::fdu::FDURecord>> {
-        let selector = zenoh::Selector::try_from(NODE_INSTANCE_SELECTOR3!(
-            GLOBAL_ACTUAL_PREFIX,
-            self.system_id,
-            self.tenant_id,
-            node_uuid
-        ))?;
-
-        let (sender, receiver) = async_std::channel::unbounded::<crate::im::fdu::FDURecord>();
-        let sub_z = self.z.clone();
-
-        let _sub = async_std::task::spawn(async move {
-            let ws = sub_z.workspace(None).await.ok().unwrap();
-            let mut cs = ws.subscribe(&selector).await.ok().unwrap();
-            while let Some(change) = cs.next().await {
-                match change.kind {
-                    zenoh::ChangeKind::PUT | zenoh::ChangeKind::PATCH => match change.value {
-                        Some(value) => {
-                            if let zenoh::Value::Raw(_, buf) = value {
-                                if let Ok(info) =
-                                    bincode::deserialize::<crate::im::fdu::FDURecord>(&buf.to_vec())
-                                {
-                                    sender.send(info).await.ok().unwrap();
-                                }
-                            }
-                        }
-                        None => log::warn!("Received empty change drop it"),
-                    },
-                    zenoh::ChangeKind::DELETE => (),
-                }
-            }
-        });
-
-        Ok(receiver)
-
-        // If Zenoh was allowing this, this would be the preferred solution.
-        // let ws = self.z.workspace(None).await?;
-        // Ok(ws
-        //     .subscribe(&selector)
-        //     .await
-        //     .map(|change_stream| FDURecordStream { change_stream })?)
-    }
-
-    pub async fn get_node_instances(
-        &self,
-        node_uuid: Uuid,
-    ) -> FResult<Vec<crate::im::fdu::FDURecord>> {
-        let selector = zenoh::Selector::try_from(NODE_INSTANCE_SELECTOR3!(
-            GLOBAL_ACTUAL_PREFIX,
-            self.system_id,
-            self.tenant_id,
-            node_uuid
-        ))?;
-        let ws = self.z.workspace(None).await?;
-
-        let mut ds = ws.get(&selector).await?;
-        let mut data = Vec::new();
-        let mut fdus: Vec<crate::im::fdu::FDURecord> = Vec::new();
-        while let Some(d) = ds.next().await {
-            data.push(d)
-        }
-        log::trace!("Got {} values", data.len());
-
-        for kv in data {
-            match &kv.value {
-                zenoh::Value::Raw(_, buf) => {
-                    let info = bincode::deserialize::<crate::im::fdu::FDURecord>(&buf.to_vec())?;
-                    fdus.push(info);
-                }
-                _ => return Err(FError::EncodingError),
-            }
-        }
-        Ok(fdus)
-    }
-
-    pub async fn add_node_instance(
-        &self,
-        node_uuid: Uuid,
-        instance_info: &crate::im::fdu::FDURecord,
-    ) -> FResult<()> {
-        let path = zenoh::Path::try_from(NODE_INSTANCE_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
-            self.system_id,
-            self.tenant_id,
-            node_uuid,
-            instance_info.fdu_uuid,
-            instance_info.uuid
-        ))?;
-        let ws = self.z.workspace(None).await?;
-        let encoded_info = bincode::serialize(&instance_info)?;
-        Ok(ws.put(&path, encoded_info.into()).await?)
-    }
-
-    pub async fn remove_node_instance(&self, node_uuid: Uuid, instance_uuid: Uuid) -> FResult<()> {
-        let instance_info = self.get_instance(instance_uuid).await?;
-        let path = zenoh::Path::try_from(NODE_INSTANCE_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
-            self.system_id,
-            self.tenant_id,
-            node_uuid,
-            instance_info.fdu_uuid,
-            instance_info.uuid
-        ))?;
-        let ws = self.z.workspace(None).await?;
-        Ok(ws.delete(&path).await?)
-    }
-
-    pub async fn get_node_virtual_network(
-        &self,
-        node_uuid: Uuid,
-        net_uuid: Uuid,
-    ) -> FResult<crate::types::VirtualNetwork> {
-        let selector = zenoh::Selector::try_from(NODE_VNET_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
-            self.system_id,
-            self.tenant_id,
-            node_uuid,
-            net_uuid
-        ))?;
-        let ws = self.z.workspace(None).await?;
-        let mut ds = ws.get(&selector).await?;
-        let mut data = Vec::new();
-        while let Some(d) = ds.next().await {
-            data.push(d)
-        }
-        match data.len() {
-            0 => Err(FError::NotFound),
-            1 => {
-                let kv = &data[0];
-                match &kv.value {
-                    zenoh::Value::Raw(_, buf) => {
-                        let info =
-                            bincode::deserialize::<crate::types::VirtualNetwork>(&buf.to_vec())?;
-                        Ok(info)
-                    }
-                    _ => Err(FError::EncodingError),
-                }
-            }
-            _ => Err(FError::TooMuchError),
-        }
-    }
-
-    pub async fn add_node_virutal_network(
-        &self,
-        node_uuid: Uuid,
-        vnet_info: &crate::types::VirtualNetwork,
-    ) -> FResult<()> {
-        let path = zenoh::Path::try_from(NODE_VNET_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
-            self.system_id,
-            self.tenant_id,
-            node_uuid,
-            vnet_info.uuid
-        ))?;
-        let ws = self.z.workspace(None).await?;
-        let encoded_info = bincode::serialize(&vnet_info)?;
-        Ok(ws.put(&path, encoded_info.into()).await?)
-    }
-
-    pub async fn remove_node_virtual_network(
-        &self,
-        node_uuid: Uuid,
-        net_uuid: Uuid,
-    ) -> FResult<()> {
-        let path = zenoh::Path::try_from(NODE_VNET_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
-            self.system_id,
-            self.tenant_id,
-            node_uuid,
-            net_uuid
-        ))?;
-        let ws = self.z.workspace(None).await?;
-        Ok(ws.delete(&path).await?)
-    }
-
-    pub async fn get_node_connection_point(
-        &self,
-        node_uuid: Uuid,
-        cp_uuid: Uuid,
-    ) -> FResult<crate::types::ConnectionPoint> {
-        let selector = zenoh::Selector::try_from(NODE_CP_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
-            self.system_id,
-            self.tenant_id,
-            node_uuid,
-            cp_uuid
-        ))?;
-        let ws = self.z.workspace(None).await?;
-        let mut ds = ws.get(&selector).await?;
-        let mut data = Vec::new();
-        while let Some(d) = ds.next().await {
-            data.push(d)
-        }
-        match data.len() {
-            0 => Err(FError::NotFound),
-            1 => {
-                let kv = &data[0];
-                match &kv.value {
-                    zenoh::Value::Raw(_, buf) => {
-                        let info =
-                            bincode::deserialize::<crate::types::ConnectionPoint>(&buf.to_vec())?;
-                        Ok(info)
-                    }
-                    _ => Err(FError::EncodingError),
-                }
-            }
-            _ => Err(FError::TooMuchError),
-        }
-    }
-
-    pub async fn add_node_connection_point(
-        &self,
-        node_uuid: Uuid,
-        cp_info: &crate::types::ConnectionPoint,
-    ) -> FResult<()> {
-        let path = zenoh::Path::try_from(NODE_CP_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
-            self.system_id,
-            self.tenant_id,
-            node_uuid,
-            cp_info.uuid
-        ))?;
-        let ws = self.z.workspace(None).await?;
-        let encoded_info = bincode::serialize(&cp_info)?;
-        Ok(ws.put(&path, encoded_info.into()).await?)
-    }
-
-    pub async fn remove_node_connection_point(
-        &self,
-        node_uuid: Uuid,
-        cp_uuid: Uuid,
-    ) -> FResult<()> {
-        let path = zenoh::Path::try_from(NODE_CP_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
-            self.system_id,
-            self.tenant_id,
-            node_uuid,
-            cp_uuid
-        ))?;
-        let ws = self.z.workspace(None).await?;
-        Ok(ws.delete(&path).await?)
-    }
-
-    pub async fn get_node_interface(
-        &self,
-        node_uuid: Uuid,
-        iface_uuid: Uuid,
-    ) -> FResult<crate::types::VirtualInterface> {
-        let selector = zenoh::Selector::try_from(NODE_VIFACE_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
-            self.system_id,
-            self.tenant_id,
-            node_uuid,
-            iface_uuid
-        ))?;
-        let ws = self.z.workspace(None).await?;
-        let mut ds = ws.get(&selector).await?;
-        let mut data = Vec::new();
-        while let Some(d) = ds.next().await {
-            data.push(d)
-        }
-        match data.len() {
-            0 => Err(FError::NotFound),
-            1 => {
-                let kv = &data[0];
-                match &kv.value {
-                    zenoh::Value::Raw(_, buf) => {
-                        let info =
-                            bincode::deserialize::<crate::types::VirtualInterface>(&buf.to_vec())?;
-                        Ok(info)
-                    }
-                    _ => Err(FError::EncodingError),
-                }
-            }
-            _ => Err(FError::TooMuchError),
-        }
-    }
-
-    pub async fn get_node_all_interfaces(
-        &self,
-        node_uuid: Uuid,
-    ) -> FResult<Vec<crate::types::VirtualInterface>> {
-        let selector = zenoh::Selector::try_from(NODE_VIFACE_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
-            self.system_id,
-            self.tenant_id,
-            node_uuid,
-            "*"
-        ))?;
-        let ws = self.z.workspace(None).await?;
-        let mut ds = ws.get(&selector).await?;
-        let mut data = Vec::new();
-        while let Some(d) = ds.next().await {
-            data.push(d)
-        }
-        let mut ifaces = Vec::new();
-
-        for kv in data {
-            match &kv.value {
-                zenoh::Value::Raw(_, buf) => {
-                    let info =
-                        bincode::deserialize::<crate::types::VirtualInterface>(&buf.to_vec())?;
-                    ifaces.push(info);
-                }
-                _ => return Err(FError::EncodingError),
-            }
-        }
-        Ok(ifaces)
-    }
-
-    pub async fn add_node_interface(
-        &self,
-        node_uuid: Uuid,
-        iface_info: &crate::types::VirtualInterface,
-    ) -> FResult<()> {
-        let path = zenoh::Path::try_from(NODE_VIFACE_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
-            self.system_id,
-            self.tenant_id,
-            node_uuid,
-            iface_info.uuid
-        ))?;
-        let ws = self.z.workspace(None).await?;
-        let encoded_info = bincode::serialize(&iface_info)?;
-        Ok(ws.put(&path, encoded_info.into()).await?)
-    }
-
-    pub async fn remove_node_interface(&self, node_uuid: Uuid, iface_uuid: Uuid) -> FResult<()> {
-        let path = zenoh::Path::try_from(NODE_VIFACE_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
-            self.system_id,
-            self.tenant_id,
-            node_uuid,
-            iface_uuid
-        ))?;
-        let ws = self.z.workspace(None).await?;
-        Ok(ws.delete(&path).await?)
-    }
-
-    pub async fn get_node_network_namespace(
-        &self,
-        node_uuid: Uuid,
-        ns_uuid: Uuid,
-    ) -> FResult<crate::types::NetworkNamespace> {
-        let selector = zenoh::Selector::try_from(NODE_NETNS_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
-            self.system_id,
-            self.tenant_id,
-            node_uuid,
-            ns_uuid
-        ))?;
-        let ws = self.z.workspace(None).await?;
-        let mut ds = ws.get(&selector).await?;
-        let mut data = Vec::new();
-        while let Some(d) = ds.next().await {
-            data.push(d)
-        }
-        match data.len() {
-            0 => Err(FError::NotFound),
-            1 => {
-                let kv = &data[0];
-                match &kv.value {
-                    zenoh::Value::Raw(_, buf) => {
-                        let info =
-                            bincode::deserialize::<crate::types::NetworkNamespace>(&buf.to_vec())?;
-                        Ok(info)
-                    }
-                    _ => Err(FError::EncodingError),
-                }
-            }
-            _ => Err(FError::TooMuchError),
-        }
-    }
-
-    pub async fn add_node_network_namespace(
-        &self,
-        node_uuid: Uuid,
-        ns_info: &crate::types::NetworkNamespace,
-    ) -> FResult<()> {
-        let path = zenoh::Path::try_from(NODE_NETNS_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
-            self.system_id,
-            self.tenant_id,
-            node_uuid,
-            ns_info.uuid
-        ))?;
-        let ws = self.z.workspace(None).await?;
-        let encoded_info = bincode::serialize(&ns_info)?;
-        Ok(ws.put(&path, encoded_info.into()).await?)
-    }
-
-    pub async fn remove_node_network_namespace(
-        &self,
-        node_uuid: Uuid,
-        ns_uuid: Uuid,
-    ) -> FResult<()> {
-        let path = zenoh::Path::try_from(NODE_NETNS_PATH!(
-            GLOBAL_ACTUAL_PREFIX,
-            self.system_id,
-            self.tenant_id,
-            node_uuid,
-            ns_uuid
         ))?;
         let ws = self.z.workspace(None).await?;
         Ok(ws.delete(&path).await?)
