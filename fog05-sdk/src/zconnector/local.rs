@@ -383,6 +383,30 @@ impl Local {
         }
     }
 
+    pub async fn get_all_interfaces(&self) -> FResult<Vec<crate::types::VirtualInterface>> {
+        let selector =
+            zenoh::Selector::try_from(NODE_VIFACE_PATH!(LOCAL_PREFIX, self.node_uuid, "*"))?;
+        let ws = self.z.workspace(None).await?;
+        let mut ds = ws.get(&selector).await?;
+        let mut data = Vec::new();
+        while let Some(d) = ds.next().await {
+            data.push(d)
+        }
+        let mut ifaces = Vec::new();
+
+        for kv in data {
+            match &kv.value {
+                zenoh::Value::Raw(_, buf) => {
+                    let info =
+                        bincode::deserialize::<crate::types::VirtualInterface>(&buf.to_vec())?;
+                    ifaces.push(info);
+                }
+                _ => return Err(FError::EncodingError),
+            }
+        }
+        Ok(ifaces)
+    }
+
     pub async fn add_interface(&self, iface_info: &crate::types::VirtualInterface) -> FResult<()> {
         let path = zenoh::Path::try_from(NODE_VIFACE_PATH!(
             LOCAL_PREFIX,
@@ -554,91 +578,6 @@ impl Local {
         //     .await
         //     .map(|change_stream| FDURecordStream { change_stream })?)
     }
-
-    // pub async fn get_interface(
-    //     &self,
-    //     iface_uuid: Uuid,
-    // ) -> FResult<crate::types::VirtualInterface> {
-    //     let selector = zenoh::Selector::try_from(NODE_VIFACE_PATH!(
-    //         LOCAL_PREFIX,
-    //         self.node_uuid,
-    //         iface_uuid
-    //     ))?;
-    //     let ws = self.z.workspace(None).await?;
-    //     let mut ds = ws.get(&selector).await?;
-    //     let mut data = Vec::new();
-    //     while let Some(d) = ds.next().await {
-    //         data.push(d)
-    //     }
-    //     match data.len() {
-    //         0 => Err(FError::NotFound),
-    //         1 => {
-    //             let kv = &data[0];
-    //             match &kv.value {
-    //                 zenoh::Value::Raw(_, buf) => {
-    //                     let info =
-    //                         bincode::deserialize::<crate::types::VirtualInterface>(&buf.to_vec())?;
-    //                     Ok(info)
-    //                 }
-    //                 _ => Err(FError::EncodingError),
-    //             }
-    //         }
-    //         _ => Err(FError::TooMuchError),
-    //     }
-    // }
-
-    // pub async fn get_all_interfaces(
-    //     &self,
-    // ) -> FResult<Vec<crate::types::VirtualInterface>> {
-    //     let selector = zenoh::Selector::try_from(NODE_VIFACE_PATH!(
-    //         LOCAL_PREFIX,
-    //         self.node_uuid,
-    //         "*"
-    //     ))?;
-    //     let ws = self.z.workspace(None).await?;
-    //     let mut ds = ws.get(&selector).await?;
-    //     let mut data = Vec::new();
-    //     while let Some(d) = ds.next().await {
-    //         data.push(d)
-    //     }
-    //     let mut ifaces = Vec::new();
-
-    //     for kv in data {
-    //         match &kv.value {
-    //             zenoh::Value::Raw(_, buf) => {
-    //                 let info =
-    //                     bincode::deserialize::<crate::types::VirtualInterface>(&buf.to_vec())?;
-    //                 ifaces.push(info);
-    //             }
-    //             _ => return Err(FError::EncodingError),
-    //         }
-    //     }
-    //     Ok(ifaces)
-    // }
-
-    // pub async fn add_interface(
-    //     &self,
-    //     iface_info: &crate::types::VirtualInterface,
-    // ) -> FResult<()> {
-    //     let path = zenoh::Path::try_from(NODE_VIFACE_PATH!(
-    //         LOCAL_PREFIX,
-    //         self.node_uuid,
-    //         iface_info.uuid
-    //     ))?;
-    //     let ws = self.z.workspace(None).await?;
-    //     let encoded_info = bincode::serialize(&iface_info)?;
-    //     Ok(ws.put(&path, encoded_info.into()).await?)
-    // }
-
-    // pub async fn remove_interface(&self, iface_uuid: Uuid) -> FResult<()> {
-    //     let path = zenoh::Path::try_from(NODE_VIFACE_PATH!(
-    //         LOCAL_PREFIX,
-    //         self.node_uuid,
-    //         iface_uuid
-    //     ))?;
-    //     let ws = self.z.workspace(None).await?;
-    //     Ok(ws.delete(&path).await?)
-    // }
 
     pub async fn get_network_namespace(
         &self,
