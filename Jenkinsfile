@@ -1,7 +1,8 @@
 pipeline {
-    agent kubernetes {
+    agent { kubernetes {
             label 'ubuntu:focal'
         }
+    }
     stages {
         stage('install-rust') {
             steps {
