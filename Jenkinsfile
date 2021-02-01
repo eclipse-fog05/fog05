@@ -4,10 +4,11 @@ pipeline {
         stage('build') {
             steps {
                 sh
-                '''
+                "
+                env
                 pwd
                 uname -a
-                '''
+                "
             }
         }
     }
