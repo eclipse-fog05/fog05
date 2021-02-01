@@ -1,16 +1,17 @@
 pipeline {
-    kubernetes {
-      label 'my-agent-pod'
-      yaml """
-        apiVersion: v1
-        kind: Pod
-        spec:
-        containers:
-        - name: ubuntu
-            image: ubuntu:focal
-            tty: true
-        """
-    }
+    agent {
+        kubernetes {
+        label 'my-agent-pod'
+        yaml """
+            apiVersion: v1
+            kind: Pod
+            spec:
+            containers:
+            - name: ubuntu
+                image: ubuntu:focal
+                tty: true
+            """
+        }
   }
     stages {
         stage('install-rust') {
