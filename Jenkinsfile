@@ -6,10 +6,10 @@ pipeline {
             apiVersion: v1
             kind: Pod
             spec:
-            containers:
-            - name: ubuntu
-                image: ubuntu:focal
-                tty: true
+                containers:
+                - name: ubuntu
+                    image: ubuntu:focal
+                    tty: true
             """
         }
   }
