@@ -3,12 +3,7 @@ pipeline {
     stages {
         stage('build') {
             steps {
-                sh
-                "
-                env
-                pwd
-                uname -a
-                "
+                sh 'uname -a'
             }
         }
     }
