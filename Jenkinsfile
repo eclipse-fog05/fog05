@@ -9,16 +9,17 @@ spec:
   containers:
   - name: ubu20
     image: fog05/ubuntu-build:focal
+    imagePullPolicy: Always
     command:
     - cat
     tty: true
     resources:
       limits:
-        memory: "2Gi"
-        cpu: "1"
+        memory: "4Gi"
+        cpu: "2"
       requests:
-        memory: "2Gi"
-        cpu: "1"
+        memory: "4Gi"
+        cpu: "2"
 """
     }
   }
@@ -50,8 +51,6 @@ spec:
                         export PATH=$PATH:/home/$(id -u)/.cargo/bin
                         export CARGO_HOME=/home/$(id -u)/.cargo
                         cargo check
-                        cargo fmt -- --check
-                        cargo clippy --all
                     '''
                 }
             }
