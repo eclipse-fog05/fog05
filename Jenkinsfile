@@ -23,6 +23,15 @@ spec:
 """
     }
   }
+  parameters {
+    booleanParam(name: 'PUBLISH_ECLIPSE_DOWNLOAD',
+        description: 'Publish the resulting artifacts to Eclipse download.',
+        defaultValue: false)
+  }
+  environment {
+      LABEL = get_label()
+      DOWNLOAD_DIR="/home/data/httpd/download.eclipse.org/fog05/fog05/${LABEL}"
+  }
   stages {
         stage('install-rust') {
             steps {
@@ -70,6 +79,28 @@ spec:
                     '''
                 }
             }
+        }
+
+        stage('publish to download.eclipse.org') {
+        when { expression { return params.PUBLISH_ECLIPSE_DOWNLOAD }}
+        steps {
+            // Note: remove existing dir on download.eclipse.org only if it's for a branch
+            // (e.g. master that is rebuilt periodically from different commits)
+            sshagent ( ['projects-storage.eclipse.org-bot-ssh']) {
+            sh '''
+                if [[ ${GIT_TAG} == origin/* ]]; then
+                ssh genie.fog05@projects-storage.eclipse.org rm -fr ${DOWNLOAD_DIR}
+                fi
+                ssh genie.fog05@projects-storage.eclipse.org mkdir -p ${DOWNLOAD_DIR}
+                COMMIT_ID=`git log -n1 --format="%h"`
+                echo "https://github.com/eclipse-fog05/fog05/tree/${COMMIT_ID}" > _git_commit_${COMMIT_ID}.txt
+                scp _*.txt genie.fog05@projects-storage.eclipse.org:${DOWNLOAD_DIR}/
+
+                scp target/debian/*.deb genie.fog05@projects-storage.eclipse.org:${DOWNLOAD_DIR}
+
+            '''
+            }
+        }
         }
 
     }

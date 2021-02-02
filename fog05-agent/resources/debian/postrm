@@ -20,8 +20,9 @@ set -e
 
 case "$1" in
     purge|remove|upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
-    sudo userdel fos
-    sudo rm -rf /var/fos
+    userdel fos
+    rm -rf /var/fos
+    rm -rf /etc/sudoers.d/fog05
     ;;
 
     *)

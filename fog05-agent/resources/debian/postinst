@@ -22,7 +22,7 @@ case "$1" in
     configure)
         id -u fos  >/dev/null 2>&1 ||  sudo useradd -r -s /bin/false fos
         sudo usermod -aG sudo fos
-        echo "fos      ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers > /dev/null
+        echo "fos      ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers.d/fog05 > /dev/null
         sudo chown fos:fos -R /var/fos
         systemctl daemon-reload
     ;;
