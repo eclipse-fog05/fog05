@@ -11,7 +11,7 @@ description = "fog05: The End-to-End Compute, Storage and Networking Virtualisat
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-async-std = { version = "=1.8.0", features = ["attributes"] }
+async-std = { version = "=1.9.0", features = ["attributes"] }
 zenoh = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "master" }
 zenoh-protocol = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "master" }
 uhlc = "0.2"
