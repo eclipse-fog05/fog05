@@ -89,7 +89,7 @@ spec:
             sshagent ( ['projects-storage.eclipse.org-bot-ssh']) {
             sh '''
                 if [[ ${GIT_TAG} == origin/* ]]; then
-                ssh genie.fog05@projects-storage.eclipse.org rm -fr ${DOWNLOAD_DIR}
+                    ssh genie.fog05@projects-storage.eclipse.org rm -fr ${DOWNLOAD_DIR}
                 fi
                 ssh genie.fog05@projects-storage.eclipse.org mkdir -p ${DOWNLOAD_DIR}
                 COMMIT_ID=`git log -n1 --format="%h"`
