@@ -168,6 +168,14 @@ impl NetworkingPlugin for DummyNetwork {
         self.connector.local.get_connection_point(cp_uuid).await
     }
 
+    async fn set_default_route_in_network_namespace(
+        &self,
+        ns_uuid: Uuid,
+        intf_uuid: Uuid,
+    ) -> FResult<()> {
+        Err(FError::Unimplemented)
+    }
+
     async fn delete_connection_point(&self, cp_uuid: Uuid) -> FResult<Uuid> {
         let node_uuid = self.agent.as_ref().unwrap().get_node_uuid().await??;
         match self.connector.local.get_connection_point(cp_uuid).await {
