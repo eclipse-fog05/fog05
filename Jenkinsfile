@@ -29,7 +29,7 @@ spec:
         defaultValue: false)
   }
   environment {
-      LABEL = get_label()
+      LABEL = "nightly"
       DOWNLOAD_DIR="/home/data/httpd/download.eclipse.org/fog05/fog05/${LABEL}"
   }
   stages {
