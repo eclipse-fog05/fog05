@@ -121,7 +121,11 @@ pub trait NetworkingPlugin {
     async fn delete_virtual_bridge(&self, br_uuid: Uuid) -> FResult<VirtualInterface>;
 
     /// Sets the given interface as default route for in the given namespace
-    async fn set_default_route_in_network_namespace(&self, ns_uuid: Uuid, intf_uuid: Uuid) -> FResult<()>;
+    async fn set_default_route_in_network_namespace(
+        &self,
+        ns_uuid: Uuid,
+        intf_uuid: Uuid,
+    ) -> FResult<()>;
 
     /// Creates a new network namespace in the node
     async fn create_network_namespace(&self) -> FResult<NetworkNamespace>;
