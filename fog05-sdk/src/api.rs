@@ -55,9 +55,22 @@ impl FDUApi {
         }
     }
 
-    async fn define_fdu(&self, fdu_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
-        let nodes = self.zconnector.global.get_all_nodes().await?;
-        let entry_point = nodes.choose(&mut rand::thread_rng()).unwrap();
+    async fn define_fdu(
+        &self,
+        fdu_uuid: Uuid,
+        node_uuid: Option<Uuid>,
+    ) -> FResult<im::fdu::FDURecord> {
+        let entry_point = match node_uuid {
+            None => {
+                let nodes = self.zconnector.global.get_all_nodes().await?;
+                let ep = nodes.choose(&mut rand::thread_rng()).unwrap();
+                (&*ep).clone()
+            }
+            Some(node_uuid) => {
+                let ni = self.zconnector.global.get_node_info(node_uuid).await?;
+                ni
+            }
+        };
         log::trace!(
             "Selected node entry point: {}",
             entry_point.agent_service_uuid
@@ -66,12 +79,22 @@ impl FDUApi {
             self.zenoh.clone(),
             entry_point.agent_service_uuid,
         );
-        match node_client.schedule_fdu(fdu_uuid).await? {
-            Ok(instance) => Ok(instance),
-            Err(e) => {
-                log::error!("Error occured: {}", e);
-                Err(e)
-            }
+
+        match node_uuid {
+            None => match node_client.schedule_fdu(fdu_uuid).await? {
+                Ok(instance) => Ok(instance),
+                Err(e) => {
+                    log::error!("Error occured: {}", e);
+                    Err(e)
+                }
+            },
+            Some(_) => match node_client.define_fdu(fdu_uuid).await? {
+                Ok(instance) => Ok(instance),
+                Err(e) => {
+                    log::error!("Error occured: {}", e);
+                    Err(e)
+                }
+            },
         }
     }
 

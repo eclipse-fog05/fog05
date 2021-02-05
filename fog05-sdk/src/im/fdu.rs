@@ -111,7 +111,7 @@ pub struct Position {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 //or Affinity/Antiaffinity
 pub struct Proximity {
-    pub neighbour: String,
+    pub neighbor: String,
     pub radius: f64,
 }
 
@@ -185,12 +185,12 @@ pub struct StorageDescriptor {
     pub size: u32, //depends on the kind, MB for BLOCK, items for OBJECT
 }
 
-//example pf hypervisor for BARE (Native)
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Command {
-    pub binary: String, //can be relative, in that case it is expected to be part of the image of global path
-    pub args: Vec<String>,
-}
+// //example pf hypervisor for BARE (Native)
+// #[derive(Serialize, Deserialize, Debug, Clone)]
+// pub struct Command {
+//     pub binary: String, //can be relative, in that case it is expected to be part of the image of global path
+//     pub args: Vec<String>,
+// }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FDUDescriptor {
