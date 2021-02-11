@@ -10,7 +10,7 @@
 * Contributors:
 *   ADLINK fog05 team, <fog05@adlink-labs.tech>
 *********************************************************************************/
-
+#![allow(clippy::upper_case_acronyms)]
 #![recursion_limit = "512"]
 
 extern crate base64;

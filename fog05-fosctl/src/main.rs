@@ -10,6 +10,7 @@
 * Contributors:
 *   ADLINK fog05 team, <fog05@adlink-labs.tech>
 *********************************************************************************/
+#![allow(clippy::upper_case_acronyms)]
 
 #[macro_use]
 extern crate failure;

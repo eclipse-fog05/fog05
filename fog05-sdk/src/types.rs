@@ -205,14 +205,14 @@ pub struct TreeGREInfo {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct P2PVXLANInfo {
     pub vni: u32, //actually should be u24
-    pub mcast_addr: IPAddress,
+    pub remote_addr: IPAddress,
     pub port: u16,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct P2PGREInfo {
     pub vni: u32, //actually should be u24
-    pub mcast_addr: IPAddress,
+    pub remote_addr: IPAddress,
     pub port: u16,
 }
 
