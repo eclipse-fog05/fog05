@@ -255,8 +255,8 @@ pub struct FDURecordVirtualInterface {
     pub bandwidht: Option<u8>,
 }
 
-// #[derive(Serialize, Deserialize, Debug, Clone, znrpc_macros::Ast)]
-#[derive(Serialize, Deserialize, Debug, Clone, znrpc_macros::Ast)]
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FDURecordConnectionPoint {
     pub uuid: Uuid,
     pub id: String,
