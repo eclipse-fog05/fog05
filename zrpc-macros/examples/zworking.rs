@@ -10,7 +10,6 @@
 #[macro_use]
 extern crate std;
 extern crate base64;
-extern crate bincode;
 extern crate serde;
 extern crate serde_json;
 
@@ -91,7 +90,7 @@ where
             };
             let encoded_ci = zrpc::serialize::serialize_state(&component_info)?;
             let path = zenoh::Path::try_from(format!(
-                "/this/is/generated/Hello/instance/{}/state",
+                "/zservice/Hello/00000000-0000-0000-0000-000000000001/{}/state",
                 _self.instance_uuid()
             ))?;
             Ok(ws.put(&path, encoded_ci.into()).await?)
@@ -108,7 +107,7 @@ where
             S: Hello + Send + 'static,
         {
             let selector = zenoh::Selector::try_from(format!(
-                "/this/is/generated/Hello/instance/{}/state",
+                "/zservice/Hello/00000000-0000-0000-0000-000000000001/{}/state",
                 _self.instance_uuid()
             ))?;
             let ws = _self.z.workspace(None).await?;
@@ -127,7 +126,7 @@ where
                                     zrpc::ComponentStatus::HALTED => {
                                         ci.status = zrpc::ComponentStatus::INITIALIZING;
                                         let encoded_ci = zrpc::serialize::serialize_state(&ci)?;
-                                        let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state",
+                                        let path = zenoh::Path::try_from(format!("/zservice/Hello/00000000-0000-0000-0000-000000000001/{}/state",
                                         _self.instance_uuid()))?;
                                         Ok(ws.put(&path,encoded_ci.into()).await?)
                                     },
@@ -154,7 +153,7 @@ where
             S: Hello + Send + 'static,
         {
             let selector = zenoh::Selector::try_from(format!(
-                "/this/is/generated/Hello/instance/{}/state",
+                "/zservice/Hello/00000000-0000-0000-0000-000000000001/{}/state",
                 _self.instance_uuid()
             ))?;
             let ws = _self.z.workspace(None).await?;
@@ -173,7 +172,7 @@ where
                                     zrpc::ComponentStatus::INITIALIZING => {
                                         ci.status = zrpc::ComponentStatus::REGISTERED;
                                         let encoded_ci = zrpc::serialize::serialize_state(&ci)?;
-                                        let path = zenoh::Path::try_from(format!("/this/is/generated/Hello/instance/{}/state",
+                                        let path = zenoh::Path::try_from(format!("/zservice/Hello/00000000-0000-0000-0000-000000000001/{}/state",
                                         _self.instance_uuid()))?;
                                         Ok(ws.put(&path,encoded_ci.into()).await?)
                                     },
@@ -215,7 +214,7 @@ where
         {
             let (s, r) = async_std::channel::bounded::<()>(1);
             let selector = zenoh::Selector::try_from(format!(
-                "/this/is/generated/Hello/instance/{}/state",
+                "/zservice/Hello/00000000-0000-0000-0000-000000000001/{}/state",
                 _self.instance_uuid()
             ))?;
             let ws = _self.z.workspace(None).await?;
@@ -233,9 +232,9 @@ where
                             match ci.status {
                                 zrpc::ComponentStatus::REGISTERED => {
                                     ci.status = zrpc::ComponentStatus::SERVING;
-                                    let encoded_ci = bincode::serialize(&ci)?;
+                                    let encoded_ci = zrpc::serialize::serialize_state(&ci)?;
                                     let path = zenoh::Path::try_from(format!(
-                                        "/this/is/generated/Hello/instance/{}/state",
+                                        "/zservice/Hello/00000000-0000-0000-0000-000000000001/{}/state",
                                         _self.instance_uuid()
                                     ))?;
                                     ws.put(&path, encoded_ci.into()).await?;
@@ -275,7 +274,7 @@ where
             S: Hello + Send + 'static,
         {
             let selector = zenoh::Selector::try_from(format!(
-                "/this/is/generated/Hello/instance/{}/state",
+                "/zservice/Hello/00000000-0000-0000-0000-000000000001/{}/state",
                 _self.instance_uuid()
             ))?;
             let ws = _self.z.workspace(None).await?;
@@ -293,7 +292,7 @@ where
                             match ci.status {
                                 zrpc::ComponentStatus::SERVING => {
                                     let path = zenoh::Path::try_from(format!(
-                                        "/this/is/generated/Hello/instance/{}/eval",
+                                        "/zservice/Hello/00000000-0000-0000-0000-000000000001/{}/eval",
                                         _self.instance_uuid()
                                     ))?;
                                     log::trace!("eval registering");
@@ -383,7 +382,7 @@ where
             S: Hello + Send + 'static,
         {
             let selector = zenoh::Selector::try_from(format!(
-                "/this/is/generated/Hello/instance/{}/state",
+                "/zservice/Hello/00000000-0000-0000-0000-000000000001/{}/state",
                 _self.instance_uuid()
             ))?;
             let ws = _self.z.workspace(None).await?;
@@ -403,7 +402,7 @@ where
                                     ci.status = zrpc::ComponentStatus::REGISTERED;
                                     let encoded_ci = zrpc::serialize::serialize_state(&ci)?;
                                     let path = zenoh::Path::try_from(format!(
-                                        "/this/is/generated/Hello/instance/{}/state",
+                                        "/zservice/Hello/00000000-0000-0000-0000-000000000001/{}/state",
                                         _self.instance_uuid()
                                     ))?;
                                     ws.put(&path, encoded_ci.into()).await?;
@@ -436,7 +435,7 @@ where
             S: Hello + Send + 'static,
         {
             let selector = zenoh::Selector::try_from(format!(
-                "/this/is/generated/Hello/instance/{}/state",
+                "/zservice/Hello/00000000-0000-0000-0000-000000000001/{}/state",
                 _self.instance_uuid()
             ))?;
             let ws = _self.z.workspace(None).await?;
@@ -456,7 +455,7 @@ where
                                         ci.status = zrpc::ComponentStatus::HALTED;
                                         let encoded_ci = zrpc::serialize::serialize_state(&ci)?;
                                         let path = zenoh::Path::try_from(format!(
-                                            "/this/is/generated/Hello/instance/{}/state",
+                                            "/zservice/Hello/00000000-0000-0000-0000-000000000001/{}/state",
                                             _self.instance_uuid()))?;
                                         Ok(ws.put(&path,encoded_ci.into()).await?)
                                         // Here we should stop the serve
@@ -482,7 +481,7 @@ where
         {
             let ws = _self.z.workspace(None).await?;
             let path = zenoh::Path::try_from(format!(
-                "/this/is/generated/Hello/instance/{}/state",
+                "/zservice/Hello/00000000-0000-0000-0000-000000000001/{}/state",
                 _self.instance_uuid()
             ))?;
             Ok(ws.delete(&path).await?)
@@ -542,7 +541,7 @@ impl HelloClient {
     pub fn new(z: Arc<zenoh::Zenoh>, instance_id: Uuid) -> HelloClient {
         let new_client = zrpc::ZClientChannel::new(
             z,
-            "/this/is/generated/Hello/instance".to_string(),
+            "/zservice/Hello/00000000-0000-0000-0000-000000000001".to_string(),
             Some(instance_id),
         );
         HelloClient {
@@ -570,7 +569,7 @@ impl HelloClient {
                 .to_uppercase();
 
             let selector =
-                zenoh::Selector::try_from("/this/is/generated/Hello/instance/*/state".to_string())?;
+                zenoh::Selector::try_from("/zservice/Hello/00000000-0000-0000-0000-000000000001/*/state".to_string())?;
             let mut ds = ws.get(&selector).await?;
             let mut servers = Vec::new();
 
@@ -601,7 +600,7 @@ impl HelloClient {
         async move {
             let ws = z.workspace(None).await?;
             let selector =
-                zenoh::Selector::try_from("/this/is/generated/Hello/instance/*/state".to_string())?;
+                zenoh::Selector::try_from("/zservice/Hello/00000000-0000-0000-0000-000000000001/*/state".to_string())?;
             let mut ds = ws.get(&selector).await?;
             let mut servers = Vec::new();
 

@@ -14,6 +14,7 @@ description = "fog05: The End-to-End Compute, Storage and Networking Virtualisat
 [dependencies]
 async-std = { version = "=1.9.0", features = ["attributes"] }
 futures = "0.3.5"
+syn-serde = { version = "0.2", features = ["json"] }
 syn = { version = "1.0.11", features = ["full"] }
 quote = "1.0.2"
 proc-macro2 = "1.0.6"
@@ -42,3 +43,7 @@ proc-macro = true
 
 [[example]]
 name = "znservice"
+
+
+[[example]]
+name = "expanded"

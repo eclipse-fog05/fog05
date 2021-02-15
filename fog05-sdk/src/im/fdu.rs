@@ -255,11 +255,63 @@ pub struct FDURecordVirtualInterface {
     pub bandwidht: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+// #[derive(Serialize, Deserialize, Debug, Clone, znrpc_macros::Ast)]
+#[derive(Serialize, Deserialize, Debug, Clone, znrpc_macros::Ast)]
 pub struct FDURecordConnectionPoint {
     pub uuid: Uuid,
     pub id: String,
 }
+
+
+
+/* AST of FDURecordConnectionPoint from syn
+
+
+{
+  "items": [
+    {
+      "struct": {
+        "vis": "pub",
+        "ident": "FDURecordConnectionPoint",
+        "fields": {
+          "named": [
+            {
+              "vis": "pub",
+              "ident": "uuid",
+              "colon_token": true,
+              "ty": {
+                "path": {
+                  "segments": [
+                    {
+                      "ident": "Uuid"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "vis": "pub",
+              "ident": "id",
+              "colon_token": true,
+              "ty": {
+                "path": {
+                  "segments": [
+                    {
+                      "ident": "String"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
+
+
+*/
 
 // #[derive(Serialize,Deserialize,Debug, Clone)]
 // pub struct FDUMigrationProperties {

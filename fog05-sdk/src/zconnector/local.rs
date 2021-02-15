@@ -552,7 +552,7 @@ impl Local {
             let mut cs = ws.subscribe(&selector).await.ok().unwrap();
             while let Some(change) = cs.next().await {
                 match change.kind {
-                    zenoh::ChangeKind::PUT | zenoh::ChangeKind::PATCH => match change.value {
+                    zenoh::ChangeKind::Put | zenoh::ChangeKind::Patch => match change.value {
                         Some(value) => {
                             if let zenoh::Value::Raw(_, buf) = value {
                                 if let Ok(info) =
@@ -564,7 +564,7 @@ impl Local {
                         }
                         None => log::warn!("Received empty change drop it"),
                     },
-                    zenoh::ChangeKind::DELETE => (),
+                    zenoh::ChangeKind::Delete => (),
                 }
             }
         });

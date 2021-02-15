@@ -402,7 +402,7 @@ impl Stream for FDURecordStream<'_> {
             .poll_next_unpin(cx)
         {
             Poll::Ready(Some(change)) => match change.kind {
-                zenoh::ChangeKind::PUT | zenoh::ChangeKind::PATCH => match change.value {
+                zenoh::ChangeKind::Put | zenoh::ChangeKind::Patch => match change.value {
                     Some(value) => match value {
                         zenoh::Value::Raw(_, buf) => {
                             match bincode::deserialize::<crate::im::fdu::FDURecord>(&buf.to_vec()) {
@@ -417,7 +417,7 @@ impl Stream for FDURecordStream<'_> {
                         Poll::Pending
                     }
                 },
-                zenoh::ChangeKind::DELETE => Poll::Pending,
+                zenoh::ChangeKind::Delete => Poll::Pending,
             },
             Poll::Ready(None) => Poll::Ready(None),
             Poll::Pending => Poll::Pending,

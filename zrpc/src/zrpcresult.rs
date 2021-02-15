@@ -67,14 +67,31 @@ impl From<Box<bincode::ErrorKind>> for ZRPCError {
     }
 }
 
-#[cfg(any(feature = "send_json", feature = "state_json", feature = "resp_json"))]
+#[cfg(any(feature = "resp_cbor", feature = "state_cbor", feature = "send_cbor"))]
+impl From<serde_cbor::Error> for ZRPCError {
+    fn from(err: serde_cbor::Error) -> Self {
+        ZRPCError::SerializationError(err.to_string())
+    }
+}
+
+#[cfg(any(
+    feature = "send_json",
+    feature = "state_json",
+    feature = "resp_json",
+    feature = "router_json"
+))]
 impl From<serde_json::Error> for ZRPCError {
     fn from(err: serde_json::Error) -> Self {
         ZRPCError::SerializationError(err.to_string())
     }
 }
 
-#[cfg(any(feature = "send_json", feature = "state_json", feature = "resp_json"))]
+#[cfg(any(
+    feature = "send_json",
+    feature = "state_json",
+    feature = "resp_json",
+    feature = "router_json"
+))]
 impl From<std::str::Utf8Error> for ZRPCError {
     fn from(err: std::str::Utf8Error) -> Self {
         ZRPCError::DeserializationError(err.to_string())

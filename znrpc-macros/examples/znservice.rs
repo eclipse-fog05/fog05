@@ -49,7 +49,6 @@ async fn main() {
     env_logger::init();
     let zproperties = Properties::from("mode=peer");
     let zsession = Arc::new(zenoh::net::open(zproperties.into()).await.unwrap());
-
     let service = HelloZService {
         ser_name: "test service".to_string(),
         counter: Arc::new(Mutex::new(0u64)),
@@ -65,6 +64,7 @@ async fn main() {
     let (stopper, _h) = server.connect().await.unwrap();
     server.initialize().await.unwrap();
     server.register().await.unwrap();
+
 
     // let servers = HelloClient::find_servers(zsession.clone()).await;
     // println!("servers found: {:?}", servers);
@@ -92,14 +92,14 @@ async fn main() {
     let hello = client.hello("client".to_string()).await;
     println!("Res is: {:?}", hello);
 
-    let hello = client.add().await;
-    println!("Res is: {:?}", hello);
+    let res = client.add().await;
+    println!("Res is: {:?}", res);
 
-    let hello = client.add().await;
-    println!("Res is: {:?}", hello);
+    let res = client.add().await;
+    println!("Res is: {:?}", res);
 
-    let hello = client.add().await;
-    println!("Res is: {:?}", hello);
+    let res = client.add().await;
+    println!("Res is: {:?}", res);
 
     server.stop(s).await.unwrap();
 
