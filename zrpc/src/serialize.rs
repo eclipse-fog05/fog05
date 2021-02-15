@@ -39,7 +39,6 @@ where
     Ok(bincode::serialize(data)?)
 }
 
-
 #[cfg(feature = "resp_json")]
 pub fn serialize_response<T: ?Sized>(data: &T) -> ZRPCResult<Vec<u8>>
 where

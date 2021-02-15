@@ -65,7 +65,6 @@ async fn main() {
     server.initialize().await.unwrap();
     server.register().await.unwrap();
 
-
     // let servers = HelloClient::find_servers(zsession.clone()).await;
     // println!("servers found: {:?}", servers);
 

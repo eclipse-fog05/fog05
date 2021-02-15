@@ -21,7 +21,6 @@ extern crate quote;
 extern crate serde;
 extern crate syn;
 
-use syn_serde::json;
 use darling::FromMeta;
 use inflector::cases::snakecase::to_snake_case;
 use proc_macro::TokenStream;
@@ -40,6 +39,7 @@ use syn::{
     Attribute, AttributeArgs, Block, FnArg, Ident, ImplItem, ImplItemMethod, ImplItemType,
     ItemImpl, Pat, PatIdent, PatType, Receiver, ReturnType, Signature, Token, Type, Visibility,
 };
+use syn_serde::json;
 use uuid::Uuid;
 
 mod receiver;
@@ -182,20 +182,16 @@ impl Parse for EvalMethod {
     }
 }
 
-
 #[proc_macro_derive(Ast)]
 pub fn derive_ast(item: TokenStream) -> TokenStream {
-    let ast : syn::DeriveInput = syn::parse(item).unwrap();
-    let exp : syn::File = syn::parse_quote! {
+    let ast: syn::DeriveInput = syn::parse(item).unwrap();
+    let exp: syn::File = syn::parse_quote! {
         #ast
     };
 
     println!("{}", json::to_string_pretty(&exp));
     TokenStream::new()
 }
-
-
-
 
 /// Generates:
 /// - service trait
@@ -952,7 +948,6 @@ impl<'a> ZNServiceGenerator<'a> {
             args,
             ..
         } = self;
-
 
         quote! {
             /// The request sent over the wire from the client to the server.

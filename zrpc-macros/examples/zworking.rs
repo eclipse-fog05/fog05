@@ -568,8 +568,9 @@ impl HelloClient {
                 .collect::<Vec<_>>()[0]
                 .to_uppercase();
 
-            let selector =
-                zenoh::Selector::try_from("/zservice/Hello/00000000-0000-0000-0000-000000000001/*/state".to_string())?;
+            let selector = zenoh::Selector::try_from(
+                "/zservice/Hello/00000000-0000-0000-0000-000000000001/*/state".to_string(),
+            )?;
             let mut ds = ws.get(&selector).await?;
             let mut servers = Vec::new();
 
@@ -599,8 +600,9 @@ impl HelloClient {
     ) -> impl std::future::Future<Output = ZRPCResult<Vec<Uuid>>> + 'static {
         async move {
             let ws = z.workspace(None).await?;
-            let selector =
-                zenoh::Selector::try_from("/zservice/Hello/00000000-0000-0000-0000-000000000001/*/state".to_string())?;
+            let selector = zenoh::Selector::try_from(
+                "/zservice/Hello/00000000-0000-0000-0000-000000000001/*/state".to_string(),
+            )?;
             let mut ds = ws.get(&selector).await?;
             let mut servers = Vec::new();
 

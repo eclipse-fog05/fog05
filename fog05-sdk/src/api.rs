@@ -35,7 +35,7 @@ impl FDUApi {
         Self { zenoh, zconnector }
     }
 
-    async fn onboard_fdu(&self, fdu: im::fdu::FDUDescriptor) -> FResult<Uuid> {
+    pub async fn onboard_fdu(&self, fdu: im::fdu::FDUDescriptor) -> FResult<Uuid> {
         let nodes = self.zconnector.global.get_all_nodes().await?;
         let entry_point = nodes.choose(&mut rand::thread_rng()).unwrap();
         log::trace!(
@@ -55,7 +55,7 @@ impl FDUApi {
         }
     }
 
-    async fn define_fdu(
+    pub async fn define_fdu(
         &self,
         fdu_uuid: Uuid,
         node_uuid: Option<Uuid>,
@@ -98,7 +98,7 @@ impl FDUApi {
         }
     }
 
-    async fn configure_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
+    pub async fn configure_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
         let nodes = self.zconnector.global.get_all_nodes().await?;
         let entry_point = nodes.choose(&mut rand::thread_rng()).unwrap();
         log::trace!(
@@ -118,7 +118,7 @@ impl FDUApi {
         }
     }
 
-    async fn start_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
+    pub async fn start_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
         let nodes = self.zconnector.global.get_all_nodes().await?;
         let entry_point = nodes.choose(&mut rand::thread_rng()).unwrap();
         log::trace!(
@@ -138,7 +138,7 @@ impl FDUApi {
         }
     }
 
-    async fn stop_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
+    pub async fn stop_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
         let nodes = self.zconnector.global.get_all_nodes().await?;
         let entry_point = nodes.choose(&mut rand::thread_rng()).unwrap();
         log::trace!(
@@ -158,7 +158,7 @@ impl FDUApi {
         }
     }
 
-    async fn clean_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
+    pub async fn clean_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
         let nodes = self.zconnector.global.get_all_nodes().await?;
         let entry_point = nodes.choose(&mut rand::thread_rng()).unwrap();
         log::trace!(
@@ -178,7 +178,7 @@ impl FDUApi {
         }
     }
 
-    async fn undefine_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
+    pub async fn undefine_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
         let nodes = self.zconnector.global.get_all_nodes().await?;
         let entry_point = nodes.choose(&mut rand::thread_rng()).unwrap();
         log::trace!(
@@ -198,7 +198,7 @@ impl FDUApi {
         }
     }
 
-    async fn offload_fdu(&self, fdu_uuid: Uuid) -> FResult<Uuid> {
+    pub async fn offload_fdu(&self, fdu_uuid: Uuid) -> FResult<Uuid> {
         let nodes = self.zconnector.global.get_all_nodes().await?;
         let entry_point = nodes.choose(&mut rand::thread_rng()).unwrap();
         log::trace!(
@@ -229,15 +229,15 @@ impl NodeApi {
         Self { zenoh, zconnector }
     }
 
-    async fn list(&self) -> FResult<Vec<im::node::NodeInfo>> {
+    pub async fn list(&self) -> FResult<Vec<im::node::NodeInfo>> {
         self.zconnector.global.get_all_nodes().await
     }
 
-    async fn info(&self, node_uuid: Uuid) -> FResult<im::node::NodeInfo> {
+    pub async fn info(&self, node_uuid: Uuid) -> FResult<im::node::NodeInfo> {
         self.zconnector.global.get_node_info(node_uuid).await
     }
 
-    async fn status(&self, node_uuid: Uuid) -> FResult<im::node::NodeStatus> {
+    pub async fn status(&self, node_uuid: Uuid) -> FResult<im::node::NodeStatus> {
         self.zconnector.global.get_node_status(node_uuid).await
     }
 }

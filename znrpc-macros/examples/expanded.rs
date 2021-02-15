@@ -2,12 +2,10 @@
 #![allow(clippy::manual_async_fn)]
 #![allow(clippy::large_enum_variant)]
 #[prelude_import]
-
 extern crate serde;
 extern crate std;
 
 use std::prelude::v1::*;
-
 
 use async_std::prelude::FutureExt;
 use async_std::sync::{Arc, Mutex};
@@ -19,11 +17,9 @@ use std::time::Duration;
 use uuid::Uuid;
 use zenoh::*;
 
+use serde::{Deserialize, Serialize};
 use zrpc::zrpcresult::{ZRPCError, ZRPCResult};
 use zrpc::ZNServe;
-use serde::{Deserialize, Serialize};
-
-
 
 pub trait Hello: Clone {
     fn hello(
@@ -121,10 +117,12 @@ where
             let (s, r) = async_std::channel::bounded::<()>(1);
             let zsession = _self.z.clone();
             let state = _self.state.clone();
-            let path = zenoh::Path::try_from(format!("/znservice/Hello/2967c40b-a9a4-4330-b5f6-e0315b2356a9/{}/state",_self.instance_uuid()))?;
+            let path = zenoh::Path::try_from(format!(
+                "/znservice/Hello/2967c40b-a9a4-4330-b5f6-e0315b2356a9/{}/state",
+                _self.instance_uuid()
+            ))?;
 
             let h = async_std::task::spawn(async move {
-
                 let mut queryable = zsession
                     .declare_queryable(&path.clone().into(), zenoh::net::queryable::EVAL)
                     .await?;
@@ -161,9 +159,10 @@ where
                     }
                 };
 
-                rcv_loop.race(r.recv()).await.map_err(|e| {
-                    ZRPCError::Error(format!("{}",e))
-                })
+                rcv_loop
+                    .race(r.recv())
+                    .await
+                    .map_err(|e| ZRPCError::Error(format!("{}", e)))
             });
             Ok((s, h))
         }
@@ -173,7 +172,6 @@ where
     fn initialize(
         &self,
     ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>> {
-
         async fn __initialize<S>(_self: &ServeHello<S>) -> ZRPCResult<()>
         where
             S: Hello + Send + 'static,
@@ -195,7 +193,6 @@ where
     fn register(
         &self,
     ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>> {
-
         async fn __register<S>(_self: &ServeHello<S>) -> ZRPCResult<()>
         where
             S: Hello + Send + 'static,
@@ -231,7 +228,6 @@ where
                 > + '_,
         >,
     > {
-
         async fn __start<S>(
             _self: &ServeHello<S>,
         ) -> ZRPCResult<(
@@ -267,7 +263,6 @@ where
         &self,
         stop: async_std::channel::Receiver<()>,
     ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>> {
-
         async fn __serve<S>(
             _self: &ServeHello<S>,
             _stop: async_std::channel::Receiver<()>,
@@ -280,7 +275,9 @@ where
                 zrpc::ComponentStatus::SERVING => {
                     drop(ci);
                     let path = zenoh::Path::try_from(format!(
-                        "/znservice/Hello/2967c40b-a9a4-4330-b5f6-e0315b2356a9/{}/eval", _self.instance_uuid()))?;
+                        "/znservice/Hello/2967c40b-a9a4-4330-b5f6-e0315b2356a9/{}/eval",
+                        _self.instance_uuid()
+                    ))?;
 
                     let mut queryable = _self
                         .z
@@ -353,7 +350,10 @@ where
                         }
                     };
 
-                    let res = rcv_loop.race(_stop.recv()).await.map_err(|e| ZRPCError::Error(format!("{}",e)));
+                    let res = rcv_loop
+                        .race(_stop.recv())
+                        .await
+                        .map_err(|e| ZRPCError::Error(format!("{}", e)));
                     res
                 }
                 _ => Err(ZRPCError::StateTransitionNotAllowed(
@@ -370,7 +370,6 @@ where
         &self,
         stop: async_std::channel::Sender<()>,
     ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>> {
-
         async fn __stop<S>(
             _self: &ServeHello<S>,
             _stop: async_std::channel::Sender<()>,
@@ -396,7 +395,6 @@ where
     fn unregister(
         &self,
     ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>> {
-
         async fn __unregister<S>(_self: &ServeHello<S>) -> ZRPCResult<()>
         where
             S: Hello + Send + 'static,
@@ -420,7 +418,6 @@ where
         &self,
         stop: async_std::channel::Sender<()>,
     ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>> {
-
         async fn __disconnect<S>(
             _self: &ServeHello<S>,
             _stop: async_std::channel::Sender<()>,
@@ -465,7 +462,6 @@ pub struct HelloClient<C = zrpc::ZNClientChannel<HelloRequest, HelloResponse>> {
     server_uuid: Uuid,
 }
 
-
 impl HelloClient {
     pub fn new(
         z: async_std::sync::Arc<zenoh::net::Session>,
@@ -488,10 +484,10 @@ impl HelloClient {
         z: async_std::sync::Arc<zenoh::net::Session>,
     ) -> impl std::future::Future<Output = ZRPCResult<Vec<uuid::Uuid>>> + 'static {
         async move {
-
             let reskey = net::ResKey::RId(
                 z.declare_resource(&net::ResKey::RName(
-                    "/znservice/Hello/2967c40b-a9a4-4330-b5f6-e0315b2356a9/*/state".to_string()))
+                    "/znservice/Hello/2967c40b-a9a4-4330-b5f6-e0315b2356a9/*/state".to_string(),
+                ))
                 .await?,
             );
             let mut servers = Vec::new();
@@ -515,10 +511,10 @@ impl HelloClient {
         z: async_std::sync::Arc<zenoh::net::Session>,
     ) -> impl std::future::Future<Output = ZRPCResult<Vec<uuid::Uuid>>> + 'static {
         async move {
-
             let reskey = net::ResKey::RId(
                 z.declare_resource(&net::ResKey::RName(
-                    "/znservice/Hello/2967c40b-a9a4-4330-b5f6-e0315b2356a9/*/state".to_string()))
+                    "/znservice/Hello/2967c40b-a9a4-4330-b5f6-e0315b2356a9/*/state".to_string(),
+                ))
                 .await?,
             );
             let mut servers = Vec::new();
@@ -549,7 +545,7 @@ impl HelloClient {
 
             let reskey = net::ResKey::RId(
                 z.declare_resource(&net::ResKey::RName(format!("/@/router/{}", rid)))
-                .await?,
+                    .await?,
             );
             let rdata: Vec<zenoh::net::Reply> = z
                 .query(
@@ -649,7 +645,6 @@ struct HelloZService {
     pub counter: Arc<Mutex<u64>>,
 }
 
-
 impl Hello for HelloZService {
     #[allow(unused, clippy::manual_async_fn)]
     fn hello(
@@ -680,58 +675,57 @@ impl Hello for HelloZService {
 
 #[async_std::main]
 async fn main() {
-        {
-            env_logger::init();
-            let zproperties = Properties::from("mode=peer");
-            let zsession = Arc::new(zenoh::net::open(zproperties.into()).await.unwrap());
+    {
+        env_logger::init();
+        let zproperties = Properties::from("mode=peer");
+        let zsession = Arc::new(zenoh::net::open(zproperties.into()).await.unwrap());
 
-            let service = HelloZService {
-                ser_name: "test service".to_string(),
-                counter: Arc::new(Mutex::new(0u64)),
-            };
+        let service = HelloZService {
+            ser_name: "test service".to_string(),
+            counter: Arc::new(Mutex::new(0u64)),
+        };
 
-            let z = zsession.clone();
-            let server = service.get_hello_server(z, None);
+        let z = zsession.clone();
+        let server = service.get_hello_server(z, None);
 
-            let ser_uuid = server.instance_uuid();
-            println!("Server instance UUID {}", ser_uuid);
-            let client = HelloClient::new(zsession.clone(), ser_uuid);
+        let ser_uuid = server.instance_uuid();
+        println!("Server instance UUID {}", ser_uuid);
+        let client = HelloClient::new(zsession.clone(), ser_uuid);
 
-            let (stopper, _h) = server.connect().await.unwrap();
+        let (stopper, _h) = server.connect().await.unwrap();
 
-            server.initialize().await.unwrap();
-            server.register().await.unwrap();
-            println!("Verify server: {:?}", client.verify_server().await);
+        server.initialize().await.unwrap();
+        server.register().await.unwrap();
+        println!("Verify server: {:?}", client.verify_server().await);
 
-            let (s, handle) = server.start().await.unwrap();
+        let (s, handle) = server.start().await.unwrap();
 
-            let servers = HelloClient::find_servers(zsession.clone()).await;
-            println!("servers found: {:?}", servers);
+        let servers = HelloClient::find_servers(zsession.clone()).await;
+        println!("servers found: {:?}", servers);
 
-            let local_servers = HelloClient::find_local_servers(zsession.clone()).await;
+        let local_servers = HelloClient::find_local_servers(zsession.clone()).await;
 
-            println!("local_servers found: {:?}", local_servers);
+        println!("local_servers found: {:?}", local_servers);
 
-            println!("Verify server: {:?}", client.verify_server().await);
-            task::sleep(Duration::from_secs(1)).await;
+        println!("Verify server: {:?}", client.verify_server().await);
+        task::sleep(Duration::from_secs(1)).await;
 
-            println!("Verify server: {:?}", client.verify_server().await);
+        println!("Verify server: {:?}", client.verify_server().await);
 
-            let hello = client.hello("client".to_string()).await;
-            println!("Res is: {:?}", hello);
-            let res = client.add().await;
-            println!("Res is: {:?}", res);
+        let hello = client.hello("client".to_string()).await;
+        println!("Res is: {:?}", hello);
+        let res = client.add().await;
+        println!("Res is: {:?}", res);
 
-            let res = client.add().await;
-            println!("Res is: {:?}", res);
+        let res = client.add().await;
+        println!("Res is: {:?}", res);
 
-            let res = client.add().await;
-            println!("Res is: {:?}", res);
+        let res = client.add().await;
+        println!("Res is: {:?}", res);
 
-
-            server.stop(s).await.unwrap();
-            server.unregister().await.unwrap();
-            server.disconnect(stopper).await.unwrap();
-            handle.await.unwrap();
-        }
+        server.stop(s).await.unwrap();
+        server.unregister().await.unwrap();
+        server.disconnect(stopper).await.unwrap();
+        handle.await.unwrap();
+    }
 }
