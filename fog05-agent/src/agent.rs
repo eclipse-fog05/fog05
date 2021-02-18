@@ -552,7 +552,7 @@ impl AgentPluginInterface for Agent {
     ) -> FResult<Uuid> {
         Err(FError::Unimplemented)
     }
-    async fn unbind_co_from_fdu_face(
+    async fn unbind_cp_from_fdu_face(
         &self,
         cp_uuid: Uuid,
         instance_uuid: Uuid,

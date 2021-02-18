@@ -21,10 +21,10 @@ serde_derive = "1.0.55"
 serde = { version = "1.0.55", features = ["derive"] }
 zenoh = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "master" }
 zrpc = {path = "../zrpc"}
-base64 = "0.12.3"
+base64 = "0.13.0"
 log = "0.4.11"
 uuid = { version = "0.8.1", features = ["serde", "v4"] }
-darling = "0.10.2"
+darling = "0.12.0"
 Inflector = "0.11.4"
 bincode = { version = "1.3.1"}
 
@@ -33,8 +33,8 @@ bincode = { version = "1.3.1"}
 [dev-dependencies]
 bincode = { version = "1.3.1"}
 serde_json = { version = "1.0.55"}
-base64 = "0.12.3"
-env_logger = "0.7.1"
+base64 = "0.13.0"
+env_logger = "0.8.3"
 
 [lib]
 proc-macro = true

@@ -111,7 +111,7 @@ pub trait AgentPluginInterface {
         instance_uuid: Uuid,
         interface: String,
     ) -> FResult<Uuid>;
-    async fn unbind_co_from_fdu_face(
+    async fn unbind_cp_from_fdu_face(
         &self,
         cp_uuid: Uuid,
         instance_uuid: Uuid,

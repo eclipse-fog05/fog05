@@ -43,7 +43,7 @@ impl Bencher for MyBench {
 
 
 
-#[tokio::main(core_threads=1, max_threads=1)]
+#[tokio::main(worker_threads=1)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = ServerArgs::from_args();

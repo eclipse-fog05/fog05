@@ -31,7 +31,7 @@ pub enum FError {
     HasInstances,
     ConversionError(String),
     IOError(String),
-    BincodeError(String),
+    SerializationDeserializationError(String),
     ZError(String),
     UnknownError(String),
     NetworkingError(String),
@@ -56,7 +56,7 @@ impl fmt::Display for FError {
             FError::ConversionError(err) => write!(f, "{}", err),
             FError::IOError(err) => write!(f, "{}", err),
             FError::ZError(err) => write!(f, "{}", err),
-            FError::BincodeError(err) => write!(f, "{}", err),
+            FError::SerializationDeserializationError(err) => write!(f, "{}", err),
             FError::UnknownError(err) => write!(f, "Error {}", err),
             FError::NetworkingError(err) => write!(f, "NetworkingError {}", err),
             FError::HypervisorError(err) => write!(f, "HypervisorError {}", err),
@@ -68,12 +68,6 @@ impl fmt::Display for FError {
 impl From<zenoh::ZError> for FError {
     fn from(err: zenoh::ZError) -> Self {
         FError::ZError(err.to_string())
-    }
-}
-
-impl From<Box<bincode::ErrorKind>> for FError {
-    fn from(err: Box<bincode::ErrorKind>) -> Self {
-        FError::BincodeError(err.to_string())
     }
 }
 
@@ -110,6 +104,34 @@ impl From<Box<dyn std::error::Error>> for FError {
 impl From<uuid::Error> for FError {
     fn from(err: uuid::Error) -> Self {
         FError::UUIDError(err.to_string())
+    }
+}
+
+#[cfg(feature = "data_bincode")]
+impl From<Box<bincode::ErrorKind>> for FError {
+    fn from(err: Box<bincode::ErrorKind>) -> Self {
+        FError::SerializationDeserializationError(err.to_string())
+    }
+}
+
+#[cfg(feature = "data_cbor")]
+impl From<serde_cbor::Error> for FError {
+    fn from(err: serde_cbor::Error) -> Self {
+        FError::SerializationDeserializationError(err.to_string())
+    }
+}
+
+#[cfg(feature = "data_json")]
+impl From<serde_json::Error> for FError {
+    fn from(err: serde_json::Error) -> Self {
+        FError::SerializationError(err.to_string())
+    }
+}
+
+#[cfg(feature = "data_json")]
+impl From<std::str::Utf8Error> for FError {
+    fn from(err: std::str::Utf8Error) -> Self {
+        FError::SerializationDeserializationError(err.to_string())
     }
 }
 

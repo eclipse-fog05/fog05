@@ -13,8 +13,8 @@
 
 #![allow(unused)]
 
-extern crate bincode;
-extern crate serde;
+mod serializers;
+use serializers::*;
 
 use super::im::data::*;
 use crate::fresult::{FError, FResult};
@@ -405,7 +405,7 @@ impl Stream for FDURecordStream<'_> {
                 zenoh::ChangeKind::Put | zenoh::ChangeKind::Patch => match change.value {
                     Some(value) => match value {
                         zenoh::Value::Raw(_, buf) => {
-                            match bincode::deserialize::<crate::im::fdu::FDURecord>(&buf.to_vec()) {
+                            match deserialize_data::<crate::im::fdu::FDURecord>(&buf.to_vec()) {
                                 Ok(info) => Poll::Ready(Some(info)),
                                 Err(_) => Poll::Pending,
                             }
@@ -470,8 +470,7 @@ impl Global {
                 let kv = &data[0];
                 match &kv.value {
                     zenoh::Value::Raw(_, buf) => {
-                        let si =
-                            bincode::deserialize::<crate::im::types::SystemInfo>(&buf.to_vec())?;
+                        let si = deserialize_data::<crate::im::types::SystemInfo>(&buf.to_vec())?;
                         Ok(si)
                     }
                     _ => Err(FError::ZConnectorError),
@@ -495,8 +494,7 @@ impl Global {
                 let kv = &data[0];
                 match &kv.value {
                     zenoh::Value::Raw(_, buf) => {
-                        let sc =
-                            bincode::deserialize::<crate::im::types::SystemConfig>(&buf.to_vec())?;
+                        let sc = deserialize_data::<crate::im::types::SystemConfig>(&buf.to_vec())?;
                         Ok(sc)
                     }
                     _ => Err(FError::EncodingError),
@@ -518,7 +516,7 @@ impl Global {
         while let Some(d) = ds.next().await {
             match &d.value {
                 zenoh::Value::Raw(_, buf) => {
-                    let ni = bincode::deserialize::<crate::im::node::NodeInfo>(&buf.to_vec())?;
+                    let ni = deserialize_data::<crate::im::node::NodeInfo>(&buf.to_vec())?;
                     data.push(ni);
                 }
                 _ => return Err(FError::EncodingError),
@@ -546,7 +544,7 @@ impl Global {
                 let kv = &data[0];
                 match &kv.value {
                     zenoh::Value::Raw(_, buf) => {
-                        let ni = bincode::deserialize::<crate::im::node::NodeInfo>(&buf.to_vec())?;
+                        let ni = deserialize_data::<crate::im::node::NodeInfo>(&buf.to_vec())?;
                         Ok(ni)
                     }
                     _ => Err(FError::EncodingError),
@@ -575,7 +573,7 @@ impl Global {
             node_info.uuid
         ))?;
         let ws = self.z.workspace(None).await?;
-        let encoded_info = bincode::serialize(&node_info)?;
+        let encoded_info = serialize_data(&node_info)?;
         Ok(ws.put(&path, encoded_info.into()).await?)
     }
 
@@ -598,8 +596,7 @@ impl Global {
                 let kv = &data[0];
                 match &kv.value {
                     zenoh::Value::Raw(_, buf) => {
-                        let ni =
-                            bincode::deserialize::<crate::im::node::NodeStatus>(&buf.to_vec())?;
+                        let ni = deserialize_data::<crate::im::node::NodeStatus>(&buf.to_vec())?;
                         Ok(ni)
                     }
                     _ => Err(FError::EncodingError),
@@ -617,7 +614,7 @@ impl Global {
             node_status.uuid
         ))?;
         let ws = self.z.workspace(None).await?;
-        let encoded_status = bincode::serialize(&node_status)?;
+        let encoded_status = serialize_data(&node_status)?;
         Ok(ws.put(&path, encoded_status.into()).await?)
     }
 
@@ -656,7 +653,7 @@ impl Global {
                 let kv = &data[0];
                 match &kv.value {
                     zenoh::Value::Raw(_, buf) => {
-                        let info = bincode::deserialize::<crate::types::PluginInfo>(&buf.to_vec())?;
+                        let info = deserialize_data::<crate::types::PluginInfo>(&buf.to_vec())?;
                         Ok(info)
                     }
                     _ => Err(FError::EncodingError),
@@ -688,8 +685,7 @@ impl Global {
                 let kv = &data[0];
                 match &kv.value {
                     zenoh::Value::Raw(_, buf) => {
-                        let info =
-                            bincode::deserialize::<crate::types::VirtualNetwork>(&buf.to_vec())?;
+                        let info = deserialize_data::<crate::types::VirtualNetwork>(&buf.to_vec())?;
                         Ok(info)
                     }
                     _ => Err(FError::EncodingError),
@@ -710,7 +706,7 @@ impl Global {
             vnet_info.uuid
         ))?;
         let ws = self.z.workspace(None).await?;
-        let encoded_info = bincode::serialize(&vnet_info)?;
+        let encoded_info = serialize_data(&vnet_info)?;
         Ok(ws.put(&path, encoded_info.into()).await?)
     }
 
@@ -748,7 +744,7 @@ impl Global {
                 match &kv.value {
                     zenoh::Value::Raw(_, buf) => {
                         let info =
-                            bincode::deserialize::<crate::types::ConnectionPoint>(&buf.to_vec())?;
+                            deserialize_data::<crate::types::ConnectionPoint>(&buf.to_vec())?;
                         Ok(info)
                     }
                     _ => Err(FError::EncodingError),
@@ -769,7 +765,7 @@ impl Global {
             cp_info.uuid
         ))?;
         let ws = self.z.workspace(None).await?;
-        let encoded_info = bincode::serialize(&cp_info)?;
+        let encoded_info = serialize_data(&cp_info)?;
         Ok(ws.put(&path, encoded_info.into()).await?)
     }
 
@@ -804,7 +800,7 @@ impl Global {
                 match &kv.value {
                     zenoh::Value::Raw(_, buf) => {
                         let info =
-                            bincode::deserialize::<crate::types::VirtualInterface>(&buf.to_vec())?;
+                            deserialize_data::<crate::types::VirtualInterface>(&buf.to_vec())?;
                         Ok(info)
                     }
                     _ => Err(FError::EncodingError),
@@ -822,7 +818,7 @@ impl Global {
             iface_info.uuid
         ))?;
         let ws = self.z.workspace(None).await?;
-        let encoded_info = bincode::serialize(&iface_info)?;
+        let encoded_info = serialize_data(&iface_info)?;
         Ok(ws.put(&path, encoded_info.into()).await?)
     }
 
@@ -857,7 +853,7 @@ impl Global {
                 match &kv.value {
                     zenoh::Value::Raw(_, buf) => {
                         let info =
-                            bincode::deserialize::<crate::im::fdu::FDUDescriptor>(&buf.to_vec())?;
+                            deserialize_data::<crate::im::fdu::FDUDescriptor>(&buf.to_vec())?;
                         Ok(info)
                     }
                     _ => Err(FError::EncodingError),
@@ -884,8 +880,7 @@ impl Global {
         for kv in data {
             match &kv.value {
                 zenoh::Value::Raw(_, buf) => {
-                    let info =
-                        bincode::deserialize::<crate::im::fdu::FDUDescriptor>(&buf.to_vec())?;
+                    let info = deserialize_data::<crate::im::fdu::FDUDescriptor>(&buf.to_vec())?;
                     fdus.push(info);
                 }
                 _ => return Err(FError::EncodingError),
@@ -903,7 +898,7 @@ impl Global {
             fdu_uuid
         ))?;
         let ws = self.z.workspace(None).await?;
-        let encoded_info = bincode::serialize(&fdu_info)?;
+        let encoded_info = serialize_data(&fdu_info)?;
         Ok(ws.put(&path, encoded_info.into()).await?)
     }
 
@@ -937,8 +932,7 @@ impl Global {
                 let kv = &data[0];
                 match &kv.value {
                     zenoh::Value::Raw(_, buf) => {
-                        let info =
-                            bincode::deserialize::<crate::im::fdu::FDURecord>(&buf.to_vec())?;
+                        let info = deserialize_data::<crate::im::fdu::FDURecord>(&buf.to_vec())?;
                         Ok(info)
                     }
                     _ => Err(FError::EncodingError),
@@ -969,7 +963,7 @@ impl Global {
         for kv in data {
             match &kv.value {
                 zenoh::Value::Raw(_, buf) => {
-                    let info = bincode::deserialize::<crate::im::fdu::FDURecord>(&buf.to_vec())?;
+                    let info = deserialize_data::<crate::im::fdu::FDURecord>(&buf.to_vec())?;
                     fdus.push(info);
                 }
                 _ => return Err(FError::EncodingError),
@@ -1003,7 +997,7 @@ impl Global {
         for kv in data {
             match &kv.value {
                 zenoh::Value::Raw(_, buf) => {
-                    let info = bincode::deserialize::<crate::im::fdu::FDURecord>(&buf.to_vec())?;
+                    let info = deserialize_data::<crate::im::fdu::FDURecord>(&buf.to_vec())?;
                     fdus.push(info);
                 }
                 _ => return Err(FError::EncodingError),
@@ -1021,7 +1015,7 @@ impl Global {
             instance_info.uuid
         ))?;
         let ws = self.z.workspace(None).await?;
-        let encoded_info = bincode::serialize(&instance_info)?;
+        let encoded_info = serialize_data(&instance_info)?;
         Ok(ws.put(&path, encoded_info.into()).await?)
     }
 
@@ -1060,9 +1054,8 @@ impl Global {
                 let kv = &data[0];
                 match &kv.value {
                     zenoh::Value::Raw(_, buf) => {
-                        let info = bincode::deserialize::<crate::im::entity::EntityDescriptor>(
-                            &buf.to_vec(),
-                        )?;
+                        let info =
+                            deserialize_data::<crate::im::entity::EntityDescriptor>(&buf.to_vec())?;
                         Ok(info)
                     }
                     _ => Err(FError::EncodingError),
@@ -1090,7 +1083,7 @@ impl Global {
             match &kv.value {
                 zenoh::Value::Raw(_, buf) => {
                     let info =
-                        bincode::deserialize::<crate::im::entity::EntityDescriptor>(&buf.to_vec())?;
+                        deserialize_data::<crate::im::entity::EntityDescriptor>(&buf.to_vec())?;
                     entities.push(info);
                 }
                 _ => return Err(FError::EncodingError),
@@ -1111,7 +1104,7 @@ impl Global {
             entity_uuid
         ))?;
         let ws = self.z.workspace(None).await?;
-        let encoded_info = bincode::serialize(&entity_info)?;
+        let encoded_info = serialize_data(&entity_info)?;
         Ok(ws.put(&path, encoded_info.into()).await?)
     }
 
@@ -1149,7 +1142,7 @@ impl Global {
                 match &kv.value {
                     zenoh::Value::Raw(_, buf) => {
                         let info =
-                            bincode::deserialize::<crate::im::entity::EntityRecord>(&buf.to_vec())?;
+                            deserialize_data::<crate::im::entity::EntityRecord>(&buf.to_vec())?;
                         Ok(info)
                     }
                     _ => Err(FError::EncodingError),
@@ -1182,8 +1175,7 @@ impl Global {
         for kv in data {
             match &kv.value {
                 zenoh::Value::Raw(_, buf) => {
-                    let info =
-                        bincode::deserialize::<crate::im::entity::EntityRecord>(&buf.to_vec())?;
+                    let info = deserialize_data::<crate::im::entity::EntityRecord>(&buf.to_vec())?;
                     entities.push(info);
                 }
                 _ => return Err(FError::EncodingError),
@@ -1217,8 +1209,7 @@ impl Global {
         for kv in data {
             match &kv.value {
                 zenoh::Value::Raw(_, buf) => {
-                    let info =
-                        bincode::deserialize::<crate::im::entity::EntityRecord>(&buf.to_vec())?;
+                    let info = deserialize_data::<crate::im::entity::EntityRecord>(&buf.to_vec())?;
                     entities.push(info);
                 }
                 _ => return Err(FError::EncodingError),
@@ -1239,7 +1230,7 @@ impl Global {
             instance_info.uuid
         ))?;
         let ws = self.z.workspace(None).await?;
-        let encoded_info = bincode::serialize(&instance_info)?;
+        let encoded_info = serialize_data(&instance_info)?;
         Ok(ws.put(&path, encoded_info.into()).await?)
     }
 

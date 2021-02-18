@@ -30,7 +30,7 @@ struct ClientArgs {
     duration: u64,
 }
 
-#[tokio::main(core_threads=1, max_threads=1)]
+#[tokio::main(worker_threads=1)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = ClientArgs::from_args();
 
@@ -51,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("MSGS,SIZE,THR,INTERVEAL,RTT_US,KIND");
     task::spawn(async move {
         loop {
-            tokio::time::delay_for(Duration::from_secs(i)).await;
+            tokio::time::sleep(Duration::from_secs(i)).await;
             let n = c.swap(0, Ordering::AcqRel);
             let r = rt.swap(0, Ordering::AcqRel);
             let msgs = n / i;
