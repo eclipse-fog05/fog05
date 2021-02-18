@@ -16,6 +16,9 @@
 mod serializers;
 use serializers::*;
 
+pub mod local;
+use local::Local;
+
 use super::im::data::*;
 use crate::fresult::{FError, FResult};
 use async_std::pin::Pin;
@@ -1247,9 +1250,6 @@ impl Global {
         Ok(ws.delete(&path).await?)
     }
 }
-
-mod local;
-use local::Local;
 
 pub struct ZConnector {
     pub global: Global,
