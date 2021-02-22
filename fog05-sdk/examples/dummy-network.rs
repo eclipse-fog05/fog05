@@ -1061,7 +1061,7 @@ impl DummyNetwork {
         let iface: String = thread_rng()
             .sample_iter(&Alphanumeric)
             .take(8)
-            .map(|x| format!("{}", x))
+            .map(char::from)
             .collect();
         iface
     }
@@ -1070,7 +1070,7 @@ impl DummyNetwork {
         let ns: String = thread_rng()
             .sample_iter(&Alphanumeric)
             .take(8)
-            .map(|x| format!("{}", x))
+            .map(char::from)
             .collect();
         format!("ns-{}", ns)
     }
