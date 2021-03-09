@@ -83,7 +83,7 @@
           ram_size_mb: 10
           storage_size_mb: 1
       migration_kind : COLD
-      hypervisor_specific : "{\"cmd\":\"/home/ubuntu/zcam/target/debug/zcapture\",\"args\":[\"-m\",\"client\",\"-e\",\"tcp/51.178.81.124:7447\",\"-p\",\"/robot/video\"],\"env\":{}}"
+      hypervisor_specific : "{\"cmd\":\"/home/ubuntu/zcam/target/release/zcapture\",\"args\":[\"-m\",\"client\",\"-e\",\"tcp/51.178.81.124:7447\",\"-p\",\"/robot/video\"],\"env\":{}}"
       interfaces : []
       storage: []
       connection_points: []

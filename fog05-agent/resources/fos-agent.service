@@ -5,6 +5,7 @@ Description = Eclipse fog05 Agent
 
 [Service]
 Type=simple
+Environment=RUST_LOG="fog05_agent=trace"
 PIDFile=/var/fos/fos-agent.pid
 ExecStart = /usr/bin/fog05-agent -c /etc/fos/agent.yaml
 KillMode=mixed

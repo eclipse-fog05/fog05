@@ -6,7 +6,7 @@ use structopt::StructOpt;
 use zenoh::net::queryable::EVAL;
 use zenoh::net::*;
 use zenoh::*;
-use zenoh_protocol::proto::DataInfo;
+use zenoh::net::protocol::proto::DataInfo;
 
 static DEFAULT_MODE: &str = "peer";
 static DEFAULT_SIZE: &str = "8";

@@ -375,7 +375,12 @@ impl Agent {
         let mut clients: Vec<AgentOrchestratorInterfaceClient> = Vec::new();
 
         for node in nodes {
-            if node.uuid == my_uuid {
+            if node.agent_service_uuid != my_uuid {
+                log::trace!(
+                    "Creating Client for node {} - service id: {}",
+                    node.uuid,
+                    node.agent_service_uuid
+                );
                 let client =
                     AgentOrchestratorInterfaceClient::new(self.z.clone(), node.agent_service_uuid);
                 clients.push(client);
@@ -444,8 +449,22 @@ impl Agent {
             let fdu_instance = self_client
                 .schedule_fdu(fdu.uuid.ok_or(FError::MalformedDescriptor)?)
                 .await??;
-            self_client.configure_fdu(fdu_instance.uuid).await??;
-            self_client.start_fdu(fdu_instance.uuid).await??;
+            log::trace!(
+                "FDU: {} Scheduled on node: {}",
+                fdu_instance.uuid,
+                fdu_instance.node
+            );
+            if fdu_instance.node == self_node_uuid {
+                self_client.configure_fdu(fdu_instance.uuid).await??;
+                self_client.start_fdu(fdu_instance.uuid).await??;
+            } else {
+                let node_info = zconnector.global.get_node_info(fdu_instance.node).await?;
+                let client =
+                    AgentOrchestratorInterfaceClient::new(z.clone(), node_info.agent_service_uuid);
+                client.configure_fdu(fdu_instance.uuid).await??;
+                client.start_fdu(fdu_instance.uuid).await??;
+            }
+
             instance.fdus.push(fdu_instance.uuid);
         }
 
@@ -471,9 +490,19 @@ impl Agent {
         // stop, clean and undefine all FDUs
 
         for fdu_inst_id in instance.fdus.clone() {
-            self_client.stop_fdu(fdu_inst_id).await??;
-            self_client.clean_fdu(fdu_inst_id).await??;
-            self_client.undefine_fdu(fdu_inst_id).await??;
+            let instance = zconnector.global.get_instance(fdu_inst_id).await?;
+            if instance.node == self_node_uuid {
+                self_client.stop_fdu(fdu_inst_id).await??;
+                self_client.clean_fdu(fdu_inst_id).await??;
+                self_client.undefine_fdu(fdu_inst_id).await??;
+            } else {
+                let node_info = zconnector.global.get_node_info(instance.node).await?;
+                let client =
+                    AgentOrchestratorInterfaceClient::new(z.clone(), node_info.agent_service_uuid);
+                client.stop_fdu(fdu_inst_id).await??;
+                client.clean_fdu(fdu_inst_id).await??;
+                client.undefine_fdu(fdu_inst_id).await??;
+            }
         }
 
         instance.status = im::entity::EntityStatus::STOPPED;
@@ -1136,19 +1165,26 @@ impl AgentOrchestratorInterface for Agent {
     async fn configure_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
         info!("FDU Configure {}", instance_uuid);
         let guard = self.agent.read().await;
-        trace!("Getting record");
         let instance = self.connector.global.get_instance(instance_uuid).await?;
-        trace!("Getting descriptor");
-        let descriptor = self.connector.global.get_fdu(instance.fdu_uuid).await?;
-        trace!("Getting plugin");
-        let plugin = guard
-            .hypervisors
-            .get(&descriptor.hypervisor)
-            .ok_or(FError::NotFound)?;
 
-        trace!("Calling plugin function");
-        plugin.configure_fdu(instance_uuid).await??;
-        Ok(instance)
+        if instance.node == self.node_uuid {
+            log::trace!("FDU Instance is local!");
+            let descriptor = self.connector.global.get_fdu(instance.fdu_uuid).await?;
+            let plugin = guard
+                .hypervisors
+                .get(&descriptor.hypervisor)
+                .ok_or(FError::NotFound)?;
+
+            trace!("Calling plugin function");
+            plugin.configure_fdu(instance_uuid).await??;
+            return Ok(instance);
+        }
+
+        let node_info = self.connector.global.get_node_info(instance.node).await?;
+        let client =
+            AgentOrchestratorInterfaceClient::new(self.z.clone(), node_info.agent_service_uuid);
+
+        Ok(client.configure_fdu(instance_uuid).await??)
     }
 
     async fn start_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
@@ -1156,14 +1192,23 @@ impl AgentOrchestratorInterface for Agent {
         let guard = self.agent.read().await;
         trace!("Getting record");
         let instance = self.connector.global.get_instance(instance_uuid).await?;
-        let descriptor = self.connector.global.get_fdu(instance.fdu_uuid).await?;
-        let plugin = guard
-            .hypervisors
-            .get(&descriptor.hypervisor)
-            .ok_or(FError::NotFound)?;
+        if instance.node == self.node_uuid {
+            log::trace!("FDU Instance is local!");
+            let descriptor = self.connector.global.get_fdu(instance.fdu_uuid).await?;
+            let plugin = guard
+                .hypervisors
+                .get(&descriptor.hypervisor)
+                .ok_or(FError::NotFound)?;
 
-        plugin.start_fdu(instance_uuid).await??;
-        Ok(instance)
+            plugin.start_fdu(instance_uuid).await??;
+            return Ok(instance);
+        }
+
+        let node_info = self.connector.global.get_node_info(instance.node).await?;
+        let client =
+            AgentOrchestratorInterfaceClient::new(self.z.clone(), node_info.agent_service_uuid);
+
+        Ok(client.start_fdu(instance_uuid).await??)
     }
 
     async fn run_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
@@ -1186,44 +1231,68 @@ impl AgentOrchestratorInterface for Agent {
         info!("FDU Stop {}", instance_uuid);
         let guard = self.agent.read().await;
         let instance = self.connector.global.get_instance(instance_uuid).await?;
-        let descriptor = self.connector.global.get_fdu(instance.fdu_uuid).await?;
-        let plugin = guard
-            .hypervisors
-            .get(&descriptor.hypervisor)
-            .ok_or(FError::NotFound)?;
 
-        plugin.stop_fdu(instance_uuid).await??;
-        Ok(instance)
+        if instance.node == self.node_uuid {
+            log::trace!("FDU Instance is local!");
+            let descriptor = self.connector.global.get_fdu(instance.fdu_uuid).await?;
+            let plugin = guard
+                .hypervisors
+                .get(&descriptor.hypervisor)
+                .ok_or(FError::NotFound)?;
+
+            plugin.stop_fdu(instance_uuid).await??;
+            return Ok(instance);
+        }
+        let node_info = self.connector.global.get_node_info(instance.node).await?;
+        let client =
+            AgentOrchestratorInterfaceClient::new(self.z.clone(), node_info.agent_service_uuid);
+
+        Ok(client.stop_fdu(instance_uuid).await??)
     }
 
     async fn clean_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
         info!("FDU Clean {}", instance_uuid);
         let guard = self.agent.read().await;
         let instance = self.connector.global.get_instance(instance_uuid).await?;
-        let descriptor = self.connector.global.get_fdu(instance.fdu_uuid).await?;
-        let plugin = guard
-            .hypervisors
-            .get(&descriptor.hypervisor)
-            .ok_or(FError::NotFound)?;
+        if instance.node == self.node_uuid {
+            log::trace!("FDU Instance is local!");
+            let descriptor = self.connector.global.get_fdu(instance.fdu_uuid).await?;
+            let plugin = guard
+                .hypervisors
+                .get(&descriptor.hypervisor)
+                .ok_or(FError::NotFound)?;
 
-        plugin.clean_fdu(instance_uuid).await??;
-        Ok(instance)
+            plugin.clean_fdu(instance_uuid).await??;
+            return Ok(instance);
+        }
+        let node_info = self.connector.global.get_node_info(instance.node).await?;
+        let client =
+            AgentOrchestratorInterfaceClient::new(self.z.clone(), node_info.agent_service_uuid);
+
+        Ok(client.clean_fdu(instance_uuid).await??)
     }
 
     async fn undefine_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
         info!("FDU Undefine {}", instance_uuid);
         let guard = self.agent.read().await;
         let instance = self.connector.global.get_instance(instance_uuid).await?;
-        let descriptor = self.connector.global.get_fdu(instance.fdu_uuid).await?;
-        let plugin = guard
-            .hypervisors
-            .get(&descriptor.hypervisor)
-            .ok_or(FError::NotFound)?;
+        if instance.node == self.node_uuid {
+            let descriptor = self.connector.global.get_fdu(instance.fdu_uuid).await?;
+            let plugin = guard
+                .hypervisors
+                .get(&descriptor.hypervisor)
+                .ok_or(FError::NotFound)?;
 
-        plugin.undefine_fdu(instance_uuid).await??;
-        trace!("removing instance {:?}", instance);
-        self.connector.global.remove_instance(instance_uuid).await?;
-        Ok(instance)
+            plugin.undefine_fdu(instance_uuid).await??;
+            trace!("removing instance {:?}", instance);
+            self.connector.global.remove_instance(instance_uuid).await?;
+            return Ok(instance);
+        }
+        let node_info = self.connector.global.get_node_info(instance.node).await?;
+        let client =
+            AgentOrchestratorInterfaceClient::new(self.z.clone(), node_info.agent_service_uuid);
+
+        Ok(client.clean_fdu(instance_uuid).await??)
     }
 
     async fn offload_fdu(&self, fdu_uuid: Uuid) -> FResult<Uuid> {

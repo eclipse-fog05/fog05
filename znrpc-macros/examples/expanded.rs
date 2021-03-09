@@ -141,7 +141,7 @@ where
                         let sample = zenoh::net::Sample {
                             res_name: path.to_string().clone(),
                             payload: data.into(),
-                            data_info: Some(zenoh_protocol::proto::DataInfo {
+                            data_info: Some(zenoh::net::protocol::proto::DataInfo {
                                 source_id: None,
                                 source_sn: None,
                                 first_router_id: None,
@@ -309,7 +309,7 @@ where
                                     let sample = zenoh::net::Sample {
                                         res_name: p.to_string().clone(),
                                         payload: encoded.into(),
-                                        data_info: Some(zenoh_protocol::proto::DataInfo {
+                                        data_info: Some(zenoh::net::protocol::proto::DataInfo {
                                             source_id: None,
                                             source_sn: None,
                                             first_router_id: None,
@@ -331,7 +331,7 @@ where
                                     let sample = zenoh::net::Sample {
                                         res_name: p.to_string().clone(),
                                         payload: encoded.into(),
-                                        data_info: Some(zenoh_protocol::proto::DataInfo {
+                                        data_info: Some(zenoh::net::protocol::proto::DataInfo {
                                             source_id: None,
                                             source_sn: None,
                                             first_router_id: None,
@@ -563,9 +563,9 @@ impl HelloClient {
             let router_data = &rdata[0].data;
             let reply_encoding = if let Some(info) = router_data.data_info.clone() {
                 info.encoding
-                    .unwrap_or(zenoh_protocol::proto::encoding::APP_OCTET_STREAM)
+                    .unwrap_or(zenoh::net::protocol::proto::encoding::APP_OCTET_STREAM)
             } else {
-                zenoh_protocol::proto::encoding::APP_OCTET_STREAM
+                zenoh::net::protocol::proto::encoding::APP_OCTET_STREAM
             };
             let router_value = zenoh::Value::decode(reply_encoding, router_data.payload.clone())?;
             match router_value {

@@ -20,7 +20,6 @@ proc-macro2 = "1.0.6"
 serde_derive = "1.0.55"
 serde = { version = "1.0.55", features = ["derive"] }
 zenoh = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "master" }
-zenoh-protocol = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "master" }
 zrpc = {path = "../zrpc"}
 zrpc-macros = {path = "../zrpc-macros"}
 znrpc-macros = {path = "../znrpc-macros"}
