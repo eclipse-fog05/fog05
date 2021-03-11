@@ -30,7 +30,7 @@ zrpc = {path = "../zrpc"}
 znrpc-macros = {path = "../znrpc-macros"}
 log = "0.4"
 pnet = { version = "0.27.2", features = ["serde"]}
-reqwest = { version = "0.11.0", features = ["blocking", "json"] }
+reqwest = { version = "0.11.0", default-features = false, features = ["json", "rustls-tls"] }
 rand = "0.8.3"
 ipnetwork = "0.17.0"
 machine-uid = "0.2.0"
@@ -48,7 +48,7 @@ psutil = "3.2.0"
 machine-uid = "0.2.0"
 async-ctrlc ={version = "1.2.0", features = ["stream"]}
 hostname = "0.3.1"
-reqwest = { version = "0.11.0", features = ["blocking", "json"] }
+reqwest = { version = "0.11.0", default-features = false, features = ["json", "rustls-tls"] }
 rand = "0.8.3"
 clap = "2.33"
 structopt = "0.3.13"
