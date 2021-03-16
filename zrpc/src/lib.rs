@@ -152,6 +152,7 @@ pub trait ZNServe<Req>: Sized + Clone {
     fn serve(
         &self,
         stop: async_std::channel::Receiver<()>,
+        barrier: async_std::sync::Arc<async_std::sync::Barrier>,
     ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>>;
 
     /// State changes to REGISTERED, will stop serve/work

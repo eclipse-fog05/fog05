@@ -636,7 +636,9 @@ impl AgentPluginInterface for Agent {
 
                     // We spawn a task for the creation of the default virtual network.
                     task::spawn(async move {
-                        task::sleep(Duration::from_secs(5)).await;
+                        while !n_client.verify_server().await.unwrap() {
+                            task::sleep(Duration::from_micros((100))).await;
+                        }
                         n_client
                             .create_default_virtual_network(true)
                             .await
@@ -952,13 +954,55 @@ impl AgentOrchestratorInterface for Agent {
             && image
             && faces;
 
-        trace!("Plugin check: {}", has_plugin);
-        trace!("CPU Arch check: {}", cpu_arch);
-        trace!("CPU Number check: {}", cpu_number);
-        trace!("RAM Size check: {}", ram_size);
-        trace!("Disk Size check: {}", disk_size);
-        trace!("Image check: {}", image);
-        trace!("Interfaces check: {}", faces);
+        trace!(
+            "Plugin check: {:?} contains {} -> {}",
+            self.agent
+                .read()
+                .await
+                .hypervisors
+                .keys()
+                .collect::<Vec<&String>>(),
+            descriptor.hypervisor,
+            has_plugin
+        );
+        trace!(
+            "CPU Arch check: {} == {} -> {}",
+            node_info.cpu[0].arch,
+            descriptor.computation_requirements.cpu_arch,
+            cpu_arch
+        );
+        trace!(
+            "CPU Number check: {} >= {} -> {} ",
+            (node_info.cpu.len() as u8),
+            descriptor.computation_requirements.cpu_min_count,
+            cpu_number
+        );
+        trace!(
+            "RAM Size check: {} >= {} -> {}",
+            node_status.ram.free,
+            (descriptor.computation_requirements.ram_size_mb as f64),
+            ram_size
+        );
+        trace!(
+            "Disk Size check: {} >= {} -> {}",
+            (node_status
+                .disk
+                .iter()
+                .find(|x| x.mount_point == *"/") //TODO This should be OS independent...
+                .unwrap()
+                .free
+                * 1024.0),
+            (descriptor.computation_requirements.storage_size_mb as f64),
+            disk_size
+        );
+
+        log::debug!("Plugin check: {}", has_plugin);
+        log::debug!("CPU Arch check: {}", cpu_arch);
+        log::debug!("CPU Number check: {}", cpu_number);
+        log::debug!("RAM Size check: {}", ram_size);
+        log::debug!("Disk Size check: {}", disk_size);
+        log::debug!("Image check: {}", image);
+        log::debug!("Interfaces check: {}", faces);
 
         info!(
             "FDU compatibility checks for {:?} is {}",

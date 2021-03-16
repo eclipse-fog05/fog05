@@ -770,23 +770,29 @@ impl<'a> ZNServiceGenerator<'a> {
                         S: #service_ident + Send + 'static,
                     {
                             let (s, r) = async_std::channel::bounded::<()>(1);
+                            let barrier = async_std::sync::Arc::new(async_std::sync::Barrier::new(2));
                             let ci = _self.state.read().await;
                             match ci.status {
                                 zrpc::ComponentStatus::REGISTERED => {
                                     drop(ci);
+
+
+                                    let server = _self.clone();
+                                    let b =  barrier.clone();
+
+                                    let h = async_std::task::spawn_blocking( move || {
+                                        async_std::task::block_on(async {
+                                            server.serve(r, b).await
+                                        })
+                                    });
+                                    log::trace!("Waiting for serving loop to be ready");
+                                    barrier.wait().await;
+
+                                    // Updating status, using barrier to avoid race condition
                                     let mut ci = _self.state.write().await;
                                     ci.status = zrpc::ComponentStatus::SERVING;
                                     drop(ci);
-                                    let server = _self.clone();
 
-                                    // let h = async_std::task::spawn( async move {
-                                    //     server.serve(r).await
-                                    // });
-                                    let h = async_std::task::spawn_blocking( move || {
-                                        async_std::task::block_on(async {
-                                            server.serve(r).await
-                                        })
-                                    });
                                     Ok((s,h))
 
                                 }
@@ -801,16 +807,17 @@ impl<'a> ZNServiceGenerator<'a> {
                 fn serve(
                     &self,
                     stop: async_std::channel::Receiver<()>,
+                    barrier : async_std::sync::Arc<async_std::sync::Barrier>,
                 ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>> {
                     log::trace!("Serve Service {} Instance {}", #service_name, self.instance_uuid());
-                    async fn __serve<S>(_self: &#server_ident<S>, _stop: async_std::channel::Receiver<()>) -> ZRPCResult<()>
+                    async fn __serve<S>(_self: &#server_ident<S>, _stop: async_std::channel::Receiver<()>, _barrier : async_std::sync::Arc<async_std::sync::Barrier>) -> ZRPCResult<()>
                     where
                         S: #service_ident + Send + 'static,
                     {
 
                         let ci = _self.state.read().await;
                         match ci.status {
-                            zrpc::ComponentStatus::SERVING => {
+                            zrpc::ComponentStatus::REGISTERED => {
                                 drop(ci);
                                 let path = zenoh::Path::try_from(format!("{}/{}/eval",#eval_path, _self.instance_uuid()))?;
                                 log::trace!("Registering eval on {:?}", path);
@@ -818,6 +825,7 @@ impl<'a> ZNServiceGenerator<'a> {
                                     .declare_queryable(&path.clone().into(), zenoh::net::queryable::EVAL)
                                     .await?;
                                 log::trace!("Registered on {:?}", path);
+                                _barrier.wait().await;
                                 let rcv_loop = async {
                                     loop {
                                         let query = queryable.stream().next().await.ok_or_else(|| async_std::channel::RecvError)?;
@@ -833,10 +841,11 @@ impl<'a> ZNServiceGenerator<'a> {
                                         let p = path.clone();
                                         //log::trace!("Spawning task to respond to {:?}", req);
 
-                                        match req {
+                                        match req.clone() {
                                             #(
                                                 #request_ident::#camel_case_idents{#(#arg_pats),*} => {
                                                     let resp = #response_ident::#camel_case_idents(ser.#method_idents( #(#arg_pats),*).await);
+                                                    log::trace!("Reply to {:?} {:?} with {:?}", path, req, resp);
                                                     let encoded =  zrpc::serialize::serialize_response(&resp).map_err(|_| async_std::channel::RecvError)?;
 
                                                     let sample = zenoh::net::Sample {
@@ -856,6 +865,7 @@ impl<'a> ZNServiceGenerator<'a> {
                                                         }),
                                                     };
                                                     query.reply(sample).await;
+                                                    log::trace!("Response {:?} sent", resp);
                                                 }
                                             )*
                                         }
@@ -869,7 +879,7 @@ impl<'a> ZNServiceGenerator<'a> {
                             _ => Err(ZRPCError::StateTransitionNotAllowed("State is not WORK, serve called directly? serve is called by calling work!".to_string())),
                         }
                     }
-                    let res  = __serve(self, stop);
+                    let res  = __serve(self, stop, barrier);
                     Box::pin(res)
                 }
 

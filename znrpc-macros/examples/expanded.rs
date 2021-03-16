@@ -238,17 +238,24 @@ where
             S: Hello + Send + 'static,
         {
             let (s, r) = async_std::channel::bounded::<()>(1);
+            let barrier = async_std::sync::Arc::new(async_std::sync::Barrier::new(2));
             let ci = _self.state.read().await;
             match ci.status {
                 zrpc::ComponentStatus::REGISTERED => {
                     drop(ci);
+
+                    let server = _self.clone();
+                    let b =  barrier.clone();
+                    let h = async_std::task::spawn_blocking(move || {
+                        async_std::task::block_on(async { server.serve(r,b).await })
+                    });
+
+                    barrier.wait().await;
+
                     let mut ci = _self.state.write().await;
                     ci.status = zrpc::ComponentStatus::SERVING;
                     drop(ci);
-                    let server = _self.clone();
-                    let h = async_std::task::spawn_blocking(move || {
-                        async_std::task::block_on(async { server.serve(r).await })
-                    });
+
                     Ok((s, h))
                 }
                 _ => Err(ZRPCError::StateTransitionNotAllowed(
@@ -262,17 +269,19 @@ where
     fn serve(
         &self,
         stop: async_std::channel::Receiver<()>,
+        barrier : async_std::sync::Arc<async_std::sync::Barrier>,
     ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>> {
         async fn __serve<S>(
             _self: &ServeHello<S>,
             _stop: async_std::channel::Receiver<()>,
+            _barrier : async_std::sync::Arc<async_std::sync::Barrier>
         ) -> ZRPCResult<()>
         where
             S: Hello + Send + 'static,
         {
             let ci = _self.state.read().await;
             match ci.status {
-                zrpc::ComponentStatus::SERVING => {
+                zrpc::ComponentStatus::REGISTERED => {
                     drop(ci);
                     let path = zenoh::Path::try_from(format!(
                         "/znservice/Hello/2967c40b-a9a4-4330-b5f6-e0315b2356a9/{}/eval",
@@ -283,7 +292,7 @@ where
                         .z
                         .declare_queryable(&path.clone().into(), zenoh::net::queryable::EVAL)
                         .await?;
-
+                    _barrier.wait().await;
                     let rcv_loop = async {
                         loop {
                             let query = queryable
@@ -362,7 +371,7 @@ where
                 )),
             }
         }
-        let res = __serve(self, stop);
+        let res = __serve(self, stop, barrier);
         Box::pin(res)
     }
     #[allow(clippy::type_complexity, clippy::manual_async_fn)]

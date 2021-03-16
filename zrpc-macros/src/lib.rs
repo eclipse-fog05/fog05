@@ -849,12 +849,14 @@ impl<'a> ZServiceGenerator<'a> {
                                                         let p = path.clone();
                                                         //log::trace!("Spawning task to respond to {:?}", req);
 
-                                                        match req {
+                                                        match req.clone() {
                                                             #(
                                                                 #request_ident::#camel_case_idents{#(#arg_pats),*} => {
                                                                     let resp = #response_ident::#camel_case_idents(ser.#method_idents( #(#arg_pats),*));
+                                                                    log::trace!("Reply to {:?} {:?} with {:?}", path, req, resp);
                                                                     let encoded =  zrpc::serialize::serialize_response(&resp).map_err(|_| async_std::channel::RecvError)?;
                                                                     gr.reply(p, encoded.into()).await;
+                                                                    log::trace!("Response {:?} sent", resp);
                                                                 }
                                                             )*
                                                         }

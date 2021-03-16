@@ -12,8 +12,8 @@
       hypervisor: ros2
       computation_requirements:
           cpu_arch: aarch64
-          ram_size_mb: 10
-          storage_size_mb: 1
+          ram_size_mb: 0
+          storage_size_mb: 0
       migration_kind : COLD
       image:
           uri: file:///home/ubuntu/tb3_ws.tar.gz
@@ -31,8 +31,8 @@
       hypervisor: bare
       computation_requirements:
           cpu_arch: aarch64
-          ram_size_mb: 10
-          storage_size_mb: 1
+          ram_size_mb: 0
+          storage_size_mb: 0
       migration_kind : COLD
       hypervisor_specific : "{\"cmd\":\"/home/ubuntu/dzd\",\"args\":[\"-m\",\"client\",\"-e\",\"tcp/eu.zenoh.io:7447\"],\"env\":{}}"
       interfaces : []
@@ -46,8 +46,8 @@
       hypervisor: bare
       computation_requirements:
           cpu_arch: x86_64
-          ram_size_mb: 10
-          storage_size_mb: 1
+          ram_size_mb: 0
+          storage_size_mb: 0
       migration_kind : COLD
       hypervisor_specific : "{\"cmd\":\"/home/ato/fos/dzd\",\"args\":[\"-m\",\"client\",\"-e\",\"tcp/eu.zenoh.io:7447\"],\"env\":{}}"
       interfaces : []
@@ -61,8 +61,8 @@
       hypervisor: ros2
       computation_requirements:
           cpu_arch: x86_64
-          ram_size_mb: 10
-          storage_size_mb: 1
+          ram_size_mb: 0
+          storage_size_mb: 0
       migration_kind : COLD
       image:
           uri: file:///home/ato/teleop_ws.tar.gz
@@ -80,8 +80,8 @@
       hypervisor: bare
       computation_requirements:
           cpu_arch: aarch64
-          ram_size_mb: 10
-          storage_size_mb: 1
+          ram_size_mb: 0
+          storage_size_mb: 0
       migration_kind : COLD
       hypervisor_specific : "{\"cmd\":\"/home/ubuntu/zcam/target/release/zcapture\",\"args\":[\"-m\",\"client\",\"-e\",\"tcp/eu.zenoh.io:7447\",\"-p\",\"/robot/video\"],\"env\":{}}"
       interfaces : []
