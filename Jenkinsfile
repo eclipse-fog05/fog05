@@ -41,7 +41,7 @@ spec:
   parameters {
     booleanParam(name: 'PUBLISH_ECLIPSE_DOWNLOAD',
         description: 'Publish the resulting artifacts to Eclipse download.',
-        defaultValue: false)
+        defaultValue: true)
   }
   environment {
       LABEL = "nightly"
