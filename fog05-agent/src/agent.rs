@@ -637,7 +637,7 @@ impl AgentPluginInterface for Agent {
                     // We spawn a task for the creation of the default virtual network.
                     task::spawn(async move {
                         while !n_client.verify_server().await.unwrap() {
-                            task::sleep(Duration::from_micros((100))).await;
+                            task::sleep(Duration::from_micros(100)).await;
                         }
                         n_client
                             .create_default_virtual_network(true)

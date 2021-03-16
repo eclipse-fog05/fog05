@@ -245,9 +245,9 @@ where
                     drop(ci);
 
                     let server = _self.clone();
-                    let b =  barrier.clone();
+                    let b = barrier.clone();
                     let h = async_std::task::spawn_blocking(move || {
-                        async_std::task::block_on(async { server.serve(r,b).await })
+                        async_std::task::block_on(async { server.serve(r, b).await })
                     });
 
                     barrier.wait().await;
@@ -269,12 +269,12 @@ where
     fn serve(
         &self,
         stop: async_std::channel::Receiver<()>,
-        barrier : async_std::sync::Arc<async_std::sync::Barrier>,
+        barrier: async_std::sync::Arc<async_std::sync::Barrier>,
     ) -> ::core::pin::Pin<Box<dyn std::future::Future<Output = ZRPCResult<()>> + '_>> {
         async fn __serve<S>(
             _self: &ServeHello<S>,
             _stop: async_std::channel::Receiver<()>,
-            _barrier : async_std::sync::Arc<async_std::sync::Barrier>
+            _barrier: async_std::sync::Arc<async_std::sync::Barrier>,
         ) -> ZRPCResult<()>
         where
             S: Hello + Send + 'static,
