@@ -130,6 +130,7 @@ impl Agent {
             let receiver = m_self.connector.local.subscribe_instances().await.unwrap();
 
             loop {
+                // This can cause a race condition
                 match receiver.recv().await {
                     Ok(instance) => {
                         log::info!("Node FDU: {} Status: {}", instance.uuid, instance.status);
@@ -1203,7 +1204,16 @@ impl AgentOrchestratorInterface for Agent {
         trace!("Calling plugin function");
         let instance = plugin.define_fdu(descriptor).await??;
         trace!("Writing instance {:?}", instance);
-        Ok(instance)
+        let uuid = instance.uuid;
+
+        loop {
+            let instance = self.connector.global.get_instance(uuid).await?;
+            match instance.status {
+                im::fdu::FDUState::DEFINED => return Ok(instance),
+                im::fdu::FDUState::ERROR(e) => return Err(FError::HypervisorError(e)),
+                _ => ()
+            }
+        }
     }
 
     async fn configure_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
