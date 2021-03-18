@@ -37,7 +37,7 @@ sysinfo = "0.16.1"
 psutil = "3.2.0"
 async-ctrlc ={version = "1.2.0", features = ["stream"]}
 hostname = "0.3.1"
-reqwest = { version = "0.11.0", default-features = false, features = ["json", "rustls-tls"] }
+reqwest = { version = "0.11.0", default-features = false, features = ["json", "rustls-tls" , "blocking"] }
 pnet = { version = "0.27.2", features = ["serde"]}
 pnet_datalink = { version = "0.27.2"}
 ipnetwork = "0.17.0"

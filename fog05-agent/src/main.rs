@@ -76,7 +76,7 @@ async fn main() {
         env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "info"),
     );
 
-    debug!("Eclipse fog05 Agent {}", GIT_VERSION);
+    info!("Eclipse fog05 Agent {}", GIT_VERSION);
 
     let conf_file_path = Path::new(&args.config);
     let config = serde_yaml::from_str::<AgentConfig>(&(read_file(&conf_file_path).await)).unwrap();
@@ -86,7 +86,7 @@ async fn main() {
     //Getting PID
     let my_pid = process::id();
 
-    info!("PID is {}", my_pid);
+    trace!("PID is {}", my_pid);
 
     let pid_file_path = Path::new(&config.pid_file);
 
@@ -134,11 +134,8 @@ async fn main() {
         zenoh::Properties::from(format!("mode=client;peer={}", config.zlocator.clone()));
     log::trace!("Zenoh properties: {}", zproperties);
     let z = Arc::new(Zenoh::new(zproperties.clone().into()).await.unwrap());
-    log::trace!("Zenoh session created...");
     let zenoh = Arc::new(zenoh::net::open(zproperties.into()).await.unwrap());
-    log::trace!("Zenoh.net session created...");
     let zconnector = Arc::new(ZConnector::new(z.clone(), Some(config.system), None));
-    log::trace!("ZConnector created...");
 
     // Creating Agent
     let agent = Agent {

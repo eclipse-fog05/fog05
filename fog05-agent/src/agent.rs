@@ -86,7 +86,7 @@ pub struct Agent {
 
 impl Agent {
     async fn run(&self, stop: async_std::channel::Receiver<()>) -> FResult<()> {
-        info!("Agent main loop starting...");
+        log::info!("Agent main loop starting...");
         //this should return a channel to send the stop and a task handler to wait for
 
         //starting the Agent-Plugin Server
@@ -111,12 +111,11 @@ impl Agent {
         a2o_server.initialize().await?;
         a2o_server.register().await?;
 
-        log::trace!("taking guard for updating instance id");
         let mut guard = self.agent.write().await;
         guard.instance_uuid = Some(a2o_server.instance_uuid());
         drop(guard);
 
-        log::trace!("staring servers...");
+        log::trace!("Staring ZRPC Servers");
         let (sa2p, ha2p) = a2p_server.start().await?;
 
         let (sos, hos) = os_server.start().await?;
@@ -133,7 +132,7 @@ impl Agent {
                 // This can cause a race condition
                 match receiver.recv().await {
                     Ok(instance) => {
-                        log::info!("Node FDU: {} Status: {}", instance.uuid, instance.status);
+                        log::trace!("Node FDU: {} Status: {}", instance.uuid, instance.status);
                         let _ = m_self.connector.global.add_instance(&instance).await;
                     }
                     Err(e) => log::warn!("FDU Monitoring receiver error: {}", e),
@@ -143,7 +142,7 @@ impl Agent {
 
         let monitoring_hw = async {
             let guard = self.agent.read().await;
-            info!(
+            debug!(
                 "Monitoring loop started with interveal {}",
                 guard.config.monitoring_interveal
             );
@@ -152,7 +151,6 @@ impl Agent {
             loop {
                 let guard = self.agent.read().await;
                 let interveal = guard.config.monitoring_interveal;
-                trace!("Monitoring loop, with interveal {}", interveal);
                 let mut disks = Vec::<im::node::DiskStatus>::new();
                 let mut ifaces = Vec::<im::node::NetworkInterfaceStatus>::new();
 
@@ -609,7 +607,6 @@ impl AgentPluginInterface for Agent {
     ) -> FResult<Uuid> {
         trace!("register_plugin called with {} {}", plugin_uuid, kind);
         let mut guard = self.agent.write().await;
-        trace!("register_plugin took WriteLock!");
         match kind.clone() {
             types::PluginKind::HYPERVISOR(hv) => match guard.hypervisors.get(&hv) {
                 Some(_) => Err(FError::AlreadyPresent),
@@ -617,7 +614,6 @@ impl AgentPluginInterface for Agent {
                     trace!("Adding Hypervisor plugin {} {}", plugin_uuid, hv);
                     let hv_client = HypervisorPluginClient::new(self.z.clone(), plugin_uuid);
                     guard.hypervisors.insert(hv.clone(), hv_client);
-                    trace!("Added Hypervisor plugin {} {}", plugin_uuid, hv);
                     let pl_info = types::PluginInfo {
                         uuid: plugin_uuid,
                         kind: kind.clone(),
@@ -664,7 +660,6 @@ impl AgentPluginInterface for Agent {
     async fn unregister_plugin(&mut self, plugin_uuid: Uuid) -> FResult<Uuid> {
         trace!("unregister_plugin called with {}", plugin_uuid);
         let mut guard = self.agent.write().await;
-        trace!("register_plugin took WriteLock!");
         let pl_info = self.connector.local.get_plugin(plugin_uuid).await?;
         match pl_info.kind {
             types::PluginKind::HYPERVISOR(hv) => {
@@ -872,7 +867,7 @@ impl OS for Agent {
 #[znserver]
 impl AgentOrchestratorInterface for Agent {
     async fn check_fdu_compatibility(&self, fdu_uuid: Uuid) -> FResult<bool> {
-        trace!("FDU Compatibility check for {}", fdu_uuid);
+        log::trace!("FDU Compatibility check for {}", fdu_uuid);
 
         let descriptor = self.connector.global.get_fdu(fdu_uuid).await?;
         let node_info = self.connector.global.get_node_info(self.node_uuid).await?;
@@ -1047,7 +1042,7 @@ impl AgentOrchestratorInterface for Agent {
 
             match res {
                 Ok(_) => {
-                    log::debug!("Entity scheduling done!")
+                    log::info!("Entity scheduling done!")
                 }
                 Err(e) => {
                     instance.status = im::entity::EntityStatus::ERROR(format!("{}", e));
@@ -1103,7 +1098,7 @@ impl AgentOrchestratorInterface for Agent {
 
             match res {
                 Ok(_) => {
-                    log::debug!("Entity descheduling done!")
+                    log::info!("Entity descheduling done!")
                 }
                 Err(e) => {
                     instance.status = im::entity::EntityStatus::ERROR(format!("{}", e));
@@ -1117,7 +1112,7 @@ impl AgentOrchestratorInterface for Agent {
     }
 
     async fn schedule_fdu(&self, fdu_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
-        trace!("FDU Scheduling for {}", fdu_uuid);
+        log::debug!("FDU Scheduling for {}", fdu_uuid);
         let my_uuid = self.instance_uuid().await;
 
         let compatibles = self.get_compatible_nodes(fdu_uuid).await?;
@@ -1128,7 +1123,7 @@ impl AgentOrchestratorInterface for Agent {
 
         match selected {
             Some(selected) => {
-                info!("FDU Scheduling node {} is random picked", selected);
+                log::debug!("FDU Scheduling node {} is random picked", selected);
                 if *selected == self.node_uuid {
                     Ok(self.define_fdu(fdu_uuid).await?)
                 } else {
@@ -1141,12 +1136,11 @@ impl AgentOrchestratorInterface for Agent {
     }
 
     async fn onboard_fdu(&self, fdu: im::fdu::FDUDescriptor) -> FResult<Uuid> {
-        info!("FDU Onboard {:?}", fdu);
+        log::debug!("FDU Onboard {:?}", fdu);
         let mut fdu = fdu.clone();
         match fdu.uuid {
             None => {
                 let fdu_uuid = Uuid::new_v4();
-                trace!("FDU Onboard adding UUID: {}", fdu_uuid);
                 fdu.uuid = Some(fdu_uuid);
                 self.connector.global.add_fdu(&fdu).await?;
                 Ok(fdu_uuid)
@@ -1159,7 +1153,7 @@ impl AgentOrchestratorInterface for Agent {
     }
 
     async fn onboard_entity(&self, entity: im::entity::EntityDescriptor) -> FResult<Uuid> {
-        info!("Entity Onboard {:?}", entity);
+        log::debug!("Entity Onboard {:?}", entity);
         let mut entity = entity.clone();
         let mut fdus = Vec::new();
         for fdu in entity.fdus {
@@ -1179,7 +1173,6 @@ impl AgentOrchestratorInterface for Agent {
         match entity.uuid {
             None => {
                 let entity_uuid = Uuid::new_v4();
-                trace!("Entity Onboard adding UUID: {}", entity_uuid);
                 entity.uuid = Some(entity_uuid);
                 self.connector.global.add_entity(&entity).await?;
                 Ok(entity_uuid)
@@ -1192,46 +1185,59 @@ impl AgentOrchestratorInterface for Agent {
     }
 
     async fn define_fdu(&self, fdu_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
-        info!("FDU Define {}", fdu_uuid);
+        log::debug!("FDU Define {}", fdu_uuid);
         let guard = self.agent.read().await;
-        trace!("Getting descriptor");
         let descriptor = self.connector.global.get_fdu(fdu_uuid).await?;
-        trace!("Getting plugin");
         let plugin = guard
             .hypervisors
             .get(&descriptor.hypervisor)
             .ok_or(FError::NotFound)?;
-        trace!("Calling plugin function");
         let instance = plugin.define_fdu(descriptor).await??;
-        trace!("Writing instance {:?}", instance);
         let uuid = instance.uuid;
 
         loop {
-            let instance = self.connector.global.get_instance(uuid).await?;
-            match instance.status {
-                im::fdu::FDUState::DEFINED => return Ok(instance),
-                im::fdu::FDUState::ERROR(e) => return Err(FError::HypervisorError(e)),
-                _ => ()
+            let res = self.connector.global.get_instance(uuid).await;
+            match res {
+                Ok(instance) => match instance.status {
+                    im::fdu::FDUState::DEFINED => return Ok(instance),
+                    im::fdu::FDUState::ERROR(e) => return Err(FError::HypervisorError(e)),
+                    _ => task::sleep(Duration::from_micros(100)).await,
+                },
+                Err(e) => match e {
+                    FError::NotFound => task::sleep(Duration::from_micros(100)).await,
+                    _ => return Err(e),
+                },
             }
         }
     }
 
     async fn configure_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
-        info!("FDU Configure {}", instance_uuid);
+        log::debug!("FDU Configure {}", instance_uuid);
         let guard = self.agent.read().await;
         let instance = self.connector.global.get_instance(instance_uuid).await?;
 
         if instance.node == self.node_uuid {
-            log::trace!("FDU Instance is local!");
             let descriptor = self.connector.global.get_fdu(instance.fdu_uuid).await?;
             let plugin = guard
                 .hypervisors
                 .get(&descriptor.hypervisor)
                 .ok_or(FError::NotFound)?;
 
-            trace!("Calling plugin function");
             plugin.configure_fdu(instance_uuid).await??;
-            return Ok(instance);
+            loop {
+                let res = self.connector.global.get_instance(instance_uuid).await;
+                match res {
+                    Ok(instance) => match instance.status {
+                        im::fdu::FDUState::CONFIGURED => return Ok(instance),
+                        im::fdu::FDUState::ERROR(e) => return Err(FError::HypervisorError(e)),
+                        _ => task::sleep(Duration::from_micros(100)).await,
+                    },
+                    Err(e) => match e {
+                        FError::NotFound => task::sleep(Duration::from_micros(100)).await,
+                        _ => return Err(e),
+                    },
+                }
+            }
         }
 
         let node_info = self.connector.global.get_node_info(instance.node).await?;
@@ -1242,12 +1248,10 @@ impl AgentOrchestratorInterface for Agent {
     }
 
     async fn start_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
-        info!("FDU Start {}", instance_uuid);
+        log::debug!("FDU Start {}", instance_uuid);
         let guard = self.agent.read().await;
-        trace!("Getting record");
         let instance = self.connector.global.get_instance(instance_uuid).await?;
         if instance.node == self.node_uuid {
-            log::trace!("FDU Instance is local!");
             let descriptor = self.connector.global.get_fdu(instance.fdu_uuid).await?;
             let plugin = guard
                 .hypervisors
@@ -1255,7 +1259,21 @@ impl AgentOrchestratorInterface for Agent {
                 .ok_or(FError::NotFound)?;
 
             plugin.start_fdu(instance_uuid).await??;
-            return Ok(instance);
+
+            loop {
+                let res = self.connector.global.get_instance(instance_uuid).await;
+                match res {
+                    Ok(instance) => match instance.status {
+                        im::fdu::FDUState::RUNNING => return Ok(instance),
+                        im::fdu::FDUState::ERROR(e) => return Err(FError::HypervisorError(e)),
+                        _ => task::sleep(Duration::from_micros(100)).await,
+                    },
+                    Err(e) => match e {
+                        FError::NotFound => task::sleep(Duration::from_micros(100)).await,
+                        _ => return Err(e),
+                    },
+                }
+            }
         }
 
         let node_info = self.connector.global.get_node_info(instance.node).await?;
@@ -1282,12 +1300,11 @@ impl AgentOrchestratorInterface for Agent {
     }
 
     async fn stop_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
-        info!("FDU Stop {}", instance_uuid);
+        log::debug!("FDU Stop {}", instance_uuid);
         let guard = self.agent.read().await;
         let instance = self.connector.global.get_instance(instance_uuid).await?;
 
         if instance.node == self.node_uuid {
-            log::trace!("FDU Instance is local!");
             let descriptor = self.connector.global.get_fdu(instance.fdu_uuid).await?;
             let plugin = guard
                 .hypervisors
@@ -1295,21 +1312,37 @@ impl AgentOrchestratorInterface for Agent {
                 .ok_or(FError::NotFound)?;
 
             plugin.stop_fdu(instance_uuid).await??;
-            return Ok(instance);
+
+            loop {
+                let res = self.connector.global.get_instance(instance_uuid).await;
+                match res {
+                    Ok(instance) => match instance.status {
+                        im::fdu::FDUState::CONFIGURED => return Ok(instance),
+                        im::fdu::FDUState::ERROR(e) => return Err(FError::HypervisorError(e)),
+                        _ => task::sleep(Duration::from_micros(100)).await,
+                    },
+                    Err(e) => match e {
+                        FError::NotFound => task::sleep(Duration::from_micros(100)).await,
+                        _ => return Err(e),
+                    },
+                }
+            }
+
         }
         let node_info = self.connector.global.get_node_info(instance.node).await?;
         let client =
             AgentOrchestratorInterfaceClient::new(self.z.clone(), node_info.agent_service_uuid);
 
         Ok(client.stop_fdu(instance_uuid).await??)
+
+
     }
 
     async fn clean_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
-        info!("FDU Clean {}", instance_uuid);
+        log::debug!("FDU Clean {}", instance_uuid);
         let guard = self.agent.read().await;
         let instance = self.connector.global.get_instance(instance_uuid).await?;
         if instance.node == self.node_uuid {
-            log::trace!("FDU Instance is local!");
             let descriptor = self.connector.global.get_fdu(instance.fdu_uuid).await?;
             let plugin = guard
                 .hypervisors
@@ -1317,7 +1350,20 @@ impl AgentOrchestratorInterface for Agent {
                 .ok_or(FError::NotFound)?;
 
             plugin.clean_fdu(instance_uuid).await??;
-            return Ok(instance);
+            loop {
+                let res = self.connector.global.get_instance(instance_uuid).await;
+                match res {
+                    Ok(instance) => match instance.status {
+                        im::fdu::FDUState::DEFINED => return Ok(instance),
+                        im::fdu::FDUState::ERROR(e) => return Err(FError::HypervisorError(e)),
+                        _ => task::sleep(Duration::from_micros(100)).await,
+                    },
+                    Err(e) => match e {
+                        FError::NotFound => task::sleep(Duration::from_micros(100)).await,
+                        _ => return Err(e),
+                    },
+                }
+            }
         }
         let node_info = self.connector.global.get_node_info(instance.node).await?;
         let client =
@@ -1327,7 +1373,7 @@ impl AgentOrchestratorInterface for Agent {
     }
 
     async fn undefine_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
-        info!("FDU Undefine {}", instance_uuid);
+        log::debug!("FDU Undefine {}", instance_uuid);
         let guard = self.agent.read().await;
         let instance = self.connector.global.get_instance(instance_uuid).await?;
         if instance.node == self.node_uuid {
@@ -1338,7 +1384,6 @@ impl AgentOrchestratorInterface for Agent {
                 .ok_or(FError::NotFound)?;
 
             plugin.undefine_fdu(instance_uuid).await??;
-            trace!("removing instance {:?}", instance);
             self.connector.global.remove_instance(instance_uuid).await?;
             return Ok(instance);
         }
@@ -1350,7 +1395,7 @@ impl AgentOrchestratorInterface for Agent {
     }
 
     async fn offload_fdu(&self, fdu_uuid: Uuid) -> FResult<Uuid> {
-        info!("FDU Offload {}", fdu_uuid);
+        log::debug!("FDU Offload {}", fdu_uuid);
         self.connector.global.get_fdu(fdu_uuid).await?;
         let instances = self
             .connector
@@ -1366,7 +1411,7 @@ impl AgentOrchestratorInterface for Agent {
     }
 
     async fn offload_entity(&self, entity_uuid: Uuid) -> FResult<Uuid> {
-        info!("Entity Offload {}", entity_uuid);
+        log::debug!("Entity Offload {}", entity_uuid);
         self.connector.global.get_entity(entity_uuid).await?;
         let instances = self
             .connector
@@ -1382,7 +1427,7 @@ impl AgentOrchestratorInterface for Agent {
     }
 
     async fn fdu_status(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
-        info!("FDU Status {}", instance_uuid);
+        log::debug!("FDU Status {}", instance_uuid);
         let guard = self.agent.read().await;
         let instance = self.connector.global.get_instance(instance_uuid).await?;
         let descriptor = self.connector.global.get_fdu(instance.fdu_uuid).await?;
