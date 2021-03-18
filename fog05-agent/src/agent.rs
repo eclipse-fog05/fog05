@@ -1327,15 +1327,12 @@ impl AgentOrchestratorInterface for Agent {
                     },
                 }
             }
-
         }
         let node_info = self.connector.global.get_node_info(instance.node).await?;
         let client =
             AgentOrchestratorInterfaceClient::new(self.z.clone(), node_info.agent_service_uuid);
 
         Ok(client.stop_fdu(instance_uuid).await??)
-
-
     }
 
     async fn clean_fdu(&self, instance_uuid: Uuid) -> FResult<im::fdu::FDURecord> {
