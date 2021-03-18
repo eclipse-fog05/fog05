@@ -142,7 +142,7 @@ impl Agent {
 
         let monitoring_hw = async {
             let guard = self.agent.read().await;
-            debug!(
+            log::debug!(
                 "Monitoring loop started with interveal {}",
                 guard.config.monitoring_interveal
             );

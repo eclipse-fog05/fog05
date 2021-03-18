@@ -21,7 +21,7 @@ use async_std::path::Path;
 use async_std::prelude::*;
 use async_std::sync::{Arc, RwLock};
 
-use log::{debug, error, info, trace};
+use log::{error, info, trace};
 
 use zenoh::*;
 
