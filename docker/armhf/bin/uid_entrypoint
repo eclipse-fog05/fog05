@@ -1,0 +1,10 @@
+#!/bin/sh
+if ! whoami &> /dev/null; then
+  if [ -w /etc/passwd ]; then
+    mkdir /home/$(id -u)
+    echo "${USER_NAME:-default}:x:$(id -u):0::/home/$(id -u):/bin/bash" >> /etc/passwd
+    cd /home/$(id -u)
+   export HOME="/home/$(id -u)"
+  fi
+fi
+exec "$@"
