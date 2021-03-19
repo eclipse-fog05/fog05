@@ -1,0 +1,83 @@
+pipeline {
+  agent {
+    kubernetes {
+      label 'my-agent-pod'
+      yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: focal-amd64
+    image: fog05/ubuntu-build:amd64
+    imagePullPolicy: Always
+    command:
+    - cat
+    volumeMounts:
+    - mountPath: "/home/jenkins"
+      name: "jenkins-home"
+      readOnly: false
+    tty: true
+  - name: jnlp
+    volumeMounts:
+    - name: volume-known-hosts
+      mountPath: /home/jenkins/.ssh
+  volumes:
+  - name: "jenkins-home"
+    emptyDir: {}
+  - name: volume-known-hosts
+    configMap:
+      name: known-hosts
+
+"""
+    }
+  }
+  parameters {
+    booleanParam(name: 'PUBLISH_ECLIPSE_DOWNLOAD',
+        description: 'Publish the resulting artifacts to Eclipse download.',
+        defaultValue: true)
+  }
+  environment {
+      LABEL = "nightly"
+      DOWNLOAD_DIR="/home/data/httpd/download.eclipse.org/fog05/fog05/${LABEL}"
+  }
+  stages {
+
+      stage('[Download] Debian packages from download.eclipse.org') {
+        when { expression { return params.PUBLISH_ECLIPSE_DOWNLOAD }}
+        steps {
+            sshagent ( ['projects-storage.eclipse.org-bot-ssh']) {
+            sh '''
+                scp genie.fog05@projects-storage.eclipse.org:${DOWNLOAD_DIR}/*.deb ./
+            '''
+            }
+        }
+        }
+
+       stage('[Generate] Build Packages.gz for download.eclipse.org') {
+        when { expression { return params.PUBLISH_ECLIPSE_DOWNLOAD }}
+        steps {
+            container('focal-amd64') {
+            sh '''
+                dpkg-scanpackages --multiversion . > Packages
+                cat Packages
+                gzip -c9 < Packages > Packages.gz
+            '''
+            }
+        }
+        }
+
+        stage('[Publish] Upload Packages.gz to download.eclipse.org') {
+        when { expression { return params.PUBLISH_ECLIPSE_DOWNLOAD }}
+        steps {
+            sshagent ( ['projects-storage.eclipse.org-bot-ssh']) {
+            sh '''
+
+                scp Packages.gz genie.fog05@projects-storage.eclipse.org:${DOWNLOAD_DIR}/
+
+            '''
+            }
+        }
+        }
+
+    }
+}
