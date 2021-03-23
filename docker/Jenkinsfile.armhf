@@ -1,0 +1,259 @@
+pipeline {
+  agent {
+    kubernetes {
+      label 'my-agent-pod'
+      yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: focal-armhf
+    image: fog05/ubuntu-build:armhf
+    imagePullPolicy: Always
+    command:
+    - cat
+    volumeMounts:
+    - mountPath: "/home/jenkins"
+      name: "jenkins-home"
+      readOnly: false
+    tty: true
+    resources:
+      limits:
+        memory: "8Gi"
+        cpu: "2"
+      requests:
+        memory: "8Gi"
+        cpu: "2"
+  - name: jnlp
+    volumeMounts:
+    - name: volume-known-hosts
+      mountPath: /home/jenkins/.ssh
+  volumes:
+  - name: "jenkins-home"
+    emptyDir: {}
+  - name: volume-known-hosts
+    configMap:
+      name: known-hosts
+
+"""
+    }
+  }
+  parameters {
+    booleanParam(name: 'PUBLISH_ECLIPSE_DOWNLOAD',
+        description: 'Publish the resulting artifacts to Eclipse download.',
+        defaultValue: true)
+  }
+  environment {
+      LABEL = "nightly"
+      DOWNLOAD_DIR="/home/data/httpd/download.eclipse.org/fog05/fog05/${LABEL}"
+  }
+  stages {
+        stage('[Install] rust armv7-unknown-linux-gnueabihf') {
+            steps {
+                container('focal-armhf') {
+                    sh '''
+                        pwd
+                        export  HOME=/home/$(id -u)
+                        curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain nightly -y
+                        export RUSTUP_HOME=/home/$(id -u)/.rustup
+                        export PATH=$PATH:/home/$(id -u)/.cargo/bin
+                        export CARGO_HOME=/home/$(id -u)/.cargo
+
+                        rustup target add armv7-unknown-linux-gnueabihf
+
+                        echo '[target.armv7-unknown-linux-gnueabihf]' >> /home/$(id -u)/.cargo/config
+                        echo 'linker = "arm-linux-gnueabihf-gcc"' >> /home/$(id -u)/.cargo/config
+                        echo 'strip = { path = "arm-linux-gnueabihf-strip" }' >> /home/$(id -u)/.cargo/config
+                        echo 'objcopy = { path = "arm-linux-gnueabihf-objcopy" }' >> /home/$(id -u)/.cargo/config
+
+                        cargo install cargo-deb
+                    '''
+                }
+            }
+        }
+
+        stage('[Checkout] fog05 repositories') {
+            steps {
+                container('focal-armhf') {
+                    sh '''
+                        pwd
+                        export  HOME=/home/$(id -u)
+
+                        git clone https://github.com/eclipse-fog05/fog05
+                        git clone https://github.com/eclipse-fog05/fog05-networking-linux
+                        git clone https://github.com/eclipse-fog05/fog05-hypervisor-native
+                        git clone https://github.com/eclipse-fog05/fog05-hypervisor-ros2
+
+                        mkdir -p debian/
+                        mkdir -p packages/
+                    '''
+                }
+            }
+        }
+
+        stage('[Build] armv7-unknown-linux-gnueabihf fog05-agent fog05-fosctl') {
+            steps {
+                container('focal-armhf') {
+                    sh '''
+                        export  HOME=/home/$(id -u)
+                        export RUSTUP_HOME=/home/$(id -u)/.rustup
+                        export PATH=$PATH:/home/$(id -u)/.cargo/bin
+                        export CARGO_HOME=/home/$(id -u)/.cargo
+                        cd fog05
+                        cargo deb --target=armv7-unknown-linux-gnueabihf -p fog05-agent
+                        cargo deb --target=armv7-unknown-linux-gnueabihf -p fog05-fosctl
+
+                        mkdir -p package/etc/fos
+                        mkdir -p package/lib/systemd/system
+                        mkdir -p package/usr/bin
+                        mkdir -p package/var/fos
+                        cp fog05-agent/etc/agent.yaml package/etc/fos
+                        cp fog05-agent/resources/fos-agent.service package/lib/systemd/system
+                        cp fog05-agent/resources/fos-zenoh.service package/lib/systemd/system
+                        cp fog05-agent/resources/get-zip.sh package/var/fos
+                        cp target/armv7-unknown-linux-gnueabihf/release/fog05-agent package/usr/bin/
+
+                        cd package
+                        tar -czvf eclipse-fog05-agent-${LABEL}-armv7-unknown-linux-gnueabihf.tgz --strip-components 3 etc/ lib/ usr/ var/
+                        mv eclipse-fog05-agent-${LABEL}-armv7-unknown-linux-gnueabihf.tgz ../
+                        cd ..
+
+                        rm -rf package
+                        mkdir -p package/usr/bin
+
+                        cp target/armv7-unknown-linux-gnueabihf/release/fog05-fosctl package/usr/bin/fosctl
+                        cd package
+                        tar -czvf eclipse-fog05-fosctl-${LABEL}-armv7-unknown-linux-gnueabihf.tgz --strip-components 3 usr/
+                        mv eclipse-fog05-fosctl-${LABEL}-armv7-unknown-linux-gnueabihf.tgz ../
+                        cd ..
+
+
+                        mv *.tgz ../packages/
+                        mv target/armv7-unknown-linux-gnueabihf/debian/*.deb ../debian/
+                    '''
+                }
+            }
+        }
+
+        stage('[Build] armv7-unknown-linux-gnueabihf fog05-networking-linux') {
+            steps {
+                container('focal-armhf') {
+                    sh '''
+                        export  HOME=/home/$(id -u)
+                        export RUSTUP_HOME=/home/$(id -u)/.rustup
+                        export PATH=$PATH:/home/$(id -u)/.cargo/bin
+                        export CARGO_HOME=/home/$(id -u)/.cargo
+                        cd fog05-networking-linux
+                        PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig PKG_CONFIG_ALLOW_CROSS=1 cargo deb --target=armv7-unknown-linux-gnueabihf
+
+                        mkdir -p package/etc/fos/linux-network
+                        mkdir -p package/etc/fos/sysctl.d
+                        mkdir -p package/lib/systemd/system
+                        mkdir -p package/usr/bin
+                        mkdir -p package/var/fos/linux-network
+
+                        cp etc/config.yaml package/etc/fos/linux-network
+                        cp etc/dnsmasq.conf package/etc/fos/linux-network
+                        cp etc/dnsmasq.conf package/var/fos/linux-network
+                        cp etc/99-fog05-net-linux.conf package/etc/fos/sysctl.d
+                        cp resources/fos-net-linux.service package/lib/systemd/system
+                        cp target/armv7-unknown-linux-gnueabihf/release/linux-networking package/usr/bin/fos-net-linux
+                        cp target/armv7-unknown-linux-gnueabihf/release/fos-net-linux-ns-manager package/usr/bin/fos-net-linux-ns-manager
+
+                        cd package
+                        tar -czvf eclipse-fog05-networking-linux-${LABEL}-armv7-unknown-linux-gnueabihf.tgz --strip-components 3 etc/ lib/ usr/ var/
+                        mv eclipse-fog05-networking-linux-${LABEL}-armv7-unknown-linux-gnueabihf.tgz ../
+                        cd ..
+
+                        mv *.tgz ../packages/
+                        mv target/armv7-unknown-linux-gnueabihf/debian/*.deb ../debian/
+                    '''
+                }
+            }
+        }
+
+        stage('[Build] armv7-unknown-linux-gnueabihf fog05-hypervisor-native') {
+            steps {
+                container('focal-armhf') {
+                    sh '''
+                        export  HOME=/home/$(id -u)
+                        export RUSTUP_HOME=/home/$(id -u)/.rustup
+                        export PATH=$PATH:/home/$(id -u)/.cargo/bin
+                        export CARGO_HOME=/home/$(id -u)/.cargo
+                        cd fog05-hypervisor-native
+                        cargo deb --target=armv7-unknown-linux-gnueabihf
+
+                        mkdir -p package/etc/fos/native-hyperisor
+                        mkdir -p package/lib/systemd/system
+                        mkdir -p package/usr/bin
+                        mkdir -p package/var/fos/native-hyperisor
+
+                        cp etc/config.yaml package/etc/fos/native-hyperisor
+                        cp etc/config.yaml package/var/fos/native-hyperisor
+                        cp resources/fos-hv-native.service package/lib/systemd/system
+                        cp target/armv7-unknown-linux-gnueabihf/release/native-hypervisor package/usr/bin/fos-hv-native
+                        cp target/armv7-unknown-linux-gnueabihf/release/native-isolate package/usr/bin/native-isolate
+
+                        cd package
+                        tar -czvf eclipse-fog05-hypervisor-native-${LABEL}-armv7-unknown-linux-gnueabihf.tgz --strip-components 3 etc/ lib/ usr/ var/
+                        mv eclipse-fog05-hypervisor-native-${LABEL}-armv7-unknown-linux-gnueabihf.tgz ../
+                        cd ..
+
+                        mv *.tgz ../packages/
+                        mv target/armv7-unknown-linux-gnueabihf/debian/*.deb ../debian/
+                    '''
+                }
+            }
+        }
+
+        stage('[Build] armv7-unknown-linux-gnueabihf fog05-hypervisor-ros2') {
+            steps {
+                container('focal-armhf') {
+                    sh '''
+                        export  HOME=/home/$(id -u)
+                        export RUSTUP_HOME=/home/$(id -u)/.rustup
+                        export PATH=$PATH:/home/$(id -u)/.cargo/bin
+                        export CARGO_HOME=/home/$(id -u)/.cargo
+                        cd fog05-hypervisor-ros2
+                        cargo deb --target=armv7-unknown-linux-gnueabihf
+
+                        mkdir -p package/etc/fos/ros2-hypervisor
+                        mkdir -p package/lib/systemd/system
+                        mkdir -p package/usr/bin
+                        mkdir -p package/var/fos/ros2-hypervisor
+
+                        cp etc/config.yaml package/etc/fos/ros2-hypervisor
+                        cp etc/config.yaml package/var/fos/ros2-hypervisor
+                        cp resources/fos-hv-ros2.service package/lib/systemd/system
+                        cp target/armv7-unknown-linux-gnueabihf/release/ros2-hypervisor package/usr/bin/fos-hv-ros2
+                        cp bin/ros2-isolate package/usr/bin/fos-ros2-isolate
+                        cp target/armv7-unknown-linux-gnueabihf/release/prepare-ros2-isolate package/usr/bin/prepare-ros2-isolate
+
+                        cd package
+                        tar -czvf eclipse-fog05-hypervisor-ros2-${LABEL}-armv7-unknown-linux-gnueabihf.tgz --strip-components 3 etc/ lib/ usr/ var/
+                        mv eclipse-fog05-hypervisor-ros2-${LABEL}-armv7-unknown-linux-gnueabihf.tgz ../
+                        cd ..
+
+                        mv *.tgz ../packages/
+                        mv target/armv7-unknown-linux-gnueabihf/debian/*.deb ../debian/
+                    '''
+                }
+            }
+        }
+
+        stage('[Publish] Upload packages to download.eclipse.org') {
+        when { expression { return params.PUBLISH_ECLIPSE_DOWNLOAD }}
+        steps {
+            sshagent ( ['projects-storage.eclipse.org-bot-ssh']) {
+            sh '''
+
+                scp packages/*.tgz genie.fog05@projects-storage.eclipse.org:${DOWNLOAD_DIR}
+                scp debian/*.deb genie.fog05@projects-storage.eclipse.org:${DOWNLOAD_DIR}
+
+            '''
+            }
+        }
+        }
+
+    }
+}
