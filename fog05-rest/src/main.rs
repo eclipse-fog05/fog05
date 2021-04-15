@@ -54,7 +54,7 @@ impl<D> FOSRestResponse<D>
 where
     D: Serialize + DeserializeOwned + Clone,
 {
-    pub fn into_json(&self) -> String {
+    pub fn serialize_to_json(&self) -> String {
         serde_json::to_string(self).unwrap()
     }
 }
@@ -103,7 +103,8 @@ async fn main() -> tide::Result<()> {
     app.at("/fdu/define").post(define_fdu);
     app.at("/fdu/instance/:fdu_uuid").post(instantiate_fdu);
     app.at("/fdu/instance/:instance_uuid").get(get_fdu_instance);
-    app.at("/fdu/instance/:instance_uuid").delete(delete_fdu_instance);
+    app.at("/fdu/instance/:instance_uuid")
+        .delete(delete_fdu_instance);
     app.at("/fdu/delete/:fdu_uuid").delete(delete_fdu);
     app.listen(format!(
         "{}:{}",
@@ -135,7 +136,7 @@ async fn define_fdu(mut req: Request<FOSRestState>) -> tide::Result {
                 result: Some(fdu_descriptor),
                 error: None,
             };
-            let body_resp = res.into_json();
+            let body_resp = res.serialize_to_json();
             Ok(body_resp.into())
         }
         Err(e) => {
@@ -144,7 +145,7 @@ async fn define_fdu(mut req: Request<FOSRestState>) -> tide::Result {
                 result: None,
                 error: Some(format!("{:?}", e)),
             };
-            let body_resp = res.into_json();
+            let body_resp = res.serialize_to_json();
             Ok(body_resp.into())
         }
     }
@@ -175,7 +176,7 @@ async fn instantiate_fdu(req: Request<FOSRestState>) -> tide::Result {
                 result: Some(instance),
                 error: None,
             };
-            let body_resp = res.into_json();
+            let body_resp = res.serialize_to_json();
             Ok(body_resp.into())
         }
         Err(e) => {
@@ -184,7 +185,7 @@ async fn instantiate_fdu(req: Request<FOSRestState>) -> tide::Result {
                 result: None,
                 error: Some(format!("{:?}", e)),
             };
-            let body_resp = res.into_json();
+            let body_resp = res.serialize_to_json();
             Ok(body_resp.into())
         }
     }
@@ -215,7 +216,7 @@ async fn delete_fdu_instance(req: Request<FOSRestState>) -> tide::Result {
                 result: Some(instance),
                 error: None,
             };
-            let body_resp = res.into_json();
+            let body_resp = res.serialize_to_json();
             Ok(body_resp.into())
         }
         Err(e) => {
@@ -224,7 +225,7 @@ async fn delete_fdu_instance(req: Request<FOSRestState>) -> tide::Result {
                 result: None,
                 error: Some(format!("{:?}", e)),
             };
-            let body_resp = res.into_json();
+            let body_resp = res.serialize_to_json();
             Ok(body_resp.into())
         }
     }
@@ -248,7 +249,7 @@ async fn get_fdu_instance(req: Request<FOSRestState>) -> tide::Result {
                 result: Some(instance),
                 error: None,
             };
-            let body_resp = res.into_json();
+            let body_resp = res.serialize_to_json();
             Ok(body_resp.into())
         }
         Err(e) => {
@@ -257,7 +258,7 @@ async fn get_fdu_instance(req: Request<FOSRestState>) -> tide::Result {
                 result: None,
                 error: Some(format!("{:?}", e)),
             };
-            let body_resp = res.into_json();
+            let body_resp = res.serialize_to_json();
             Ok(body_resp.into())
         }
     }
@@ -285,7 +286,7 @@ async fn delete_fdu(req: Request<FOSRestState>) -> tide::Result {
                     result: Some(fdu),
                     error: None,
                 };
-                let body_resp = res.into_json();
+                let body_resp = res.serialize_to_json();
                 Ok(body_resp.into())
             }
             Err(e) => {
@@ -294,7 +295,7 @@ async fn delete_fdu(req: Request<FOSRestState>) -> tide::Result {
                     result: None,
                     error: Some(format!("{:?}", e)),
                 };
-                let body_resp = res.into_json();
+                let body_resp = res.serialize_to_json();
                 Ok(body_resp.into())
             }
         },
@@ -304,7 +305,7 @@ async fn delete_fdu(req: Request<FOSRestState>) -> tide::Result {
                 result: None,
                 error: Some(format!("{:?}", e)),
             };
-            let body_resp = res.into_json();
+            let body_resp = res.serialize_to_json();
             Ok(body_resp.into())
         }
     }

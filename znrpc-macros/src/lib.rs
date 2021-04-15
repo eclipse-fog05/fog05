@@ -466,10 +466,9 @@ fn verify_types_were_provided(
 ) -> syn::Result<()> {
     let mut result = Ok(());
     for (method, expected) in expected {
-        if provided
+        if !provided
             .iter()
-            .find(|typedecl| typedecl.ident == expected)
-            .is_none()
+            .any(|typedecl| typedecl.ident == expected)
         {
             let mut e = syn::Error::new(
                 span,
