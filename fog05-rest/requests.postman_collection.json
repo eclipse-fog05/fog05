@@ -1,0 +1,122 @@
+{
+	"info": {
+		"_postman_id": "0f67aa11-6f72-401b-bd64-35f0fc3e4eb8",
+		"name": "fog05 rust REST",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Onboard FDU",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": ""
+				},
+				"description": "Onboard an FDU descriptor into fog05"
+			},
+			"response": []
+		},
+		{
+			"name": "Offload FDU descriptor",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:8180/fdu/delete/9a7dc01f-2039-4ff6-bfe7-49f4101be83c",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8180",
+					"path": [
+						"fdu",
+						"delete",
+						"9a7dc01f-2039-4ff6-bfe7-49f4101be83c"
+					]
+				},
+				"description": "Offloads a descriptor from fog05"
+			},
+			"response": []
+		},
+		{
+			"name": "Instantiate FDU",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:8180/fdu/instance/85a3b9ba-9675-4cbb-99cd-a0769fda8811",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8180",
+					"path": [
+						"fdu",
+						"instance",
+						"85a3b9ba-9675-4cbb-99cd-a0769fda8811"
+					]
+				},
+				"description": "Instantiates an FDU"
+			},
+			"response": []
+		},
+		{
+			"name": "Get FDU Instance Info",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:8180/fdu/instance/793d2228-df9b-431a-9d5d-bf36a20884df",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8180",
+					"path": [
+						"fdu",
+						"instance",
+						"793d2228-df9b-431a-9d5d-bf36a20884df"
+					]
+				},
+				"description": "Gets record for the given instance"
+			},
+			"response": []
+		},
+		{
+			"name": "Remove FDU Instance",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:8180/fdu/instance/793d2228-df9b-431a-9d5d-bf36a20884df",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8180",
+					"path": [
+						"fdu",
+						"instance",
+						"793d2228-df9b-431a-9d5d-bf36a20884df"
+					]
+				},
+				"description": "Deletes the given instance"
+			},
+			"response": []
+		}
+	],
+	"protocolProfileBehavior": {}
+}

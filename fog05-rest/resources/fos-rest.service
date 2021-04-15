@@ -1,0 +1,20 @@
+[Unit]
+Description = Eclipse fog05 REST SERVICE
+
+
+
+[Service]
+Type=simple
+Environment=RUST_LOG="fog05_rest=trace"
+PIDFile=/var/fos/fos-rest.pid
+ExecStart = /usr/bin/fog05-rest -c /etc/fos/rest.yaml
+KillMode=mixed
+KillSignal=SIGINT
+RestartKillSignal=SIGINT
+Restart=on-failure
+User=fos
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=fos-rest
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,48 @@
+[package]
+name = "fog05-rest"
+version = "0.1.0"
+authors = ["gabrik <gabriele.baldoni@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tide = "0.16.0"
+log = "0.4"
+env_logger = "0.8.3"
+git-version = "0.3.4"
+serde = { version = "1.0.55", features = ["derive"] }
+serde_derive = "1.0.55"
+serde_yaml = "0.8.13"
+serde_json = "1.0.55"
+async-std = { version = "=1.9.0", features = ["attributes"] }
+zenoh = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "master" }
+clap = "2.33"
+structopt = "0.3.13"
+fog05-sdk = {path = "../fog05-sdk" }
+rand = "0.8.3"
+uuid = { version = "0.8", features = ["serde", "v4"] }
+
+
+
+[package.metadata.deb]
+maintainer = "ADLINK fog05 team <fog05@adlink-labs.tech>"
+copyright = "2020, ADLINK Technology Inc"
+extended-description = "Eclipse fog05 REST Service"
+depends = "$auto"
+license-file = ["../LICENSE.md", "0"]
+maintainer-scripts = "fog05-rest/resources/debian/"
+section = "utils"
+priority = "optional"
+assets = [
+    # binary
+    ["target/release/fog05-rest", "/usr/bin/", "755"],
+    # assets
+    ["etc/*", "/etc/fos", "644"],
+    ["resources/fos-rest.service","/lib/systemd/system/fos-rest.service","644"],
+]
+conf-files = ["/etc/fos/rest.yaml"]
+
+[package.metadata.deb.systemd-units]
+unit-scripts = "resources/"
+unit-name = "fos-rest.service"
