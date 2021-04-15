@@ -466,10 +466,7 @@ fn verify_types_were_provided(
 ) -> syn::Result<()> {
     let mut result = Ok(());
     for (method, expected) in expected {
-        if !provided
-            .iter()
-            .any(|typedecl| typedecl.ident == expected)
-        {
+        if !provided.iter().any(|typedecl| typedecl.ident == expected) {
             let mut e = syn::Error::new(
                 span,
                 format!("not all trait items implemented, missing: `{}`", expected),
