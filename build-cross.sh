@@ -25,12 +25,12 @@ case "$ARCH" in
         docker exec -u root build-fos-amd64 bash -c "cd /root && git clone https://github.com/eclipse-fog05/fog05-hypervisor-native"
         docker exec -u root build-fos-amd64 bash -c "cd /root && git clone https://github.com/eclipse-fog05/fog05-hypervisor-ros2"
 
-        # build zenohd and zenoh-storages
+        # build zenohd and zenoh-plugin-storages
         docker exec -u root build-fos-amd64 bash -c 'source ${HOME}/.cargo/env && cd /root/zenoh/ && cargo build --target=x86_64-unknown-linux-gnu --release --all-targets'
 
-        # generate debian packages for zenohd and zenoh-storages
+        # generate debian packages for zenohd and zenoh-plugin-storages
         docker exec -u root build-fos-amd64 bash -c 'source ${HOME}/.cargo/env && cd /root/zenoh/ && cargo deb --target=x86_64-unknown-linux-gnu -p zenoh --no-build'
-        docker exec -u root build-fos-amd64 bash -c 'source ${HOME}/.cargo/env && cd /root/zenoh/ && cargo deb --target=x86_64-unknown-linux-gnu  -p zenoh-storages --no-build'
+        docker exec -u root build-fos-amd64 bash -c 'source ${HOME}/.cargo/env && cd /root/zenoh/ && cargo deb --target=x86_64-unknown-linux-gnu  -p zenoh-plugin-storages --no-build'
 
         # copy-out generated debian files
         docker cp  'build-fos-amd64:/root/zenoh/target/x86_64-unknown-linux-gnu/debian' /tmp/
@@ -107,7 +107,7 @@ case "$ARCH" in
         docker exec -u root build-fos-arm64 bash -c 'source ${HOME}/.cargo/env && cd /root/zenoh/ && rustup target add aarch64-unknown-linux-gnu'
         docker exec -u root build-fos-arm64 bash -c 'source ${HOME}/.cargo/env && cd /root/zenoh/ && cargo build --target=aarch64-unknown-linux-gnu --release --all-targets'
         docker exec -u root build-fos-arm64 bash -c 'source ${HOME}/.cargo/env && cd /root/zenoh/ && cargo deb --target=aarch64-unknown-linux-gnu -p zenoh --no-build'
-        docker exec -u root build-fos-arm64 bash -c 'source ${HOME}/.cargo/env && cd /root/zenoh/ && cargo deb --target=aarch64-unknown-linux-gnu  -p zenoh-storages --no-build'
+        docker exec -u root build-fos-arm64 bash -c 'source ${HOME}/.cargo/env && cd /root/zenoh/ && cargo deb --target=aarch64-unknown-linux-gnu  -p zenoh-plugin-storages --no-build'
         docker cp  'build-fos-arm64:/root/zenoh/target/aarch64-unknown-linux-gnu/debian' /tmp/
         mv /tmp/debian/*.deb ./debs/arm64
 
@@ -160,7 +160,7 @@ case "$ARCH" in
         docker exec -u root build-fos-arm64 bash -c 'source ${HOME}/.cargo/env && cd /root/zenoh/ && rustup target add armv7-unknown-linux-gnueabihf'
         docker exec -u root build-fos-armhf bash -c 'source ${HOME}/.cargo/env && cd /root/zenoh/ && cargo build --target=armv7-unknown-linux-gnueabihf --release --all-targets'
         docker exec -u root build-fos-armhf bash -c 'source ${HOME}/.cargo/env && cd /root/zenoh/ && cargo deb --target=armv7-unknown-linux-gnueabihf -p zenoh --no-build'
-        docker exec -u root build-fos-armhf bash -c 'source ${HOME}/.cargo/env && cd /root/zenoh/ && cargo deb --target=armv7-unknown-linux-gnueabihf  -p zenoh-storages --no-build'
+        docker exec -u root build-fos-armhf bash -c 'source ${HOME}/.cargo/env && cd /root/zenoh/ && cargo deb --target=armv7-unknown-linux-gnueabihf  -p zenoh-plugin-storages --no-build'
         docker cp  'build-fos-armhf:/root/zenoh/target/armv7-unknown-linux-gnueabihf/debian' /tmp/
         mv /tmp/debian/*.deb ./debs/armhf
 

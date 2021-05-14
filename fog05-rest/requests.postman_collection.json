@@ -8,10 +8,26 @@
 		{
 			"name": "Onboard FDU",
 			"request": {
-				"method": "GET",
+				"method": "POST",
 				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"id\":\"test-ping-fdu\",\"name\":\"ping fdu\",\"version\":\"0.3.0\",\"fdu_version\":\"0.0.1\",\"hypervisor\":\"bare\",\"computation_requirements\":{\"cpu_arch\":\"x86_64\",\"ram_size_mb\":10,\"storage_size_mb\":1},\"migration_kind\":\"COLD\",\"hypervisor_specific\":\"{\\\"cmd\\\":\\\"ping\\\",\\\"args\\\":[\\\"1.1.1.1\\\"],\\\"env\\\":{}}\",\"interfaces\":[],\"storage\":[],\"connection_points\":[],\"depends_on\":[]}"
+				},
 				"url": {
-					"raw": ""
+					"raw": "http://127.0.0.1:8180/fdu/define",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8180",
+					"path": [
+						"fdu",
+						"define"
+					]
 				},
 				"description": "Onboard an FDU descriptor into fog05"
 			},
@@ -23,7 +39,7 @@
 				"method": "DELETE",
 				"header": [],
 				"url": {
-					"raw": "http://127.0.0.1:8180/fdu/delete/9a7dc01f-2039-4ff6-bfe7-49f4101be83c",
+					"raw": "http://127.0.0.1:8180/fdu/delete/85a3b9ba-9675-4cbb-99cd-a0769fda8811",
 					"protocol": "http",
 					"host": [
 						"127",
@@ -35,7 +51,7 @@
 					"path": [
 						"fdu",
 						"delete",
-						"9a7dc01f-2039-4ff6-bfe7-49f4101be83c"
+						"85a3b9ba-9675-4cbb-99cd-a0769fda8811"
 					]
 				},
 				"description": "Offloads a descriptor from fog05"
