@@ -638,7 +638,7 @@ impl<'a> ZNServiceGenerator<'a> {
                         S: #service_ident + Send + 'static,
                     {
                         let zinfo = _self.z.info().await;
-                        let pid = zinfo.get(&zenoh::net::info::ZN_INFO_PID_KEY)?.to_uppercase();
+                        let pid = zinfo.get(&zenoh::net::info::ZN_INFO_PID_KEY).ok_or(ZRPCError::MissingValue)?.to_uppercase();
                         let rid = match zinfo.get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY) {
                             Some(r_info) => {
                                 if r_info != "" {

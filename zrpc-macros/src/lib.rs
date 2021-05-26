@@ -515,8 +515,8 @@ impl<'a> ZServiceGenerator<'a> {
 
                         let zsession = _self.z.session();
                         let zinfo = zsession.info().await;
-                        let pid = zinfo.get(&zenoh::net::info::ZN_INFO_PID_KEY)?.to_uppercase();
-                        let rid = zinfo.get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY)?.split(",").collect::<Vec<_>>()[0].to_uppercase();
+                        let pid = zinfo.get(&zenoh::net::info::ZN_INFO_PID_KEY).ok_or(ZRPCError::MissingValue)?.to_uppercase();
+                        let rid = zinfo.get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY).ok_or(ZRPCError::MissingValue)?.split(",").collect::<Vec<_>>()[0].to_uppercase();
                         let ws = _self.z.workspace(None).await?;
 
 
@@ -1159,7 +1159,7 @@ impl<'a> ZServiceGenerator<'a> {
                         let ws = z.workspace(None).await?;
                         let zsession = z.session();
                         let zinfo = zsession.info().await;
-                        let rid = zinfo.get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY)?.split(",").collect::<Vec<_>>()[0].to_uppercase();
+                        let rid = zinfo.get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY).ok_or(ZRPCError::MissingValue)?.split(",").collect::<Vec<_>>()[0].to_uppercase();
 
                         let selector = zenoh::Selector::try_from(format!("{}/*/state",#eval_path))?;
                         let mut ds = ws.get(&selector).await?;

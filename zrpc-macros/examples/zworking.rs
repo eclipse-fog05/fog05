@@ -72,10 +72,12 @@ where
             let zsession = _self.z.session();
             let zinfo = zsession.info().await;
             let pid = zinfo
-                .get(&zenoh::net::info::ZN_INFO_PID_KEY)?
+                .get(&zenoh::net::info::ZN_INFO_PID_KEY)
+                .ok_or(ZRPCError::MissingValue)?
                 .to_uppercase();
             let rid = zinfo
-                .get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY)?
+                .get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY)
+                .ok_or(ZRPCError::MissingValue)?
                 .split(',')
                 .collect::<Vec<_>>()[0]
                 .to_uppercase();
@@ -563,7 +565,8 @@ impl HelloClient {
             let zsession = z.session();
             let zinfo = zsession.info().await;
             let rid = zinfo
-                .get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY)?
+                .get(&zenoh::net::info::ZN_INFO_ROUTER_PID_KEY)
+                .ok_or(ZRPCError::MissingValue)?
                 .split(',')
                 .collect::<Vec<_>>()[0]
                 .to_uppercase();

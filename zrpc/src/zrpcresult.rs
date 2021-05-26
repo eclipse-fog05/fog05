@@ -104,11 +104,7 @@ impl From<zenoh::ZError> for ZRPCError {
     }
 }
 
-impl From<std::option::NoneError> for ZRPCError {
-    fn from(_err: std::option::NoneError) -> Self {
-        ZRPCError::MissingValue
-    }
-}
+
 impl From<std::io::Error> for ZRPCError {
     fn from(err: std::io::Error) -> Self {
         ZRPCError::IOError(err.to_string())
