@@ -19,7 +19,7 @@ quote = "1.0.2"
 proc-macro2 = "1.0.6"
 serde_derive = "1.0.55"
 serde = { version = "1.0.55", features = ["derive"] }
-zenoh = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "master" }
+zenoh = { git = "https://github.com/eclipse-zenoh/zenoh.git", rev = "cf124d6c4d393e65662d1e1caf567b66af7150d5" }
 zrpc = {path = "../zrpc"}
 base64 = "0.13.0"
 log = "0.4.11"

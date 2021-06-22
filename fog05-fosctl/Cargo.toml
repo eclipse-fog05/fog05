@@ -30,7 +30,7 @@ derive_more = "0.99.10"
 semver = { version = "0.11.0", features = ["serde"]}
 rand = "0.8.3"
 fog05-sdk = {path = "../fog05-sdk" }
-zenoh = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "master" }
+zenoh = { git = "https://github.com/eclipse-zenoh/zenoh.git", rev = "cf124d6c4d393e65662d1e1caf567b66af7150d5" }
 serde_derive = "1.0.55"
 serde = { version = "1.0.55", features = ["derive"] }
 serde_yaml = "0.8.13"
