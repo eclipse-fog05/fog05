@@ -20,7 +20,7 @@ use async_std::sync::Arc;
 
 use zenoh::net::Session;
 
-use crate::agent::AgentOrchestratorInterfaceClient;
+use crate::agent::orchestrator::AgentOrchestratorInterfaceClient;
 use crate::fresult::FResult;
 use crate::im;
 use crate::zconnector::ZConnector;

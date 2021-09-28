@@ -79,7 +79,7 @@ async fn main() {
     info!("Eclipse fog05 Agent {}", GIT_VERSION);
 
     let conf_file_path = Path::new(&args.config);
-    let config = serde_yaml::from_str::<AgentConfig>(&(read_file(&conf_file_path).await)).unwrap();
+    let config = serde_yaml::from_str::<AgentConfig>(&(read_file(conf_file_path).await)).unwrap();
 
     info!("Eclipse fog05 Agent -- bootstrap");
 

@@ -26,7 +26,7 @@ use zenoh::*;
 
 use rand::seq::SliceRandom;
 
-use fog05_sdk::agent::AgentOrchestratorInterfaceClient;
+use fog05_sdk::agent::orchestrator::AgentOrchestratorInterfaceClient;
 use fog05_sdk::fresult::FError;
 use fog05_sdk::im::entity::EntityDescriptor;
 use fog05_sdk::im::fdu::FDUDescriptor;

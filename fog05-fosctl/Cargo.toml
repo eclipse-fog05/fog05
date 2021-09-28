@@ -18,6 +18,9 @@ maintenance = { status = "actively-developed" }
 
 [dependencies]
 async-std = { version = "=1.9.0", features = ["attributes"] }
+zenoh = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "master"}
+fog05-sdk = {path = "../fog05-sdk" }
+
 structopt = "0.3.13"
 clap = "2.33"
 exitfailure = "0.5.1"
@@ -27,17 +30,17 @@ reqwest = { version = "0.11.0", default-features = false, features = ["json", "r
 uuid = { version = "0.8.1", features = ["serde", "v4"] }
 base64 = "0.13.0"
 derive_more = "0.99.10"
-semver = { version = "0.11.0", features = ["serde"]}
+semver = { version = "1.0.4", features = ["serde"]}
 rand = "0.8.3"
-fog05-sdk = {path = "../fog05-sdk" }
-zenoh = { git = "https://github.com/eclipse-zenoh/zenoh.git", rev = "cf124d6c4d393e65662d1e1caf567b66af7150d5" }
+
+
 serde_derive = "1.0.55"
 serde = { version = "1.0.55", features = ["derive"] }
 serde_yaml = "0.8.13"
 serde_json = "1.0.55"
 serde-aux = "2.1.1"
 log = "0.4"
-env_logger = "0.8.3"
+env_logger = "0.9"
 git-version = "0.3.4"
 
 
