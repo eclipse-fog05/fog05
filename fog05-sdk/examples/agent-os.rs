@@ -1,6 +1,6 @@
 use async_std::sync::Arc;
 
-use fog05_sdk::agent::OSClient;
+use fog05_sdk::agent::os::OSClient;
 use zenoh::*;
 
 use url::Url;

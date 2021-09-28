@@ -18,11 +18,11 @@ use zenoh::*;
 use znrpc_macros::znserver;
 use zrpc::ZNServe;
 
-use fog05_sdk::agent::{AgentPluginInterfaceClient, OSClient};
+use fog05_sdk::agent::{os::OSClient, plugin::AgentPluginInterfaceClient};
 use fog05_sdk::fresult::{FError, FResult};
 use fog05_sdk::im::fdu::*;
 use fog05_sdk::im::fdu::{FDUDescriptor, FDURecord, FDUState};
-use fog05_sdk::plugins::{HypervisorPlugin, NetworkingPluginClient};
+use fog05_sdk::plugins::{hypervisor::HypervisorPlugin, networking::NetworkingPluginClient};
 use fog05_sdk::types::PluginKind;
 use fog05_sdk::zconnector::ZConnector;
 

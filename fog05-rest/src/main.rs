@@ -11,7 +11,7 @@ use structopt::StructOpt;
 
 use zenoh::*;
 
-use fog05_sdk::agent::AgentOrchestratorInterfaceClient;
+use fog05_sdk::agent::orchestrator::AgentOrchestratorInterfaceClient;
 // use fog05_sdk::fresult::FError;
 // use fog05_sdk::im::entity::{EntityDescriptor, EntityRecord};
 use fog05_sdk::im::fdu::{FDUDescriptor, FDURecord};
@@ -39,7 +39,6 @@ struct FOSRestConfig {
 #[derive(Clone)]
 struct FOSRestState {
     zsession: Arc<zenoh::net::Session>,
-    zenoh: Arc<zenoh::Zenoh>,
     zconnector: Arc<ZConnector>,
     config: FOSRestConfig,
 }
@@ -76,7 +75,7 @@ async fn main() -> tide::Result<()> {
 
     let conf_file_path = Path::new(&args.config);
     let config =
-        serde_yaml::from_str::<FOSRestConfig>(&(read_file(&conf_file_path).await)).unwrap();
+        serde_yaml::from_str::<FOSRestConfig>(&(read_file(conf_file_path).await)).unwrap();
 
     log::debug!("Configuration {:?}", config);
 
@@ -90,11 +89,10 @@ async fn main() -> tide::Result<()> {
             .await
             .unwrap(),
     );
-    let zconnector = Arc::new(ZConnector::new(zenoh.clone(), None, None));
+    let zconnector = Arc::new(ZConnector::new(zenoh, None, None));
 
     let rest_state = FOSRestState {
         zsession,
-        zenoh,
         zconnector,
         config,
     };

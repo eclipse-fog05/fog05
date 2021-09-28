@@ -14,19 +14,12 @@
 [workspace]
 
 members = [
-  "zrpc",
-  "zrpc-macros",
-  "znrpc-macros",
   "fog05-sdk",
   "fog05-fosctl",
   "fog05-agent",
   "fog05-rest",
 ]
 
-exclude = [
-  "zrpc-perf",
-
-]
 
 #[profile.release]
 #debug=false

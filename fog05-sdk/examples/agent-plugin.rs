@@ -1,6 +1,6 @@
 use async_std::sync::Arc;
 
-use fog05_sdk::agent::AgentPluginInterfaceClient;
+use fog05_sdk::agent::plugin::AgentPluginInterfaceClient;
 use zenoh::*;
 
 #[async_std::main]

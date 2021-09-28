@@ -15,9 +15,9 @@ use zenoh::*;
 use znrpc_macros::znserver;
 use zrpc::ZNServe;
 
-use fog05_sdk::agent::{AgentPluginInterfaceClient, OSClient};
+use fog05_sdk::agent::{os::OSClient, plugin::AgentPluginInterfaceClient};
 use fog05_sdk::fresult::{FError, FResult};
-use fog05_sdk::plugins::NetworkingPlugin;
+use fog05_sdk::plugins::networking::NetworkingPlugin;
 use fog05_sdk::types::{
     BridgeKind, ConnectionPoint, GREKind, IPAddress, IPConfiguration, IPVersion, Interface,
     InterfaceKind, LinkKind, MACAddress, MACVLANKind, MCastVXLANInfo, NetworkNamespace, PluginKind,

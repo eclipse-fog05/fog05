@@ -39,11 +39,12 @@ use znrpc_macros::znserver;
 use zrpc::ZNServe;
 
 use fog05_sdk::agent::{
-    AgentOrchestratorInterface, AgentOrchestratorInterfaceClient, AgentPluginInterface, OS,
+    orchestrator::AgentOrchestratorInterface, orchestrator::AgentOrchestratorInterfaceClient,
+    os::OS, plugin::AgentPluginInterface,
 };
 use fog05_sdk::fresult::{FError, FResult};
 use fog05_sdk::im;
-use fog05_sdk::plugins::{HypervisorPluginClient, NetworkingPluginClient};
+use fog05_sdk::plugins::{hypervisor::HypervisorPluginClient, networking::NetworkingPluginClient};
 use fog05_sdk::types;
 use fog05_sdk::types::{IPAddress, InterfaceKind};
 
@@ -156,14 +157,14 @@ impl Agent {
 
                 system.refresh_all();
                 let mem = im::node::RAMStatus {
-                    total: (system.get_total_memory() as f64) / 1024.0,
-                    free: (system.get_free_memory() as f64) / 1024.0,
+                    total: (system.total_memory() as f64) / 1024.0,
+                    free: (system.free_memory() as f64) / 1024.0,
                 };
-                for disk in system.get_disks() {
+                for disk in system.disks() {
                     let disk_status = im::node::DiskStatus {
-                        mount_point: String::from(disk.get_mount_point().to_str().unwrap()),
-                        total: (disk.get_total_space() as f64) / 1024.0 / 1024.0,
-                        free: (disk.get_available_space() as f64) / 1024.0 / 1024.0,
+                        mount_point: String::from(disk.mount_point().to_str().unwrap()),
+                        total: (disk.total_space() as f64) / 1024.0 / 1024.0,
+                        free: (disk.available_space() as f64) / 1024.0 / 1024.0,
                     };
                     disks.push(disk_status);
                 }
@@ -173,7 +174,7 @@ impl Agent {
                     //let ps_ifaces = psutil::network::net_if_stats().unwrap();
                     //let ps_iface = ps_ifaces.get(&iface.name).ok_or(FError::NotFound).unwrap();
                     let (_, sys_iface) = match system
-                        .get_networks()
+                        .networks()
                         .iter()
                         .find(|(name, _)| **name == iface.name)
                         .ok_or(FError::NotFound)
@@ -191,10 +192,10 @@ impl Agent {
                         is_up: true, //ps_iface.is_up(), //Filling because psutil-rust is not yet working
                         mtu: 1500,   //ps_iface.mtu(),
                         speed: 100,  //ps_iface.speed(),
-                        sent_pkts: sys_iface.get_total_packets_transmitted(),
-                        recv_pkts: sys_iface.get_total_packets_received(),
-                        sent_bytes: sys_iface.get_total_transmitted(),
-                        recv_bytes: sys_iface.get_total_received(),
+                        sent_pkts: sys_iface.total_packets_transmitted(),
+                        recv_pkts: sys_iface.total_packets_received(),
+                        sent_bytes: sys_iface.total_transmitted(),
+                        recv_bytes: sys_iface.total_received(),
                     };
 
                     ifaces.push(face);
@@ -301,13 +302,10 @@ impl Agent {
         //refresh information
         system.refresh_all();
 
-        for processor in system.get_processors() {
+        for processor in system.processors() {
             let cpu_spec = im::node::CPUSpec {
-                model: processor
-                    .get_vendor_id()
-                    .trim_end_matches('\u{0}')
-                    .to_string(),
-                frequency: processor.get_frequency(),
+                model: processor.vendor_id().trim_end_matches('\u{0}').to_string(),
+                frequency: processor.frequency(),
                 arch: arch.clone(),
             };
 
@@ -315,17 +313,17 @@ impl Agent {
         }
 
         let mem = im::node::RAMSpec {
-            size: (system.get_total_memory() as f64) / 1024.0,
+            size: (system.total_memory() as f64) / 1024.0,
         };
         let os = String::from(std::env::consts::OS);
         let name = String::from(hostname::get().unwrap().to_str().unwrap());
 
-        for disk in system.get_disks() {
+        for disk in system.disks() {
             let disk_spec = im::node::DiskSpec {
-                local_address: String::from(disk.get_name().to_os_string().to_str().unwrap()),
-                dimension: (disk.get_total_space() as f64) / 1024.0 / 1024.0,
-                mount_point: String::from(disk.get_mount_point().to_str().unwrap()),
-                file_system: String::from(std::str::from_utf8(disk.get_file_system()).unwrap()),
+                local_address: String::from(disk.name().to_os_string().to_str().unwrap()),
+                dimension: (disk.total_space() as f64) / 1024.0 / 1024.0,
+                mount_point: String::from(disk.mount_point().to_str().unwrap()),
+                file_system: String::from(std::str::from_utf8(disk.file_system()).unwrap()),
             };
 
             disks.push(disk_spec);
@@ -820,7 +818,7 @@ impl OS for Agent {
     async fn send_signal(&self, signal: u8, pid: u32) -> FResult<bool> {
         let mut system = sysinfo::System::new_all();
         system.refresh_all();
-        let process = system.get_process(pid.try_into()?);
+        let process = system.process(pid.try_into()?);
         match process {
             Some(p) => {
                 Err(FError::Unimplemented)
@@ -833,7 +831,7 @@ impl OS for Agent {
     async fn check_if_pid_exists(&self, pid: u32) -> FResult<bool> {
         let mut system = sysinfo::System::new_all();
         system.refresh_all();
-        let process = system.get_process(pid.try_into()?);
+        let process = system.process(pid.try_into()?);
         match process {
             Some(_) => Ok(true),
             None => Ok(false),

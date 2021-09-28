@@ -385,7 +385,7 @@ macro_rules! NETNS_SELECTOR {
 pin_project! {
     pub struct FDURecordStream<'a> {
         #[pin]
-        change_stream: zenoh::ChangeStream<'a>,
+        change_stream: zenoh::ChangeReceiver<'a>,
     }
 }
 
