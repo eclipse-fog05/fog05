@@ -74,8 +74,7 @@ async fn main() -> tide::Result<()> {
     log::debug!("Eclipse fog05 REST Service {}", GIT_VERSION);
 
     let conf_file_path = Path::new(&args.config);
-    let config =
-        serde_yaml::from_str::<FOSRestConfig>(&(read_file(conf_file_path).await)).unwrap();
+    let config = serde_yaml::from_str::<FOSRestConfig>(&(read_file(conf_file_path).await)).unwrap();
 
     log::debug!("Configuration {:?}", config);
 
