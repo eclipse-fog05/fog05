@@ -170,9 +170,6 @@ impl Agent {
                 }
 
                 for iface in pnet::datalink::interfaces() {
-                    // TODO: psutil-rust is not yet implementing net_if_stats for Linux, macOS and Windows...
-                    //let ps_ifaces = psutil::network::net_if_stats().unwrap();
-                    //let ps_iface = ps_ifaces.get(&iface.name).ok_or(FError::NotFound).unwrap();
                     let (_, sys_iface) = match system
                         .networks()
                         .iter()
@@ -189,9 +186,9 @@ impl Agent {
                         mac: iface.mac,
                         ips: iface.ips,
                         flags: iface.flags,
-                        is_up: true, //ps_iface.is_up(), //Filling because psutil-rust is not yet working
-                        mtu: 1500,   //ps_iface.mtu(),
-                        speed: 100,  //ps_iface.speed(),
+                        is_up: true,
+                        mtu: 1500,
+                        speed: 100,
                         sent_pkts: sys_iface.total_packets_transmitted(),
                         recv_pkts: sys_iface.total_packets_received(),
                         sent_bytes: sys_iface.total_transmitted(),

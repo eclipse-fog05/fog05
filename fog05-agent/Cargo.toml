@@ -13,9 +13,9 @@ readme = "../README.md"
 
 [dependencies]
 async-std = { version = "=1.9.0", features = ["attributes"] }
-zenoh = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "master"}
-zrpc = { git = "https://github.com/atolab/zenoh-rpc.git", branch = "master" }
-znrpc-macros = { git = "https://github.com/atolab/zenoh-rpc.git", branch = "master" }
+zenoh = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "branch_0.5.0-beta.9"}
+zrpc = { git = "https://github.com/atolab/zenoh-rpc.git", branch = "old-api" }
+znrpc-macros = { git = "https://github.com/atolab/zenoh-rpc.git", branch = "old-api" }
 fog05-sdk = {path = "../fog05-sdk"}
 async-trait = "0.1.36"
 futures = "0.3.5"
@@ -33,7 +33,6 @@ base64 = "0.13.0"
 url = "2.1.1"
 mac_address = {version =  "1.1.1", features = ["serde"]}
 sysinfo = "0.20"
-psutil = "3.2.0"
 async-ctrlc ={version = "1.2.0", features = ["stream"]}
 hostname = "0.3.1"
 reqwest = { version = "0.11.0", default-features = false, features = ["json", "rustls-tls" , "blocking"] }

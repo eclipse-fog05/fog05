@@ -16,20 +16,16 @@ use std::str;
 
 use std::collections::HashMap;
 
+use async_ctrlc::CtrlC;
 use async_std::fs;
 use async_std::path::Path;
 use async_std::prelude::*;
 use async_std::sync::{Arc, RwLock};
-
-use log::{error, info, trace};
-
-use zenoh::*;
-
 use fog05_sdk::zconnector::ZConnector;
-
-use async_ctrlc::CtrlC;
-
+use log::{error, info, trace};
 use structopt::StructOpt;
+use sysinfo::{ProcessExt, ProcessStatus, System, SystemExt};
+use zenoh::*;
 
 pub mod agent;
 
@@ -91,8 +87,8 @@ async fn main() {
     let pid_file_path = Path::new(&config.pid_file);
 
     //Read Agent PID file
-    let old_pid: Option<u32> = if pid_file_path.exists().await {
-        Some(read_file(pid_file_path).await.parse::<u32>().unwrap())
+    let old_pid: Option<i32> = if pid_file_path.exists().await {
+        Some(read_file(pid_file_path).await.parse::<i32>().unwrap())
     } else {
         None
     };
@@ -105,12 +101,18 @@ async fn main() {
             pid
         );
 
-        match psutil::process::Process::new(pid) {
-            Ok(old_proc) => {
-                if old_proc.is_running() {
-                    error!("There is an agent already running, panic!");
-                    // We panic if there is already an agent running on this machine
-                    panic!("A fog05 Agent is already running in this machine!!!")
+        let s = System::new_all();
+        match s.process(pid) {
+            Some(old_proc) => {
+                match old_proc.status() {
+                    ProcessStatus::Run | ProcessStatus::Idle | ProcessStatus::Sleep => {
+                        error!("There is an agent already running, panic!");
+                        // We panic if there is already an agent running on this machine
+                        panic!("A fog05 Agent is already running in this machine!!!")
+                    }
+                    _ => {
+                        trace!("Old agent is not running, removing the PID file...");
+                    }
                 }
             }
             _ => trace!("Old agent is not running, removing the PID file..."),

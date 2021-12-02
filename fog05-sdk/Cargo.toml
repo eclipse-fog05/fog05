@@ -12,10 +12,10 @@ description = "fog05: The End-to-End Compute, Storage and Networking Virtualisat
 
 [dependencies]
 async-std = { version = "=1.9.0", features = ["attributes"] }
-zenoh = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "master"}
-zenoh-util = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "master" }
-zrpc = { git = "https://github.com/atolab/zenoh-rpc.git", branch = "master" }
-znrpc-macros = { git = "https://github.com/atolab/zenoh-rpc.git", branch = "master" }
+zenoh = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "branch_0.5.0-beta.9"}
+zenoh-util = { git = "https://github.com/eclipse-zenoh/zenoh.git", branch = "branch_0.5.0-beta.9" }
+zrpc = { git = "https://github.com/atolab/zenoh-rpc.git", branch = "old-api" }
+znrpc-macros = { git = "https://github.com/atolab/zenoh-rpc.git", branch = "old-api" }
 
 
 uhlc = "0.3.1"
@@ -47,7 +47,6 @@ serde_json = { version = "1.0.55", optional = true}
 env_logger = "0.9.0"
 mac_address = {version =  "1.1.1", features = ["serde"]}
 sysinfo = "0.20.3"
-psutil = "3.2.0"
 machine-uid = "0.2.0"
 async-ctrlc ={version = "1.2.0", features = ["stream"]}
 hostname = "0.3.1"

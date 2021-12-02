@@ -667,9 +667,9 @@ impl NetworkingPlugin for DummyNetwork {
                                 iface.parent = None;
                                 self.connector.local.add_interface(&iface).await?;
                                 self.connector.local.add_interface(&new_bridge).await?;
-                                return Ok(iface);
+                                Ok(iface)
                             }
-                            None => return Err(FError::NotConnected),
+                            None => Err(FError::NotConnected),
                         }
                     }
                     _ => Err(FError::WrongKind),
