@@ -79,14 +79,18 @@ async fn main() -> tide::Result<()> {
     log::debug!("Configuration {:?}", config);
 
     let zenoh = Arc::new(
-        Zenoh::new(Properties::from(format!("mode=client;peer={}", &config.locators.join(","))).into())
-            .await
-            .unwrap(),
+        Zenoh::new(
+            Properties::from(format!("mode=client;peer={}", &config.locators.join(","))).into(),
+        )
+        .await
+        .unwrap(),
     );
     let zsession = Arc::new(
-        zenoh::net::open(Properties::from(format!("mode=client;peer={}", &config.locators.join(","))).into())
-            .await
-            .unwrap(),
+        zenoh::net::open(
+            Properties::from(format!("mode=client;peer={}", &config.locators.join(","))).into(),
+        )
+        .await
+        .unwrap(),
     );
     let zconnector = Arc::new(ZConnector::new(zenoh, None, None));
 
