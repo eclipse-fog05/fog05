@@ -33,7 +33,7 @@ struct FOSRestArgs {
 struct FOSRestConfig {
     address: String,
     port: u32,
-    locator: String,
+    locators: Vec<String>,
 }
 
 #[derive(Clone)]
@@ -79,12 +79,12 @@ async fn main() -> tide::Result<()> {
     log::debug!("Configuration {:?}", config);
 
     let zenoh = Arc::new(
-        Zenoh::new(Properties::from(format!("mode=client;peer={}", config.locator)).into())
+        Zenoh::new(Properties::from(format!("mode=client;peer={}", &config.locators.join(","))).into())
             .await
             .unwrap(),
     );
     let zsession = Arc::new(
-        zenoh::net::open(Properties::from(format!("mode=client;peer={}", config.locator)).into())
+        zenoh::net::open(Properties::from(format!("mode=client;peer={}", &config.locators.join(","))).into())
             .await
             .unwrap(),
     );
